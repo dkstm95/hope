@@ -15,7 +15,7 @@ test("code paths select a bounded supported language", () => {
 });
 
 test("GitHub light and dark token colors are emitted as trusted CSS classes", async () => {
-  const highlighter = await createCodeHighlighter();
+  const highlighter = await createCodeHighlighter({ paths: ["src/answer.ts"] });
   const rendered = highlighter.render({
     excerpt: 'const answer = "<script>alert(1)</script>";',
     path: "src/answer.ts",
@@ -34,7 +34,7 @@ test("GitHub light and dark token colors are emitted as trusted CSS classes", as
 });
 
 test("patches mark changed lines while unknown files stay inert", async () => {
-  const highlighter = await createCodeHighlighter();
+  const highlighter = await createCodeHighlighter({ paths: ["src/value.ts"] });
   const patch = highlighter.render({
     excerpt: "@@ -10,2 +20,2 @@\n-const oldValue = true;\n+const newValue = false;\n unchanged();",
     path: "src/value.ts",
@@ -57,7 +57,7 @@ test("patches mark changed lines while unknown files stay inert", async () => {
 });
 
 test("patches without hunk coordinates do not reserve an empty line-number column", async () => {
-  const highlighter = await createCodeHighlighter();
+  const highlighter = await createCodeHighlighter({ paths: ["src/value.ts"] });
   const patch = highlighter.render({
     excerpt: "+const safe = true;\n-const old = false;",
     path: "src/value.ts",
@@ -69,7 +69,7 @@ test("patches without hunk coordinates do not reserve an empty line-number colum
 });
 
 test("bidirectional controls are shown instead of changing visual order", async () => {
-  const highlighter = await createCodeHighlighter();
+  const highlighter = await createCodeHighlighter({ paths: ["src/value.ts"] });
   const rendered = highlighter.render({
     excerpt: "const safe = true; // \u202E } hidden",
     path: "src/value.ts",
@@ -81,7 +81,7 @@ test("bidirectional controls are shown instead of changing visual order", async 
 });
 
 test("highlighted source contains explicit line separators", async () => {
-  const highlighter = await createCodeHighlighter();
+  const highlighter = await createCodeHighlighter({ paths: ["src/value.ts"] });
   const rendered = highlighter.render({
     excerpt: "const first = 1;\nconst second = 2;",
     path: "src/value.ts",

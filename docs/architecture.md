@@ -102,6 +102,12 @@ but must not claim automatic AI analysis until it has a real model adapter of
 its own. This is still one feature implementation with two honest entry
 boundaries, not separate diff implementations.
 
+The skill carries only compact authoring rules and points to the generated
+analysis schema. It does not load the full human-facing product and design
+documents for every review. Those documents remain the source of truth for
+implementation and maintenance; the runtime validator and renderer own their
+fixed behavior.
+
 ## Add a feature
 
 1. Start with a clear user goal.

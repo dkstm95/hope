@@ -5,12 +5,14 @@ import { promisify } from "node:util";
 import { parseGitHubPullRequestUrl } from "./github.mjs";
 
 const execFile = promisify(execFileCallback);
+const GITHUB_COMMAND_TIMEOUT_MS = 30_000;
 
 async function runJson(command, arguments_, { exec = execFile } = {}) {
   try {
     const { stdout } = await exec(command, arguments_, {
       encoding: "utf8",
       maxBuffer: 1024 * 1024,
+      timeout: GITHUB_COMMAND_TIMEOUT_MS,
     });
     return JSON.parse(stdout);
   } catch (error) {
@@ -26,7 +28,11 @@ async function currentBranch(options) {
     const { stdout } = await (options.exec ?? execFile)(
       "git",
       ["branch", "--show-current"],
-      { encoding: "utf8", maxBuffer: 64 * 1024 },
+      {
+        encoding: "utf8",
+        maxBuffer: 64 * 1024,
+        timeout: GITHUB_COMMAND_TIMEOUT_MS,
+      },
     );
     return stdout.trim() || undefined;
   } catch {

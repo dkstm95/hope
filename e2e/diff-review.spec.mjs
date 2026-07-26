@@ -149,6 +149,10 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     width: "1px",
   });
   await expect(page.locator("#synopsis > .synopsis-head > h1")).toBeVisible();
+  await expect(page.locator(".synopsis-row > h3").first()).toHaveCSS(
+    "padding-top",
+    "2px",
+  );
   await expect(page.locator("header .top-context")).toHaveText("example/hope · PR #142");
   await expect(page.locator(".pr-hero")).toHaveCount(0);
   await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
@@ -254,6 +258,10 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   expect(wideFlow.contentOverflow).toBe(false);
 
   await page.setViewportSize(viewports.mobile);
+  await expect(page.locator(".synopsis-row > h3").first()).toHaveCSS(
+    "padding-top",
+    "0px",
+  );
   const narrowFlow = await page.locator("#explore .flow-short").evaluate((flow) => ({
     clientWidth: flow.clientWidth,
     display: getComputedStyle(flow).display,

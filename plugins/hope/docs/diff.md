@@ -421,6 +421,26 @@ available evidence.
 On failure, explain the cause and next step. Do not create or expose an
 incomplete review, and do not replace an older valid artifact.
 
+Inspection pages may carry several short source chunks under one untrusted
+page envelope. Source IDs and line ranges remain distinct. Hope reports planned
+inspection pages and serialized bytes, source bytes, actual analysis-file and
+canonical JSON bytes, evidence counts, and artifact bytes as content-free
+processing details. These counters support comparison and diagnosis; they are
+not model token counts or proof that a host received every planned page. Record
+exact input or output tokens only when the active host supplies them.
+
+Reject an analysis before rendering when it exceeds the bounded authoring
+budget: 128 KiB for both the analysis file and canonical JSON, 48 KiB of
+generated prose, 192 evidence references, 96 unique evidence ranges, 1,200
+unique evidence lines, 96 KiB of unique excerpts, or 600 highlighted code-line
+occurrences across the distinct ranges rendered. These are upper safety
+limits, not targets. A useful review should stay substantially smaller and
+omit optional sections that do not improve understanding.
+
+New runs use inspection protocol v2 and require this resource policy. The
+runtime can still resume a private v1 run created before an upgrade, using the
+original v1 analysis limits, until that run expires.
+
 ## Teaching aids
 
 Use a visual, interactive model, or quiz only when it makes a relationship

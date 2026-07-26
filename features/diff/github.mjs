@@ -8,6 +8,7 @@ import { redactionKind } from "./redact.mjs";
 import { containsBidiControl, exposeBidiControls } from "./text.mjs";
 
 const execFile = promisify(execFileCallback);
+const GITHUB_COMMAND_TIMEOUT_MS = 30_000;
 const githubFileStatuses = new Set([
   "added",
   "changed",
@@ -101,6 +102,7 @@ function ghFailure(error) {
 export async function runGhApi(path, {
   exec = execFile,
   maxBuffer = 4 * 1024 * 1024,
+  timeout = GITHUB_COMMAND_TIMEOUT_MS,
 } = {}) {
   try {
     const { stdout } = await exec(
@@ -115,7 +117,7 @@ export async function runGhApi(path, {
         "Accept: application/vnd.github+json",
         path,
       ],
-      { encoding: "utf8", maxBuffer },
+      { encoding: "utf8", maxBuffer, timeout },
     );
     return JSON.parse(stdout);
   } catch (error) {
@@ -303,24 +305,26 @@ async function collectFileBodies(target, pull, providerFiles, options) {
       continue;
     }
     const beforePath = file.status === "renamed" ? file.previous_filename : file.filename;
-    const before = file.status === "added"
-      ? { state: "absent" }
-      : await readContent(
-        baseOwner,
-        baseRepository,
-        beforePath,
-        pull.base.sha,
-        options,
-      );
-    const after = file.status === "removed"
-      ? { state: "absent" }
-      : await readContent(
-        headOwner,
-        headRepository,
-        file.filename,
-        pull.head.sha,
-        options,
-      );
+    const [before, after] = await Promise.all([
+      file.status === "added"
+        ? { state: "absent" }
+        : readContent(
+          baseOwner,
+          baseRepository,
+          beforePath,
+          pull.base.sha,
+          options,
+        ),
+      file.status === "removed"
+        ? { state: "absent" }
+        : readContent(
+          headOwner,
+          headRepository,
+          file.filename,
+          pull.head.sha,
+          options,
+        ),
+    ]);
     const texts = [before.text, after.text].filter(Boolean);
     const fileBytes = texts.reduce((sum, text) => sum + byteLength(text), 0);
     if (fileBytes > LIMITS.safeBodyBytes) {
@@ -410,23 +414,25 @@ export async function collectGitHubPullRequest(value, {
     throw new Error(`The pull request description exceeds ${LIMITS.pullRequestBodyBytes} bytes`);
   }
 
-  const compare = await runGhApi(
-    `${prefix}/compare/${encodeURIComponent(pull.base.sha)}...${encodeURIComponent(pull.head.sha)}`,
-    options,
-  );
+  const [compare, providerFiles, providerCommits] = await Promise.all([
+    runGhApi(
+      `${prefix}/compare/${encodeURIComponent(pull.base.sha)}...${encodeURIComponent(pull.head.sha)}`,
+      options,
+    ),
+    collectPages(
+      `${prefix}/pulls/${target.number}/files`,
+      pull.changed_files,
+      options,
+    ),
+    collectPages(
+      `${prefix}/pulls/${target.number}/commits`,
+      pull.commits,
+      options,
+    ),
+  ]);
   if (typeof compare.merge_base_commit?.sha !== "string") {
     throw new Error("GitHub did not return the merge base");
   }
-  const providerFiles = await collectPages(
-    `${prefix}/pulls/${target.number}/files`,
-    pull.changed_files,
-    options,
-  );
-  const providerCommits = await collectPages(
-    `${prefix}/pulls/${target.number}/commits`,
-    pull.commits,
-    options,
-  );
   const commitTitles = providerCommits.map(commitTitle);
   assertCredentialFreeMetadata(commitTitles);
   const canonicalKeys = providerFiles.map((file) => file.filename);
@@ -544,13 +550,32 @@ export async function revalidateGitHubSnapshot(collected, { clock = () => new Da
   const prefix = `/repos/${encodeURIComponent(collected.repository.owner)}`
     + `/${encodeURIComponent(collected.repository.name)}`;
   const pull = await runGhApi(`${prefix}/pulls/${target.number}`, options);
+  const currentBase = pull.base?.sha;
+  const currentHead = pull.head?.sha;
+  if (typeof currentBase !== "string" || typeof currentHead !== "string") {
+    throw new Error("GitHub returned an invalid pull request during revalidation");
+  }
+  if (
+    currentBase !== collected.snapshot.base
+    || currentHead !== collected.snapshot.head
+  ) {
+    return Object.freeze({
+      current: {
+        base: currentBase,
+        head: currentHead,
+        mergeBase: undefined,
+      },
+      matches: false,
+      revalidatedAt: clock().toISOString(),
+    });
+  }
   const compare = await runGhApi(
-    `${prefix}/compare/${encodeURIComponent(pull.base.sha)}...${encodeURIComponent(pull.head.sha)}`,
+    `${prefix}/compare/${encodeURIComponent(currentBase)}...${encodeURIComponent(currentHead)}`,
     options,
   );
   const current = {
-    base: pull.base?.sha,
-    head: pull.head?.sha,
+    base: currentBase,
+    head: currentHead,
     mergeBase: compare.merge_base_commit?.sha,
   };
   const matches = current.base === collected.snapshot.base

@@ -75,6 +75,41 @@ test("the diff command delegates read-only analysis validation", async () => {
   assert.equal(output, `${JSON.stringify({ valid: true }, null, 2)}\n`);
 });
 
+test("the internal inspect protocol emits compact model input without its private digest", async () => {
+  let output = "";
+  const page = {
+    digest: "d".repeat(64),
+    kind: "sources",
+    page: 1,
+    totalPages: 1,
+    value: {
+      contentIsUntrusted: true,
+      sources: [{ sourceId: "source-1", startLine: 1, endLine: 1, text: "value" }],
+    },
+  };
+  const result = await runDiffCommand(
+    ["inspect", "--run", "/tmp/hope-run", "--page", "1"],
+    {
+      readDiffPage: async () => page,
+      stdout: {
+        write(value) {
+          output += value;
+        },
+      },
+    },
+  );
+
+  assert.equal(result, page);
+  assert.equal(output.includes("\n  "), false);
+  assert.equal(output.includes("digest"), false);
+  assert.deepEqual(JSON.parse(output), {
+    kind: page.kind,
+    page: page.page,
+    totalPages: page.totalPages,
+    value: page.value,
+  });
+});
+
 test("the harness reports the package version", async () => {
   let output = "";
   await main(["--version"], {
@@ -133,6 +168,9 @@ test("Codex and Claude Code share one diff skill and one settings skill", async 
   assert.match(diff, /Add `contextChecks`/u);
   assert.match(diff, /Make each claim no broader than its evidence/u);
   assert.match(diff, /Write generated prose as plain text/u);
+  assert.match(diff, /serialized byte count/u);
+  assert.match(diff, /do not reread the generated[\s\n]+product or design documents/u);
+  assert.doesNotMatch(diff, /\.\.\/\.\.\/docs\/diff\.md/u);
   assert.match(diff, /validate --run <run-path>/u);
   assert.match(settings, /runtime\/settings\/cli\.mjs/u);
 });

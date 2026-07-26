@@ -18,6 +18,20 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(validated.contextChecks.length, 3);
   assert.equal(validated.sourceIndex.length, snapshot.sources.length);
   assert.equal("text" in validated.sourceIndex[0], false);
+  assert.deepEqual(validated.resources, {
+    analysisCanonicalBytes: 2390,
+    analysisFileBytes: 2390,
+    authoredProseBytes: 842,
+    evidenceBytes: 178,
+    evidenceLines: 5,
+    evidenceReferences: 9,
+    highlightedLines: 8,
+    uniqueEvidenceRanges: 4,
+  });
+  assert.equal(
+    validated.coreChange.after.evidence[0],
+    validated.coreChange.details[0].evidence[0],
+  );
 });
 
 test("only material collection limits make the review scope limited", () => {
@@ -331,5 +345,134 @@ test("review items can link only known scope limits once", () => {
   assert.throws(
     () => validateAnalysis(duplicate, snapshot, { runId }),
     /contains a duplicate/u,
+  );
+});
+
+test("generated prose length uses the same code-point boundary as the schema", () => {
+  const snapshot = makeSnapshot();
+  const accepted = makeAnalysis(snapshot, runId);
+  accepted.purpose.text = "가".repeat(32_768);
+  assert.doesNotThrow(() => validateAnalysis(accepted, snapshot, {
+    enforceResourceLimits: false,
+    runId,
+  }));
+
+  const rejected = makeAnalysis(snapshot, runId);
+  rejected.purpose.text = "가".repeat(32_769);
+  assert.throws(
+    () => validateAnalysis(rejected, snapshot, {
+      enforceResourceLimits: false,
+      runId,
+    }),
+    /purpose\.text is too long/u,
+  );
+});
+
+test("analysis rejects excessive evidence references before rendering", () => {
+  const snapshot = makeSnapshot();
+  const { digest: _digest, ...snapshotValue } = snapshot;
+  snapshotValue.sources = snapshotValue.sources.map((source) => (
+    source.id === "source-3"
+      ? {
+        ...source,
+        lineCount: 6,
+        text: Array.from({ length: 6 }, (_, index) => `line ${index + 1}`).join("\n"),
+      }
+      : source
+  ));
+  const budgetSnapshot = {
+    ...snapshotValue,
+    digest: digestJson(snapshotValue),
+  };
+  const analysis = makeAnalysis(budgetSnapshot, runId);
+  const ranges = [];
+  for (let startLine = 1; startLine <= 6; startLine += 1) {
+    for (let endLine = startLine; endLine <= 6; endLine += 1) {
+      ranges.push({ endLine, sourceId: "source-3", startLine });
+    }
+  }
+  analysis.reviewItems = Array.from({ length: 20 }, (_, index) => ({
+    ...analysis.reviewItems[0],
+    evidence: ranges.slice(0, 12),
+    title: `Review item ${index + 1}`,
+  }));
+
+  assert.throws(
+    () => validateAnalysis(analysis, budgetSnapshot, { runId }),
+    /more than 192 evidence references/u,
+  );
+});
+
+test("analysis rejects excessive unique evidence bytes before rendering", () => {
+  const snapshot = makeSnapshot();
+  const { digest: _digest, ...snapshotValue } = snapshot;
+  const line = "const value = \"" + "x".repeat(880) + "\";";
+  snapshotValue.sources = snapshotValue.sources.map((source) => (
+    source.id === "source-3"
+      ? {
+        ...source,
+        lineCount: 120,
+        text: Array.from({ length: 120 }, () => line).join("\n"),
+      }
+      : source
+  ));
+  const budgetSnapshot = {
+    ...snapshotValue,
+    digest: digestJson(snapshotValue),
+  };
+  const analysis = makeAnalysis(budgetSnapshot, runId);
+  analysis.codeSteps = Array.from({ length: 5 }, (_, index) => ({
+    basis: "code",
+    evidence: [{
+      endLine: (index + 1) * 24,
+      sourceId: "source-3",
+      startLine: index * 24 + 1,
+    }],
+    fileIds: ["file-1"],
+    text: `Changed code group ${index + 1}.`,
+    title: `Code group ${index + 1}`,
+  }));
+
+  assert.throws(
+    () => validateAnalysis(analysis, budgetSnapshot, { runId }),
+    /evidence exceeds 98304 bytes/u,
+  );
+});
+
+test("overlapping evidence ranges count every rendered code line", () => {
+  const snapshot = makeSnapshot();
+  const { digest: _digest, ...snapshotValue } = snapshot;
+  snapshotValue.sources = snapshotValue.sources.map((source) => (
+    source.id === "source-3"
+      ? {
+        ...source,
+        lineCount: 60,
+        text: Array.from({ length: 60 }, (_, index) => `line ${index + 1}`).join("\n"),
+      }
+      : source
+  ));
+  const budgetSnapshot = {
+    ...snapshotValue,
+    digest: digestJson(snapshotValue),
+  };
+  const analysis = makeAnalysis(budgetSnapshot, runId);
+  analysis.codeSteps = Array.from({ length: 3 }, (_, group) => ({
+    basis: "code",
+    evidence: Array.from({ length: 12 }, (_, index) => {
+      const startLine = group * 12 + index + 1;
+      return {
+        endLine: startLine + 23,
+        sourceId: "source-3",
+        startLine,
+      };
+    }),
+    fileIds: ["file-1"],
+    text: `Changed overlapping code group ${group + 1}.`,
+    title: `Overlapping code group ${group + 1}`,
+  }));
+
+  assert.throws(
+    () => validateAnalysis(analysis, budgetSnapshot, { runId }),
+    /more than 600 highlighted code lines/u,
   );
 });
