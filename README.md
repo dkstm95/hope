@@ -1,8 +1,8 @@
 <p align="center">
   <img
-    src="plugins/hope/assets/telescope.svg"
+    src="plugins/hope/assets/hope-protected-light.png"
     width="128"
-    alt="Hope telescope icon"
+    alt="Hope Protected Light icon"
   >
 </p>
 

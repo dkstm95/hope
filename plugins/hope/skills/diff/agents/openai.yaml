@@ -1,7 +1,7 @@
 interface:
   display_name: "Hope Diff"
   short_description: "Understand a PR with evidence-linked review"
-  icon_small: "./assets/telescope.svg"
-  icon_large: "./assets/telescope.svg"
+  icon_small: "./assets/hope-protected-light.png"
+  icon_large: "./assets/hope-protected-light.png"
   brand_color: "#087EA4"
   default_prompt: "Use $hope:diff to explain the current pull request."

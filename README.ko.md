@@ -1,8 +1,8 @@
 <p align="center">
   <img
-    src="plugins/hope/assets/telescope.svg"
+    src="plugins/hope/assets/hope-protected-light.png"
     width="128"
-    alt="Hope 망원경 아이콘"
+    alt="Hope 프로텍티드 라이트 아이콘"
   >
 </p>
 

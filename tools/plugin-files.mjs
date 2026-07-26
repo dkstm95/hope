@@ -124,13 +124,14 @@ export const generatedPluginFiles = Object.freeze([
 export const staticPluginFiles = Object.freeze([
   "plugins/hope/.claude-plugin/plugin.json",
   "plugins/hope/.codex-plugin/plugin.json",
-  "plugins/hope/assets/telescope.svg",
+  "plugins/hope/assets/hope-protected-light-128.png",
+  "plugins/hope/assets/hope-protected-light.png",
   "plugins/hope/skills/diff/SKILL.md",
   "plugins/hope/skills/diff/agents/openai.yaml",
-  "plugins/hope/skills/diff/assets/telescope.svg",
+  "plugins/hope/skills/diff/assets/hope-protected-light.png",
   "plugins/hope/skills/settings/SKILL.md",
   "plugins/hope/skills/settings/agents/openai.yaml",
-  "plugins/hope/skills/settings/assets/telescope.svg",
+  "plugins/hope/skills/settings/assets/hope-protected-light.png",
 ]);
 
 export const pluginPackageFiles = Object.freeze([
