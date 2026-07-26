@@ -511,9 +511,15 @@ Do not show a language badge in the header. Record the resolved locale and its
 source in artifact details, set the HTML `lang`, and show a visible warning only
 when Hope used a fallback.
 
-Translate fixed labels through trusted shared locale files. Preserve titles,
-paths, commands, code, and excerpts exactly. Generated explanations use the
-resolved locale while keeping necessary source terms unchanged.
+Translate fixed labels through trusted shared locale files. Preserve provider
+titles, paths, commands, code, and excerpts exactly in their source and
+evidence surfaces. Generated explanations use the resolved locale while
+keeping necessary source terms unchanged.
+
+Generated explanations render as plain text. Hope does not parse Markdown or
+HTML, so the analysis must not add formatting. Version 1 validation rejects
+backticks to prevent visible inline-code markers. When exact syntax needs a
+backtick, show it in an evidence excerpt instead of generated prose.
 
 The review starts with the resolved `system`, `light`, or `dark` theme. Its
 theme control changes only the open document and does not write Hope settings
@@ -544,8 +550,14 @@ immediate cleanup. Each run therefore needs an ownership record, restrictive
 permissions, and safe expiry cleanup on a later Hope invocation. Never infer
 ownership from a directory name alone.
 
-A failed analysis validation may keep the private run for one explicit repair
-attempt. The next validation failure is terminal and removes it.
+Validate drafted analysis before finalization. This preflight is read-only: it
+does not render or publish an artifact, change the run phase, consume a repair
+attempt, or delete the run. Correct clear contract errors and repeat the
+preflight without collecting the pull request again.
+
+Finalization validates the analysis again. A failed final validation may keep
+the private run for one explicit repair attempt. The next final validation
+failure is terminal and removes it.
 
 The HTML is a view of one snapshot. After the pull request changes, its current
 status is unknown until an external comparison is made. Durable project

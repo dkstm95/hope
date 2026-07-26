@@ -11,7 +11,10 @@ import {
   DIFF_MODEL_ADAPTER_MESSAGE,
   runDiff,
 } from "../features/diff/index.mjs";
-import { parseDiffArguments } from "../features/diff/cli.mjs";
+import {
+  main as runDiffCommand,
+  parseDiffArguments,
+} from "../features/diff/cli.mjs";
 import { main, parseArguments } from "../harness/hope.mjs";
 import { normalizeLineEndings } from "../tools/build-plugin.mjs";
 
@@ -44,6 +47,32 @@ test("the harness parses independent diff and settings entries", () => {
     theme: undefined,
     url: "https://github.com/example/repo/pull/1",
   });
+  assert.deepEqual(parseDiffArguments([
+    "validate",
+    "--run",
+    "/tmp/hope-run",
+  ]), {
+    command: "validate",
+    runPath: "/tmp/hope-run",
+  });
+});
+
+test("the diff command delegates read-only analysis validation", async () => {
+  let received;
+  let output = "";
+  await runDiffCommand(["validate", "--run", "/tmp/hope-run"], {
+    stdout: {
+      write(value) {
+        output += value;
+      },
+    },
+    validateDiff: async (runPath) => {
+      received = runPath;
+      return { valid: true };
+    },
+  });
+  assert.equal(received, "/tmp/hope-run");
+  assert.equal(output, `${JSON.stringify({ valid: true }, null, 2)}\n`);
 });
 
 test("the harness reports the package version", async () => {
@@ -103,6 +132,8 @@ test("Codex and Claude Code share one diff skill and one settings skill", async 
   assert.match(diff, /Use `coreChange\.details` for the main explanation/u);
   assert.match(diff, /Add `contextChecks`/u);
   assert.match(diff, /Make each claim no broader than its evidence/u);
+  assert.match(diff, /Write generated prose as plain text/u);
+  assert.match(diff, /validate --run <run-path>/u);
   assert.match(settings, /runtime\/settings\/cli\.mjs/u);
 });
 

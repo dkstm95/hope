@@ -116,16 +116,35 @@ Follow these rules:
   lines in one evidence reference.
 - Do not invent execution or CI results.
 - Do not add approval or rejection advice.
-- Keep source titles, code, paths, commands, and excerpts in their original
-  form.
+- Keep provider titles, code, paths, commands, and excerpts exact in their
+  source and evidence fields. In generated prose, use plain names. Put exact
+  syntax that needs formatting characters in evidence instead of copying it
+  into prose.
 - Never put internal reference IDs such as `source-7`, `file-2`, or `limit-1`
   in user-facing prose. Use the file, component, behavior, or limitation name
   a reader can recognize. Keep internal IDs only in schema reference fields.
 - Write generated prose in the resolved locale.
+- Write generated prose as plain text. Hope does not parse Markdown or HTML.
+  Do not add formatting. Version 1 validation rejects backticks so they cannot
+  appear as visible inline-code markers.
 - Omit optional sections that do not teach or clarify this change.
 
 The runtime derives excerpts, file accounting, scope, counts, status, links,
 and snapshot identity. Do not try to author those values.
+
+## Validate
+
+Run:
+
+```text
+validate --run <run-path>
+```
+
+This checks the drafted analysis without rendering, publishing, deleting the
+run, or consuming the final repair attempt. Fix each clear contract error and
+run `validate` again. Stop if the same error repeats or the repair makes no
+progress. Before stopping, run `cancel --run <run-path>` once to remove the
+private run. Run `finish` only after validation succeeds.
 
 ## Finish
 

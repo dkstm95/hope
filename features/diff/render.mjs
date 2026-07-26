@@ -667,8 +667,8 @@ function buildSections(review, dictionary, codeHighlighter) {
     title: label(dictionary, "section.core"),
   });
   if (review.behavior) {
-    const shortFlow = review.behavior.steps.length <= 5
-      && review.behavior.steps.every((step) => step.text.length <= 140);
+    const shortFlow = review.behavior.steps.length <= 4
+      && review.behavior.steps.every((step) => step.text.length <= 80);
     sections.push({
       html: section({
         content: `${claimBlock(
@@ -1431,6 +1431,7 @@ button { color: inherit; }
   flex: 1 0 0;
   border: 1px solid var(--component-border);
   background: var(--panel);
+  overflow-wrap: anywhere;
 }
 .flow-short > li:not(:last-child)::after {
   position: absolute;

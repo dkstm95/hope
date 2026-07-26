@@ -13,7 +13,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { LIMITS } from "../features/diff/constants.mjs";
-import { finishDiff } from "../features/diff/index.mjs";
+import { finishDiff, validateDiff } from "../features/diff/index.mjs";
 import {
   buildInspectionPages,
   claimDiffRunFinalization,
@@ -54,6 +54,77 @@ test("a DiffRun requires every page and publishes one review", async () => {
   await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
 });
 
+test("analysis preflight preserves the run and final repair attempt", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-validate-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+
+  await assert.rejects(
+    validateDiff(created.path, { temporaryRoot }),
+    /Read every Hope inspection page/u,
+  );
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+
+  const invalid = makeAnalysis(snapshot, created.runId);
+  invalid.snapshotDigest = "0".repeat(64);
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(invalid, null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await assert.rejects(
+      validateDiff(created.path, { temporaryRoot }),
+      (error) => {
+        assert.match(error.message, /snapshot digest/iu);
+        assert.equal(error.code, "HOPE_ANALYSIS_INVALID");
+        assert.equal(error.canRetry, true);
+        return true;
+      },
+    );
+  }
+  let run = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(run.manifest.phase, "inspected");
+  assert.equal(run.manifest.analysisAttempts, 0);
+
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`,
+    { mode: 0o600 },
+  );
+  const validated = await validateDiff(created.path, {
+    finalize: async () => assert.fail("preflight must not publish"),
+    render: async () => assert.fail("preflight must not render"),
+    revalidate: async () => assert.fail("preflight must not revalidate"),
+    temporaryRoot,
+  });
+  assert.deepEqual(validated, {
+    runId: created.runId,
+    snapshotDigest: snapshot.digest,
+    valid: true,
+  });
+  run = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(run.manifest.phase, "inspected");
+  assert.equal(run.manifest.analysisAttempts, 0);
+
+  const result = await finishDiff(created.path, {
+    revalidate: async () => ({
+      matches: true,
+      revalidatedAt: "2026-07-23T00:01:00.000Z",
+    }),
+    temporaryRoot,
+  });
+  assert.match(result.outputPath, /hope-review\.html$/u);
+  await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
+});
+
 test("one invalid analysis can be repaired without rereading inspection pages", async () => {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-retry-"));
   const snapshot = makeSnapshot();
@@ -78,12 +149,35 @@ test("one invalid analysis can be repaired without rereading inspection pages", 
       return true;
     },
   );
+  await assert.rejects(
+    validateDiff(created.path, { temporaryRoot }),
+    (error) => {
+      assert.equal(error.code, "HOPE_ANALYSIS_INVALID");
+      assert.equal(error.canRetry, true);
+      return true;
+    },
+  );
+  await assert.rejects(
+    validateDiff(created.path, { temporaryRoot }),
+    (error) => {
+      assert.equal(error.code, "HOPE_ANALYSIS_INVALID");
+      assert.equal(error.canRetry, true);
+      return true;
+    },
+  );
+  let run = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(run.manifest.phase, "analysis-invalid");
+  assert.equal(run.manifest.analysisAttempts, 1);
 
   await writeFile(
     created.analysisPath,
     `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`,
     { mode: 0o600 },
   );
+  await validateDiff(created.path, { temporaryRoot });
+  run = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(run.manifest.phase, "analysis-invalid");
+  assert.equal(run.manifest.analysisAttempts, 1);
   const result = await finishDiff(created.path, {
     revalidate: async () => ({
       matches: true,
@@ -93,6 +187,32 @@ test("one invalid analysis can be repaired without rereading inspection pages", 
   });
 
   assert.match(result.outputPath, /hope-review\.html$/u);
+  await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
+});
+
+test("a second final analysis failure removes the private run", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-final-invalid-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+
+  const invalid = makeAnalysis(snapshot, created.runId);
+  invalid.snapshotDigest = "0".repeat(64);
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(invalid, null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+  await assert.rejects(
+    finishDiff(created.path, { temporaryRoot }),
+    (error) => error.code === "HOPE_ANALYSIS_INVALID" && error.canRetry === true,
+  );
+  await assert.rejects(
+    finishDiff(created.path, { temporaryRoot }),
+    (error) => error.code === "HOPE_ANALYSIS_INVALID" && error.canRetry === false,
+  );
   await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
 });
 

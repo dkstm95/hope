@@ -380,25 +380,39 @@ test("a review with no items states the result once", async () => {
   assert.doesNotMatch(synopsis, /review-items-compact/u);
 });
 
-test("short behavior steps use the responsive flow and long steps fall back", async () => {
+test("only two to four brief behavior steps use the responsive flow", async () => {
   const snapshot = makeSnapshot();
   const shortAnalysis = makeAnalysis(snapshot, runId);
   shortAnalysis.behavior = {
-    steps: [
-      { ...shortAnalysis.coreChange.after, text: "Keep the final error." },
-      { ...shortAnalysis.coreChange.after, text: "Return it to the caller." },
-    ],
+    steps: Array.from({ length: 4 }, (_, index) => ({
+      ...shortAnalysis.coreChange.after,
+      text: `${index + 1}. ${"x".repeat(77)}`,
+    })),
     summary: shortAnalysis.coreChange.after,
   };
   const shortReview = validateAnalysis(shortAnalysis, snapshot, { runId });
   const shortHtml = (await renderReview(shortReview)).bytes.toString("utf8");
   assert.match(shortHtml, /<ol class="flow flow-short">/u);
+  assert.match(shortHtml, /overflow-wrap: anywhere/u);
+
+  const numerousAnalysis = makeAnalysis(snapshot, runId);
+  numerousAnalysis.behavior = {
+    steps: Array.from({ length: 5 }, (_, index) => ({
+      ...numerousAnalysis.coreChange.after,
+      text: `Step ${index + 1}`,
+    })),
+    summary: numerousAnalysis.coreChange.after,
+  };
+  const numerousReview = validateAnalysis(numerousAnalysis, snapshot, { runId });
+  const numerousHtml = (await renderReview(numerousReview)).bytes.toString("utf8");
+  assert.match(numerousHtml, /<ol class="flow">/u);
+  assert.doesNotMatch(numerousHtml, /<ol class="flow flow-short">/u);
 
   const longAnalysis = makeAnalysis(snapshot, runId);
   longAnalysis.behavior = {
     steps: [
       { ...longAnalysis.coreChange.after, text: "Keep the final error." },
-      { ...longAnalysis.coreChange.after, text: "x".repeat(141) },
+      { ...longAnalysis.coreChange.after, text: "x".repeat(81) },
     ],
     summary: longAnalysis.coreChange.after,
   };

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { digestJson } from "../features/diff/hash.mjs";
 import { validateAnalysis } from "../features/diff/validate.mjs";
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
 
@@ -286,6 +287,34 @@ test("analysis rejects bidirectional controls in user-facing prose", () => {
     () => validateAnalysis(analysis, snapshot, { runId }),
     /bidirectional control character/u,
   );
+});
+
+test("generated prose rejects Markdown backticks while source excerpts keep them", () => {
+  const snapshot = makeSnapshot();
+  const invalid = makeAnalysis(snapshot, runId);
+  invalid.purpose.text = "Use `--profile-directory` when Chrome starts.";
+
+  assert.throws(
+    () => validateAnalysis(invalid, snapshot, { runId }),
+    /Markdown backtick/u,
+  );
+
+  const { digest: _digest, ...snapshotValue } = makeSnapshot();
+  snapshotValue.sources = snapshotValue.sources.map((source) => (
+    source.id === "source-3"
+      ? { ...source, text: source.text.replace("throw last", "throw `last`") }
+      : source
+  ));
+  const sourceSnapshot = {
+    ...snapshotValue,
+    digest: digestJson(snapshotValue),
+  };
+  const validated = validateAnalysis(
+    makeAnalysis(sourceSnapshot, runId),
+    sourceSnapshot,
+    { runId },
+  );
+  assert.match(validated.reviewItems[0].evidence[0].excerpt, /`last`/u);
 });
 
 test("review items can link only known scope limits once", () => {
