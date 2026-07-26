@@ -28,6 +28,12 @@
   available yet.
 - Generate every plugin runtime, locale, design, and product-document copy from
   root sources and verify the exact release file list.
+- Reduce Diff resource use by packing short inspection sources, emitting compact
+  model pages, loading the renderer on demand, registering only the needed
+  syntax grammars, parallelizing independent GitHub reads, caching evidence
+  ranges, and rejecting oversized analyses before rendering. Report
+  content-free byte and count metrics without presenting them as model token
+  usage, while keeping in-flight v1 runs resumable under the v2 run protocol.
 
 ## 0.3.2-alpha - 2026-07-19
 

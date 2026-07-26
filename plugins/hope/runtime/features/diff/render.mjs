@@ -91,6 +91,28 @@ function evidenceTarget(evidence) {
   return `evidence-${createHash("sha256").update(key).digest("hex").slice(0, 12)}`;
 }
 
+function codeEvidencePaths(review) {
+  const paths = new Set();
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    if (
+      typeof value.excerpt === "string"
+      && typeof value.path === "string"
+      && ["after-file", "before-file", "patch"].includes(value.sourceKind)
+    ) {
+      paths.add(value.path);
+      return;
+    }
+    for (const item of Object.values(value)) visit(item);
+  };
+  visit(review);
+  return [...paths];
+}
+
 function evidenceBlock(
   items,
   dictionary,
@@ -1124,6 +1146,7 @@ button { color: inherit; }
   gap: ${space3}px;
   align-items: start;
 }
+.synopsis-row > h3 { padding-top: 2px; }
 .synopsis-value {
   min-width: 0;
 }
@@ -1896,6 +1919,7 @@ td:first-child {
     text-align: left;
   }
   .synopsis-row { grid-template-columns: 1fr; gap: ${space1}px; }
+  .synopsis-row > h3 { padding-top: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1988,7 +2012,9 @@ export async function renderReview(review, { fonts } = {}) {
   const fontBytes = fonts ?? Object.fromEntries(await Promise.all(
     Object.entries(fontUrls).map(async ([name, url]) => [name, await readFile(url)]),
   ));
-  const codeHighlighter = await createCodeHighlighter();
+  const codeHighlighter = await createCodeHighlighter({
+    paths: codeEvidencePaths(review),
+  });
   const script = clientScript(dictionary);
   const sections = buildSections(review, dictionary, codeHighlighter);
   const styles = css(

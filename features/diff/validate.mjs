@@ -16,6 +16,18 @@ const statedSources = new Set([
   "commit-title",
 ]);
 const contextStatuses = ["checked", "not-applicable", "limited"];
+const proseFields = new Set([
+  "answer",
+  "doneWhen",
+  "effect",
+  "explanation",
+  "impact",
+  "nextStep",
+  "question",
+  "subject",
+  "text",
+  "title",
+]);
 
 function object(value, name, keys) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -28,7 +40,7 @@ function object(value, name, keys) {
   return value;
 }
 
-function array(value, name, maximum = LIMITS.modelItems) {
+function array(value, name, maximum = LIMITS.reviewItems) {
   if (!Array.isArray(value)) throw new TypeError(`${name} must be an array`);
   if (value.length > maximum) throw new RangeError(`${name} has too many items`);
   return value;
@@ -38,7 +50,7 @@ function text(value, name) {
   if (typeof value !== "string" || value.length === 0) {
     throw new TypeError(`${name} must be a non-empty string`);
   }
-  if (Buffer.byteLength(value, "utf8") > LIMITS.modelString) {
+  if ([...value].length > LIMITS.modelString) {
     throw new RangeError(`${name} is too long`);
   }
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) {
@@ -81,14 +93,16 @@ function evidenceReference(value, name, sourceMap) {
       `${name} exceeds the ${LIMITS.evidenceLines}-line evidence limit`,
     );
   }
-  const excerpt = source.text
-    .split("\n")
+  const key = `${value.startLine}:${value.endLine}`;
+  const cached = source.referenceCache.get(key);
+  if (cached) return cached;
+  const excerpt = source.lines
     .slice(value.startLine - 1, value.endLine)
     .join("\n");
   if (excerpt.trim().length === 0) {
     throw new Error(`${name} refers only to empty source text`);
   }
-  return Object.freeze({
+  const validated = Object.freeze({
     endLine: value.endLine,
     excerpt,
     fileId: source.fileId,
@@ -97,6 +111,118 @@ function evidenceReference(value, name, sourceMap) {
     sourceId: source.id,
     sourceKind: source.kind,
     startLine: value.startLine,
+  });
+  source.referenceCache.set(key, validated);
+  return validated;
+}
+
+function proseBytes(value, field) {
+  if (typeof value === "string") {
+    return proseFields.has(field) ? Buffer.byteLength(value, "utf8") : 0;
+  }
+  if (Array.isArray(value)) {
+    return value.reduce((sum, item) => sum + proseBytes(item), 0);
+  }
+  if (!value || typeof value !== "object") return 0;
+  return Object.entries(value).reduce(
+    (sum, [key, item]) => sum + proseBytes(item, key),
+    0,
+  );
+}
+
+function analysisResources(analysis, roots, {
+  analysisFileBytes,
+  enforceLimits,
+}) {
+  const analysisCanonicalBytes = Buffer.byteLength(
+    JSON.stringify(analysis),
+    "utf8",
+  );
+  const actualAnalysisFileBytes = analysisFileBytes ?? analysisCanonicalBytes;
+  if (enforceLimits && actualAnalysisFileBytes > LIMITS.modelBytes) {
+    throw new RangeError(`Analysis file exceeds ${LIMITS.modelBytes} bytes`);
+  }
+  if (enforceLimits && analysisCanonicalBytes > LIMITS.modelBytes) {
+    throw new RangeError(`Analysis exceeds ${LIMITS.modelBytes} bytes`);
+  }
+  const authoredProseBytes = proseBytes(analysis);
+  if (enforceLimits && authoredProseBytes > LIMITS.analysisProseBytes) {
+    throw new RangeError(
+      `Analysis prose exceeds ${LIMITS.analysisProseBytes} bytes`,
+    );
+  }
+
+  let evidenceReferences = 0;
+  let evidenceBytes = 0;
+  const evidenceLines = new Set();
+  let highlightedLines = 0;
+  const ranges = new Set();
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    if (
+      typeof value.sourceId === "string"
+      && Number.isSafeInteger(value.startLine)
+      && Number.isSafeInteger(value.endLine)
+      && typeof value.excerpt === "string"
+    ) {
+      evidenceReferences += 1;
+      const range = `${value.sourceId}:${value.startLine}:${value.endLine}`;
+      if (!ranges.has(range)) {
+        ranges.add(range);
+        evidenceBytes += Buffer.byteLength(value.excerpt, "utf8");
+        for (let line = value.startLine; line <= value.endLine; line += 1) {
+          const coordinate = `${value.sourceId}:${line}`;
+          evidenceLines.add(coordinate);
+        }
+        if (codeSources.has(value.sourceKind)) {
+          highlightedLines += value.endLine - value.startLine + 1;
+        }
+      }
+      return;
+    }
+    for (const item of Object.values(value)) visit(item);
+  };
+  for (const root of roots) visit(root);
+
+  if (enforceLimits && evidenceReferences > LIMITS.evidenceReferences) {
+    throw new RangeError(
+      `Analysis uses more than ${LIMITS.evidenceReferences} evidence references`,
+    );
+  }
+  if (enforceLimits && ranges.size > LIMITS.uniqueEvidenceRanges) {
+    throw new RangeError(
+      `Analysis uses more than ${LIMITS.uniqueEvidenceRanges} unique evidence ranges`,
+    );
+  }
+  if (enforceLimits && evidenceLines.size > LIMITS.evidenceTotalLines) {
+    throw new RangeError(
+      `Analysis evidence exceeds ${LIMITS.evidenceTotalLines} unique lines`,
+    );
+  }
+  if (enforceLimits && evidenceBytes > LIMITS.evidenceBytes) {
+    throw new RangeError(
+      `Analysis evidence exceeds ${LIMITS.evidenceBytes} bytes`,
+    );
+  }
+  if (enforceLimits && highlightedLines > LIMITS.highlightedLines) {
+    throw new RangeError(
+      `Analysis renders more than ${LIMITS.highlightedLines} highlighted code lines`,
+    );
+  }
+
+  return Object.freeze({
+    analysisCanonicalBytes,
+    analysisFileBytes: actualAnalysisFileBytes,
+    authoredProseBytes,
+    evidenceBytes,
+    evidenceLines: evidenceLines.size,
+    evidenceReferences,
+    highlightedLines,
+    uniqueEvidenceRanges: ranges.size,
   });
 }
 
@@ -383,6 +509,8 @@ function validateCodeSteps(values, sourceMap, fileMap) {
 }
 
 export function validateAnalysis(analysis, snapshot, {
+  analysisFileBytes,
+  enforceResourceLimits = true,
   runId,
 } = {}) {
   if (snapshot?.schemaVersion !== CONTRACT_VERSION) {
@@ -415,7 +543,20 @@ export function validateAnalysis(analysis, snapshot, {
     throw new Error("Analysis locale does not match the prepared review");
   }
 
-  const sourceMap = new Map(snapshot.sources.map((source) => [source.id, source]));
+  const sourceMap = new Map(snapshot.sources.map((source) => {
+    if (typeof source.text !== "string") {
+      throw new TypeError(`Hope source ${source.id} is not text`);
+    }
+    const lines = Object.freeze(source.text.split("\n"));
+    if (lines.length !== source.lineCount) {
+      throw new Error(`Hope source ${source.id} line count does not match`);
+    }
+    return [source.id, {
+      ...source,
+      lines,
+      referenceCache: new Map(),
+    }];
+  }));
   const fileMap = new Map(snapshot.files.map((file) => [file.id, file]));
   const limitMap = new Map(snapshot.limits.map((limit) => [limit.id, limit]));
   const core = object(
@@ -444,7 +585,7 @@ export function validateAnalysis(analysis, snapshot, {
   const sorted = sortReviewItems(array(
     analysis.reviewItems,
     "reviewItems",
-    LIMITS.modelItems,
+    LIMITS.reviewItems,
   ).map((value, index) => reviewItem(value, index, sourceMap, limitMap)));
   const reviewItems = sorted.map((item, index) => Object.freeze({
     ...item,
@@ -514,18 +655,34 @@ export function validateAnalysis(analysis, snapshot, {
     path: source.path,
     revision: source.revision,
   }));
+  const codeSteps = validateCodeSteps(analysis.codeSteps, sourceMap, fileMap);
+  const resources = analysisResources(
+    analysis,
+    [
+      background,
+      behavior,
+      codeSteps,
+      contextChecks,
+      coreChange,
+      purpose,
+      quiz,
+      reviewItems,
+    ],
+    { analysisFileBytes, enforceLimits: enforceResourceLimits },
+  );
 
   return Object.freeze({
     analysisSchemaVersion: CONTRACT_VERSION,
     background: Object.freeze(background),
     behavior,
-    codeSteps: Object.freeze(validateCodeSteps(analysis.codeSteps, sourceMap, fileMap)),
+    codeSteps: Object.freeze(codeSteps),
     contextChecks: Object.freeze(contextChecks),
     coreChange,
     files: Object.freeze(files),
     limits: Object.freeze(limits),
     purpose,
     quiz: Object.freeze(quiz),
+    resources,
     result: deriveReviewResult(reviewItems, limits),
     reviewItems: Object.freeze(reviewItems),
     runId,

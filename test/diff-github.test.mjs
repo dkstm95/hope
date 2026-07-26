@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   collectGitHubPullRequest,
   parseGitHubPullRequestUrl,
+  revalidateGitHubSnapshot,
 } from "../features/diff/github.mjs";
 
 function response(value) {
@@ -211,6 +212,61 @@ test("an incomplete patch falls back to exact before and after files", async () 
   assert.equal(snapshot.files[0].sourceIds.length, 2);
 });
 
+test("independent GitHub collection requests start concurrently", async () => {
+  const github = fakeGitHub();
+  const started = new Set();
+  let release;
+  const barrier = new Promise((resolve) => {
+    release = resolve;
+  });
+  const gh = async (command, arguments_) => {
+    const path = arguments_.at(-1);
+    const kind = path.includes("/compare/")
+      ? "compare"
+      : path.includes("/files?")
+        ? "files"
+        : path.includes("/commits?")
+          ? "commits"
+          : undefined;
+    if (kind) {
+      started.add(kind);
+      if (started.size === 3) release();
+      await barrier;
+    }
+    return await github(command, arguments_);
+  };
+
+  await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    { gh, locale: "en-US", theme: "system" },
+  );
+  assert.deepEqual([...started].sort(), ["commits", "compare", "files"]);
+});
+
+test("fallback before and after bodies are fetched concurrently", async () => {
+  const github = fakeGitHub({ incompletePatch: true });
+  let contentRequests = 0;
+  let release;
+  const barrier = new Promise((resolve) => {
+    release = resolve;
+  });
+  const gh = async (command, arguments_) => {
+    const path = arguments_.at(-1);
+    if (path.includes("/contents/")) {
+      contentRequests += 1;
+      if (contentRequests === 2) release();
+      await barrier;
+    }
+    return await github(command, arguments_);
+  };
+
+  await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    { gh, locale: "en-US", theme: "system" },
+  );
+  assert.equal(contentRequests, 2);
+});
+
 test("a provider file without text changes stays metadata-only without a body request", async () => {
   const seen = [];
   const github = fakeGitHub({
@@ -334,4 +390,30 @@ test("provider control characters stay inert without changing line coordinates",
   assert.match(source.text, /\\u202Ehidden/u);
   assert.doesNotMatch(source.text, /\u202E/u);
   assert.equal(source.lineCount, 3);
+});
+
+test("revalidation skips the comparison after the base or head changes", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    { gh: fakeGitHub(), locale: "en-US", theme: "system" },
+  );
+  const github = fakeGitHub();
+  let compareRequests = 0;
+  const gh = async (command, arguments_) => {
+    const path = arguments_.at(-1);
+    if (path.includes("/compare/")) compareRequests += 1;
+    const result = await github(command, arguments_);
+    if (path === "/repos/example/repo/pulls/1") {
+      const pull = JSON.parse(result.stdout);
+      pull.head.sha = "d".repeat(40);
+      return response(pull);
+    }
+    return result;
+  };
+
+  const result = await revalidateGitHubSnapshot(snapshot, { gh });
+  assert.equal(result.matches, false);
+  assert.equal(result.current.head, "d".repeat(40));
+  assert.equal(result.current.mergeBase, undefined);
+  assert.equal(compareRequests, 0);
 });

@@ -59,6 +59,20 @@ function hasIdentity(info, expected) {
     && info.ino === expected.ino;
 }
 
+export async function preflightReviewOutput(outputPath) {
+  if (!outputPath) return undefined;
+  const requested = isAbsolute(outputPath) ? outputPath : resolve(outputPath);
+  const parent = await realpath(dirname(requested));
+  const target = join(parent, basename(requested));
+  try {
+    await lstat(target);
+  } catch (error) {
+    if (error?.code === "ENOENT") return target;
+    throw error;
+  }
+  throw new Error(`Hope did not replace the existing output: ${target}`);
+}
+
 export async function finalizeReview(bytes, {
   artifactDigest,
   linkFile = link,
@@ -71,9 +85,7 @@ export async function finalizeReview(bytes, {
   let privateDirectory;
   let target;
   if (outputPath) {
-    const requested = isAbsolute(outputPath) ? outputPath : resolve(outputPath);
-    const parent = await realpath(dirname(requested));
-    target = join(parent, basename(requested));
+    target = await preflightReviewOutput(outputPath);
   } else {
     const trustedTemporaryRoot = await realpath(temporaryRoot);
     privateDirectory = await mkdtemp(join(trustedTemporaryRoot, "hope-review-"));

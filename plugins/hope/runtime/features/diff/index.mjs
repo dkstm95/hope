@@ -3,14 +3,13 @@ import { lstat, open } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { resolveSettings } from "../../settings/index.mjs";
-import { LIMITS } from "./constants.mjs";
-import { finalizeReview } from "./finalize.mjs";
+import { LIMITS, RUN_VERSION } from "./constants.mjs";
+import { finalizeReview, preflightReviewOutput } from "./finalize.mjs";
 import {
   collectGitHubPullRequest,
   parseGitHubPullRequestUrl,
   revalidateGitHubSnapshot,
 } from "./github.mjs";
-import { renderReview } from "./render.mjs";
 import {
   claimDiffRunFinalization,
   createDiffRun,
@@ -26,13 +25,15 @@ export const DIFF_MODEL_ADAPTER_CODE = "HOPE_DIFF_MODEL_ADAPTER_REQUIRED";
 export const DIFF_MODEL_ADAPTER_MESSAGE =
   "Automatic Hope diff analysis currently runs through the Claude or Codex skill.";
 
-async function readAnalysis(path) {
+async function readAnalysis(path, {
+  maximumBytes = LIMITS.modelBytes,
+} = {}) {
   const info = await lstat(path);
   if (!info.isFile() || info.isSymbolicLink()) {
     throw new Error("Hope analysis is not a regular file");
   }
-  if (info.size > LIMITS.modelBytes) {
-    throw new Error(`Hope analysis exceeds ${LIMITS.modelBytes} bytes`);
+  if (info.size > maximumBytes) {
+    throw new Error(`Hope analysis exceeds ${maximumBytes} bytes`);
   }
   const handle = await open(path, "r");
   try {
@@ -45,7 +46,26 @@ async function readAnalysis(path) {
     ) {
       throw new Error("Hope analysis changed while being opened");
     }
-    return JSON.parse(await handle.readFile("utf8"));
+    const bytes = await handle.readFile();
+    const completed = await handle.stat();
+    if (
+      !completed.isFile()
+      || completed.dev !== opened.dev
+      || completed.ino !== opened.ino
+      || completed.size !== opened.size
+      || completed.mtimeMs !== opened.mtimeMs
+      || completed.ctimeMs !== opened.ctimeMs
+      || bytes.length !== completed.size
+    ) {
+      throw new Error("Hope analysis changed while being read");
+    }
+    if (bytes.length > maximumBytes) {
+      throw new Error(`Hope analysis exceeds ${maximumBytes} bytes`);
+    }
+    return Object.freeze({
+      fileBytes: bytes.length,
+      value: JSON.parse(bytes.toString("utf8")),
+    });
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error("Hope analysis is not valid JSON", { cause: error });
@@ -71,12 +91,27 @@ function assertAnalysisReady(run) {
 }
 
 async function validateRunAnalysis(run, dependencies = {}) {
-  const analysis = await readAnalysis(run.analysisPath);
+  const enforceResourceLimits = run.manifest.runVersion === RUN_VERSION;
+  const analysis = await readAnalysis(run.analysisPath, {
+    maximumBytes: enforceResourceLimits
+      ? LIMITS.modelBytes
+      : LIMITS.legacyModelBytes,
+  });
   return (dependencies.validate ?? validateAnalysis)(
-    analysis,
+    analysis.value,
     run.snapshot,
-    { runId: run.manifest.runId },
+    {
+      analysisFileBytes: analysis.fileBytes,
+      enforceResourceLimits,
+      runId: run.manifest.runId,
+    },
   );
+}
+
+async function renderValidatedAnalysis(validated, dependencies = {}) {
+  if (dependencies.render) return await dependencies.render(validated);
+  const module = await (dependencies.loadRenderer ?? (() => import("./render.mjs")))();
+  return await module.renderReview(validated);
 }
 
 export async function prepareDiff({
@@ -86,6 +121,9 @@ export async function prepareDiff({
   theme,
   url,
 } = {}, dependencies = {}) {
+  const preparedOutputPath = await (
+    dependencies.preflightOutput ?? preflightReviewOutput
+  )(outputPath);
   const settings = await (dependencies.resolveSettings ?? resolveSettings)({
     hostLocale,
     locale,
@@ -107,7 +145,7 @@ export async function prepareDiff({
   });
   const run = await (dependencies.createRun ?? createDiffRun)(snapshot, {
     clock: dependencies.clock,
-    outputPath,
+    outputPath: preparedOutputPath,
     temporaryRoot: dependencies.temporaryRoot,
   });
   return Object.freeze({
@@ -133,8 +171,9 @@ export async function validateDiff(runPath, dependencies = {}) {
     temporaryRoot: dependencies.temporaryRoot,
   });
   assertAnalysisReady(run);
+  let validated;
   try {
-    await validateRunAnalysis(run, dependencies);
+    validated = await validateRunAnalysis(run, dependencies);
   } catch (error) {
     error.code = "HOPE_ANALYSIS_INVALID";
     error.canRetry = true;
@@ -142,6 +181,10 @@ export async function validateDiff(runPath, dependencies = {}) {
   }
   return Object.freeze({
     runId: run.manifest.runId,
+    resources: Object.freeze({
+      ...run.resources,
+      ...validated.resources,
+    }),
     snapshotDigest: run.snapshot.digest,
     valid: true,
   });
@@ -176,7 +219,7 @@ export async function finishDiff(runPath, dependencies = {}) {
     }
 
     try {
-      const rendered = await (dependencies.render ?? renderReview)(validated);
+      const rendered = await renderValidatedAnalysis(validated, dependencies);
       const revalidation = await (
         dependencies.revalidate ?? revalidateGitHubSnapshot
       )(run.snapshot, {
@@ -205,6 +248,11 @@ export async function finishDiff(runPath, dependencies = {}) {
       return Object.freeze({
         ...ticket,
         pullRequest: run.snapshot.pullRequest,
+        resources: Object.freeze({
+          ...run.resources,
+          ...validated.resources,
+          artifactBytes: rendered.bytes.length,
+        }),
         result: validated.result,
       });
     } catch (error) {

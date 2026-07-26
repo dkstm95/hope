@@ -43,36 +43,36 @@ const themes = Object.freeze({
   light: "github-light-default",
 });
 
-const languages = Object.freeze([
-  bash,
-  c,
-  cpp,
-  csharp,
-  css,
-  diff,
-  dockerfile,
-  go,
-  htmlLanguage,
-  java,
-  javascript,
-  json,
-  jsonc,
-  jsx,
-  kotlin,
-  markdown,
-  mdx,
-  php,
-  python,
-  ruby,
-  rust,
-  scss,
-  sql,
-  swift,
-  tsx,
-  typescript,
-  vue,
-  xml,
-  yaml,
+const languageDefinitions = new Map([
+  ["bash", bash],
+  ["c", c],
+  ["cpp", cpp],
+  ["csharp", csharp],
+  ["css", css],
+  ["diff", diff],
+  ["dockerfile", dockerfile],
+  ["go", go],
+  ["html", htmlLanguage],
+  ["java", java],
+  ["javascript", javascript],
+  ["json", json],
+  ["jsonc", jsonc],
+  ["jsx", jsx],
+  ["kotlin", kotlin],
+  ["markdown", markdown],
+  ["mdx", mdx],
+  ["php", php],
+  ["python", python],
+  ["ruby", ruby],
+  ["rust", rust],
+  ["scss", scss],
+  ["sql", sql],
+  ["swift", swift],
+  ["tsx", tsx],
+  ["typescript", typescript],
+  ["vue", vue],
+  ["xml", xml],
+  ["yaml", yaml],
 ]);
 
 const extensionLanguages = new Map(Object.entries({
@@ -127,15 +127,7 @@ const exactLanguages = new Map([
   ["gemfile", "ruby"],
 ]);
 
-const warmLanguages = Object.freeze([
-  ...new Set([
-    ...extensionLanguages.values(),
-    ...exactLanguages.values(),
-    "diff",
-  ]),
-].sort());
-
-let highlighterPromise;
+const highlighterPromises = new Map();
 
 function escapeHtml(value) {
   return exposeBidiControls(value)
@@ -228,26 +220,26 @@ function diffCoordinates(lines) {
   });
 }
 
-async function getHighlighter() {
-  highlighterPromise ??= (async () => {
-    const highlighter = await createHighlighterCore({
+async function getHighlighter(paths) {
+  const names = new Set(["diff"]);
+  for (const path of paths) {
+    const language = languageFromPath(path);
+    if (language) names.add(language);
+  }
+  const selected = [...names].sort();
+  const key = selected.join(",");
+  if (!highlighterPromises.has(key)) {
+    highlighterPromises.set(key, createHighlighterCore({
       engine: createOnigurumaEngine(wasm),
-      langs: languages,
+      langs: selected.map((name) => languageDefinitions.get(name)),
       themes: [githubLight, githubDark],
-    });
-    for (const language of warmLanguages) {
-      highlighter.codeToTokensWithThemes("hope", {
-        lang: language,
-        themes,
-      });
-    }
-    return highlighter;
-  })();
-  return highlighterPromise;
+    }));
+  }
+  return await highlighterPromises.get(key);
 }
 
-export async function createCodeHighlighter() {
-  const highlighter = await getHighlighter();
+export async function createCodeHighlighter({ paths = [] } = {}) {
+  const highlighter = await getHighlighter(paths);
   const tokenRules = new Map();
 
   function tokenClass(variants) {

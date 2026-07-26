@@ -12,8 +12,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { LIMITS } from "../features/diff/constants.mjs";
-import { finishDiff, validateDiff } from "../features/diff/index.mjs";
+import {
+  LEGACY_RUN_VERSION,
+  LIMITS,
+} from "../features/diff/constants.mjs";
+import {
+  finishDiff,
+  prepareDiff,
+  validateDiff,
+} from "../features/diff/index.mjs";
 import {
   buildInspectionPages,
   claimDiffRunFinalization,
@@ -22,8 +29,38 @@ import {
   inspectDiffRun,
   loadDiffRun,
   removeDiffRun,
+  serializeInspectionPage,
 } from "../features/diff/run.mjs";
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
+
+test("an invalid explicit output fails before GitHub collection", async () => {
+  let collected = false;
+  await assert.rejects(
+    prepareDiff(
+      {
+        outputPath: "existing.html",
+        url: "https://github.com/example/hope/pull/142",
+      },
+      {
+        collect: async () => {
+          collected = true;
+          return makeSnapshot();
+        },
+        preflightOutput: async () => {
+          throw new Error("output already exists");
+        },
+        resolveSettings: async () => ({
+          locale: "en-US",
+          localeSource: "default",
+          theme: "system",
+          themeSource: "default",
+        }),
+      },
+    ),
+    /output already exists/u,
+  );
+  assert.equal(collected, false);
+});
 
 test("a DiffRun requires every page and publishes one review", async () => {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-test-"));
@@ -52,6 +89,100 @@ test("a DiffRun requires every page and publishes one review", async () => {
   });
   assert.match(result.outputPath, /hope-review\.html$/u);
   await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
+});
+
+test("snapshot revalidation starts only after rendering completes", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-order-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+
+  let renderFinished = false;
+  await finishDiff(created.path, {
+    finalize: async () => ({ outputPath: join(temporaryRoot, "review.html") }),
+    render: async () => {
+      await Promise.resolve();
+      renderFinished = true;
+      return { bytes: Buffer.from("review"), digest: "d".repeat(64) };
+    },
+    revalidate: async () => {
+      assert.equal(renderFinished, true);
+      return {
+        matches: true,
+        revalidatedAt: "2026-07-23T00:01:00.000Z",
+      };
+    },
+    temporaryRoot,
+  });
+});
+
+test("an in-flight v1 run can resume with the original analysis contract", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-v1-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  const manifestPath = join(created.path, "run.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  manifest.runVersion = LEGACY_RUN_VERSION;
+  delete manifest.resources;
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  const analysis = makeAnalysis(snapshot, created.runId);
+  analysis.reviewItems = Array.from({ length: 80 }, (_, index) => ({
+    ...analysis.reviewItems[0],
+    explanation: `Legacy explanation ${index + 1} ${"x".repeat(1_800)}`,
+    title: `Legacy review item ${index + 1}`,
+  }));
+  const serialized = `${JSON.stringify(analysis, null, 2)}\n`;
+  assert.ok(Buffer.byteLength(serialized) > LIMITS.modelBytes);
+  assert.ok(Buffer.byteLength(serialized) <= LIMITS.legacyModelBytes);
+  await writeFile(created.analysisPath, serialized, { flag: "wx", mode: 0o600 });
+
+  let validatedReview;
+  const result = await finishDiff(created.path, {
+    finalize: async () => ({ outputPath: join(temporaryRoot, "review.html") }),
+    render: async (review) => {
+      validatedReview = review;
+      return { bytes: Buffer.from("review"), digest: "d".repeat(64) };
+    },
+    revalidate: async () => ({
+      matches: true,
+      revalidatedAt: "2026-07-23T00:01:00.000Z",
+    }),
+    temporaryRoot,
+  });
+
+  assert.equal(validatedReview.reviewItems.length, 80);
+  assert.equal(validatedReview.resources.analysisFileBytes, Buffer.byteLength(serialized));
+  assert.equal(result.resources.analysisFileBytes, Buffer.byteLength(serialized));
+});
+
+test("a v2 run cannot drop its resource policy", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-v2-policy-"));
+  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+  const manifestPath = join(created.path, "run.json");
+  const original = await readFile(manifestPath, "utf8");
+  context.after(async () => {
+    await writeFile(manifestPath, original, "utf8").catch(() => {});
+    await removeDiffRun(created.path, { temporaryRoot }).catch(() => {});
+  });
+  const manifest = JSON.parse(original);
+  delete manifest.resources;
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+  await assert.rejects(
+    loadDiffRun(created.path, { temporaryRoot }),
+    /inspection page plan is invalid/u,
+  );
 });
 
 test("analysis preflight preserves the run and final repair attempt", async (context) => {
@@ -105,11 +236,18 @@ test("analysis preflight preserves the run and final repair attempt", async (con
     revalidate: async () => assert.fail("preflight must not revalidate"),
     temporaryRoot,
   });
-  assert.deepEqual(validated, {
-    runId: created.runId,
-    snapshotDigest: snapshot.digest,
-    valid: true,
-  });
+  assert.equal(validated.runId, created.runId);
+  assert.equal(validated.snapshotDigest, snapshot.digest);
+  assert.equal(validated.valid, true);
+  assert.equal(validated.resources.plannedInspectionPages, created.pageCount);
+  assert.equal(
+    validated.resources.analysisFileBytes,
+    Buffer.byteLength(await readFile(created.analysisPath)),
+  );
+  assert.ok(
+    validated.resources.analysisFileBytes
+      > validated.resources.analysisCanonicalBytes,
+  );
   run = await loadDiffRun(created.path, { temporaryRoot });
   assert.equal(run.manifest.phase, "inspected");
   assert.equal(run.manifest.analysisAttempts, 0);
@@ -458,6 +596,7 @@ test("a run is cleaned before its review becomes visible", async (context) => {
         published = true;
         return {};
       },
+      loadRenderer: async () => assert.fail("an injected renderer must stay lazy"),
       removeRun: async () => {
         throw new Error("cleanup failed");
       },
@@ -473,13 +612,22 @@ test("a run is cleaned before its review becomes visible", async (context) => {
   assert.equal(published, false);
 });
 
-test("inspection pages must be read in order", async () => {
+test("inspection pages must be read in order and the last handoff is replayable", async (context) => {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-order-"));
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
   await assert.rejects(
     inspectDiffRun(created.path, 2, { temporaryRoot }),
     /page 1 next/u,
   );
+  const first = await inspectDiffRun(created.path, 1, { temporaryRoot });
+  const replay = await inspectDiffRun(created.path, 1, { temporaryRoot });
+  assert.deepEqual(replay, first);
+  const run = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(run.manifest.deliveredPages.length, 1);
 });
 
 test("a canonical temporary-root alias can resume a DiffRun", async () => {
@@ -508,8 +656,10 @@ test("UTF-8 inspection chunks reconstruct the exact source text", () => {
     sources: [...snapshot.sources.slice(0, 2), source],
   });
   const reconstructed = pages
-    .filter((page) => page.value?.sourceId === source.id)
-    .map((page) => page.value.text)
+    .filter((page) => page.kind === "sources")
+    .flatMap((page) => page.value.sources)
+    .filter((item) => item.sourceId === source.id)
+    .map((item) => item.text)
     .join("\n");
   assert.equal(reconstructed, text);
 });
@@ -530,8 +680,10 @@ test("inspection chunks account for JSON escaping", () => {
     sources: [...snapshot.sources.slice(0, 2), source],
   });
   const reconstructed = pages
-    .filter((page) => page.value?.sourceId === source.id)
-    .map((page) => page.value.text)
+    .filter((page) => page.kind === "sources")
+    .flatMap((page) => page.value.sources)
+    .filter((item) => item.sourceId === source.id)
+    .map((item) => item.text)
     .join("\n");
 
   assert.equal(reconstructed, text);
@@ -541,6 +693,72 @@ test("inspection chunks account for JSON escaping", () => {
         <= LIMITS.inspectionPageBytes,
     );
   }
+});
+
+test("short source bodies share bounded inspection pages", () => {
+  const snapshot = makeSnapshot();
+  const sources = Array.from({ length: 652 }, (_, index) => ({
+    id: `source-${index + 1}`,
+    kind: "commit-title",
+    lineCount: 1,
+    revision: String(index).padStart(40, "0"),
+    text: "x",
+  }));
+  const pages = buildInspectionPages({ ...snapshot, sources });
+  const sourcePages = pages.filter((page) => page.kind === "sources");
+  const delivered = sourcePages.flatMap((page) => page.value.sources);
+
+  assert.equal(delivered.length, sources.length);
+  assert.ok(sourcePages.length < 20);
+  assert.deepEqual(
+    delivered.map((item) => [
+      item.sourceId,
+      item.sourceKind,
+      item.fileId,
+      item.path,
+      item.revision,
+      item.startLine,
+      item.endLine,
+      item.text,
+    ]),
+    sources.map((source) => [
+      source.id,
+      source.kind,
+      source.fileId,
+      source.path,
+      source.revision,
+      1,
+      1,
+      source.text,
+    ]),
+  );
+  for (const page of pages) {
+    assert.ok(
+      Buffer.byteLength(JSON.stringify(page), "utf8")
+        <= LIMITS.inspectionPageBytes,
+    );
+  }
+});
+
+test("a prepared run reports exact content-free resource counters", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-resources-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  const pages = JSON.parse(await readFile(join(created.path, "pages.json"), "utf8"));
+  const expectedInspectionBytes = pages.reduce(
+    (sum, page) => sum + Buffer.byteLength(serializeInspectionPage(page), "utf8"),
+    0,
+  );
+
+  assert.deepEqual(created.resources, {
+    plannedInspectionBytes: expectedInspectionBytes,
+    plannedInspectionPages: created.pageCount,
+    sourceBytes: snapshot.sources.reduce(
+      (sum, source) => sum + Buffer.byteLength(source.text, "utf8"),
+      0,
+    ),
+  });
+  await removeDiffRun(created.path, { temporaryRoot });
 });
 
 test("large file maps stay within the inspection page limit", () => {
@@ -579,6 +797,27 @@ test("tampered inspection pages fail closed", async () => {
     loadDiffRun(created.path, { temporaryRoot }),
     /inspection page plan is invalid/u,
   );
+});
+
+test("inspection validates the requested page without rehashing future pages", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-target-page-"));
+  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+  const pagesPath = join(created.path, "pages.json");
+  const pages = JSON.parse(await readFile(pagesPath, "utf8"));
+  const originalWarning = pages[1].value.warning;
+  pages[1].value.warning = "changed";
+  await writeFile(pagesPath, `${JSON.stringify(pages, null, 2)}\n`, "utf8");
+
+  const first = await inspectDiffRun(created.path, 1, { temporaryRoot });
+  assert.equal(first.page, 1);
+  await assert.rejects(
+    inspectDiffRun(created.path, 2, { temporaryRoot }),
+    /inspection page plan is invalid/u,
+  );
+
+  pages[1].value.warning = originalWarning;
+  await writeFile(pagesPath, `${JSON.stringify(pages, null, 2)}\n`, "utf8");
+  await removeDiffRun(created.path, { temporaryRoot });
 });
 
 test("a stale snapshot creates no review artifact", async () => {

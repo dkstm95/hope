@@ -12,6 +12,7 @@ import {
   runDiff,
   validateDiff,
 } from "./index.mjs";
+import { serializeInspectionPage } from "./run.mjs";
 
 function usage() {
   return [
@@ -117,7 +118,13 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   } else {
     result = await (dependencies.cancelDiff ?? cancelDiff)(options.runPath, dependencies);
   }
-  if (result !== undefined) stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  if (result !== undefined) {
+    if (options.command === "inspect") {
+      stdout.write(serializeInspectionPage(result));
+    } else {
+      stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    }
+  }
   return result;
 }
 
