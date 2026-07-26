@@ -55,6 +55,29 @@ async function readAnalysis(path) {
   }
 }
 
+function assertAnalysisReady(run) {
+  const analysisReady = run.manifest.phase === "inspected"
+    || (
+      run.manifest.phase === "analysis-invalid"
+      && run.manifest.analysisAttempts === 1
+    );
+  if (
+    !analysisReady
+    || run.manifest.deliveredPages.length !== run.manifest.pageCount
+  ) {
+    throw new Error("Read every Hope inspection page before submitting analysis");
+  }
+}
+
+async function validateRunAnalysis(run, dependencies = {}) {
+  const analysis = await readAnalysis(run.analysisPath);
+  return (dependencies.validate ?? validateAnalysis)(
+    analysis,
+    run.snapshot,
+    { runId: run.manifest.runId },
+  );
+}
+
 export async function prepareDiff({
   hostLocale,
   locale,
@@ -104,6 +127,25 @@ export async function readDiffPage(runPath, page, dependencies = {}) {
   });
 }
 
+export async function validateDiff(runPath, dependencies = {}) {
+  const run = await (dependencies.loadRun ?? loadDiffRun)(runPath, {
+    temporaryRoot: dependencies.temporaryRoot,
+  });
+  assertAnalysisReady(run);
+  try {
+    await validateRunAnalysis(run, dependencies);
+  } catch (error) {
+    error.code = "HOPE_ANALYSIS_INVALID";
+    error.canRetry = true;
+    throw error;
+  }
+  return Object.freeze({
+    runId: run.manifest.runId,
+    snapshotDigest: run.snapshot.digest,
+    valid: true,
+  });
+}
+
 export async function finishDiff(runPath, dependencies = {}) {
   const run = await (dependencies.loadRun ?? loadDiffRun)(runPath, {
     temporaryRoot: dependencies.temporaryRoot,
@@ -118,26 +160,11 @@ export async function finishDiff(runPath, dependencies = {}) {
     throw error;
   }
   try {
-    const analysisReady = run.manifest.phase === "inspected"
-      || (
-        run.manifest.phase === "analysis-invalid"
-        && run.manifest.analysisAttempts === 1
-      );
-    if (
-      !analysisReady
-      || run.manifest.deliveredPages.length !== run.manifest.pageCount
-    ) {
-      throw new Error("Read every Hope inspection page before submitting analysis");
-    }
+    assertAnalysisReady(run);
 
     let validated;
     try {
-      const analysis = await readAnalysis(run.analysisPath);
-      validated = (dependencies.validate ?? validateAnalysis)(
-        analysis,
-        run.snapshot,
-        { runId: run.manifest.runId },
-      );
+      validated = await validateRunAnalysis(run, dependencies);
     } catch (error) {
       const result = await (dependencies.recordFailure ?? recordAnalysisFailure)(run, {
         temporaryRoot: dependencies.temporaryRoot,

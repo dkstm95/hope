@@ -145,10 +145,10 @@ In each full review item, align kind, importance, and basis on one visual
 centerline. Keep kind and importance as outlined markers and basis as quieter
 plain text.
 
-When a change has two to five short behavior steps, show them as connected
+When a change has two to four brief behavior steps, show them as connected
 cards: horizontal on a wide screen and vertical on a narrow screen. Use the
-same text and order in both layouts. Fall back to a normal list when the steps
-are long or numerous.
+same text and order in both layouts. Use a normal numbered list for five or
+more steps or when any step is longer than 80 characters.
 
 ## Color and themes
 

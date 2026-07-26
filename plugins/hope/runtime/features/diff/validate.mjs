@@ -48,6 +48,11 @@ function text(value, name) {
   if (containsBidiControl(value)) {
     throw new TypeError(`${name} contains a bidirectional control character`);
   }
+  if (value.includes("`")) {
+    throw new TypeError(
+      `${name} contains a Markdown backtick; write plain text without formatting`,
+    );
+  }
   return value.replace(/\r\n?/gu, "\n");
 }
 

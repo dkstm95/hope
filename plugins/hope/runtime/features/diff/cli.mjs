@@ -11,6 +11,7 @@ import {
   prepareDiff,
   readDiffPage,
   runDiff,
+  validateDiff,
 } from "./index.mjs";
 
 function usage() {
@@ -22,6 +23,7 @@ function usage() {
     "Internal skill protocol:",
     "  hope diff prepare [GitHub PR URL] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
     "  hope diff inspect --run <private-run-path> --page <number>",
+    "  hope diff validate --run <private-run-path>",
     "  hope diff finish --run <private-run-path>",
     "  hope diff cancel --run <private-run-path>",
   ].join("\n");
@@ -58,7 +60,7 @@ export function parseDiffArguments(argv) {
     return { command: "help" };
   }
   const [command, ...rest] = argv;
-  if (!["prepare", "inspect", "finish", "cancel"].includes(command)) {
+  if (!["prepare", "inspect", "validate", "finish", "cancel"].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
   const { options, positionals } = takeOptions(rest);
@@ -104,6 +106,11 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     result = await (dependencies.readDiffPage ?? readDiffPage)(
       options.runPath,
       options.page,
+      dependencies,
+    );
+  } else if (options.command === "validate") {
+    result = await (dependencies.validateDiff ?? validateDiff)(
+      options.runPath,
       dependencies,
     );
   } else if (options.command === "finish") {

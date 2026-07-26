@@ -44,6 +44,27 @@ test.beforeAll(async () => {
     digest: digestJson(snapshotValue),
   });
   const analysis = makeAnalysis(snapshot, runId);
+  const behaviorRanges = [
+    [1, 1],
+    [2, 2],
+    [3, 3],
+    [4, 4],
+  ];
+  analysis.behavior = {
+    steps: Array.from({ length: 4 }, (_, index) => ({
+      ...analysis.coreChange.after,
+      evidence: [{
+        endLine: behaviorRanges[index][1],
+        sourceId: "source-3",
+        startLine: behaviorRanges[index][0],
+      }],
+      text: index === 0 ? "x".repeat(80) : `동작 단계 ${index + 1}`,
+    })),
+    summary: {
+      ...analysis.coreChange.after,
+      text: "네 단계로 이어지는 변경 동작입니다.",
+    },
+  };
   analysis.reviewItems = [
     {
       ...analysis.reviewItems[0],
@@ -195,6 +216,8 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   expect(synopsisLayouts.itemBorders.every((width) => width === "0px")).toBe(true);
   await expect(page.locator("#synopsis .synopsis-state")).toHaveCount(0);
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
+  await expect(page.locator("#explore .flow")).toHaveCount(1);
+  await expect(page.locator("#explore .flow-short")).toHaveCount(1);
   await expect(page.locator(".code-step-list > li")).toHaveCount(1);
   const itemHeadAlignment = await page.locator(
     ".review-items-full .item-head",
@@ -216,6 +239,28 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   }));
   expect(itemHeadTitleGaps.every((gap) => gap >= 8)).toBe(true);
   await expectNoPageOverflow(page);
+
+  await page.setViewportSize(viewports.breakpoint);
+  const wideFlow = await page.locator("#explore .flow-short").evaluate((flow) => ({
+    contentOverflow: [...flow.querySelectorAll(".claim p")].some(
+      (content) => content.scrollWidth > content.clientWidth,
+    ),
+    clientWidth: flow.clientWidth,
+    display: getComputedStyle(flow).display,
+    scrollWidth: flow.scrollWidth,
+  }));
+  expect(wideFlow.display).toBe("flex");
+  expect(wideFlow.scrollWidth).toBeLessThanOrEqual(wideFlow.clientWidth);
+  expect(wideFlow.contentOverflow).toBe(false);
+
+  await page.setViewportSize(viewports.mobile);
+  const narrowFlow = await page.locator("#explore .flow-short").evaluate((flow) => ({
+    clientWidth: flow.clientWidth,
+    display: getComputedStyle(flow).display,
+    scrollWidth: flow.scrollWidth,
+  }));
+  expect(narrowFlow.display).toBe("grid");
+  expect(narrowFlow.scrollWidth).toBeLessThanOrEqual(narrowFlow.clientWidth);
 
   for (const viewport of [
     viewports.breakpoint,

@@ -223,6 +223,7 @@
   "$defs": {
     "text": {
       "type": "string",
+      "description": "User-facing prose rendered as plain text. Markdown and HTML are not parsed. Version 1 validation rejects backticks; keep exact syntax that needs them in evidence excerpts.",
       "minLength": 1,
       "maxLength": 32768
     },
