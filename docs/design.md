@@ -54,10 +54,10 @@ When the theme and contents controls appear together, give both a 44-pixel
 control height, the same border role, and the same corner radius. An icon-only
 control may be narrower, but it must not look like a smaller control family.
 
-The product bar owns repository and pull request identity. The title area owns
-the artifact title and the compact **Commit** label. Do not repeat repository
-identity or add a persistent sentence explaining that an offline artifact does
-not update itself.
+The product bar owns repository and pull request identity. The synopsis card
+header owns the artifact title, compact **Commit** label, and capture time. Do
+not repeat repository identity or add a persistent sentence explaining that an
+offline artifact does not update itself.
 
 A complex drawer is allowed only after its focus, keyboard, scroll, and deep
 link behavior is tested.
@@ -135,6 +135,16 @@ material limit exists. Keep the same label-and-value grid used by the other
 synopsis rows. Separate preview items with spacing, not rules. Use semantic
 `ul` and `ol` elements whenever the content is actually a list.
 
+Make the first-screen synopsis one self-contained component. Put the pull
+request title, reviewed commit, and capture time in its header. Do not place a
+second title block above it or show a generic **Summary** title inside it. Keep
+**Summary** as a quiet navigation and screen-reader heading so the document
+heading order remains intact.
+
+In each full review item, align kind, importance, and basis on one visual
+centerline. Keep kind and importance as outlined markers and basis as quieter
+plain text.
+
 When a change has two to five short behavior steps, show them as connected
 cards: horizontal on a wide screen and vertical on a narrow screen. Use the
 same text and order in both layouts. Fall back to a normal list when the steps
@@ -189,14 +199,25 @@ Supported interactions can include:
 - move through the table of contents;
 - switch the current document theme;
 - try a safe declarative microworld; and
-- reveal a quiz explanation.
+- draft an optional quiz response without submitting or saving it; and
+- reveal the quiz answer and evidence through a separate disclosure.
 
-The **Evidence and checked scope** section is a dense reference appendix. Keep
-the whole section closed initially. Its source groups, context checks, scope
-limits, checked-file group, and artifact details must also open independently
-and start closed. Use native disclosure controls so they work without
-JavaScript. Opening a fragment link must reveal every disclosure that contains
-its target.
+When a quiz response box has a clear placeholder, do not repeat a visible
+field label such as **My answer** or **Selection**. Keep an accessible name for
+assistive technology. A response is never required before the answer can be
+opened. Give repeated controls a unique accessible name by associating each
+one with its question.
+
+Print output omits the reader's transient quiz response. It shows each
+question, answer, and supporting evidence regardless of the current disclosure
+state.
+
+The **Evidence and scope** section is a dense reference appendix. Keep
+the whole section open initially so the available groups remain visible. Its
+source groups, context checks, scope limits, checked-file group, and artifact
+details must open independently and start closed. Use native disclosure
+controls so they work without JavaScript. Opening a fragment link must reveal
+every disclosure that contains its target.
 
 Code markup must contain explicit line separators. One source line must remain
 one visible line even without layout styles; long lines scroll inside the code

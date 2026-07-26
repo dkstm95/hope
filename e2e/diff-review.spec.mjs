@@ -70,6 +70,15 @@ test.beforeAll(async () => {
       title: "첫 화면에서 숨겨진 해결 항목",
     },
   ];
+  analysis.quiz = Array.from({ length: 3 }, (_, index) => ({
+    answer: `마지막 재시도 오류가 호출자에게 전달됩니다. ${index + 1}`,
+    evidence: [{
+      endLine: 4,
+      sourceId: "source-3",
+      startLine: 2,
+    }],
+    question: `모든 재시도가 실패하면 어떤 오류가 전달되나요? ${index + 1}`,
+  }));
   const review = validateAnalysis(analysis, snapshot, { runId });
   const rendered = await renderReview(review);
   const artifactPath = join(artifactDirectory, "hope-review.html");
@@ -105,11 +114,34 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
   });
   await openArtifact(page, viewports.desktop);
-  await expect(page.locator("#synopsis h2")).toHaveText("변경 요약");
+  await expect(page.locator("#synopsis > h2")).toHaveText("요약");
+  const synopsisLabelStyle = await page.locator("#synopsis > h2").evaluate(
+    (element) => ({
+      clip: getComputedStyle(element).clip,
+      position: getComputedStyle(element).position,
+      width: getComputedStyle(element).width,
+    }),
+  );
+  expect(synopsisLabelStyle).toEqual({
+    clip: "rect(0px, 0px, 0px, 0px)",
+    position: "absolute",
+    width: "1px",
+  });
+  await expect(page.locator("#synopsis > .synopsis-head > h1")).toBeVisible();
   await expect(page.locator("header .top-context")).toHaveText("example/hope · PR #142");
-  await expect(page.locator(".pr-hero")).not.toContainText("example/hope · PR #142");
-  await expect(page.locator(".pr-hero")).toContainText("커밋 bbbbbbbb");
-  await expect(page.locator(".pr-hero")).not.toContainText(
+  await expect(page.locator(".pr-hero")).toHaveCount(0);
+  await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
+    "example/hope · PR #142",
+  );
+  await expect(page.locator("#synopsis > .synopsis-head dt")).toHaveText([
+    "커밋",
+    "수집 시각",
+  ]);
+  await expect(page.locator("#synopsis > .synopsis-head dd")).toHaveText([
+    "bbbbbbbb",
+    "2026-07-23 00:00 UTC",
+  ]);
+  await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
     "이 오프라인 파일은 이후 PR 변경을 자동으로 반영하지 않습니다.",
   );
   await expect(page.locator("#synopsis .review-result")).toHaveCount(0);
@@ -121,8 +153,8 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#synopsis ul.review-items-compact > li")).toHaveCount(3);
   await expect(page.locator("#synopsis .review-item-compact .status")).toHaveText([
     "결정 필요",
-    "추가 검증",
-    "추가 검증",
+    "검증 필요",
+    "검증 필요",
   ]);
   const compactReviewStyle = await page.locator(
     "#synopsis .review-item-compact .status",
@@ -164,6 +196,25 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#synopsis .synopsis-state")).toHaveCount(0);
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
   await expect(page.locator(".code-step-list > li")).toHaveCount(1);
+  const itemHeadAlignment = await page.locator(
+    ".review-items-full .item-head",
+  ).evaluateAll((heads) => heads.map((head) => {
+    const items = [...head.children];
+    const centers = items.map((item) => {
+      const box = item.getBoundingClientRect();
+      return box.top + (box.height / 2);
+    });
+    return Math.max(...centers) - Math.min(...centers);
+  }));
+  expect(itemHeadAlignment.every((difference) => difference <= 1)).toBe(true);
+  const itemHeadTitleGaps = await page.locator(
+    ".review-items-full .review-item",
+  ).evaluateAll((items) => items.map((item) => {
+    const head = item.querySelector(".item-head").getBoundingClientRect();
+    const title = item.querySelector("h3").getBoundingClientRect();
+    return title.top - head.bottom;
+  }));
+  expect(itemHeadTitleGaps.every((gap) => gap >= 8)).toBe(true);
   await expectNoPageOverflow(page);
 
   for (const viewport of [
@@ -174,6 +225,11 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     await page.setViewportSize(viewport);
     await expectNoPageOverflow(page);
   }
+  await page.locator("#review-title").evaluate((element) => {
+    element.textContent = "LongUnbrokenPullRequestTitle".repeat(24);
+  });
+  await page.setViewportSize({ height: 640, width: 320 });
+  await expectNoPageOverflow(page);
   expect(remoteRequests).toEqual([]);
 });
 
@@ -251,7 +307,8 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   }
 
   const otherSummaries = page.locator(
-    ".quiz > details > summary, #evidence-and-scope > summary, .toc-mobile > summary",
+    ".quiz > details > summary, .quiz-answer > summary, "
+      + "#evidence-and-scope > summary, .toc-mobile > summary",
   );
   const otherCount = await otherSummaries.count();
   expect(otherCount).toBeGreaterThanOrEqual(2);
@@ -264,11 +321,11 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   const mobileToc = page.locator(".toc-mobile");
   const mobileTocSummary = mobileToc.locator(":scope > summary");
   await expect(mobileToc.locator("xpath=ancestor::header[1]")).toHaveCount(1);
-  const hero = await page.locator(".pr-hero").boundingBox();
+  const main = await page.locator("main").boundingBox();
   const synopsis = await page.locator("#synopsis").boundingBox();
-  expect(hero).not.toBeNull();
+  expect(main).not.toBeNull();
   expect(synopsis).not.toBeNull();
-  expect(synopsis.y - (hero.y + hero.height)).toBeLessThanOrEqual(24);
+  expect(synopsis.y - main.y).toBeLessThanOrEqual(1);
   const synopsisTopBeforeOpen = synopsis.y;
   await mobileTocSummary.click();
   await expect(mobileToc).toHaveAttribute("open", "");
@@ -281,16 +338,96 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   await expectNoPageOverflow(page);
 });
 
-test("evidence and checked scope disclosures start closed and open independently", async ({
+test("quiz separates an optional response from the answer and evidence", async ({
+  page,
+}) => {
+  await openArtifact(page, viewports.mobile);
+  const questions = page.locator(".quiz > details.quiz-question");
+  await expect(questions).toHaveCount(3);
+
+  const first = questions.nth(0);
+  const response = first.locator("textarea");
+  const answer = first.locator("details.quiz-answer");
+  await expect(first).not.toHaveAttribute("open", "");
+  await expect(response).not.toBeVisible();
+
+  await first.locator(":scope > summary").click();
+  await expect(first).toHaveAttribute("open", "");
+  await expect(response).toBeVisible();
+  await expect(response).toHaveAttribute(
+    "aria-labelledby",
+    "quiz-1-question quiz-1-response-label",
+  );
+  await expect(response).toHaveAttribute(
+    "placeholder",
+    "답을 먼저 적어보세요. 입력 내용은 저장되지 않습니다.",
+  );
+  const responseLabel = first.locator(
+    'label#quiz-1-response-label[for="quiz-1-response"]',
+  );
+  await expect(responseLabel).toHaveText("이해 확인 답변");
+  await expect(first.getByRole("textbox", {
+    name: /모든 재시도가 실패하면 어떤 오류가 전달되나요\? 1 이해 확인 답변/u,
+  })).toHaveCount(1);
+  const responseLabelStyle = await responseLabel.evaluate((element) => ({
+    clip: getComputedStyle(element).clip,
+    height: getComputedStyle(element).height,
+    overflow: getComputedStyle(element).overflow,
+    position: getComputedStyle(element).position,
+    width: getComputedStyle(element).width,
+  }));
+  expect(responseLabelStyle).toEqual({
+    clip: "rect(0px, 0px, 0px, 0px)",
+    height: "1px",
+    overflow: "hidden",
+    position: "absolute",
+    width: "1px",
+  });
+  await expect(answer).not.toHaveAttribute("open", "");
+  await expect(answer.locator(".quiz-answer-content")).not.toBeVisible();
+  const answerNames = await questions.locator(
+    "details.quiz-answer > summary",
+  ).evaluateAll((summaries) => summaries.map(
+    (summary) => summary.getAttribute("aria-label"),
+  ));
+  expect(answerNames.every(Boolean)).toBe(true);
+  expect(new Set(answerNames).size).toBe(answerNames.length);
+
+  await response.fill("마지막 오류가 전달됩니다.");
+  await answer.locator(":scope > summary").click();
+  await expect(answer).toHaveAttribute("open", "");
+  await expect(answer.locator(".quiz-answer-content")).toBeVisible();
+  await expect(answer.locator(".evidence-inline")).toBeVisible();
+  await expect(answer.locator("details.evidence")).toHaveCount(0);
+  await expect(answer).toContainText("마지막 재시도 오류가 호출자에게 전달됩니다.");
+
+  await first.locator(":scope > summary").click();
+  await first.locator(":scope > summary").click();
+  await expect(response).toHaveValue("마지막 오류가 전달됩니다.");
+  await expectNoPageOverflow(page);
+
+  await answer.locator(":scope > summary").click();
+  await first.locator(":scope > summary").click();
+  await expect(answer).not.toHaveAttribute("open", "");
+  await expect(first).not.toHaveAttribute("open", "");
+  await page.emulateMedia({ media: "print" });
+  await expect(response).not.toBeVisible();
+  await expect(first.locator(":scope > summary")).toBeVisible();
+  await expect(answer.locator(".quiz-answer-content")).toBeVisible();
+  await expect(answer.locator(".evidence-inline")).toBeVisible();
+});
+
+test("the evidence appendix starts open while its groups and code evidence stay closed", async ({
   page,
 }) => {
   await openArtifact(page, viewports.desktop);
-  const section = page.locator("details#evidence-and-scope");
-  const sectionSummary = section.locator(":scope > summary");
+  const codeEvidence = page.locator("#follow-code details.evidence");
+  expect(await codeEvidence.count()).toBeGreaterThan(0);
+  expect(await codeEvidence.evaluateAll((items) => (
+    items.every((item) => !item.hasAttribute("open"))
+  ))).toBe(true);
 
-  await expect(section).not.toHaveAttribute("open", "");
-  await expect(sectionSummary).toBeVisible();
-  await sectionSummary.click();
+  const section = page.locator("details#evidence-and-scope");
   await expect(section).toHaveAttribute("open", "");
 
   const nested = section.locator(
@@ -386,8 +523,6 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await expect(page.locator("h1")).toBeVisible();
     await expect(page.locator("#synopsis")).toBeVisible();
     const evidenceSection = page.locator("#evidence-and-scope");
-    await expect(evidenceSection).not.toHaveAttribute("open", "");
-    await evidenceSection.locator(":scope > summary").click();
     await expect(evidenceSection).toHaveAttribute("open", "");
     const sourceGroup = evidenceSection.locator("details.evidence-group").filter({
       has: page.getByRole("heading", {
@@ -403,6 +538,13 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await expect(page.locator(".syntax-code code").first()).toContainText(
       "throw new Error()",
     );
+    const quizQuestion = page.locator(".quiz > details.quiz-question").first();
+    await quizQuestion.locator(":scope > summary").click();
+    await expect(quizQuestion.locator("textarea")).toBeVisible();
+    const quizAnswer = quizQuestion.locator("details.quiz-answer");
+    await quizAnswer.locator(":scope > summary").click();
+    await expect(quizAnswer.locator(".quiz-answer-content")).toBeVisible();
+    await expect(quizAnswer.locator(".evidence-inline")).toBeVisible();
     await expectNoPageOverflow(page);
     expect(externalRequests).toEqual([]);
   } finally {

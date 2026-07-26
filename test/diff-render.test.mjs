@@ -72,16 +72,31 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /class="copy-link"/u);
   assert.doesNotMatch(html, />Change theme</u);
   const header = html.match(/<header class="topbar">[\s\S]*?<\/header>/u)?.[0] ?? "";
-  assert.match(html, /<div class="pr-hero">[\s\S]*?<h1>/u);
+  assert.doesNotMatch(html, /class="pr-hero"/u);
+  assert.match(
+    html,
+    /<section class="synopsis" id="synopsis"[\s\S]*?<header class="synopsis-head">[\s\S]*?<h1 id="review-title">/u,
+  );
   assert.match(html, /rel="noreferrer noopener" target="_blank"/u);
   assert.doesNotMatch(header, /<h1>/u);
   assert.match(header, /<details class="toc-mobile">/u);
   assert.match(header, /class="toc-mobile-panel"/u);
   assert.match(header, /class="toc-icon"/u);
   assert.match(header, />example\/hope · PR #142</u);
-  const hero = html.match(/<div class="pr-hero">[\s\S]*?<\/div>\s*<section/u)?.[0] ?? "";
-  assert.doesNotMatch(hero, /example\/hope · PR #142/u);
-  assert.match(hero, /Commit bbbbbbbb/u);
+  const synopsisHead = html.match(
+    /<header class="synopsis-head">[\s\S]*?<\/header>/u,
+  )?.[0] ?? "";
+  assert.doesNotMatch(synopsisHead, /example\/hope · PR #142/u);
+  assert.doesNotMatch(synopsisHead, /<a /u);
+  assert.match(synopsisHead, /<dt>Commit<\/dt>\s*<dd><code>bbbbbbbb<\/code><\/dd>/u);
+  assert.match(
+    synopsisHead,
+    /<dt>Captured<\/dt>\s*<dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u,
+  );
+  assert.match(
+    html,
+    /<h2 class="sr-only" id="synopsis-title">Summary<\/h2>/u,
+  );
   assert.doesNotMatch(html, /class="pr-freshness"/u);
   assert.doesNotMatch(
     html,
@@ -97,7 +112,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /class="toc-synopsis"><a href="#synopsis"/u);
   assert.match(html, /\.section-heading h2::before/u);
   assert.match(html, /content: counter\(review-section\)/u);
-  assert.match(html, /<details class="evidence" open>/u);
+  assert.doesNotMatch(html, /<details class="evidence" open>/u);
   assert.match(html, /<pre class="syntax-code"><code aria-label=/u);
   assert.match(html, /class="syntax-token-[a-f0-9]{16}"/u);
   assert.match(html, /:root\[data-theme="dark"\] \.syntax-token-[a-f0-9]{16}/u);
@@ -115,10 +130,17 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   )?.[0] ?? "";
   assert.doesNotMatch(compactItem, /class="item-basis"/u);
   assert.doesNotMatch(compactItem, /The changed error reaches callers/u);
-  assert.match(compactItem, /<span class="status kind-verify">Verify<\/span>/u);
+  assert.match(
+    compactItem,
+    /<span class="status kind-verify">Verification needed<\/span>/u,
+  );
   assert.match(compactItem, /<span class="importance">Medium<\/span>/u);
   assert.match(html, /\.review-item-compact \.status::before/u);
   assert.match(html, /\.review-item-compact \.importance::before/u);
+  assert.match(
+    html,
+    /\.review-item:not\(\.review-item-compact\) \.item-head \{\s*margin-bottom: 8px;/u,
+  );
   assert.match(
     html,
     /\.review-items-compact > li \+ li \{ margin-top: [^;]+; \}/u,
@@ -145,11 +167,11 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<details class="scope-limit" id="scope-limit-1">/u);
   assert.match(
     html,
-    /<details class="review-section review-section-collapsible" id="evidence-and-scope">/u,
+    /<details class="review-section review-section-collapsible" id="evidence-and-scope" open>/u,
   );
   assert.doesNotMatch(
     html,
-    /<details class="review-section review-section-collapsible" id="evidence-and-scope" open/u,
+    /<details class="evidence-group(?: [^"]*)?" open>/u,
   );
   assert.ok((html.match(/<details class="evidence-group(?: [^"]*)?">/gu) ?? []).length >= 4);
   assert.equal(
@@ -187,7 +209,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, />source-[0-9]+</u);
   const synopsis = html.match(/<section class="synopsis"[\s\S]*?<\/section>/u)?.[0] ?? "";
   assert.ok(synopsis.indexOf("synopsis.why") === -1);
-  assert.ok(synopsis.indexOf("synopsis-review") > synopsis.indexOf("Why it matters"));
+  assert.ok(synopsis.indexOf("synopsis-review") > synopsis.indexOf("Impact"));
   assert.equal((synopsis.match(/>1 item</gu) ?? []).length, 0);
   assert.doesNotMatch(synopsis, /class="status summary-/u);
   assert.equal((synopsis.match(/Scope limited/gu) ?? []).length, 0);
@@ -206,10 +228,19 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   const rendered = await renderReview(review);
   const html = rendered.bytes.toString("utf8");
   assert.match(html, /<html lang="ko-KR" data-theme="dark">/u);
-  assert.match(html, /변경의 핵심/u);
-  assert.equal((html.match(/변경 요약/gu) ?? []).length, 3);
+  assert.match(html, /핵심 변경/u);
+  assert.equal((html.match(/>요약</gu) ?? []).length, 3);
+  assert.match(html, /<h2 class="sr-only" id="synopsis-title">요약<\/h2>/u);
+  assert.match(html, />목표</u);
+  assert.match(html, />AS-IS</u);
+  assert.match(html, />TO-BE</u);
+  assert.match(html, />영향</u);
   assert.doesNotMatch(html, /한눈에 보기/u);
-  assert.match(html, /커밋 bbbbbbbb/u);
+  assert.match(html, /<dt>커밋<\/dt>\s*<dd><code>bbbbbbbb<\/code><\/dd>/u);
+  assert.match(
+    html,
+    /<dt>수집 시각<\/dt>\s*<dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u,
+  );
   assert.doesNotMatch(html, /class="review-result/u);
   assert.doesNotMatch(html, /class="review-count/u);
   assert.match(html, /2026-07-23 00:00 UTC/u);
@@ -231,6 +262,56 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.doesNotMatch(html, /class="language-badge"/u);
   assert.doesNotMatch(html, />modified</u);
   assert.doesNotMatch(html, />explained</u);
+});
+
+test("quiz responses stay visually unlabeled and separate from the answer", async () => {
+  const snapshot = makeSnapshot({ locale: "ko-KR" });
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.quiz = Array.from({ length: 3 }, (_, index) => ({
+    answer: `마지막 오류가 호출자에게 전달됩니다. ${index + 1}`,
+    evidence: [{
+      endLine: 4,
+      sourceId: "source-3",
+      startLine: 2,
+    }],
+    question: `모든 재시도가 실패하면 어떤 오류가 전달되나요? ${index + 1}`,
+  }));
+  const review = validateAnalysis(analysis, snapshot, { runId });
+  const html = (await renderReview(review)).bytes.toString("utf8");
+
+  assert.equal((html.match(/<details class="quiz-question"/gu) ?? []).length, 3);
+  assert.equal((html.match(/<textarea/gu) ?? []).length, 3);
+  assert.equal((html.match(/class="quiz-answer"/gu) ?? []).length, 3);
+  assert.equal((html.match(/>답과 근거 보기<\/summary>/gu) ?? []).length, 3);
+  assert.match(
+    html,
+    /<label class="sr-only" id="quiz-1-response-label" for="quiz-1-response">이해 확인 답변<\/label>/u,
+  );
+  assert.match(
+    html,
+    /<summary id="quiz-1-question">[\s\S]*?<\/summary>[\s\S]*?<textarea[\s\S]*?aria-labelledby="quiz-1-question quiz-1-response-label"[\s\S]*?id="quiz-1-response"/u,
+  );
+  assert.match(
+    html,
+    /placeholder="답을 먼저 적어보세요\. 입력 내용은 저장되지 않습니다\."/u,
+  );
+  assert.doesNotMatch(html, /<label[^>]*>[^<]*(?:내 생각|선택)/u);
+  assert.equal((html.match(/class="evidence evidence-inline"/gu) ?? []).length, 3);
+  assert.match(
+    html,
+    /aria-label="모든 재시도가 실패하면 어떤 오류가 전달되나요\? 1 · 답과 근거 보기"/u,
+  );
+  assert.match(html, /\.quiz textarea,[\s\S]*?\.quiz-answer > summary \{[\s\S]*?display: none !important;/u);
+  assert.match(
+    html,
+    /\.quiz-question > \.quiz-workspace,[\s\S]*?\.quiz-answer > \.quiz-answer-content \{[\s\S]*?display: block !important;/u,
+  );
+  assert.doesNotMatch(
+    html.match(/<details class="quiz-answer">[\s\S]*?<\/details>/u)?.[0] ?? "",
+    /<details class="evidence">/u,
+  );
+  assert.doesNotMatch(html, /<details class="quiz-question"[^>]* open/u);
+  assert.doesNotMatch(html, /<details class="quiz-answer"[^>]* open/u);
 });
 
 test("the synopsis shows top mixed-kind items without a dashboard summary", async () => {

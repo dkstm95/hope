@@ -108,17 +108,22 @@ These statements are not the same:
 ## First screen
 
 The first screen gives the shape of the change and its limits in about 30
-seconds. Show information in this order:
+seconds. Its summary card starts with the pull request title, reviewed head
+commit, and capture time. The capture time records when Hope captured the pull
+request inputs. It is not the commit date or HTML creation time. Follow that
+identity with information in this order:
 
-1. **Change purpose** — the result the change is trying to create.
-2. **Core change** — a short previous and new explanation.
-3. **Why it matters** — the effect on a person, caller, system, process, or
+1. **Goal** — the result the change is trying to create.
+2. **AS-IS and TO-BE** — a short previous and new explanation.
+3. **Impact** — the effect on a person, caller, system, process, or
    data.
 4. **Review items** — the top one to three items, or a clear empty result.
-5. **Known scope limits** — each material effect, only when at least one exists.
+5. **Review limits** — each material effect, only when at least one exists.
 
-The first screen is a short synopsis. The main explanation lives in **Core
-change**. Group long lists and link to their full explanation.
+The first screen is a short synopsis. Do not show a separate visible
+**Summary** heading above the pull request title. Keep **Summary** as the table
+of contents label and as an accessible section name. The main explanation
+lives in **Core change**. Group long lists and link to their full explanation.
 
 Show repository and pull request identity once in the product bar. Do not
 repeat it under the artifact title. Do not add a representative status, total,
@@ -148,15 +153,15 @@ help this change.
 
 | Order | Section | Show when |
 | --- | --- | --- |
-| 1 | Background for understanding | Existing behavior, terms, or components are needed. |
+| 1 | Background | Existing behavior, terms, or components are needed. |
 | 2 | Core change | Always. |
-| 3 | Explore the behavior | A flow, branch, state change, comparison, or experiment helps. |
-| 4 | Follow the code | Selected implementation detail adds useful understanding. |
-| 5 | Judge and verify | At least one actionable review item exists. |
+| 3 | Behavior flow | A flow, branch, state change, comparison, or experiment helps. |
+| 4 | Code flow | Selected implementation detail adds useful understanding. |
+| 5 | Review items | At least one actionable review item exists. |
 | 6 | Check understanding | Prediction questions add learning value. |
-| 7 | Evidence and checked scope | Always. |
+| 7 | Evidence and scope | Always. |
 
-### Background for understanding
+### Background
 
 Explain only the existing behavior, ideas, and components needed for this
 change. Do not teach the whole system.
@@ -166,19 +171,19 @@ change. Do not teach the whole system.
 Explain the purpose, previous state, new state, affected people or systems, and
 important result. Lead with behavior or practical effect, not file names.
 
-### Explore the behavior
+### Behavior flow
 
 Explain behavior before code. Use a flow, conditions and results, state change,
 comparison, or small experiment only when it makes the result easier to
 predict.
 
-### Follow the code
+### Code flow
 
 Explain code in the order that creates understanding, not file-name or diff
 order. Show only the excerpts needed for each step. Do not repeat the full
 diff.
 
-### Judge and verify
+### Review items
 
 Show actionable review items. State what is known, why it matters, the next
 step, the closing condition, and the evidence. Avoid vague warnings.
@@ -189,17 +194,30 @@ Ask the reader to predict behavior, preserve an important condition, or find a
 failure case. Do not ask for names, paths, or copied sentences. The quiz is not
 a merge gate.
 
-### Evidence and checked scope
+Each question uses a two-step self-check:
+
+1. Opening the question shows an optional response box. Its placeholder gives
+   the prompt, so the interface does not repeat a visible label such as **My
+   answer** or **Selection**. The box still has an accessible name.
+2. A separate **Show answer and evidence** disclosure reveals the answer,
+   explanation, and supporting evidence.
+
+The response stays only in the open document. Hope does not submit or persist
+it, and print output omits it. The reader can reveal the answer without typing
+or meeting a minimum length.
+
+### Evidence and scope
 
 Show the exact code snapshot, captured supporting sources, checked files,
 material sources not checked, and resulting limits. Important evidence also
 stays beside the claim it supports. This section is an index, not the only
 evidence location.
 
-Treat this dense index as an appendix. The section and each source group,
-context check, scope limit, checked-file group, and artifact-detail group start
-closed and can be opened independently. A direct link opens the controls needed
-to reveal its target.
+Treat this dense index as an appendix. Keep the section open initially so its
+available groups are visible without another action. Each source group, context
+check, scope limit, checked-file group, and artifact-detail group starts closed
+and can be opened independently. A direct link opens the controls needed to
+reveal its target.
 
 Do not list a changed file once as a captured patch and again as a checked
 file. Join file sources to the changed-file row by stable file ID. Keep pull
@@ -262,7 +280,7 @@ Derive the review status in this order:
 ```text
 At least one Resolve item   -> Action needed
 Else, at least one Decide   -> Decision needed
-Else, at least one Verify   -> More verification needed
+Else, at least one Verify   -> Verification needed
 No items                    -> No important item found in the checked scope
 ```
 
@@ -411,7 +429,7 @@ sequence view for ordered interaction, and a component map for structure. A
 visual clarifies prose; it does not decorate the page.
 
 The review may contain one optional microworld as a visually separate **Try
-it** block inside **Explore the behavior**.
+it** block inside **Behavior flow**.
 
 Use a microworld when changing an input, condition, or state helps the reader
 predict the result. State what evidence grounds it, what it simplifies, and
@@ -423,7 +441,9 @@ artifact. It needs its own isolated execution boundary.
 
 Use one optional quiz with three to five evidence-backed questions only when
 prediction adds value. Give each answer a self-check explanation and evidence
-link. Do not add an aggregate score or pass threshold.
+link. Keep the reader's optional response separate from the answer, and reveal
+the answer only through its own disclosure. Do not add an aggregate score,
+pass threshold, or forced response.
 
 ## Optional verification
 

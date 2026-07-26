@@ -75,10 +75,14 @@ function trustedCodeUrl(review, evidence) {
 
 function accessibleEvidenceLabel(context, count, dictionary) {
   const evidence = `${label(dictionary, "common.evidence")} · ${count}`;
+  return accessibleControlLabel(context, evidence);
+}
+
+function accessibleControlLabel(context, action) {
   const normalized = String(context ?? "").replace(/\s+/gu, " ").trim();
-  if (!normalized) return evidence;
+  if (!normalized) return action;
   const shortened = [...normalized].slice(0, 160).join("");
-  return `${shortened}${shortened.length < normalized.length ? "…" : ""} · ${evidence}`;
+  return `${shortened}${shortened.length < normalized.length ? "…" : ""} · ${action}`;
 }
 
 function evidenceTarget(evidence) {
@@ -91,42 +95,46 @@ function evidenceBlock(
   dictionary,
   review,
   codeHighlighter,
-  { context = "", open = false } = {},
+  { collapsible = true, context = "" } = {},
 ) {
   if (items.length === 0) return "";
-  return `<details class="evidence"${open ? " open" : ""}>
-    <summary aria-label="${html(accessibleEvidenceLabel(context, items.length, dictionary))}">${html(label(dictionary, "common.evidence"))} · ${items.length}</summary>
-    <div class="evidence-list">
-      ${items.map((item) => {
-        let seen = evidenceOccurrences.get(codeHighlighter);
-        if (!seen) {
-          seen = new Set();
-          evidenceOccurrences.set(codeHighlighter, seen);
-        }
-        const target = evidenceTarget(item);
-        const url = trustedCodeUrl(review, item);
-        const title = sourceTitle(item, dictionary);
-        if (seen.has(target)) {
-          return `<article class="evidence-reference">
-            <a href="#${target}">${html(title)}</a>
-          </article>`;
-        }
-        seen.add(target);
-        const codeSource = ["after-file", "before-file", "patch"].includes(item.sourceKind);
-        return `<article class="evidence-item" id="${target}">
-          <div class="evidence-meta">
-            ${url
-              ? `<a href="${html(url)}" rel="noreferrer noopener" target="_blank">${html(title)}</a>`
-              : `<span>${html(title)}</span>`}
-          </div>
-          <pre class="${codeSource ? "syntax-code" : "source-text"}"><code${codeSource
-            ? ` aria-label="${html(item.excerpt)}"`
-            : ""}>${codeSource
-            ? codeHighlighter.render(item)
-            : html(item.excerpt)}</code></pre>
+  const content = `<div class="evidence-list">
+    ${items.map((item) => {
+      let seen = evidenceOccurrences.get(codeHighlighter);
+      if (!seen) {
+        seen = new Set();
+        evidenceOccurrences.set(codeHighlighter, seen);
+      }
+      const target = evidenceTarget(item);
+      const url = trustedCodeUrl(review, item);
+      const title = sourceTitle(item, dictionary);
+      if (seen.has(target)) {
+        return `<article class="evidence-reference">
+          <a href="#${target}">${html(title)}</a>
         </article>`;
-      }).join("")}
-    </div>
+      }
+      seen.add(target);
+      const codeSource = ["after-file", "before-file", "patch"].includes(item.sourceKind);
+      return `<article class="evidence-item" id="${target}">
+        <div class="evidence-meta">
+          ${url
+            ? `<a href="${html(url)}" rel="noreferrer noopener" target="_blank">${html(title)}</a>`
+            : `<span>${html(title)}</span>`}
+        </div>
+        <pre class="${codeSource ? "syntax-code" : "source-text"}"><code${codeSource
+          ? ` aria-label="${html(item.excerpt)}"`
+          : ""}>${codeSource
+          ? codeHighlighter.render(item)
+          : html(item.excerpt)}</code></pre>
+      </article>`;
+    }).join("")}
+  </div>`;
+  if (!collapsible) {
+    return `<div class="evidence evidence-inline" role="group" aria-label="${html(label(dictionary, "common.evidence"))}">${content}</div>`;
+  }
+  return `<details class="evidence">
+    <summary aria-label="${html(accessibleEvidenceLabel(context, items.length, dictionary))}">${html(label(dictionary, "common.evidence"))} · ${items.length}</summary>
+    ${content}
   </details>`;
 }
 
@@ -136,7 +144,6 @@ function claimBlock(
   review,
   codeHighlighter,
   className = "",
-  { evidenceOpen = false } = {},
 ) {
   return `<div class="claim ${html(className)}">
     <p>${userText(claim.text)}</p>
@@ -147,7 +154,7 @@ function claimBlock(
         dictionary,
         review,
         codeHighlighter,
-        { context: claim.text, open: evidenceOpen },
+        { context: claim.text },
       )}
     </div>
   </div>`;
@@ -158,11 +165,10 @@ function titledClaim(
   dictionary,
   review,
   codeHighlighter,
-  { evidenceOpen = false } = {},
 ) {
   return `<article class="explanation-step">
     <h3>${userText(item.title)}</h3>
-    ${claimBlock(item, dictionary, review, codeHighlighter, "", { evidenceOpen })}
+    ${claimBlock(item, dictionary, review, codeHighlighter)}
   </article>`;
 }
 
@@ -231,8 +237,8 @@ function section({ id, title, content }) {
   </section>`;
 }
 
-function collapsibleSection({ id, title, content }) {
-  return `<details class="review-section review-section-collapsible" id="${html(id)}">
+function collapsibleSection({ id, title, content, initiallyOpen = false }) {
+  return `<details class="review-section review-section-collapsible" id="${html(id)}"${initiallyOpen ? " open" : ""}>
     <summary class="section-heading">
       <h2>${html(title)}</h2>
     </summary>
@@ -291,16 +297,27 @@ function contextCheck(
   </details>`;
 }
 
-function synopsis(review, dictionary, codeHighlighter) {
+function synopsis(review, dictionary, codeHighlighter, { title }) {
   const visibleItems = review.reviewItems.slice(0, 3);
   const hiddenItems = review.reviewItems.length - visibleItems.length;
   const materialLimits = review.limits.filter((limit) => limit.material);
   const visibleLimits = materialLimits.slice(0, 3);
   const hiddenLimits = materialLimits.length - visibleLimits.length;
   return `<section class="synopsis" id="synopsis" aria-labelledby="synopsis-title">
-    <div class="synopsis-head">
-      <h2 id="synopsis-title">${html(label(dictionary, "section.synopsis"))}</h2>
-    </div>
+    <header class="synopsis-head">
+      <h1 id="review-title">${userText(title)}</h1>
+      <dl class="synopsis-meta">
+        <div>
+          <dt>${html(label(dictionary, "artifact.head"))}</dt>
+          <dd><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></dd>
+        </div>
+        <div>
+          <dt>${html(label(dictionary, "artifact.capturedAt"))}</dt>
+          <dd><time datetime="${html(review.snapshot.capturedAt)}" title="${html(review.snapshot.capturedAt)}">${html(formatTimestamp(review.snapshot.capturedAt))}</time></dd>
+        </div>
+      </dl>
+    </header>
+    <h2 class="sr-only" id="synopsis-title">${html(label(dictionary, "section.synopsis"))}</h2>
     <div class="synopsis-grid">
       <div class="synopsis-row">
         <h3>${html(label(dictionary, "synopsis.purpose"))}</h3>
@@ -608,6 +625,7 @@ function evidenceSection(review, dictionary, codeHighlighter) {
         </dl>
       </details>`,
     id: "evidence-and-scope",
+    initiallyOpen: true,
     title: label(dictionary, "section.evidence"),
   });
 }
@@ -678,12 +696,11 @@ function buildSections(review, dictionary, codeHighlighter) {
     sections.push({
       html: section({
         content: `<ol class="code-step-list">${review.codeSteps.map(
-          (item, index) => `<li>${titledClaim(
+          (item) => `<li>${titledClaim(
             item,
             dictionary,
             review,
             codeHighlighter,
-            { evidenceOpen: index === 0 },
           )}</li>`,
         ).join("")}</ol>`,
         id: "follow-code",
@@ -714,12 +731,29 @@ function buildSections(review, dictionary, codeHighlighter) {
   if (review.quiz.length > 0) {
     sections.push({
       html: section({
-        content: `<div class="quiz">${review.quiz.map((item) => `<details id="${html(item.id)}">
-          <summary>${userText(item.question)}</summary>
-          <p>${userText(item.answer)}</p>
-          ${evidenceBlock(item.evidence, dictionary, review, codeHighlighter, {
-            context: item.question,
-          })}
+        content: `<div class="quiz">${review.quiz.map((item) => `<details class="quiz-question" id="${html(item.id)}">
+          <summary id="${html(`${item.id}-question`)}">${userText(item.question)}</summary>
+          <div class="quiz-workspace">
+            <label class="sr-only" id="${html(`${item.id}-response-label`)}" for="${html(`${item.id}-response`)}">${html(label(dictionary, "quiz.responseLabel"))}</label>
+            <textarea
+              aria-labelledby="${html(`${item.id}-question`)} ${html(`${item.id}-response-label`)}"
+              id="${html(`${item.id}-response`)}"
+              placeholder="${html(label(dictionary, "quiz.responsePlaceholder"))}"
+              rows="3"></textarea>
+            <details class="quiz-answer">
+              <summary aria-label="${html(accessibleControlLabel(
+                item.question,
+                label(dictionary, "quiz.showAnswer"),
+              ))}">${html(label(dictionary, "quiz.showAnswer"))}</summary>
+              <div class="quiz-answer-content">
+                <p>${userText(item.answer)}</p>
+                ${evidenceBlock(item.evidence, dictionary, review, codeHighlighter, {
+                  collapsible: false,
+                  context: item.question,
+                })}
+              </div>
+            </details>
+          </div>
         </details>`).join("")}</div>`,
         id: "quiz",
         title: label(dictionary, "section.quiz"),
@@ -855,6 +889,7 @@ a {
   outline-offset: 3px;
 }
 button,
+textarea,
 summary { font: inherit; }
 button { color: inherit; }
 
@@ -920,33 +955,6 @@ button { color: inherit; }
   align-items: center;
   gap: ${space2}px;
 }
-.pr-hero {
-  margin-bottom: ${space4}px;
-}
-.pr-hero h1 {
-  margin: 0;
-  font-size: ${widePageTitle.fontSize}px;
-  line-height: ${widePageTitle.lineHeight};
-  overflow-wrap: anywhere;
-}
-.pr-hero h1 a {
-  color: var(--text);
-  text-decoration: none;
-}
-.pr-hero h1 a:hover,
-.pr-hero h1 a:focus-visible {
-  color: var(--accent);
-  text-decoration: underline;
-}
-.pr-target {
-  margin-top: ${space2}px;
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-  font-family: "Hope Code", ui-monospace, monospace;
-  font-weight: 400;
-}
-
 .theme-button {
   border: 1px solid var(--component-border);
   border-radius: ${space2}px;
@@ -1031,10 +1039,42 @@ button { color: inherit; }
   padding-bottom: ${space3}px;
   border-bottom: 1px solid var(--border);
 }
-.synopsis h2 {
+.synopsis-head h1 {
+  min-width: 0;
   margin: 0;
-  font-size: ${narrowSection.fontSize}px;
-  line-height: ${narrowSection.lineHeight};
+  font-size: ${widePageTitle.fontSize}px;
+  line-height: ${widePageTitle.lineHeight};
+  overflow-wrap: anywhere;
+}
+.synopsis-meta {
+  display: flex;
+  margin-top: ${space2}px;
+  color: var(--muted);
+  flex-wrap: wrap;
+  gap: ${space1}px ${space2}px;
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  line-height: ${TYPE.supporting.wide.lineHeight};
+}
+.synopsis-meta > div {
+  display: inline-flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: ${space1}px;
+  white-space: nowrap;
+}
+.synopsis-meta > div + div::before {
+  margin-right: ${space1}px;
+  content: "·";
+}
+.synopsis-meta dt {
+  font-weight: 500;
+}
+.synopsis-meta dd {
+  min-width: 0;
+  margin: 0;
+}
+.synopsis-meta code {
+  font-family: "Hope Code", ui-monospace, monospace;
 }
 .synopsis-grid > div > h3,
 .synopsis-review-head > h3,
@@ -1052,6 +1092,7 @@ button { color: inherit; }
   display: flex;
   flex-wrap: wrap;
   gap: ${space2}px;
+  align-items: center;
 }
 .status,
 .importance {
@@ -1116,9 +1157,9 @@ button { color: inherit; }
 }
 .claim-meta > .evidence[open] { flex: 1 1 100%; }
 .item-basis {
-  align-self: center;
   color: var(--muted);
   font-size: ${TYPE.micro.fontSize}px;
+  line-height: ${TYPE.micro.lineHeight};
   font-weight: 500;
 }
 
@@ -1406,6 +1447,9 @@ button { color: inherit; }
   border: 1px solid var(--component-border);
   background: var(--panel);
 }
+.review-item:not(.review-item-compact) .item-head {
+  margin-bottom: ${space2}px;
+}
 .review-item > p {
   max-width: ${LAYOUT.proseWidth};
   margin: ${space2}px 0;
@@ -1600,7 +1644,8 @@ td:first-child {
 .scope-limit > summary,
 .scope-limit-item > summary,
 .artifact-details > summary,
-.quiz > details > summary {
+.quiz > details > summary,
+.quiz-answer > summary {
   display: flex;
   min-height: 44px;
   gap: ${space1}px;
@@ -1616,7 +1661,8 @@ td:first-child {
 .scope-limit > summary::-webkit-details-marker,
 .scope-limit-item > summary::-webkit-details-marker,
 .artifact-details > summary::-webkit-details-marker,
-.quiz > details > summary::-webkit-details-marker {
+.quiz > details > summary::-webkit-details-marker,
+.quiz-answer > summary::-webkit-details-marker {
   display: none;
 }
 .evidence > summary::before,
@@ -1625,7 +1671,8 @@ td:first-child {
 .scope-limit > summary::before,
 .scope-limit-item > summary::before,
 .artifact-details > summary::before,
-.quiz > details > summary::before {
+.quiz > details > summary::before,
+.quiz-answer > summary::before {
   content: "›";
   display: inline-block;
   flex: 0 0 auto;
@@ -1637,7 +1684,8 @@ td:first-child {
 .scope-limit[open] > summary::before,
 .scope-limit-item[open] > summary::before,
 .artifact-details[open] > summary::before,
-.quiz > details[open] > summary::before {
+.quiz > details[open] > summary::before,
+.quiz-answer[open] > summary::before {
   transform: rotate(90deg);
 }
 .artifact-details dl {
@@ -1652,6 +1700,42 @@ td:first-child {
   padding: ${space3}px;
   border: 1px solid var(--component-border);
   background: var(--panel);
+}
+.quiz-workspace {
+  display: grid;
+  padding-top: ${space2}px;
+  gap: ${space2}px;
+}
+.quiz textarea {
+  width: 100%;
+  max-width: ${LAYOUT.proseWidth};
+  min-height: 96px;
+  padding: ${space2}px ${space3}px;
+  resize: vertical;
+  border: 1px solid var(--component-border);
+  background: var(--bg);
+  color: var(--text);
+  line-height: inherit;
+}
+.quiz textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.quiz-answer {
+  border-top: 1px solid var(--border);
+}
+.quiz-answer > summary {
+  color: var(--accent);
+}
+.quiz-answer-content {
+  padding: 0 0 ${space2}px ${space3}px;
+}
+.quiz-answer-content > p {
+  max-width: ${LAYOUT.proseWidth};
+  margin: 0 0 ${space2}px;
+}
+.quiz-answer-content > .evidence-inline {
+  margin-top: ${space2}px;
 }
 
 :focus-visible {
@@ -1727,11 +1811,11 @@ td:first-child {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .pr-hero h1 {
+  .synopsis-head h1 {
     font-size: ${narrowPageTitle.fontSize}px;
     line-height: ${narrowPageTitle.lineHeight};
   }
-  .pr-target {
+  .synopsis-meta {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
     line-height: ${TYPE.supporting.narrow.lineHeight};
   }
@@ -1859,7 +1943,8 @@ ${syntaxStyles}
   .main { max-width: none; }
   .review-section,
   .review-item,
-  .evidence-item { break-inside: avoid; }
+  .evidence-item,
+  .quiz-question { break-inside: avoid; }
   .review-section-collapsible > .section-content,
   .evidence-group > .evidence-group-content,
   .context-check > .disclosure-content,
@@ -1867,6 +1952,18 @@ ${syntaxStyles}
   .scope-limit-item > .scope-limit-item-content,
   .artifact-details > dl {
     display: block !important;
+  }
+  .quiz-question > .quiz-workspace,
+  .quiz-answer > .quiz-answer-content {
+    display: block !important;
+  }
+  .quiz-question::details-content,
+  .quiz-answer::details-content {
+    content-visibility: visible;
+  }
+  .quiz textarea,
+  .quiz-answer > summary {
+    display: none !important;
   }
   a {
     color: inherit;
@@ -1892,7 +1989,6 @@ export async function renderReview(review, { fonts } = {}) {
   const codeHighlighter = await createCodeHighlighter();
   const script = clientScript(dictionary);
   const sections = buildSections(review, dictionary, codeHighlighter);
-  const synopsisHtml = synopsis(review, dictionary, codeHighlighter);
   const styles = css(
     Object.fromEntries(Object.entries(fontBytes).map(
       ([name, bytes]) => [name, bytes.toString("base64")],
@@ -1903,6 +1999,7 @@ export async function renderReview(review, { fonts } = {}) {
   const { owner, name } = review.snapshot.repository;
   const prUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
     + `/pull/${review.snapshot.pullRequest.number}`;
+  const synopsisHtml = synopsis(review, dictionary, codeHighlighter, { title });
   const theme = review.snapshot.settings.theme;
   const themeAttribute = theme === "system" ? "" : ` data-theme="${html(theme)}"`;
   const toc = `<div class="toc-synopsis"><a href="#synopsis">${html(label(dictionary, "section.synopsis"))}</a></div>
@@ -1950,10 +2047,6 @@ export async function renderReview(review, { fonts } = {}) {
   </header>
   <div class="layout">
     <main class="main" id="review">
-      <div class="pr-hero">
-        <h1><a href="${html(prUrl)}" rel="noreferrer noopener" target="_blank">${userText(title)}</a></h1>
-        <div class="pr-target">${html(label(dictionary, "artifact.head"))} ${html(review.snapshot.snapshot.head.slice(0, 8))} · <time datetime="${html(review.snapshot.capturedAt)}" title="${html(review.snapshot.capturedAt)}">${html(formatTimestamp(review.snapshot.capturedAt))}</time></div>
-      </div>
       ${synopsisHtml}
       ${sections.map((item) => item.html).join("")}
     </main>
