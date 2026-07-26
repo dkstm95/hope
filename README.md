@@ -64,15 +64,15 @@ $hope:diff https://github.com/owner/repository/pull/123
 
 <p align="center">
   <img
-    src="assets/readme/hope-diff-playwright-41939.png"
-    alt="Hope Diff result for Microsoft Playwright pull request 41939"
+    src="assets/readme/hope-diff-light-horizontal.png"
+    alt="Hope Diff result in light mode showing the summary, behavior flow, code flow, review items, and comprehension prompts"
   >
 </p>
 
 <p align="center">
   <img
-    src="assets/readme/hope-diff-playwright-41939-details.png"
-    alt="Behavior flow, code flow, and a review item in a Hope Diff result"
+    src="assets/readme/hope-diff-dark-horizontal.png"
+    alt="Hope Diff result in dark mode showing the summary, behavior flow, code flow, review items, and comprehension prompts"
   >
 </p>
 
