@@ -64,15 +64,15 @@ $hope:diff https://github.com/owner/repository/pull/123
 
 <p align="center">
   <img
-    src="assets/readme/hope-diff-playwright-41939.png"
-    alt="Microsoft Playwright PR 41939를 분석한 Hope Diff 결과"
+    src="assets/readme/hope-diff-light-horizontal.png"
+    alt="요약, 동작 흐름, 코드 흐름, 검토 항목, 이해 확인 문항을 보여주는 라이트 모드 Hope Diff 결과"
   >
 </p>
 
 <p align="center">
   <img
-    src="assets/readme/hope-diff-playwright-41939-details.png"
-    alt="Hope Diff 결과의 동작 흐름, 코드 흐름, 검토 항목"
+    src="assets/readme/hope-diff-dark-horizontal.png"
+    alt="요약, 동작 흐름, 코드 흐름, 검토 항목, 이해 확인 문항을 보여주는 다크 모드 Hope Diff 결과"
   >
 </p>
 
