@@ -21,8 +21,9 @@
 Hope 플러그인은 Codex와 Claude Code에 설치할 수 있습니다.
 
 다음 항목들이 필요합니다.
+
 - Node.js 20 이상
-- Diff 사용 시 [GitHub CLI](https://cli.github.com/) 가 필요합니다. 필요하다면 먼저 `gh auth login`을 실행하세요.
+- Diff를 사용하려면 인증된 [GitHub CLI](https://cli.github.com/)가 필요합니다. 필요하다면 먼저 `gh auth login`을 실행하세요.
 
 가장 간단한 방법은 Codex나 Claude Code에 다음과 같이 요청하는 것입니다.
 
@@ -55,8 +56,7 @@ Diff는 코드 변경을 이해하도록 돕고, 사용자의 판단에 필요�
 
 결과는 하나의 로컬 HTML 파일로 생성됩니다.
 
-> URL 없이 실행하면 대상 저장소에서 사용자가 만든 열린 PR을 찾습니다.
-> 특정 PR을 고르려면 GitHub PR URL을 함께 입력하세요.
+> URL 없이 실행하면 대상 저장소에서 사용자가 만든 열린 PR을 찾습니다. 특정 PR을 고르려면 GitHub PR URL을 함께 입력하세요.
 
 ```text
 $hope:diff https://github.com/owner/repository/pull/123
@@ -86,7 +86,7 @@ Diff는 PR 설명, 커밋 제목, 수집할 수 있는 변경 파일의 본문�
 
 ### Settings
 
-Hope의 사용할 언어와 테마 설정을 저장할 수 있습니다.
+Hope에서 사용할 언어와 테마 설정을 저장할 수 있습니다.
 
 저장된 설정이 없으면 Hope는 현재 도구나 운영체제의 언어를 따르고 시스템 테마를 사용합니다.
 
