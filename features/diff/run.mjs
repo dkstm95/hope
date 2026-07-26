@@ -27,6 +27,35 @@ const FINALIZATION_LEASE_TTL_MS = 60 * 60 * 1000;
 const FINALIZATION_HEARTBEAT_MS = 60 * 1000;
 const SUPPORTED_RUN_VERSIONS = new Set([LEGACY_RUN_VERSION, RUN_VERSION]);
 
+function planFileNames(manifest) {
+  const hasSnapshotFile = manifest.snapshotFile !== undefined;
+  const hasPagesFile = manifest.pagesFile !== undefined;
+  if (hasSnapshotFile !== hasPagesFile) {
+    throw new Error("Hope diff run plan pointers are incomplete");
+  }
+  if (!hasSnapshotFile) {
+    return {
+      pagesFile: "pages.json",
+      snapshotFile: "snapshot.json",
+    };
+  }
+  const expectedSnapshot = `snapshot.${manifest.snapshotDigest}.json`;
+  const expectedPages = `pages.${manifest.snapshotDigest}.json`;
+  if (
+    manifest.runVersion !== RUN_VERSION
+    || manifest.snapshotFile !== expectedSnapshot
+    || manifest.pagesFile !== expectedPages
+    || basename(manifest.snapshotFile) !== manifest.snapshotFile
+    || basename(manifest.pagesFile) !== manifest.pagesFile
+  ) {
+    throw new Error("Hope diff run plan pointers are unsafe");
+  }
+  return {
+    pagesFile: manifest.pagesFile,
+    snapshotFile: manifest.snapshotFile,
+  };
+}
+
 function parseFinalizationClaim(value) {
   let parsed;
   try {
@@ -90,8 +119,8 @@ async function replaceJson(path, value) {
   const temporary = `${path}.${process.pid}.${Date.now().toString(36)}.tmp`;
   await writeNewJson(temporary, value);
   try {
+    if (process.platform !== "win32") await chmod(temporary, 0o600);
     await rename(temporary, path);
-    if (process.platform !== "win32") await chmod(path, 0o600);
   } catch (error) {
     await rm(temporary, { force: true }).catch(() => {});
     throw error;
@@ -171,6 +200,45 @@ async function readFinalizationClaim(path) {
   }
 }
 
+function finalizationClaimGeneration(name) {
+  if (name === FINALIZATION_CLAIM) return 0;
+  const match = /^\.finish\.lock\.([1-9][0-9]*)$/u.exec(name);
+  if (!match) return undefined;
+  const generation = Number(match[1]);
+  if (!Number.isSafeInteger(generation)) {
+    throw new Error("Hope diff finalization lease generation is unsafe");
+  }
+  return generation;
+}
+
+function finalizationClaimName(generation) {
+  return generation === 0
+    ? FINALIZATION_CLAIM
+    : `${FINALIZATION_CLAIM}.${generation}`;
+}
+
+async function readFinalizationClaims(runPath) {
+  const claims = [];
+  for (const name of await readdir(runPath)) {
+    const generation = finalizationClaimGeneration(name);
+    if (generation === undefined) continue;
+    const path = join(runPath, name);
+    claims.push({
+      ...await readFinalizationClaim(path),
+      generation,
+      path,
+    });
+  }
+  claims.sort((left, right) => left.generation - right.generation);
+  return claims;
+}
+
+function claimExistsError() {
+  const error = new Error("This Hope diff run already has a finalization claim");
+  error.code = "EEXIST";
+  return error;
+}
+
 export async function claimDiffRunFinalization(run, {
   clearHeartbeat = clearInterval,
   clock = () => new Date(),
@@ -178,8 +246,19 @@ export async function claimDiffRunFinalization(run, {
   scheduleHeartbeat = setInterval,
   unlinkFile = unlink,
 } = {}) {
-  const path = join(run.path, FINALIZATION_CLAIM);
   const token = randomBytes(16).toString("hex");
+  const observedClaims = await readFinalizationClaims(run.path);
+  const observed = observedClaims.at(-1);
+  const observedAt = clock();
+  const observedStale = observed?.reclaimable
+    && Number.isFinite(observedAt.getTime())
+    && observedAt.getTime() - observed.mtimeMs >= FINALIZATION_LEASE_TTL_MS;
+  if (observed && !observedStale) throw claimExistsError();
+  if (observed?.generation === Number.MAX_SAFE_INTEGER) {
+    throw new Error("Hope diff finalization lease generation is exhausted");
+  }
+  const generation = observed ? observed.generation + 1 : 0;
+  const path = join(run.path, finalizationClaimName(generation));
   let created = false;
   let handle;
   try {
@@ -199,6 +278,17 @@ export async function claimDiffRunFinalization(run, {
     if (created) await unlinkFile(path).catch(() => {});
     throw error;
   }
+
+  const currentClaim = async () => {
+    const claims = await readFinalizationClaims(run.path);
+    return claims.at(-1);
+  };
+  const owns = (claim) => (
+    claim?.valid
+    && claim.generation === generation
+    && claim.runId === run.manifest.runId
+    && claim.token === token
+  );
   let heartbeatError;
   let heartbeatInFlight;
   const assertOwned = async () => {
@@ -207,12 +297,8 @@ export async function claimDiffRunFinalization(run, {
         cause: heartbeatError,
       });
     }
-    const claim = await readFinalizationClaim(path);
-    if (
-      !claim?.valid
-      || claim.runId !== run.manifest.runId
-      || claim.token !== token
-    ) {
+    const claim = await currentClaim();
+    if (!owns(claim)) {
       throw new Error("Hope diff finalization lease was lost");
     }
     const now = clock();
@@ -256,6 +342,7 @@ export async function claimDiffRunFinalization(run, {
           !value
           || value.runId !== run.manifest.runId
           || value.token !== token
+          || !owns(await currentClaim())
         ) {
           throw new Error("Hope diff finalization lease was lost");
         }
@@ -287,13 +374,22 @@ export async function claimDiffRunFinalization(run, {
   const release = async () => {
     clearHeartbeat(timer);
     await heartbeatInFlight?.catch(() => {});
-    const claim = await readFinalizationClaim(path);
-    if (
-      claim?.valid
-      && claim.runId === run.manifest.runId
-      && claim.token === token
-    ) {
-      await unlinkFile(path).catch((error) => {
+    const claims = await readFinalizationClaims(run.path).catch((error) => {
+      if (error?.code === "ENOENT") return [];
+      throw error;
+    });
+    const current = claims.at(-1);
+    const now = clock();
+    const currentExpired = (
+      !Number.isFinite(now.getTime())
+      || now.getTime() - current?.mtimeMs >= FINALIZATION_LEASE_TTL_MS
+    );
+    if (!owns(current) || currentExpired) return;
+    // Older generations are immutable fencing records. Remove them first and
+    // the authoritative generation last, so a concurrent claimant can never
+    // mistake a partially released run for an unlocked one.
+    for (const claim of claims) {
+      await unlinkFile(claim.path).catch((error) => {
         if (error?.code !== "ENOENT") throw error;
       });
     }
@@ -538,6 +634,7 @@ function validRunResources(value) {
 
 export async function cleanupExpiredRuns({
   clock = () => new Date(),
+  onCleanupClaimed = async () => {},
   temporaryRoot,
 } = {}) {
   const root = await privateRunRoot({ temporaryRoot });
@@ -566,21 +663,15 @@ export async function cleanupExpiredRuns({
       let cleanupClaim;
       try {
         cleanupClaim = await claimDiffRunFinalization({ manifest, path });
-      } catch (error) {
-        if (error?.code !== "EEXIST") continue;
-        const claimPath = join(path, FINALIZATION_CLAIM);
-        const claim = await readFinalizationClaim(claimPath);
-        const stale = claim?.reclaimable
-          && now - claim.mtimeMs >= FINALIZATION_LEASE_TTL_MS;
-        if (!stale) continue;
-        await unlink(claimPath).catch(() => {});
-        try {
-          cleanupClaim = await claimDiffRunFinalization({ manifest, path });
-        } catch {
-          continue;
-        }
+      } catch {
+        continue;
       }
       try {
+        await onCleanupClaimed({ manifest, path });
+        // Cleanup can be suspended after it acquires a lease. Revalidate the
+        // authoritative generation immediately before the destructive step so
+        // a newer claimant fences the resumed cleanup process.
+        await cleanupClaim.renew();
         await rm(path, { recursive: true });
         removed.push(path);
       } finally {
@@ -597,6 +688,7 @@ export async function createDiffRun(snapshot, {
   clock = () => new Date(),
   outputPath,
   temporaryRoot,
+  writeJson = writeNewJson,
 } = {}) {
   await cleanupExpiredRuns({ clock, temporaryRoot });
   const root = await privateRunRoot({ temporaryRoot });
@@ -620,9 +712,12 @@ export async function createDiffRun(snapshot, {
     snapshotDigest: snapshot.digest,
   };
   try {
-    await writeNewJson(join(path, "snapshot.json"), snapshot);
-    await writeNewJson(join(path, "pages.json"), pages);
-    await writeNewJson(join(path, "run.json"), manifest);
+    // Establish ownership before writing any private source data. If the
+    // process is forcibly terminated during either later write, expiry cleanup
+    // can still verify and reclaim the incomplete run safely.
+    await writeJson(join(path, "run.json"), manifest);
+    await writeJson(join(path, "snapshot.json"), snapshot);
+    await writeJson(join(path, "pages.json"), pages);
   } catch (error) {
     await rm(path, { recursive: true, force: true }).catch(() => {});
     throw error;
@@ -667,12 +762,13 @@ export async function loadDiffRun(value, {
   ) {
     throw new Error("Hope diff run ownership does not match");
   }
+  const { pagesFile, snapshotFile } = planFileNames(manifest);
   let snapshot;
   let pages;
   if (inspectionPage === undefined) {
     [snapshot, pages] = await Promise.all([
-      readRunJson(join(path, "snapshot.json"), "snapshot"),
-      readRunJson(join(path, "pages.json"), "inspection pages"),
+      readRunJson(join(path, snapshotFile), "snapshot"),
+      readRunJson(join(path, pagesFile), "inspection pages"),
     ]);
     const snapshotValue = { ...snapshot };
     delete snapshotValue.digest;
@@ -680,7 +776,7 @@ export async function loadDiffRun(value, {
       throw new Error("Hope diff snapshot digest does not match the run");
     }
   } else {
-    pages = await readRunJson(join(path, "pages.json"), "inspection pages");
+    pages = await readRunJson(join(path, pagesFile), "inspection pages");
   }
   const resources = snapshot ? runResources(snapshot, pages) : manifest.resources;
   if (
@@ -737,6 +833,94 @@ export async function loadDiffRun(value, {
     resources,
     snapshot,
   };
+}
+
+export async function replaceDiffRunPlan(runValue, snapshot, {
+  expectedSnapshotDigest,
+  replaceManifest = replaceJson,
+  temporaryRoot,
+  writeJson = writeNewJson,
+} = {}) {
+  const runPath = typeof runValue === "string" ? runValue : runValue?.path;
+  if (typeof runPath !== "string") {
+    throw new TypeError("Hope diff plan replacement needs a run path");
+  }
+  const loaded = await loadDiffRun(runPath, { temporaryRoot });
+  if (loaded.manifest.runVersion !== RUN_VERSION) {
+    throw new Error("Only a current Hope diff run can replace its inspection plan");
+  }
+  let claim;
+  try {
+    claim = await claimDiffRunFinalization(loaded);
+  } catch (error) {
+    if (error?.code === "EEXIST") {
+      throw new Error("This Hope diff run is already being finalized");
+    }
+    throw error;
+  }
+  try {
+    const run = await loadDiffRun(runPath, { temporaryRoot });
+    const ready = (
+      run.manifest.phase === "prepared"
+      && run.manifest.deliveredPages.length === 0
+    ) || (
+      run.manifest.phase === "inspected"
+      && run.manifest.deliveredPages.length === run.manifest.pageCount
+    );
+    if (!ready || run.manifest.analysisAttempts !== 0) {
+      throw new Error("Hope can replace an inspection plan only before analysis starts");
+    }
+    if (
+      expectedSnapshotDigest !== undefined
+      && run.manifest.snapshotDigest !== expectedSnapshotDigest
+    ) {
+      throw new Error("Hope diff context changed while a new inspection plan was being prepared");
+    }
+    try {
+      await lstat(run.analysisPath);
+      throw new Error("Hope cannot replace an inspection plan after an analysis file exists");
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+    const snapshotValue = { ...snapshot };
+    delete snapshotValue.digest;
+    if (
+      typeof snapshot.digest !== "string"
+      || !/^[a-f0-9]{64}$/u.test(snapshot.digest)
+      || digestJson(snapshotValue) !== snapshot.digest
+    ) {
+      throw new Error("Hope cannot replace an inspection plan with an invalid snapshot digest");
+    }
+    if (snapshot.digest === run.manifest.snapshotDigest) {
+      throw new Error("Hope cannot replace an inspection plan with the current snapshot");
+    }
+
+    const pages = buildInspectionPages(snapshot);
+    const resources = runResources(snapshot, pages);
+    const snapshotFile = `snapshot.${snapshot.digest}.json`;
+    const pagesFile = `pages.${snapshot.digest}.json`;
+    const snapshotPath = join(run.path, snapshotFile);
+    const pagesPath = join(run.path, pagesFile);
+    await rm(snapshotPath, { force: true });
+    await rm(pagesPath, { force: true });
+    await writeJson(snapshotPath, snapshot);
+    await writeJson(pagesPath, pages);
+    await claim.renew();
+    // Generation files stay inert until this single atomic manifest swap.
+    await replaceManifest(run.manifestPath, {
+      ...run.manifest,
+      deliveredPages: [],
+      pageCount: pages.length,
+      pagesFile,
+      phase: "prepared",
+      resources,
+      snapshotDigest: snapshot.digest,
+      snapshotFile,
+    });
+    return await loadDiffRun(run.path, { temporaryRoot });
+  } finally {
+    await claim.release();
+  }
 }
 
 export async function inspectDiffRun(runPath, page, options = {}) {

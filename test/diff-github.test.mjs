@@ -6,18 +6,23 @@ import {
   parseGitHubPullRequestUrl,
   revalidateGitHubSnapshot,
 } from "../features/diff/github.mjs";
+import { LIMITS } from "../features/diff/constants.mjs";
 
 function response(value) {
   return { stdout: JSON.stringify(value) };
 }
 
 function fakeGitHub({
+  afterContent = "new",
+  beforeContent = "old",
   body = "Keep the real error.",
   commitMessage = "Keep the error\n\nBody",
   contentSize,
+  headFullName = "example/repo",
   incompletePatch = false,
   missingFiles = false,
   providerFile,
+  providerFiles,
   secretFile = false,
   title = "Keep the error",
 } = {}) {
@@ -28,23 +33,24 @@ function fakeGitHub({
     patch: incompletePatch ? undefined : "@@ -1 +1 @@\n-old\n+new",
     status: "modified",
   };
+  const changedFiles = providerFiles ?? [changedFile];
   return async (command, arguments_) => {
     assert.equal(command, "gh");
     assert.deepEqual(arguments_.slice(0, 3), ["api", "--hostname", "github.com"]);
     const path = arguments_.at(-1);
     if (path === "/repos/example/repo/pulls/1") {
       return response({
-        additions: 1,
+        additions: changedFiles.reduce((sum, file) => sum + file.additions, 0),
         base: {
           repo: { full_name: "example/repo" },
           sha: "a".repeat(40),
         },
         body,
-        changed_files: 1,
+        changed_files: changedFiles.length,
         commits: 1,
-        deletions: 1,
+        deletions: changedFiles.reduce((sum, file) => sum + file.deletions, 0),
         head: {
-          repo: { full_name: "example/repo" },
+          repo: { full_name: headFullName },
           sha: "b".repeat(40),
         },
         number: 1,
@@ -57,7 +63,7 @@ function fakeGitHub({
       return response({ merge_base_commit: { sha: "c".repeat(40) } });
     }
     if (path.includes("/pulls/1/files?")) {
-      return response(missingFiles ? [] : [changedFile]);
+      return response(missingFiles ? [] : changedFiles);
     }
     if (path.includes("/pulls/1/commits?")) {
       return response([{
@@ -66,7 +72,9 @@ function fakeGitHub({
       }]);
     }
     if (path.includes("/contents/")) {
-      const text = path.endsWith(`ref=${"a".repeat(40)}`) ? "old" : "new";
+      const text = path.endsWith(`ref=${"c".repeat(40)}`)
+        ? beforeContent
+        : afterContent;
       return response({
         content: Buffer.from(text).toString("base64"),
         encoding: "base64",
@@ -114,7 +122,35 @@ test("GitHub collection binds the exact snapshot and all changed files", async (
   assert.equal(snapshot.files[0].bodyState, "included");
   assert.equal(snapshot.files[0].sourceIds.length, 1);
   assert.equal(snapshot.snapshot.mergeBase, "c".repeat(40));
+  assert.deepEqual(snapshot.repository.base, {
+    name: "repo",
+    owner: "example",
+  });
+  assert.deepEqual(snapshot.repository.head, {
+    name: "repo",
+    owner: "example",
+  });
   assert.match(snapshot.digest, /^[a-f0-9]{64}$/u);
+});
+
+test("GitHub collection preserves a fork head repository identity", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    {
+      gh: fakeGitHub({ headFullName: "contributor/repo-fork" }),
+      locale: "en-US",
+      theme: "system",
+    },
+  );
+
+  assert.deepEqual(snapshot.repository.head, {
+    name: "repo-fork",
+    owner: "contributor",
+  });
+  assert.deepEqual(snapshot.repository.base, {
+    name: "repo",
+    owner: "example",
+  });
 });
 
 test("ordinary pull request metadata becomes model sources", async () => {
@@ -208,8 +244,21 @@ test("an incomplete patch falls back to exact before and after files", async () 
       theme: "system",
     },
   );
-  assert.equal(seen.filter((path) => path.includes("/contents/")).length, 2);
+  const contentRequests = seen.filter((path) => path.includes("/contents/"));
+  assert.deepEqual(
+    [...contentRequests].sort(),
+    [
+      `/repos/example/repo/contents/src/error.js?ref=${"b".repeat(40)}`,
+      `/repos/example/repo/contents/src/error.js?ref=${"c".repeat(40)}`,
+    ].sort(),
+  );
   assert.equal(snapshot.files[0].sourceIds.length, 2);
+  const beforeSource = snapshot.sources.find((source) => source.kind === "before-file");
+  const afterSource = snapshot.sources.find((source) => source.kind === "after-file");
+  assert.equal(beforeSource.revision, "c".repeat(40));
+  assert.equal(beforeSource.text, "old");
+  assert.equal(afterSource.revision, "b".repeat(40));
+  assert.equal(afterSource.text, "new");
 });
 
 test("independent GitHub collection requests start concurrently", async () => {
@@ -322,6 +371,138 @@ test("an oversized safe-text body becomes a visible metadata-only limit", async 
   assert.equal(snapshot.files[0].bodyState, "metadata-only");
   assert.equal(snapshot.files[0].bodyReasonKind, "safe-size-limit");
   assert.equal(snapshot.limits.at(-1).reasonKind, "safe-size-limit");
+});
+
+for (const [side, providerFile, sourceKind, revision] of [
+  [
+    "before",
+    {
+      additions: 0,
+      deletions: 1,
+      filename: "src/error.js",
+      status: "removed",
+    },
+    "before-file",
+    "c".repeat(40),
+  ],
+  [
+    "after",
+    {
+      additions: 1,
+      deletions: 0,
+      filename: "src/error.js",
+      status: "added",
+    },
+    "after-file",
+    "b".repeat(40),
+  ],
+]) {
+  test(`the ${side} fallback body at the safe-text boundary remains included`, async () => {
+    const snapshot = await collectGitHubPullRequest(
+      "https://github.com/example/repo/pull/1",
+      {
+        gh: fakeGitHub({
+          afterContent: "n".repeat(LIMITS.safeBodyBytes),
+          beforeContent: "o".repeat(LIMITS.safeBodyBytes),
+          providerFile,
+        }),
+        locale: "en-US",
+        theme: "system",
+      },
+    );
+
+    assert.equal(snapshot.files[0].bodyState, "included");
+    assert.equal(snapshot.files[0].sourceIds.length, 1);
+    const fileSource = snapshot.sources.find((source) => source.kind === sourceKind);
+    assert.equal(fileSource.revision, revision);
+  });
+}
+
+test("fallback bodies at the combined safe-text boundary remain included", async () => {
+  const halfLimit = LIMITS.safeBodyBytes / 2;
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    {
+      gh: fakeGitHub({
+        afterContent: "n".repeat(halfLimit),
+        beforeContent: "o".repeat(halfLimit),
+        incompletePatch: true,
+      }),
+      locale: "en-US",
+      theme: "system",
+    },
+  );
+
+  assert.equal(snapshot.files[0].bodyState, "included");
+  assert.equal(snapshot.files[0].sourceIds.length, 2);
+});
+
+test("fallback bodies over the combined safe-text limit become metadata-only", async () => {
+  const halfLimit = LIMITS.safeBodyBytes / 2;
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    {
+      gh: fakeGitHub({
+        afterContent: "n".repeat(halfLimit + 1),
+        beforeContent: "o".repeat(halfLimit),
+        incompletePatch: true,
+      }),
+      locale: "en-US",
+      theme: "system",
+    },
+  );
+
+  assert.equal(snapshot.files[0].bodyState, "metadata-only");
+  assert.deepEqual(snapshot.files[0].sourceIds, []);
+  assert.equal(snapshot.files[0].bodyReasonKind, "safe-size-limit");
+  assert.equal(snapshot.limits.at(-1).reasonKind, "safe-size-limit");
+});
+
+test("fallback body redaction takes precedence over the combined safe-text limit", async () => {
+  const halfLimit = LIMITS.safeBodyBytes / 2;
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    {
+      gh: fakeGitHub({
+        afterContent: "n".repeat(halfLimit),
+        beforeContent: `${"o".repeat(halfLimit)} ghp_${"A".repeat(24)}`,
+        incompletePatch: true,
+      }),
+      locale: "en-US",
+      theme: "system",
+    },
+  );
+
+  assert.equal(snapshot.files[0].bodyState, "redacted");
+  assert.deepEqual(snapshot.files[0].sourceIds, []);
+  assert.equal(snapshot.files[0].bodyReasonKind, "credential-pattern");
+  assert.equal(snapshot.limits.at(-1).reasonKind, "credential-pattern");
+});
+
+test("fallback metadata-only bodies still enforce the global safe-text limit", async () => {
+  const halfLimit = LIMITS.safeBodyBytes / 2;
+  const providerFiles = Array.from({ length: 3 }, (_, index) => ({
+    additions: 1,
+    deletions: 1,
+    filename: `src/error-${index + 1}.js`,
+    status: "modified",
+  }));
+
+  await assert.rejects(
+    collectGitHubPullRequest(
+      "https://github.com/example/repo/pull/1",
+      {
+        gh: fakeGitHub({
+          afterContent: "n".repeat(halfLimit + 1),
+          beforeContent: "o".repeat(halfLimit),
+          providerFiles,
+        }),
+        locale: "en-US",
+        theme: "system",
+      },
+    ),
+    new RegExp(`${LIMITS.safeBodyTotalBytes}-byte limit`, "u"),
+  );
 });
 
 test("a private path is redacted before Hope fetches its body", async () => {

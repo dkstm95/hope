@@ -10,9 +10,28 @@ import {
 import { digestJson } from "../features/diff/hash.mjs";
 import { renderReview } from "../features/diff/render.mjs";
 import { validateAnalysis } from "../features/diff/validate.mjs";
-import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
+import {
+  makeAnalysis,
+  makeSnapshot,
+  makeTeachingBehavior,
+} from "../test-support/diff-fixture.mjs";
 
 const runId = "3".repeat(32);
+
+function withLocaleSource(snapshot, localeSource) {
+  const { digest: _digest, ...value } = snapshot;
+  const updated = {
+    ...value,
+    settings: {
+      ...value.settings,
+      localeSource,
+    },
+  };
+  return Object.freeze({
+    ...updated,
+    digest: digestJson(updated),
+  });
+}
 
 test("rendering is byte-identical and keeps untrusted content inert", async () => {
   const snapshot = makeSnapshot({
@@ -115,6 +134,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /<details class="evidence" open>/u);
   assert.match(html, /<pre class="syntax-code"><code aria-label=/u);
   assert.match(html, /class="syntax-token-[a-f0-9]{16}"/u);
+  assert.doesNotMatch(html, /\/blob\/[^"]+\/src\/retry\.js#L/u);
   assert.match(html, /:root\[data-theme="dark"\] \.syntax-token-[a-f0-9]{16}/u);
   assert.doesNotMatch(html, /<span[^>]+style=/u);
   assert.match(html, /class="review-item kind-verify review-item-compact"/u);
@@ -251,7 +271,7 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(html, /관련 맥락/u);
   assert.match(html, /변경 파일/u);
   assert.match(html, /주요 설명·판단을 제한함/u);
-  assert.match(html, /변경 파일 밖의 기존 코드/u);
+  assert.match(html, /수집한 맥락 밖의 기존 코드/u);
   assert.match(html, /src\/retry\.js · 변경 조각 2–4/u);
   assert.match(html, /aria-label="라이트 모드로 전환"/u);
   assert.doesNotMatch(html, /aria-pressed=/u);
@@ -262,6 +282,39 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.doesNotMatch(html, /class="language-badge"/u);
   assert.doesNotMatch(html, />modified</u);
   assert.doesNotMatch(html, />explained</u);
+});
+
+test("the artifact visibly warns about an English or Korean locale fallback", async () => {
+  const cases = [
+    {
+      locale: "en-US",
+      warning:
+        "Hope could not resolve a supported language, so this review uses the default language.",
+    },
+    {
+      locale: "ko-KR",
+      warning:
+        "Hope가 지원되는 언어를 확인하지 못해 이 리뷰를 기본 언어로 표시합니다.",
+    },
+  ];
+  for (const { locale, warning } of cases) {
+    const snapshot = withLocaleSource(makeSnapshot({ locale }), "default");
+    const review = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
+    const html = (await renderReview(review)).bytes.toString("utf8");
+    assert.match(
+      html,
+      new RegExp(`<aside class="locale-warning" role="note">${warning}</aside>`, "u"),
+    );
+  }
+
+  const explicit = makeSnapshot();
+  const explicitReview = validateAnalysis(
+    makeAnalysis(explicit, runId),
+    explicit,
+    { runId },
+  );
+  const explicitHtml = (await renderReview(explicitReview)).bytes.toString("utf8");
+  assert.doesNotMatch(explicitHtml, /class="locale-warning"/u);
 });
 
 test("quiz responses stay visually unlabeled and separate from the answer", async () => {
@@ -422,6 +475,98 @@ test("only two to four brief behavior steps use the responsive flow", async () =
   assert.doesNotMatch(longHtml, /<ol class="flow flow-short">/u);
 });
 
+test("behavior renders a grounded visual and a separate fixed microworld safely", async () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.behavior = makeTeachingBehavior();
+  analysis.behavior.visual.title = "<img src=x onerror=alert(1)>";
+  analysis.behavior.microworld.instructions = "</script><script>alert(1)</script>";
+  const review = validateAnalysis(analysis, snapshot, { runId });
+  const html = (await renderReview(review)).bytes.toString("utf8");
+  const script = html.match(/<script>([\s\S]*?)<\/script>/u)?.[1] ?? "";
+
+  assert.match(
+    html,
+    /id="explore"[\s\S]*?class="behavior-visual visual-decision-table"/u,
+  );
+  assert.match(html, /<table class="decision-table">/u);
+  assert.match(html, />Case<\/th>/u);
+  assert.match(html, /class="microworld" data-microworld/u);
+  assert.match(html, /class="microworld-eyebrow">Try it<\/p>/u);
+  assert.match(
+    html,
+    /Explanation model only\. It does not run repository code or report a test result\./u,
+  );
+  assert.equal((html.match(/class="microworld-control"/gu) ?? []).length, 2);
+  assert.equal((html.match(/class="microworld-scenario"/gu) ?? []).length, 4);
+  assert.equal(
+    (html.match(/data-status="[^"]+"\s+hidden>/gu) ?? []).length,
+    3,
+  );
+  assert.match(html, /<dt>This model simplifies<\/dt>/u);
+  assert.match(html, /<dt>This model leaves out<\/dt>/u);
+  assert.match(html, /class="claim-meta teaching-aid-meta"/u);
+  assert.match(html, /src\/retry\.js · change excerpt 2–4/u);
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/u);
+  assert.match(
+    html,
+    /&lt;\/script&gt;&lt;script&gt;alert\(1\)&lt;\/script&gt;/u,
+  );
+  assert.doesNotMatch(html, /<img src=x/u);
+  assert.match(script, /querySelectorAll\("\[data-microworld\]"\)/u);
+  assert.match(script, /scenario\.hidden=!selected/u);
+  assert.match(script, /control\.disabled=false/u);
+  assert.equal(
+    (html.match(/class="microworld-control"[\s\S]*?disabled>/gu) ?? []).length,
+    2,
+  );
+  assert.doesNotMatch(
+    script,
+    /\beval\s*\(|new Function|fetch\s*\(|WebSocket|import\s*\(/u,
+  );
+  assert.match(
+    html,
+    /connect-src &#39;none&#39;|connect-src 'none'/u,
+  );
+});
+
+test("all visual kinds use typed, fixed renderer structures", async () => {
+  const markers = {
+    "component-map": /class="visual-components"/u,
+    "decision-table": /<table class="decision-table">/u,
+    flow: /<ol class="visual-flow">/u,
+    sequence: /class="visual-participants"/u,
+  };
+  const snapshot = makeSnapshot();
+  for (const [kind, marker] of Object.entries(markers)) {
+    const analysis = makeAnalysis(snapshot, runId);
+    analysis.behavior = makeTeachingBehavior({
+      includeMicroworld: false,
+      visualKind: kind,
+    });
+    const review = validateAnalysis(analysis, snapshot, { runId });
+    const html = (await renderReview(review)).bytes.toString("utf8");
+    assert.match(
+      html,
+      new RegExp(`class="behavior-visual visual-${kind}"`, "u"),
+    );
+    assert.match(html, marker);
+    assert.match(html, /<ol class="flow flow-short">/u);
+    if (kind === "sequence") {
+      assert.match(
+        html,
+        /class="visual-route">\s*<span class="sr-only">Attempt to Retry branch<\/span>/u,
+      );
+    }
+    if (kind === "component-map") {
+      assert.match(
+        html,
+        /class="visual-route">\s*<span class="sr-only">Retry branch to Caller<\/span>/u,
+      );
+    }
+  }
+});
+
 test("unavailable-file reasons use the review language", async () => {
   const original = makeSnapshot({ locale: "ko-KR" });
   const { digest: _digest, ...value } = original;
@@ -457,6 +602,7 @@ test("unavailable-file reasons use the review language", async () => {
     material: true,
   });
   analysis.contextChecks.push({
+    basis: "unknown",
     evidence: [],
     explanation: "환경 설정 파일 본문을 확인하지 않았습니다.",
     limitIds: ["limit-2"],
@@ -473,6 +619,86 @@ test("unavailable-file reasons use the review language", async () => {
     /The file name commonly contains private configuration/u,
   );
   assert.match(html, /본문 제외/u);
+});
+
+test("unavailable exact context uses a trusted localized reason", async () => {
+  const original = makeSnapshot({ locale: "ko-KR" });
+  const { digest: _digest, ...value } = original;
+  value.limits = [
+    ...value.limits,
+    {
+      id: "limit-2",
+      kind: "context-unavailable",
+      reason: "Untrusted provider reason",
+      reasonKind: "safe-total-limit",
+      revision: original.snapshot.head,
+      subject: "src/caller.js",
+    },
+  ];
+  const snapshot = { ...value, digest: digestJson(value) };
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.limitImpacts.push({
+    impact: "직접 호출자의 동작은 판단할 수 없습니다.",
+    limitId: "limit-2",
+    material: true,
+  });
+  analysis.contextChecks.push({
+    basis: "unknown",
+    evidence: [],
+    explanation: "요청한 호출자 맥락을 수집 한도 안에서 가져오지 못했습니다.",
+    limitIds: ["limit-2"],
+    status: "limited",
+    subject: "직접 호출자",
+  });
+
+  const html = (
+    await renderReview(validateAnalysis(analysis, snapshot, { runId }))
+  ).bytes.toString("utf8");
+  assert.match(html, /요청한 맥락이 Hope의 전체 맥락 수집 한도를 넘습니다/u);
+  assert.doesNotMatch(html, /Untrusted provider reason/u);
+});
+
+test("exact-revision context renders as highlighted code from its fork repository", async () => {
+  const original = makeSnapshot();
+  const { digest: _digest, ...value } = original;
+  value.repository = {
+    ...value.repository,
+    base: { name: "hope", owner: "example" },
+    head: { name: "hope-fork", owner: "contributor" },
+  };
+  value.sources = [
+    ...value.sources,
+    {
+      id: "source-4",
+      kind: "context-file",
+      lineCount: 2,
+      path: "src/caller.js",
+      revision: original.snapshot.head,
+      text: "export function callRetry() {\n  return retry()",
+    },
+  ];
+  const snapshot = { ...value, digest: digestJson(value) };
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.contextChecks.push({
+    basis: "code",
+    evidence: [{ endLine: 2, sourceId: "source-4", startLine: 1 }],
+    explanation: "The exact head caller was checked.",
+    limitIds: [],
+    status: "checked",
+    subject: "Head caller",
+  });
+
+  const html = (
+    await renderReview(validateAnalysis(analysis, snapshot, { runId }))
+  ).bytes.toString("utf8");
+  const contextUrl = `https://github.com/contributor/hope-fork/blob/${
+    "b".repeat(40)
+  }/src/caller.js#L1-L2`;
+  const contextStart = html.indexOf(contextUrl);
+  assert.ok(contextStart >= 0);
+  const contextEvidence = html.slice(contextStart - 200, contextStart + 2_000);
+  assert.match(contextEvidence, /<pre class="syntax-code">/u);
+  assert.match(contextEvidence, /class="syntax-token-[a-f0-9]{16}"/u);
 });
 
 test("scope limits with one reason are grouped without losing member links", async () => {
@@ -535,6 +761,7 @@ test("scope limits with one reason are grouped without losing member links", asy
     },
   );
   analysis.contextChecks.push({
+    basis: "unknown",
     evidence: [],
     explanation: "Deployment secret values were deliberately excluded.",
     limitIds: ["limit-2", "limit-3"],

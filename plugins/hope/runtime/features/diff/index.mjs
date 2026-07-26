@@ -4,12 +4,14 @@ import { fileURLToPath } from "node:url";
 
 import { resolveSettings } from "../../settings/index.mjs";
 import { LIMITS, RUN_VERSION } from "./constants.mjs";
+import { collectGitHubContext } from "./context.mjs";
 import { finalizeReview, preflightReviewOutput } from "./finalize.mjs";
 import {
   collectGitHubPullRequest,
   parseGitHubPullRequestUrl,
   revalidateGitHubSnapshot,
 } from "./github.mjs";
+import { digestJson } from "./hash.mjs";
 import {
   claimDiffRunFinalization,
   createDiffRun,
@@ -17,6 +19,7 @@ import {
   loadDiffRun,
   recordAnalysisFailure,
   removeDiffRun,
+  replaceDiffRunPlan,
 } from "./run.mjs";
 import { discoverGitHubPullRequest } from "./target.mjs";
 import { validateAnalysis } from "./validate.mjs";
@@ -90,6 +93,55 @@ function assertAnalysisReady(run) {
   }
 }
 
+function nextNumericId(values, prefix) {
+  return values.reduce((maximum, value) => {
+    const match = typeof value.id === "string"
+      ? value.id.match(new RegExp(`^${prefix}-([1-9][0-9]*)$`, "u"))
+      : undefined;
+    return match ? Math.max(maximum, Number.parseInt(match[1], 10)) : maximum;
+  }, 0) + 1;
+}
+
+function snapshotWithContext(snapshot, candidates) {
+  const sources = [...snapshot.sources];
+  const limits = [...snapshot.limits];
+  let sourceNumber = nextNumericId(sources, "source");
+  let limitNumber = nextNumericId(limits, "limit");
+  for (const candidate of candidates) {
+    if (candidate.kind === "context-file") {
+      sources.push(Object.freeze({
+        id: `source-${sourceNumber}`,
+        kind: candidate.kind,
+        lineCount: candidate.text.split("\n").length,
+        path: candidate.path,
+        revision: candidate.revision,
+        text: candidate.text,
+      }));
+      sourceNumber += 1;
+    } else {
+      limits.push(Object.freeze({
+        id: `limit-${limitNumber}`,
+        kind: candidate.kind,
+        reason: candidate.reason,
+        reasonKind: candidate.reasonKind,
+        revision: candidate.revision,
+        subject: candidate.path,
+      }));
+      limitNumber += 1;
+    }
+  }
+  const { digest: _digest, ...previous } = snapshot;
+  const value = {
+    ...previous,
+    limits: Object.freeze(limits),
+    sources: Object.freeze(sources),
+  };
+  return Object.freeze({
+    ...value,
+    digest: digestJson(value),
+  });
+}
+
 async function validateRunAnalysis(run, dependencies = {}) {
   const enforceResourceLimits = run.manifest.runVersion === RUN_VERSION;
   const analysis = await readAnalysis(run.analysisPath, {
@@ -112,6 +164,54 @@ async function renderValidatedAnalysis(validated, dependencies = {}) {
   if (dependencies.render) return await dependencies.render(validated);
   const module = await (dependencies.loadRenderer ?? (() => import("./render.mjs")))();
   return await module.renderReview(validated);
+}
+
+function withCleanupFailure(error, cleanupError) {
+  const original = error instanceof Error ? error : new Error(String(error));
+  const combined = new Error(
+    `${original.message} Hope could not remove its private review data after this failure. `
+      + "It remains in restricted temporary storage and a later Hope run will retry expiry cleanup.",
+    { cause: original },
+  );
+  combined.name = original.name;
+  if (original.code !== undefined) combined.code = original.code;
+  if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
+  combined.cleanupPending = true;
+  Object.defineProperty(combined, "cleanupError", {
+    configurable: false,
+    enumerable: false,
+    value: cleanupError,
+    writable: false,
+  });
+  return combined;
+}
+
+function withFinalizationReleaseFailure(error, releaseError) {
+  const original = error instanceof Error ? error : new Error(String(error));
+  const combined = new Error(
+    `${original.message} Hope also could not release its private finalization lease. `
+      + "A later Hope run will retry expiry cleanup.",
+    { cause: original },
+  );
+  combined.name = original.name;
+  if (original.code !== undefined) combined.code = original.code;
+  if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
+  combined.cleanupPending = true;
+  if (original.cleanupError !== undefined) {
+    Object.defineProperty(combined, "cleanupError", {
+      configurable: false,
+      enumerable: false,
+      value: original.cleanupError,
+      writable: false,
+    });
+  }
+  Object.defineProperty(combined, "releaseError", {
+    configurable: false,
+    enumerable: false,
+    value: releaseError,
+    writable: false,
+  });
+  return combined;
 }
 
 export async function prepareDiff({
@@ -166,6 +266,70 @@ export async function readDiffPage(runPath, page, dependencies = {}) {
   });
 }
 
+export async function addDiffContext(runPath, requests, dependencies = {}) {
+  const run = await (dependencies.loadRun ?? loadDiffRun)(runPath, {
+    temporaryRoot: dependencies.temporaryRoot,
+  });
+  if (
+    run.manifest.phase !== "inspected"
+    || run.manifest.deliveredPages.length !== run.manifest.pageCount
+  ) {
+    throw new Error("Read every current Hope inspection page before requesting context");
+  }
+  if (!Array.isArray(requests) || requests.length === 0) {
+    throw new Error("Hope diff context needs at least one exact repository path");
+  }
+  const contextSources = run.snapshot.sources.filter(
+    (source) => source.kind === "context-file",
+  );
+  const contextLimits = run.snapshot.limits.filter(
+    (limit) => limit.kind === "context-unavailable",
+  );
+  if (contextSources.length + contextLimits.length > 0) {
+    throw new Error("Hope diff context can be collected only once per run");
+  }
+  if (contextSources.length + contextLimits.length + requests.length > LIMITS.contextFiles) {
+    throw new Error(`Hope diff supports ${LIMITS.contextFiles} context file requests per run`);
+  }
+  const existing = new Set([
+    ...contextSources.map((source) => `${source.revision}\u0000${source.path}`),
+    ...contextLimits.map((limit) => `${limit.revision}\u0000${limit.subject}`),
+  ]);
+  for (const request of requests) {
+    const revision = request?.revision === "head"
+      ? run.snapshot.snapshot.head
+      : request?.revision === "merge-base"
+        ? run.snapshot.snapshot.mergeBase
+        : undefined;
+    if (revision && existing.has(`${revision}\u0000${request.path}`)) {
+      throw new Error(`Hope already collected this exact context file: ${request.path}`);
+    }
+  }
+  const candidates = await (
+    dependencies.collectContext ?? collectGitHubContext
+  )(run.snapshot, requests, {
+    gh: dependencies.gh,
+  });
+  const snapshot = snapshotWithContext(run.snapshot, candidates);
+  const updated = await (
+    dependencies.replaceRunPlan ?? replaceDiffRunPlan
+  )(run.path, snapshot, {
+    expectedSnapshotDigest: run.snapshot.digest,
+    temporaryRoot: dependencies.temporaryRoot,
+  });
+  return Object.freeze({
+    collected: candidates.filter((candidate) => candidate.kind === "context-file").length,
+    limitsAdded: candidates.filter(
+      (candidate) => candidate.kind === "context-unavailable"
+    ).length,
+    pageCount: updated.manifest.pageCount,
+    path: updated.path,
+    resources: updated.resources,
+    runId: updated.manifest.runId,
+    snapshotDigest: updated.snapshot.digest,
+  });
+}
+
 export async function validateDiff(runPath, dependencies = {}) {
   const run = await (dependencies.loadRun ?? loadDiffRun)(runPath, {
     temporaryRoot: dependencies.temporaryRoot,
@@ -196,13 +360,16 @@ export async function finishDiff(runPath, dependencies = {}) {
   });
   let finalizationClaim;
   try {
-    finalizationClaim = await claimDiffRunFinalization(run);
+    finalizationClaim = await (
+      dependencies.claimFinalization ?? claimDiffRunFinalization
+    )(run);
   } catch (error) {
     if (error?.code === "EEXIST") {
       throw new Error("This Hope diff run is already being finalized");
     }
     throw error;
   }
+  let primaryError;
   try {
     assertAnalysisReady(run);
 
@@ -218,6 +385,7 @@ export async function finishDiff(runPath, dependencies = {}) {
       throw error;
     }
 
+    let runRemoved = false;
     try {
       const rendered = await renderValidatedAnalysis(validated, dependencies);
       const revalidation = await (
@@ -237,6 +405,7 @@ export async function finishDiff(runPath, dependencies = {}) {
       await (dependencies.removeRun ?? removeDiffRun)(run.path, {
         temporaryRoot: dependencies.temporaryRoot,
       });
+      runRemoved = true;
       const ticket = await (dependencies.finalize ?? finalizeReview)(rendered.bytes, {
         artifactDigest: rendered.digest,
         outputPath: run.manifest.outputPath,
@@ -256,13 +425,29 @@ export async function finishDiff(runPath, dependencies = {}) {
         result: validated.result,
       });
     } catch (error) {
-      await (dependencies.removeRun ?? removeDiffRun)(run.path, {
-        temporaryRoot: dependencies.temporaryRoot,
-      }).catch(() => {});
+      if (!runRemoved) {
+        try {
+          await (dependencies.removeRun ?? removeDiffRun)(run.path, {
+            temporaryRoot: dependencies.temporaryRoot,
+          });
+        } catch (cleanupError) {
+          throw withCleanupFailure(error, cleanupError);
+        }
+      }
       throw error;
     }
+  } catch (error) {
+    primaryError = error;
+    throw error;
   } finally {
-    await finalizationClaim.release();
+    try {
+      await finalizationClaim.release();
+    } catch (releaseError) {
+      if (primaryError) {
+        throw withFinalizationReleaseFailure(primaryError, releaseError);
+      }
+      throw releaseError;
+    }
   }
 }
 

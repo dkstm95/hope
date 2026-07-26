@@ -34,6 +34,18 @@
   ranges, and rejecting oversized analyses before rendering. Report
   content-free byte and count metrics without presenting them as model token
   usage, while keeping in-flight v1 runs resumable under the v2 run protocol.
+- Read incomplete-patch before bodies from the exact merge base, downgrade
+  combined oversized before/after text to a visible metadata-only limit, and
+  preserve fork head/base repository identities for exact context reads.
+- Add one bounded post-inspection context step for grounded files at the
+  captured head or merge base, with atomic inspection-plan replacement and
+  explicit limits for unavailable context.
+- Restore evidence-backed flow, decision-table, sequence, component-map, and
+  optional declarative microworld teaching aids in the fixed offline renderer.
+- Make run ownership crash-safe before private source writes, fence stale
+  finalization recovery with immutable lease generations, surface cleanup
+  failures, warn visibly when the default locale fallback is used, and give a
+  concrete new-output next step without weakening no-overwrite publication.
 
 ## 0.3.2-alpha - 2026-07-19
 

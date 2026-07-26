@@ -246,6 +246,15 @@ Inspect only the relevant pull request text, commit titles, code versions, call
 sites, types, settings, tests, examples, and exact-revision CI needed to answer
 those questions.
 
+The first inspection plan contains the change sources. After reading it, the
+active host may request at most twelve concrete repository-relative context
+files whose paths are grounded in those sources. Collect each requested file
+from the captured head or merge-base revision, keep it in the private snapshot
+as context evidence, and atomically replace the inspection plan before analysis.
+Read the replacement plan from the beginning. This bounded path does not search
+the repository or make an ungrounded path guess; context that still cannot be
+collected remains an explicit scope limit.
+
 When a material question remains, follow directly linked issues, specs, design
 documents, discussions, one more relevant call step, migrations, schemas,
 deployment settings, or project documents. Do not explore unrelated code,

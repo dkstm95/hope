@@ -29,7 +29,11 @@ test("review finalization never replaces an existing output", async () => {
       runId: "1".repeat(32),
       snapshotDigest: "b".repeat(64),
     }),
-    /did not replace/u,
+    (error) => {
+      assert.match(error.message, /did not replace/u);
+      assert.match(error.message, /Choose a new destination with --output <new-path>/u);
+      return true;
+    },
   );
   assert.equal(await readFile(outputPath, "utf8"), "keep me");
 });
@@ -48,7 +52,11 @@ test("review finalization does not follow an output symlink", async () => {
       runId: "1".repeat(32),
       snapshotDigest: "b".repeat(64),
     }),
-    /did not replace/u,
+    (error) => {
+      assert.match(error.message, /did not replace/u);
+      assert.match(error.message, /Choose a new destination with --output <new-path>/u);
+      return true;
+    },
   );
   assert.equal(await readFile(target, "utf8"), "keep target");
 });
@@ -91,6 +99,25 @@ test("review finalization has no cross-filesystem copy fallback", async () => {
       snapshotDigest: "b".repeat(64),
     }),
     /cannot publish.*without an overwrite race/u,
+  );
+  await assert.rejects(access(outputPath), /ENOENT/u);
+});
+
+test("a publication race explains how to choose a new output", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hope-finalize-existing-race-"));
+  const outputPath = join(root, "review.html");
+  await assert.rejects(
+    finalizeReview(Buffer.from("review"), {
+      artifactDigest: "a".repeat(64),
+      linkFile: async () => {
+        throw Object.assign(new Error("target appeared"), { code: "EEXIST" });
+      },
+      outputPath,
+      revalidatedAt: "2026-07-23T00:00:00.000Z",
+      runId: "1".repeat(32),
+      snapshotDigest: "b".repeat(64),
+    }),
+    /Choose a new destination with --output <new-path>/u,
   );
   await assert.rejects(access(outputPath), /ENOENT/u);
 });

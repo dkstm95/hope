@@ -77,8 +77,11 @@ $hope:diff https://github.com/owner/repository/pull/123
 </p>
 
 Diff reads the pull request text, commit titles, and available text from changed files.
+When a collected source identifies a concrete related path, Diff can add a bounded
+set of files from the exact reviewed head or merge-base revision.
 
-It does not inspect unchanged repository files, pull request discussions, review comments, or CI results.
+It does not search unrelated repository files or inspect pull request discussions,
+review comments, or CI results.
 
 It does not run tests, build or lint commands, or other repository code.
 
