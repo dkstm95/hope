@@ -2,7 +2,8 @@
 .codex-plugin/plugin.json
 LICENSE
 THIRD_PARTY_NOTICES.md
-assets/telescope.svg
+assets/hope-protected-light-128.png
+assets/hope-protected-light.png
 docs/design.md
 docs/diff.md
 runtime/design/fonts/HopeCode.woff2
@@ -37,7 +38,7 @@ runtime/settings/cli.mjs
 runtime/settings/index.mjs
 skills/diff/SKILL.md
 skills/diff/agents/openai.yaml
-skills/diff/assets/telescope.svg
+skills/diff/assets/hope-protected-light.png
 skills/settings/SKILL.md
 skills/settings/agents/openai.yaml
-skills/settings/assets/telescope.svg
+skills/settings/assets/hope-protected-light.png

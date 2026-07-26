@@ -139,6 +139,14 @@ if (process.env.GITHUB_REF_TYPE === "tag") {
 }
 assert.equal(codexPlugin.skills, "./skills/");
 assert.equal(claudePlugin.skills, "./skills/");
+assert.equal(
+  codexPlugin.interface.composerIcon,
+  "./assets/hope-protected-light-128.png",
+);
+assert.equal(
+  codexPlugin.interface.logo,
+  "./assets/hope-protected-light.png",
+);
 assert.ok(codexMarketplace.plugins.some(
   (entry) => entry.name === "hope" && entry.source.path === "./plugins/hope",
 ));
@@ -174,12 +182,12 @@ assert.match(verify, /needs: \[check, browser\]/u);
 assert.match(verify, /CHECK_RESULT: \$\{\{ needs\.check\.result \}\}/u);
 assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
 assert.match(verify, /npm run test:browser/u);
-assert.match(readme, /src="plugins\/hope\/assets\/telescope\.svg"/u);
+assert.match(readme, /src="plugins\/hope\/assets\/hope-protected-light\.png"/u);
 assert.match(readme, /codex plugin marketplace add dkstm95\/hope/u);
 assert.match(readme, /codex plugin add hope@hope/u);
 assert.match(readme, /claude plugin marketplace add dkstm95\/hope/u);
 assert.match(readme, /claude plugin install hope@hope/u);
-assert.match(readmeKo, /src="plugins\/hope\/assets\/telescope\.svg"/u);
+assert.match(readmeKo, /src="plugins\/hope\/assets\/hope-protected-light\.png"/u);
 assert.match(readmeKo, /codex plugin marketplace add dkstm95\/hope/u);
 assert.match(readmeKo, /codex plugin add hope@hope/u);
 assert.match(readmeKo, /claude plugin marketplace add dkstm95\/hope/u);

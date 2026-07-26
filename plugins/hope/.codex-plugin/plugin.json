@@ -22,7 +22,7 @@
       "Use $hope:diff to explain the current pull request."
     ],
     "brandColor": "#087EA4",
-    "composerIcon": "./assets/telescope.svg",
-    "logo": "./assets/telescope.svg"
+    "composerIcon": "./assets/hope-protected-light-128.png",
+    "logo": "./assets/hope-protected-light.png"
   }
 }
