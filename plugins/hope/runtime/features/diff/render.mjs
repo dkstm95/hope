@@ -24,6 +24,17 @@ const fontUrls = Object.freeze({
 });
 
 const evidenceOccurrences = new WeakMap();
+const renderedCodeSources = new Set([
+  "after-file",
+  "before-file",
+  "context-file",
+  "patch",
+]);
+const linkedCodeSources = new Set([
+  "after-file",
+  "before-file",
+  "context-file",
+]);
 
 function html(value) {
   return exposeBidiControls(value)
@@ -63,11 +74,18 @@ function trustedCodeUrl(review, evidence) {
   if (
     !evidence.path
     || !evidence.revision
-    || !["before-file", "after-file"].includes(evidence.sourceKind)
+    || !linkedCodeSources.has(evidence.sourceKind)
   ) {
     return undefined;
   }
-  const { owner, name } = review.snapshot.repository;
+  const snapshot = review.snapshot.snapshot;
+  const repository = review.snapshot.repository;
+  const selected = evidence.revision === snapshot.head
+    ? repository.head ?? repository
+    : evidence.revision === snapshot.mergeBase
+      ? repository.base ?? repository
+      : repository;
+  const { owner, name } = selected;
   const path = evidence.path.split("/").map(encodeURIComponent).join("/");
   return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
     + `/blob/${encodeURIComponent(evidence.revision)}/${path}`
@@ -102,7 +120,7 @@ function codeEvidencePaths(review) {
     if (
       typeof value.excerpt === "string"
       && typeof value.path === "string"
-      && ["after-file", "before-file", "patch"].includes(value.sourceKind)
+      && renderedCodeSources.has(value.sourceKind)
     ) {
       paths.add(value.path);
       return;
@@ -137,7 +155,7 @@ function evidenceBlock(
         </article>`;
       }
       seen.add(target);
-      const codeSource = ["after-file", "before-file", "patch"].includes(item.sourceKind);
+      const codeSource = renderedCodeSources.has(item.sourceKind);
       return `<article class="evidence-item" id="${target}">
         <div class="evidence-meta">
           ${url
@@ -193,6 +211,190 @@ function titledClaim(
     <h3>${userText(item.title)}</h3>
     ${claimBlock(item, dictionary, review, codeHighlighter)}
   </article>`;
+}
+
+function aidEvidence(aid, dictionary, review, codeHighlighter) {
+  return `<div class="claim-meta teaching-aid-meta">
+    <div class="claim-basis">${html(label(dictionary, basisKey(aid.basis)))}</div>
+    ${evidenceBlock(
+      aid.evidence,
+      dictionary,
+      review,
+      codeHighlighter,
+      { context: aid.title },
+    )}
+  </div>`;
+}
+
+function visualRoute(from, to, dictionary, { block = false } = {}) {
+  const tag = block ? "div" : "span";
+  const accessible = label(dictionary, "visual.route")
+    .replace("{from}", () => from)
+    .replace("{to}", () => to);
+  return `<${tag} class="visual-route">
+    <span class="sr-only">${html(accessible)}</span>
+    <strong aria-hidden="true">${userText(from)}</strong>
+    <span aria-hidden="true">→</span>
+    <strong aria-hidden="true">${userText(to)}</strong>
+  </${tag}>`;
+}
+
+function visualBlock(visual, dictionary, review, codeHighlighter) {
+  let content;
+  if (visual.kind === "flow") {
+    content = `<ol class="visual-flow">${visual.items.map((item) => (
+      `<li>
+        <strong>${userText(item.label)}</strong>
+        <p>${userText(item.detail)}</p>
+      </li>`
+    )).join("")}</ol>`;
+  } else if (visual.kind === "decision-table") {
+    content = `<div class="table-scroll visual-table" role="region" aria-label="${html(visual.title)}" tabindex="0">
+      <table class="decision-table">
+        <thead><tr>
+          <th scope="col">${html(label(dictionary, "visual.case"))}</th>
+          ${visual.columns.map((column) => `<th scope="col">${userText(column)}</th>`).join("")}
+        </tr></thead>
+        <tbody>${visual.rows.map((row) => `<tr>
+          <th scope="row">${userText(row.case)}</th>
+          ${row.cells.map((cell) => `<td>${userText(cell)}</td>`).join("")}
+        </tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+  } else if (visual.kind === "sequence") {
+    const participants = new Map(visual.participants.map((item) => [item.id, item.label]));
+    content = `<ul class="visual-participants" aria-label="${html(label(dictionary, "visual.participants"))}">${visual.participants.map(
+      (participant) => `<li>${userText(participant.label)}</li>`,
+    ).join("")}</ul>
+      <ol class="visual-sequence">${visual.messages.map((message) => `<li>
+        ${visualRoute(
+          participants.get(message.from),
+          participants.get(message.to),
+          dictionary,
+          { block: true },
+        )}
+        <p>${userText(message.label)}</p>
+      </li>`).join("")}</ol>`;
+  } else {
+    const components = new Map(visual.components.map((item) => [item.id, item.label]));
+    content = `<div class="visual-components">${visual.components.map((component) => (
+      `<article>
+        <h4>${userText(component.label)}</h4>
+        <p>${userText(component.detail)}</p>
+      </article>`
+    )).join("")}</div>
+      <div class="visual-connections">
+        <h4>${html(label(dictionary, "visual.connections"))}</h4>
+        <ul>${visual.connections.map((connection) => `<li>
+          ${visualRoute(
+            components.get(connection.from),
+            components.get(connection.to),
+            dictionary,
+          )}
+          <span>${userText(connection.label)}</span>
+        </li>`).join("")}</ul>
+      </div>`;
+  }
+  return `<article class="behavior-visual visual-${html(visual.kind)}">
+    <header>
+      <h3>${userText(visual.title)}</h3>
+      <p>${userText(visual.caption)}</p>
+    </header>
+    ${content}
+    ${aidEvidence(visual, dictionary, review, codeHighlighter)}
+  </article>`;
+}
+
+function microworldTrace(trace, title, dictionary) {
+  return `<section class="microworld-trace">
+    <h5>${html(title)}</h5>
+    <ol>${trace.steps.map((step) => `<li>${userText(step)}</li>`).join("")}</ol>
+    <p class="microworld-outcome">
+      <strong>${html(label(dictionary, "microworld.outcome"))}:</strong>
+      ${userText(trace.outcome)}
+    </p>
+  </section>`;
+}
+
+function microworldBlock(world, dictionary, review, codeHighlighter) {
+  const defaultKey = world.controls.map(
+    (control) => `${control.id}=${control.defaultOptionId}`,
+  ).join("|");
+  const defaultScenario = world.scenarios.find(
+    (scenario) => scenario.selectionKey === defaultKey,
+  );
+  const scenarioStatus = (scenario) => (
+    `${label(dictionary, "microworld.before")}: ${scenario.before.outcome}. `
+    + `${label(dictionary, "microworld.after")}: ${scenario.after.outcome}. `
+    + scenario.lesson
+  );
+  return `<aside class="microworld" data-microworld aria-labelledby="microworld-title">
+    <header>
+      <p class="microworld-eyebrow">${html(label(dictionary, "microworld.tryIt"))}</p>
+      <h3 id="microworld-title">${userText(world.title)}</h3>
+      <p>${userText(world.instructions)}</p>
+      <p class="microworld-notice">${html(label(dictionary, "microworld.notice"))}</p>
+    </header>
+    <fieldset class="microworld-controls">
+      <legend>${html(label(dictionary, "microworld.controls"))}</legend>
+      <div>${world.controls.map((control) => {
+        const controlId = `microworld-control-${control.id}`;
+        return `<label for="${html(controlId)}">
+          <span>${userText(control.label)}</span>
+          <select
+            class="microworld-control"
+            id="${html(controlId)}"
+            data-control-id="${html(control.id)}"
+            data-control-kind="${html(control.kind)}"
+            data-control-label="${html(control.label)}"
+            dir="auto"
+            disabled>
+            ${control.options.map((option) => `<option value="${html(option.id)}"${option.id === control.defaultOptionId ? " selected" : ""}>${html(option.label)}</option>`).join("")}
+          </select>
+        </label>`;
+      }).join("")}</div>
+    </fieldset>
+    <noscript><p class="microworld-noscript">${html(label(dictionary, "microworld.noScript"))}</p></noscript>
+    <p class="sr-only" role="status" aria-live="polite" data-microworld-status>${html(
+      scenarioStatus(defaultScenario),
+    )}</p>
+    <div class="microworld-scenarios" role="region" aria-label="${html(label(dictionary, "microworld.selection"))}">
+      ${world.scenarios.map((scenario) => `<article
+        class="microworld-scenario"
+        data-selection-key="${html(scenario.selectionKey)}"
+        data-status="${html(scenarioStatus(scenario))}"
+        ${scenario.selectionKey === defaultKey ? "" : "hidden"}>
+        <h4>${userText(scenario.title)}</h4>
+        <div class="microworld-comparison">
+          ${microworldTrace(
+            scenario.before,
+            label(dictionary, "microworld.before"),
+            dictionary,
+          )}
+          ${microworldTrace(
+            scenario.after,
+            label(dictionary, "microworld.after"),
+            dictionary,
+          )}
+        </div>
+        <p class="microworld-lesson">
+          <strong>${html(label(dictionary, "microworld.lesson"))}:</strong>
+          ${userText(scenario.lesson)}
+        </p>
+      </article>`).join("")}
+    </div>
+    <dl class="microworld-boundary">
+      <div>
+        <dt>${html(label(dictionary, "microworld.simplifies"))}</dt>
+        <dd>${userText(world.simplifies)}</dd>
+      </div>
+      <div>
+        <dt>${html(label(dictionary, "microworld.omits"))}</dt>
+        <dd>${userText(world.omits)}</dd>
+      </div>
+    </dl>
+    ${aidEvidence(world, dictionary, review, codeHighlighter)}
+  </aside>`;
 }
 
 function kindLabel(kind, dictionary) {
@@ -288,6 +490,12 @@ function limitText(limit, dictionary) {
       subject: limit.subject,
     };
   }
+  if (limit.kind === "context-unavailable" && limit.reasonKind) {
+    return {
+      reason: label(dictionary, `scope.contextUnavailable.${limit.reasonKind}`),
+      subject: limit.subject,
+    };
+  }
   return { reason: limit.reason, subject: limit.subject };
 }
 
@@ -307,6 +515,9 @@ function contextCheck(
     </summary>
     <div class="disclosure-content">
       <p>${userText(check.explanation)}</p>
+      ${check.evidence.length === 0 ? "" : `<p class="claim-basis">${html(
+        label(dictionary, basisKey(check.basis)),
+      )}</p>`}
       ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
         ${relatedLimits.map((limit) => {
           const displayed = limitText(limit, dictionary);
@@ -700,6 +911,14 @@ function buildSections(review, dictionary, codeHighlighter) {
           review,
           codeHighlighter,
         )}
+          ${review.behavior.visual
+            ? visualBlock(
+              review.behavior.visual,
+              dictionary,
+              review,
+              codeHighlighter,
+            )
+            : ""}
           <ol class="flow${shortFlow ? " flow-short" : ""}">${review.behavior.steps.map(
             (step) => `<li>${claimBlock(
               step,
@@ -707,7 +926,15 @@ function buildSections(review, dictionary, codeHighlighter) {
               review,
               codeHighlighter,
             )}</li>`,
-          ).join("")}</ol>`,
+          ).join("")}</ol>
+          ${review.behavior.microworld
+            ? microworldBlock(
+              review.behavior.microworld,
+              dictionary,
+              review,
+              codeHighlighter,
+            )
+            : ""}`,
         id: "explore",
         title: label(dictionary, "section.explore"),
       }),
@@ -912,9 +1139,11 @@ a {
   outline-offset: 3px;
 }
 button,
+select,
 textarea,
 summary { font: inherit; }
-button { color: inherit; }
+button,
+select { color: inherit; }
 
 .skip {
   position: fixed;
@@ -1019,6 +1248,13 @@ button { color: inherit; }
   max-width: ${LAYOUT.contentWidth}px;
   min-width: 0;
   counter-reset: review-section;
+}
+.locale-warning {
+  margin: 0 0 ${space4}px;
+  padding: ${space3}px ${space4}px;
+  border: 1px solid var(--component-border);
+  border-left: 4px solid var(--scope);
+  background: var(--panel);
 }
 .toc-desktop {
   position: sticky;
@@ -1467,6 +1703,229 @@ button { color: inherit; }
   transform: translateY(-50%);
 }
 
+.behavior-visual,
+.microworld {
+  min-width: 0;
+  margin: ${space4}px 0;
+  padding: ${space4}px;
+  border: 1px solid var(--component-border);
+  background: var(--panel);
+  overflow-wrap: anywhere;
+}
+.behavior-visual > header h3,
+.microworld > header h3 {
+  margin: 0;
+  font-size: ${wideSubsection.fontSize}px;
+  line-height: ${wideSubsection.lineHeight};
+}
+.behavior-visual > header p,
+.microworld > header > p {
+  max-width: ${LAYOUT.proseWidth};
+  margin: ${space2}px 0 0;
+}
+.teaching-aid-meta {
+  margin-top: ${space3}px;
+  padding-top: ${space3}px;
+  border-top: 1px solid var(--border);
+}
+.visual-flow,
+.visual-sequence {
+  display: grid;
+  margin: ${space3}px 0 0;
+  padding: 0;
+  gap: ${space2}px;
+  list-style: none;
+  counter-reset: visual-step;
+}
+.visual-flow > li,
+.visual-sequence > li {
+  position: relative;
+  padding: ${space3}px ${space3}px ${space3}px 44px;
+  border: 1px solid var(--border);
+  counter-increment: visual-step;
+}
+.visual-flow > li::before,
+.visual-sequence > li::before {
+  position: absolute;
+  top: ${space3}px;
+  left: ${space3}px;
+  color: var(--muted);
+  content: counter(visual-step, decimal-leading-zero);
+  font: 400 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Code", ui-monospace, monospace;
+}
+.visual-flow p,
+.visual-sequence p {
+  margin: ${space1}px 0 0;
+}
+.visual-table {
+  min-width: 0;
+  max-width: 100%;
+  margin-top: ${space3}px;
+}
+.decision-table th {
+  text-align: left;
+  font-weight: 500;
+}
+.decision-table tbody th {
+  overflow-wrap: anywhere;
+}
+.visual-participants {
+  display: flex;
+  margin: ${space3}px 0 0;
+  padding: 0;
+  flex-wrap: wrap;
+  gap: ${space2}px;
+  list-style: none;
+}
+.visual-participants li {
+  padding: ${space1}px ${space2}px;
+  border: 1px solid var(--component-border);
+  border-radius: 999px;
+  font-weight: 500;
+}
+.visual-route {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: ${space2}px;
+}
+.visual-components {
+  display: grid;
+  margin-top: ${space3}px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${space2}px;
+}
+.visual-components article {
+  padding: ${space3}px;
+  border: 1px solid var(--border);
+}
+.visual-components h4,
+.visual-connections h4 {
+  margin: 0;
+}
+.visual-components p {
+  margin: ${space1}px 0 0;
+}
+.visual-connections {
+  margin-top: ${space3}px;
+}
+.visual-connections ul {
+  display: grid;
+  margin: ${space2}px 0 0;
+  padding-left: 20px;
+  gap: ${space2}px;
+}
+.visual-connections li > span + span {
+  display: block;
+  margin-top: ${space1}px;
+}
+
+.microworld {
+  border-left: 4px solid var(--accent);
+}
+.microworld-eyebrow {
+  color: var(--accent);
+  font-size: ${TYPE.micro.fontSize}px;
+  line-height: ${TYPE.micro.lineHeight};
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.microworld-notice {
+  padding: ${space2}px ${space3}px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 500;
+}
+.microworld-controls {
+  min-width: 0;
+  margin: ${space4}px 0 0;
+  padding: 0;
+  border: 0;
+}
+.microworld-controls legend {
+  margin-bottom: ${space2}px;
+  font-weight: 700;
+}
+.microworld-controls > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: ${space3}px;
+}
+.microworld-controls label {
+  display: grid;
+  min-width: 0;
+  gap: ${space1}px;
+  font-weight: 500;
+}
+.microworld-control {
+  width: 100%;
+  min-height: 44px;
+  padding: ${space2}px ${space3}px;
+  border: 1px solid var(--component-border);
+  border-radius: 0;
+  background: var(--bg);
+}
+.microworld-noscript {
+  margin: ${space3}px 0;
+  color: var(--scope);
+  font-weight: 500;
+}
+.microworld-scenarios {
+  margin-top: ${space4}px;
+}
+.microworld-scenario[hidden] {
+  display: none !important;
+}
+.microworld-scenario > h4 {
+  margin: 0 0 ${space3}px;
+  font-size: ${wideSubsection.fontSize}px;
+  line-height: ${wideSubsection.lineHeight};
+}
+.microworld-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${space3}px;
+}
+.microworld-trace {
+  padding: ${space3}px;
+  border: 1px solid var(--border);
+}
+.microworld-trace h5 {
+  margin: 0;
+  color: var(--muted);
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  line-height: ${TYPE.supporting.wide.lineHeight};
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.microworld-trace ol {
+  margin: ${space2}px 0;
+  padding-left: 22px;
+}
+.microworld-outcome,
+.microworld-lesson {
+  margin: ${space2}px 0 0;
+}
+.microworld-boundary {
+  display: grid;
+  margin: ${space4}px 0 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ${space3}px;
+}
+.microworld-boundary > div {
+  padding-left: ${space3}px;
+  border-left: 2px solid var(--border);
+}
+.microworld-boundary dt {
+  color: var(--muted);
+  font-weight: 500;
+}
+.microworld-boundary dd {
+  margin: ${space1}px 0 0;
+}
+
 .review-item {
   padding: ${space4}px;
   border: 1px solid var(--component-border);
@@ -1899,6 +2358,11 @@ td:first-child {
     content: "↓";
     transform: translateX(50%);
   }
+  .visual-components,
+  .microworld-comparison,
+  .microworld-boundary {
+    grid-template-columns: 1fr;
+  }
   .toc-mobile-panel ol {
     grid-template-columns: 1fr;
   }
@@ -1906,6 +2370,8 @@ td:first-child {
 
 @media (max-width: ${LAYOUT.compactBreakpoint}px) {
   .layout { padding: ${space3}px; }
+  .behavior-visual,
+  .microworld { padding: ${space3}px; }
   .topbar-inner {
     padding: ${space1}px ${space3}px;
     gap: ${space2}px;
@@ -1932,6 +2398,9 @@ td:first-child {
 
 @media (forced-colors: active) {
   .status,
+  .locale-warning,
+  .behavior-visual,
+  .microworld,
   .review-item,
   .synopsis,
   .scope-limit { forced-color-adjust: auto; }
@@ -1960,6 +2429,8 @@ ${syntaxStyles}
   .toc-desktop,
   .toc-mobile,
   .theme-button,
+  .microworld-controls,
+  .microworld-noscript,
   .skip { display: none; }
   .layout {
     display: block;
@@ -1970,6 +2441,8 @@ ${syntaxStyles}
   .review-section,
   .review-item,
   .evidence-item,
+  .behavior-visual,
+  .microworld,
   .quiz-question { break-inside: avoid; }
   .review-section-collapsible > .section-content,
   .evidence-group > .evidence-group-content,
@@ -2003,8 +2476,10 @@ function clientScript(dictionary) {
   const labels = JSON.stringify({
     dark: label(dictionary, "common.useDarkTheme"),
     light: label(dictionary, "common.useLightTheme"),
+    microworldNoScenario: label(dictionary, "microworld.noScenario"),
+    microworldSelection: label(dictionary, "microworld.selection"),
   });
-  return `(()=>{"use strict";const labels=${labels};const root=document.documentElement;const theme=document.getElementById("theme-toggle");const toc=document.querySelector(".toc-mobile");const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};syncTheme();theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});toc?.addEventListener("click",event=>{if(event.target.closest("a"))toc.open=false;});matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;requestAnimationFrame(()=>target.scrollIntoView({block:"start"}));};addEventListener("hashchange",openTarget);addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});openTarget();})();`;
+  return `(()=>{"use strict";const labels=${labels};const root=document.documentElement;const theme=document.getElementById("theme-toggle");const toc=document.querySelector(".toc-mobile");const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};syncTheme();theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});toc?.addEventListener("click",event=>{if(event.target.closest("a"))toc.open=false;});matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);for(const world of document.querySelectorAll("[data-microworld]")){const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const updateWorld=()=>{const key=controls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=controls.map(control=>control.dataset.controlLabel+": "+control.options[control.selectedIndex].textContent).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+active.dataset.status;};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;requestAnimationFrame(()=>target.scrollIntoView({block:"start"}));};addEventListener("hashchange",openTarget);addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});openTarget();})();`;
 }
 
 export async function renderReview(review, { fonts } = {}) {
@@ -2028,6 +2503,11 @@ export async function renderReview(review, { fonts } = {}) {
   const prUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
     + `/pull/${review.snapshot.pullRequest.number}`;
   const synopsisHtml = synopsis(review, dictionary, codeHighlighter, { title });
+  const localeWarning = review.snapshot.settings.localeSource === "default"
+    ? `<aside class="locale-warning" role="note">${html(
+      label(dictionary, "locale.fallbackWarning"),
+    )}</aside>`
+    : "";
   const theme = review.snapshot.settings.theme;
   const themeAttribute = theme === "system" ? "" : ` data-theme="${html(theme)}"`;
   const toc = `<div class="toc-synopsis"><a href="#synopsis">${html(label(dictionary, "section.synopsis"))}</a></div>
@@ -2075,6 +2555,7 @@ export async function renderReview(review, { fonts } = {}) {
   </header>
   <div class="layout">
     <main class="main" id="review">
+      ${localeWarning}
       ${synopsisHtml}
       ${sections.map((item) => item.html).join("")}
     </main>

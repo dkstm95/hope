@@ -72,6 +72,25 @@ the host received complete stdout or that the model understood it. If output
 fails or is truncated, replay that same page before advancing; the most recent
 page is idempotently replayable.
 
+After the initial pages, use Hope's own bounded `context` command once when a
+material question has a concrete repository-relative path grounded in the
+collected sources. This is for a direct caller or callee, related type, setting,
+test, example, or an unchanged portion of a changed file—not for speculative
+repository exploration:
+
+```text
+context --run <run-path> --head-file <path>
+context --run <run-path> --head-file <path> --merge-base-file <path>
+```
+
+Repeat either file option for up to twelve exact paths. Use `head-file` for
+current behavior. Add `merge-base-file` only when the previous exact version is
+needed. Hope rejects unsafe paths and binds every body to the captured immutable
+revision. The command replaces the private inspection plan and returns a new
+`snapshotDigest` and page count. Read every refreshed page from page 1 in order,
+and use that new digest in the analysis. If no exact path is grounded, keep the
+reported context limit instead of guessing or searching with another tool.
+
 ## Write the analysis
 
 Read the complete analysis schema returned by `prepare`. This skill and that
@@ -93,9 +112,25 @@ Follow these rules:
   small experiment helps the reader predict the result. Describe inputs,
   states, and outcomes. Do not repeat the file, function, type, or inheritance
   order from `codeSteps`.
+- Add at most one `behavior.visual`, and only when it makes an important
+  relationship materially easier to understand than the behavior summary and
+  steps alone. Choose `flow` for a process, `decision-table` for branches,
+  `sequence` for ordered interactions, or `component-map` for structure.
+  Ground its title, caption, and contents in evidence, and do not use it merely
+  to restate the steps.
+- Add at most one `behavior.microworld`, and only when changing a small input,
+  condition, or state helps the reader predict behavior. Use one to three
+  declarative controls and provide every control combination, with no more
+  than 12 scenarios total. Ground the model in evidence and state what it
+  simplifies and omits. This is an explanation model, not an execution or test
+  result: never put repository code, commands, expressions, URLs, or scripts in
+  it, and never claim that interacting with it ran the repository.
 - Add `contextChecks` for the concrete context categories that mattered to the
   review. Mark each as `checked`, `not-applicable`, or `limited`. A checked
-  category needs evidence. A limited category links the exact reported limit.
+  category needs a grounded `basis` and evidence whose source role matches that
+  basis. PR text can establish stated intent, but only collected code can
+  establish code behavior. Use `unknown` with no evidence for an unchecked
+  limited or not-applicable category. A limited category links the exact reported limit.
   Do not add broad categories such as “the whole repository” or “the entire
   ecosystem.”
 - Give every `included` file exactly one `explained`, `supporting`, or

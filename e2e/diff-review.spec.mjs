@@ -7,7 +7,11 @@ import { pathToFileURL } from "node:url";
 import { digestJson } from "../features/diff/hash.mjs";
 import { renderReview } from "../features/diff/render.mjs";
 import { validateAnalysis } from "../features/diff/validate.mjs";
-import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
+import {
+  makeAnalysis,
+  makeSnapshot,
+  makeTeachingBehavior,
+} from "../test-support/diff-fixture.mjs";
 
 const runId = "4".repeat(32);
 const viewports = {
@@ -19,6 +23,7 @@ const viewports = {
 
 let artifactDirectory;
 let artifactUrl;
+const visualArtifactUrls = {};
 
 test.beforeAll(async () => {
   artifactDirectory = await mkdtemp(join(tmpdir(), "hope-browser-review-"));
@@ -51,6 +56,110 @@ test.beforeAll(async () => {
     [4, 4],
   ];
   analysis.behavior = {
+    microworld: {
+      basis: "code",
+      controls: [
+        {
+          defaultOptionId: "failed",
+          id: "attempt",
+          kind: "input",
+          label: "마지막 시도",
+          options: [
+            { id: "failed", label: "실패" },
+            { id: "succeeded", label: "성공" },
+          ],
+        },
+        {
+          defaultOptionId: "present",
+          id: "saved-error",
+          kind: "state",
+          label: "저장된 오류",
+          options: [
+            { id: "missing", label: "없음" },
+            { id: "present", label: "있음" },
+          ],
+        },
+      ],
+      evidence: [{
+        endLine: 4,
+        sourceId: "source-3",
+        startLine: 2,
+      }],
+      instructions: "마지막 시도와 저장 상태를 바꿔 호출자에게 전달되는 결과를 비교하세요.",
+      omits: "변경된 분기 밖의 호출자별 복구와 로깅",
+      scenarios: [
+        {
+          after: {
+            outcome: "일반 오류가 전달됩니다.",
+            steps: ["마지막 시도가 실패합니다.", "일반 오류를 사용합니다."],
+          },
+          before: {
+            outcome: "일반 오류가 전달됩니다.",
+            steps: ["마지막 시도가 실패합니다.", "일반 오류를 만듭니다."],
+          },
+          id: "failed-missing",
+          lesson: "저장된 오류가 없으면 보이는 결과가 같습니다.",
+          title: "실패했고 저장된 오류가 없음",
+          when: [
+            { controlId: "attempt", optionId: "failed" },
+            { controlId: "saved-error", optionId: "missing" },
+          ],
+        },
+        {
+          after: {
+            outcome: "저장된 마지막 오류가 전달됩니다.",
+            steps: ["마지막 시도가 실패합니다.", "저장된 오류를 사용합니다."],
+          },
+          before: {
+            outcome: "일반 오류가 전달됩니다.",
+            steps: ["마지막 시도가 실패합니다.", "마지막 오류를 버립니다."],
+          },
+          id: "failed-present",
+          lesson: "저장된 마지막 오류가 있을 때만 변경 결과가 드러납니다.",
+          title: "실패했고 저장된 오류가 있음",
+          when: [
+            { controlId: "attempt", optionId: "failed" },
+            { controlId: "saved-error", optionId: "present" },
+          ],
+        },
+        {
+          after: {
+            outcome: "성공 값이 계속 전달됩니다.",
+            steps: ["마지막 시도가 성공합니다.", "성공 값을 유지합니다."],
+          },
+          before: {
+            outcome: "성공 값이 계속 전달됩니다.",
+            steps: ["마지막 시도가 성공합니다.", "성공 값을 반환합니다."],
+          },
+          id: "succeeded-missing",
+          lesson: "성공 경로의 보이는 결과는 바뀌지 않습니다.",
+          title: "성공했고 저장된 오류가 없음",
+          when: [
+            { controlId: "attempt", optionId: "succeeded" },
+            { controlId: "saved-error", optionId: "missing" },
+          ],
+        },
+        {
+          after: {
+            outcome: "성공 값이 계속 전달됩니다.",
+            steps: ["마지막 시도가 성공합니다.", "저장된 오류를 사용하지 않습니다."],
+          },
+          before: {
+            outcome: "성공 값이 계속 전달됩니다.",
+            steps: ["마지막 시도가 성공합니다.", "성공 값을 반환합니다."],
+          },
+          id: "succeeded-present",
+          lesson: "성공하면 저장된 오류 상태가 결과를 바꾸지 않습니다.",
+          title: "성공했고 저장된 오류가 있음",
+          when: [
+            { controlId: "attempt", optionId: "succeeded" },
+            { controlId: "saved-error", optionId: "present" },
+          ],
+        },
+      ],
+      simplifies: "재시도 완료를 마지막 한 번의 분기로 표현함",
+      title: "재시도 결과 실험",
+    },
     steps: Array.from({ length: 4 }, (_, index) => ({
       ...analysis.coreChange.after,
       evidence: [{
@@ -63,6 +172,22 @@ test.beforeAll(async () => {
     summary: {
       ...analysis.coreChange.after,
       text: "네 단계로 이어지는 변경 동작입니다.",
+    },
+    visual: {
+      basis: "code",
+      caption: "저장된 오류의 유무에 따라 실패 결과를 비교합니다.",
+      columns: ["이전", "이후"],
+      evidence: [{
+        endLine: 4,
+        sourceId: "source-3",
+        startLine: 2,
+      }],
+      kind: "decision-table",
+      rows: [
+        { case: "저장된 오류 없음", cells: ["일반 오류", "일반 오류"] },
+        { case: "저장된 오류 있음", cells: ["일반 오류", "마지막 오류"] },
+      ],
+      title: "실패 결과 비교",
     },
   };
   analysis.reviewItems = [
@@ -105,6 +230,20 @@ test.beforeAll(async () => {
   const artifactPath = join(artifactDirectory, "hope-review.html");
   await writeFile(artifactPath, rendered.bytes);
   artifactUrl = pathToFileURL(artifactPath).href;
+
+  const visualSnapshot = makeSnapshot();
+  for (const kind of ["sequence", "component-map"]) {
+    const visualAnalysis = makeAnalysis(visualSnapshot, runId);
+    visualAnalysis.behavior = makeTeachingBehavior({
+      includeMicroworld: false,
+      visualKind: kind,
+    });
+    const visualReview = validateAnalysis(visualAnalysis, visualSnapshot, { runId });
+    const visualRendered = await renderReview(visualReview);
+    const visualPath = join(artifactDirectory, `${kind}.html`);
+    await writeFile(visualPath, visualRendered.bytes);
+    visualArtifactUrls[kind] = pathToFileURL(visualPath).href;
+  }
 });
 
 test.afterAll(async () => {
@@ -281,9 +420,81 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await page.locator("#review-title").evaluate((element) => {
     element.textContent = "LongUnbrokenPullRequestTitle".repeat(24);
   });
+  await page.locator(".behavior-visual > header > p").evaluate((element) => {
+    element.textContent = "LongUnbrokenTeachingAidCaption".repeat(80);
+  });
   await page.setViewportSize({ height: 640, width: 320 });
   await expectNoPageOverflow(page);
   expect(remoteRequests).toEqual([]);
+});
+
+test("the microworld switches fixed scenarios with accessible native controls", async ({
+  page,
+}) => {
+  const remoteRequests = [];
+  page.on("request", (request) => {
+    if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
+  });
+  await openArtifact(page, viewports.desktop);
+  const world = page.locator("#explore .microworld");
+  await expect(world).toBeVisible();
+  await expect(world.locator(".microworld-eyebrow")).toHaveText("직접 해보기");
+  await expect(world.locator(".microworld-notice")).toContainText(
+    "저장소 코드를 실행하거나 테스트 결과를 보여주지 않습니다.",
+  );
+  await expect(page.locator("#explore .behavior-visual")).toBeVisible();
+  await expect(page.locator("#explore .decision-table")).toBeVisible();
+
+  const controls = world.locator("select.microworld-control");
+  await expect(controls).toHaveCount(2);
+  await expect(world.getByLabel("마지막 시도")).toHaveValue("failed");
+  await expect(world.getByLabel("저장된 오류")).toHaveValue("present");
+  const controlHeights = await controls.evaluateAll((items) => (
+    items.map((item) => item.getBoundingClientRect().height)
+  ));
+  expect(controlHeights.every((height) => height >= 44)).toBe(true);
+
+  const visibleScenario = world.locator(".microworld-scenario:not([hidden])");
+  await expect(visibleScenario).toHaveCount(1);
+  await expect(visibleScenario).toContainText("실패했고 저장된 오류가 있음");
+  await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
+
+  const attempt = world.getByLabel("마지막 시도");
+  const savedError = world.getByLabel("저장된 오류");
+  await attempt.focus();
+  await expect(attempt).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(savedError).toBeFocused();
+  await attempt.selectOption("succeeded");
+  await expect(attempt).toHaveValue("succeeded");
+  await expect(visibleScenario).toContainText("성공했고 저장된 오류가 있음");
+  await expect(world.locator("[data-microworld-status]")).toContainText(
+    "마지막 시도: 성공",
+  );
+
+  await savedError.selectOption("missing");
+  await expect(visibleScenario).toContainText("성공했고 저장된 오류가 없음");
+  await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
+
+  await page.setViewportSize(viewports.mobile);
+  await expectNoPageOverflow(page);
+  expect(remoteRequests).toEqual([]);
+});
+
+test("visual routes expose endpoints and direction to the accessibility tree", async ({
+  page,
+}) => {
+  await page.goto(visualArtifactUrls.sequence);
+  const sequenceRoute = await page.locator(
+    ".visual-sequence > li",
+  ).first().ariaSnapshot();
+  expect(sequenceRoute).toContain("Attempt to Retry branch");
+
+  await page.goto(visualArtifactUrls["component-map"]);
+  const componentRoute = await page.locator(
+    ".visual-connections li",
+  ).first().ariaSnapshot();
+  expect(componentRoute).toContain("Retry branch to Caller");
 });
 
 test("theme and contents controls share one visual control family", async ({ page }) => {
@@ -591,6 +802,17 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await expect(page.locator(".syntax-code code").first()).toContainText(
       "throw new Error()",
     );
+    const world = page.locator("#explore .microworld");
+    await expect(world).toBeVisible();
+    await expect(world.locator(".microworld-noscript")).toBeVisible();
+    await expect(world.locator(".microworld-noscript")).toContainText(
+      "기본 상황을 표시합니다.",
+    );
+    await expect(world.locator(".microworld-scenario:not([hidden])")).toContainText(
+      "실패했고 저장된 오류가 있음",
+    );
+    await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
+    await expect(world.locator("select.microworld-control").first()).toBeDisabled();
     const quizQuestion = page.locator(".quiz > details.quiz-question").first();
     await quizQuestion.locator(":scope > summary").click();
     await expect(quizQuestion.locator("textarea")).toBeVisible();

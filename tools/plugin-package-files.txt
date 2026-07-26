@@ -17,6 +17,7 @@ runtime/design/tokens.mjs
 runtime/features/diff/analysis-v1.schema.json
 runtime/features/diff/cli.mjs
 runtime/features/diff/constants.mjs
+runtime/features/diff/context.mjs
 runtime/features/diff/derive.mjs
 runtime/features/diff/finalize.mjs
 runtime/features/diff/github.mjs

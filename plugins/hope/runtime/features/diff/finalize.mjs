@@ -60,6 +60,13 @@ function hasIdentity(info, expected) {
     && info.ino === expected.ino;
 }
 
+function existingOutputError(target) {
+  return new Error(
+    `Hope did not replace the existing output: ${target}. `
+      + "Choose a new destination with --output <new-path>.",
+  );
+}
+
 export async function preflightReviewOutput(outputPath) {
   if (!outputPath) return undefined;
   const requested = isAbsolute(outputPath) ? outputPath : resolve(outputPath);
@@ -71,7 +78,7 @@ export async function preflightReviewOutput(outputPath) {
     if (error?.code === "ENOENT") return target;
     throw error;
   }
-  throw new Error(`Hope did not replace the existing output: ${target}`);
+  throw existingOutputError(target);
 }
 
 export async function finalizeReview(bytes, {
@@ -108,7 +115,7 @@ export async function finalizeReview(bytes, {
       published = true;
     } catch (error) {
       if (error?.code === "EEXIST") {
-        throw new Error(`Hope did not replace the existing output: ${target}`);
+        throw existingOutputError(target);
       }
       if (["EXDEV", "ENOTSUP", "EPERM"].includes(error?.code)) {
         throw new Error(

@@ -55,6 +55,22 @@ test("the harness parses independent diff and settings entries", () => {
     command: "validate",
     runPath: "/tmp/hope-run",
   });
+  assert.deepEqual(parseDiffArguments([
+    "context",
+    "--run",
+    "/tmp/hope-run",
+    "--head-file",
+    "src/caller.js",
+    "--merge-base-file",
+    "src/caller.js",
+  ]), {
+    command: "context",
+    requests: [
+      { path: "src/caller.js", revision: "head" },
+      { path: "src/caller.js", revision: "merge-base" },
+    ],
+    runPath: "/tmp/hope-run",
+  });
 });
 
 test("the diff command delegates read-only analysis validation", async () => {
@@ -73,6 +89,34 @@ test("the diff command delegates read-only analysis validation", async () => {
   });
   assert.equal(received, "/tmp/hope-run");
   assert.equal(output, `${JSON.stringify({ valid: true }, null, 2)}\n`);
+});
+
+test("the diff command delegates bounded exact-revision context collection", async () => {
+  let received;
+  let output = "";
+  const requests = [{ path: "src/caller.js", revision: "head" }];
+  await runDiffCommand([
+    "context",
+    "--run",
+    "/tmp/hope-run",
+    "--head-file",
+    "src/caller.js",
+  ], {
+    addDiffContext: async (runPath, contextRequests) => {
+      received = { contextRequests, runPath };
+      return { collected: 1, pageCount: 4 };
+    },
+    stdout: {
+      write(value) {
+        output += value;
+      },
+    },
+  });
+  assert.deepEqual(received, {
+    contextRequests: requests,
+    runPath: "/tmp/hope-run",
+  });
+  assert.equal(output, `${JSON.stringify({ collected: 1, pageCount: 4 }, null, 2)}\n`);
 });
 
 test("the internal inspect protocol emits compact model input without its private digest", async () => {

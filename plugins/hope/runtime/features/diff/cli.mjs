@@ -5,6 +5,7 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import {
+  addDiffContext,
   cancelDiff,
   DIFF_MODEL_ADAPTER_CODE,
   finishDiff,
@@ -24,6 +25,7 @@ function usage() {
     "Internal skill protocol:",
     "  hope diff prepare [GitHub PR URL] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
     "  hope diff inspect --run <private-run-path> --page <number>",
+    "  hope diff context --run <private-run-path> --head-file <path> [--merge-base-file <path>]",
     "  hope diff validate --run <private-run-path>",
     "  hope diff finish --run <private-run-path>",
     "  hope diff cancel --run <private-run-path>",
@@ -40,12 +42,28 @@ function takeOptions(values) {
       continue;
     }
     const key = value.slice(2);
-    if (!["host-locale", "locale", "theme", "output", "run", "page"].includes(key)) {
+    if (![
+      "host-locale",
+      "locale",
+      "theme",
+      "output",
+      "run",
+      "page",
+      "head-file",
+      "merge-base-file",
+    ].includes(key)) {
       throw new TypeError(`Unknown Hope diff option: ${value}`);
     }
     const next = values[index + 1];
     if (next === undefined || next.startsWith("--")) {
       throw new TypeError(`Hope diff option ${value} needs a value`);
+    }
+    if (["head-file", "merge-base-file"].includes(key)) {
+      const entries = options[key] ?? [];
+      entries.push(next);
+      options[key] = entries;
+      index += 1;
+      continue;
     }
     if (options[key] !== undefined) {
       throw new TypeError(`Hope diff option ${value} was repeated`);
@@ -61,12 +79,18 @@ export function parseDiffArguments(argv) {
     return { command: "help" };
   }
   const [command, ...rest] = argv;
-  if (!["prepare", "inspect", "validate", "finish", "cancel"].includes(command)) {
+  if (!["prepare", "inspect", "context", "validate", "finish", "cancel"].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
   const { options, positionals } = takeOptions(rest);
   if (command === "prepare") {
-    if (positionals.length > 1 || options.run || options.page) {
+    if (
+      positionals.length > 1
+      || options.run
+      || options.page
+      || options["head-file"]
+      || options["merge-base-file"]
+    ) {
       throw new TypeError(usage());
     }
     return {
@@ -79,6 +103,35 @@ export function parseDiffArguments(argv) {
     };
   }
   if (positionals.length > 0 || !options.run) throw new TypeError(usage());
+  if (command === "context") {
+    if (
+      options.page
+      || options.locale
+      || options.theme
+      || options.output
+      || options["host-locale"]
+    ) {
+      throw new TypeError(usage());
+    }
+    const requests = [
+      ...(options["head-file"] ?? []).map((path) => ({ path, revision: "head" })),
+      ...(options["merge-base-file"] ?? []).map((path) => ({
+        path,
+        revision: "merge-base",
+      })),
+    ];
+    if (requests.length === 0) throw new TypeError(usage());
+    return { command, requests, runPath: options.run };
+  }
+  if (options["head-file"] || options["merge-base-file"]) throw new TypeError(usage());
+  if (
+    options.locale
+    || options.theme
+    || options.output
+    || options["host-locale"]
+  ) {
+    throw new TypeError(usage());
+  }
   if (command === "inspect") {
     const page = Number.parseInt(options.page, 10);
     if (!options.page || !Number.isSafeInteger(page) || String(page) !== options.page) {
@@ -107,6 +160,12 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     result = await (dependencies.readDiffPage ?? readDiffPage)(
       options.runPath,
       options.page,
+      dependencies,
+    );
+  } else if (options.command === "context") {
+    result = await (dependencies.addDiffContext ?? addDiffContext)(
+      options.runPath,
+      options.requests,
       dependencies,
     );
   } else if (options.command === "validate") {

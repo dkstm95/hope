@@ -9,21 +9,39 @@ import {
 import { deriveReviewResult, sortReviewItems } from "./derive.mjs";
 import { containsBidiControl } from "./text.mjs";
 
-const codeSources = new Set(["patch", "before-file", "after-file"]);
+const changeSources = new Set(["patch", "before-file", "after-file"]);
+const codeSources = new Set([...changeSources, "context-file"]);
 const statedSources = new Set([
   "pull-request-title",
   "pull-request-description",
   "commit-title",
 ]);
 const contextStatuses = ["checked", "not-applicable", "limited"];
+const aidBases = ["stated", "code", "inferred"];
+const visualKinds = ["flow", "decision-table", "sequence", "component-map"];
+const controlKinds = ["input", "condition", "state"];
 const proseFields = new Set([
   "answer",
+  "caption",
+  "case",
+  "cells",
+  "columns",
+  "components",
   "doneWhen",
+  "detail",
   "effect",
   "explanation",
   "impact",
+  "instructions",
+  "items",
+  "label",
+  "lesson",
   "nextStep",
+  "omits",
+  "outcome",
   "question",
+  "simplifies",
+  "steps",
   "subject",
   "text",
   "title",
@@ -74,6 +92,21 @@ function enumeration(value, name, values) {
   return value;
 }
 
+function identifier(value, name) {
+  if (typeof value !== "string" || !/^[a-z][a-z0-9-]{0,63}$/u.test(value)) {
+    throw new TypeError(`${name} must be a lowercase identifier`);
+  }
+  return value;
+}
+
+function boundedArray(value, name, minimum, maximum) {
+  const values = array(value, name, maximum);
+  if (values.length < minimum) {
+    throw new RangeError(`${name} needs at least ${minimum} item${minimum === 1 ? "" : "s"}`);
+  }
+  return values;
+}
+
 function evidenceReference(value, name, sourceMap) {
   object(value, name, ["sourceId", "startLine", "endLine"]);
   if (typeof value.sourceId !== "string") throw new TypeError(`${name}.sourceId is invalid`);
@@ -121,7 +154,7 @@ function proseBytes(value, field) {
     return proseFields.has(field) ? Buffer.byteLength(value, "utf8") : 0;
   }
   if (Array.isArray(value)) {
-    return value.reduce((sum, item) => sum + proseBytes(item), 0);
+    return value.reduce((sum, item) => sum + proseBytes(item, field), 0);
   }
   if (!value || typeof value !== "object") return 0;
   return Object.entries(value).reduce(
@@ -281,6 +314,327 @@ function claim(value, name, sourceMap, { title = false } = {}) {
   });
 }
 
+function groundedAid(value, name, sourceMap) {
+  const basis = enumeration(value.basis, `${name}.basis`, aidBases);
+  const evidence = evidenceList(value.evidence, `${name}.evidence`, sourceMap);
+  if (
+    basis === "stated"
+    && evidence.some((item) => !statedSources.has(item.sourceKind))
+  ) {
+    throw new Error(`${name} uses code as a stated-source basis`);
+  }
+  if (
+    basis === "code"
+    && evidence.some((item) => !codeSources.has(item.sourceKind))
+  ) {
+    throw new Error(`${name} uses non-code evidence as a code basis`);
+  }
+  return { basis, evidence };
+}
+
+function validateVisual(value, sourceMap) {
+  const name = "behavior.visual";
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError(`${name} must be an object`);
+  }
+  const kind = enumeration(value.kind, `${name}.kind`, visualKinds);
+  const shared = [
+    "kind",
+    "title",
+    "caption",
+    "basis",
+    "evidence",
+  ];
+  const specific = {
+    "component-map": ["components", "connections"],
+    "decision-table": ["columns", "rows"],
+    flow: ["items"],
+    sequence: ["participants", "messages"],
+  }[kind];
+  object(value, name, [...shared, ...specific]);
+  const grounded = groundedAid(value, name, sourceMap);
+  const common = {
+    ...grounded,
+    caption: text(value.caption, `${name}.caption`),
+    kind,
+    title: text(value.title, `${name}.title`),
+  };
+
+  if (kind === "flow") {
+    const items = boundedArray(value.items, `${name}.items`, 2, 12).map(
+      (item, index) => {
+        const itemName = `${name}.items[${index}]`;
+        object(item, itemName, ["label", "detail"]);
+        return Object.freeze({
+          detail: text(item.detail, `${itemName}.detail`),
+          label: text(item.label, `${itemName}.label`),
+        });
+      },
+    );
+    return Object.freeze({ ...common, items: Object.freeze(items) });
+  }
+
+  if (kind === "decision-table") {
+    const columns = boundedArray(value.columns, `${name}.columns`, 1, 6).map(
+      (entry, index) => text(entry, `${name}.columns[${index}]`),
+    );
+    const rows = boundedArray(value.rows, `${name}.rows`, 1, 12).map(
+      (row, index) => {
+        const rowName = `${name}.rows[${index}]`;
+        object(row, rowName, ["case", "cells"]);
+        const cells = boundedArray(row.cells, `${rowName}.cells`, 1, 6).map(
+          (entry, cellIndex) => text(entry, `${rowName}.cells[${cellIndex}]`),
+        );
+        if (cells.length !== columns.length) {
+          throw new Error(`${rowName}.cells must match the decision-table column count`);
+        }
+        return Object.freeze({
+          case: text(row.case, `${rowName}.case`),
+          cells: Object.freeze(cells),
+        });
+      },
+    );
+    return Object.freeze({
+      ...common,
+      columns: Object.freeze(columns),
+      rows: Object.freeze(rows),
+    });
+  }
+
+  const nodeField = kind === "sequence" ? "participants" : "components";
+  const edgeField = kind === "sequence" ? "messages" : "connections";
+  const nodes = boundedArray(
+    value[nodeField],
+    `${name}.${nodeField}`,
+    2,
+    kind === "sequence" ? 8 : 12,
+  ).map((node, index) => {
+    const nodeName = `${name}.${nodeField}[${index}]`;
+    const keys = kind === "sequence" ? ["id", "label"] : ["id", "label", "detail"];
+    object(node, nodeName, keys);
+    return Object.freeze({
+      id: identifier(node.id, `${nodeName}.id`),
+      label: text(node.label, `${nodeName}.label`),
+      ...(kind === "component-map"
+        ? { detail: text(node.detail, `${nodeName}.detail`) }
+        : {}),
+    });
+  });
+  const nodeIds = new Set();
+  for (const node of nodes) {
+    if (nodeIds.has(node.id)) {
+      throw new Error(`${name}.${nodeField} contains a duplicate id`);
+    }
+    nodeIds.add(node.id);
+  }
+  const edges = boundedArray(
+    value[edgeField],
+    `${name}.${edgeField}`,
+    1,
+    kind === "sequence" ? 16 : 20,
+  ).map((edge, index) => {
+    const edgeName = `${name}.${edgeField}[${index}]`;
+    object(edge, edgeName, ["from", "to", "label"]);
+    const from = identifier(edge.from, `${edgeName}.from`);
+    const to = identifier(edge.to, `${edgeName}.to`);
+    if (!nodeIds.has(from) || !nodeIds.has(to)) {
+      throw new Error(`${edgeName} refers to an unknown ${kind === "sequence" ? "participant" : "component"}`);
+    }
+    return Object.freeze({
+      from,
+      label: text(edge.label, `${edgeName}.label`),
+      to,
+    });
+  });
+  return Object.freeze({
+    ...common,
+    [edgeField]: Object.freeze(edges),
+    [nodeField]: Object.freeze(nodes),
+  });
+}
+
+function validateMicroworldTrace(value, name) {
+  object(value, name, ["steps", "outcome"]);
+  const steps = boundedArray(value.steps, `${name}.steps`, 1, 8).map(
+    (entry, index) => text(entry, `${name}.steps[${index}]`),
+  );
+  return Object.freeze({
+    outcome: text(value.outcome, `${name}.outcome`),
+    steps: Object.freeze(steps),
+  });
+}
+
+function selectionKey(controls, pairs) {
+  return controls.map((control) => {
+    const pair = pairs.find((entry) => entry.controlId === control.id);
+    return `${control.id}=${pair.optionId}`;
+  }).join("|");
+}
+
+function expectedSelections(controls) {
+  let combinations = [[]];
+  for (const control of controls) {
+    combinations = combinations.flatMap((combination) => (
+      control.options.map((option) => [
+        ...combination,
+        { controlId: control.id, optionId: option.id },
+      ])
+    ));
+  }
+  return combinations;
+}
+
+function validateMicroworld(value, sourceMap) {
+  const name = "behavior.microworld";
+  object(value, name, [
+    "title",
+    "instructions",
+    "simplifies",
+    "omits",
+    "basis",
+    "evidence",
+    "controls",
+    "scenarios",
+  ]);
+  const grounded = groundedAid(value, name, sourceMap);
+  const controls = boundedArray(value.controls, `${name}.controls`, 1, 3).map(
+    (control, index) => {
+      const controlName = `${name}.controls[${index}]`;
+      object(control, controlName, [
+        "id",
+        "kind",
+        "label",
+        "defaultOptionId",
+        "options",
+      ]);
+      const options = boundedArray(
+        control.options,
+        `${controlName}.options`,
+        2,
+        4,
+      ).map((option, optionIndex) => {
+        const optionName = `${controlName}.options[${optionIndex}]`;
+        object(option, optionName, ["id", "label"]);
+        return Object.freeze({
+          id: identifier(option.id, `${optionName}.id`),
+          label: text(option.label, `${optionName}.label`),
+        });
+      });
+      const optionIds = new Set();
+      for (const option of options) {
+        if (optionIds.has(option.id)) {
+          throw new Error(`${controlName}.options contains a duplicate id`);
+        }
+        optionIds.add(option.id);
+      }
+      const defaultOptionId = identifier(
+        control.defaultOptionId,
+        `${controlName}.defaultOptionId`,
+      );
+      if (!optionIds.has(defaultOptionId)) {
+        throw new Error(`${controlName}.defaultOptionId refers to an unknown option`);
+      }
+      return Object.freeze({
+        defaultOptionId,
+        id: identifier(control.id, `${controlName}.id`),
+        kind: enumeration(control.kind, `${controlName}.kind`, controlKinds),
+        label: text(control.label, `${controlName}.label`),
+        options: Object.freeze(options),
+      });
+    },
+  );
+  const controlsById = new Map();
+  for (const control of controls) {
+    if (controlsById.has(control.id)) {
+      throw new Error(`${name}.controls contains a duplicate id`);
+    }
+    controlsById.set(control.id, control);
+  }
+  const expected = expectedSelections(controls);
+  if (expected.length > 12) {
+    throw new Error(`${name}.controls produce more than 12 combinations`);
+  }
+  const expectedKeys = new Set(expected.map((pairs) => selectionKey(controls, pairs)));
+  const actualKeys = new Set();
+  const scenarioIds = new Set();
+  const scenarios = boundedArray(value.scenarios, `${name}.scenarios`, 2, 12).map(
+    (scenario, index) => {
+      const scenarioName = `${name}.scenarios[${index}]`;
+      object(scenario, scenarioName, [
+        "id",
+        "title",
+        "when",
+        "before",
+        "after",
+        "lesson",
+      ]);
+      const id = identifier(scenario.id, `${scenarioName}.id`);
+      if (scenarioIds.has(id)) {
+        throw new Error(`${name}.scenarios contains a duplicate id`);
+      }
+      scenarioIds.add(id);
+      const when = boundedArray(
+        scenario.when,
+        `${scenarioName}.when`,
+        1,
+        3,
+      ).map((condition, conditionIndex) => {
+        const conditionName = `${scenarioName}.when[${conditionIndex}]`;
+        object(condition, conditionName, ["controlId", "optionId"]);
+        const controlId = identifier(condition.controlId, `${conditionName}.controlId`);
+        const optionId = identifier(condition.optionId, `${conditionName}.optionId`);
+        const control = controlsById.get(controlId);
+        if (!control) {
+          throw new Error(`${conditionName} refers to an unknown control`);
+        }
+        if (!control.options.some((option) => option.id === optionId)) {
+          throw new Error(`${conditionName} refers to an unknown option`);
+        }
+        return Object.freeze({ controlId, optionId });
+      });
+      if (new Set(when.map((entry) => entry.controlId)).size !== when.length) {
+        throw new Error(`${scenarioName}.when repeats a control`);
+      }
+      if (
+        when.length !== controls.length
+        || controls.some((control) => !when.some((entry) => entry.controlId === control.id))
+      ) {
+        throw new Error(`${scenarioName}.when must bind every control exactly once`);
+      }
+      const key = selectionKey(controls, when);
+      if (actualKeys.has(key)) {
+        throw new Error(`${name}.scenarios repeats a control combination`);
+      }
+      actualKeys.add(key);
+      return Object.freeze({
+        after: validateMicroworldTrace(scenario.after, `${scenarioName}.after`),
+        before: validateMicroworldTrace(scenario.before, `${scenarioName}.before`),
+        id,
+        lesson: text(scenario.lesson, `${scenarioName}.lesson`),
+        selectionKey: key,
+        title: text(scenario.title, `${scenarioName}.title`),
+        when: Object.freeze(controls.map(
+          (control) => when.find((entry) => entry.controlId === control.id),
+        )),
+      });
+    },
+  );
+  for (const key of expectedKeys) {
+    if (!actualKeys.has(key)) {
+      throw new Error(`${name}.scenarios is missing a control combination`);
+    }
+  }
+  return Object.freeze({
+    ...grounded,
+    controls: Object.freeze(controls),
+    instructions: text(value.instructions, `${name}.instructions`),
+    omits: text(value.omits, `${name}.omits`),
+    scenarios: Object.freeze(scenarios),
+    simplifies: text(value.simplifies, `${name}.simplifies`),
+    title: text(value.title, `${name}.title`),
+  });
+}
+
 function reviewItem(value, index, sourceMap, limitMap) {
   const name = `reviewItems[${index}]`;
   object(value, name, [
@@ -376,7 +730,7 @@ function validateLimitImpacts(values, snapshot) {
   const entries = array(
     values,
     "limitImpacts",
-    LIMITS.changedFiles + 2,
+    LIMITS.changedFiles + 2 + LIMITS.contextFiles,
   );
   const limits = new Map(snapshot.limits.map((limit) => [limit.id, limit]));
   const selected = new Map();
@@ -416,6 +770,7 @@ function validateContextChecks(values, sourceMap, limitMap) {
     object(value, name, [
       "subject",
       "status",
+      "basis",
       "explanation",
       "evidence",
       "limitIds",
@@ -428,6 +783,7 @@ function validateContextChecks(values, sourceMap, limitMap) {
       `${name}.status`,
       contextStatuses,
     );
+    const basis = enumeration(value.basis, `${name}.basis`, BASIS);
     const evidence = evidenceList(
       value.evidence,
       `${name}.evidence`,
@@ -446,6 +802,27 @@ function validateContextChecks(values, sourceMap, limitMap) {
     if (status === "checked" && evidence.length === 0) {
       throw new Error(`${name} needs evidence when checked`);
     }
+    if (status === "checked" && basis === "unknown") {
+      throw new Error(`${name} needs a grounded basis when checked`);
+    }
+    if (basis === "unknown" && evidence.length > 0) {
+      throw new Error(`${name} cannot use evidence with an unknown basis`);
+    }
+    if (basis !== "unknown" && evidence.length === 0) {
+      throw new Error(`${name} needs evidence for its basis`);
+    }
+    if (
+      basis === "stated"
+      && evidence.some((item) => !statedSources.has(item.sourceKind))
+    ) {
+      throw new Error(`${name} uses code as a stated-source basis`);
+    }
+    if (
+      basis === "code"
+      && evidence.some((item) => !codeSources.has(item.sourceKind))
+    ) {
+      throw new Error(`${name} uses non-code evidence as a code basis`);
+    }
     if (status === "checked" && limitIds.length > 0) {
       throw new Error(`${name} cannot link limits when checked`);
     }
@@ -459,6 +836,7 @@ function validateContextChecks(values, sourceMap, limitMap) {
       for (const limitId of limitIds) linkedLimits.add(limitId);
     }
     return Object.freeze({
+      basis,
       evidence,
       explanation: text(value.explanation, `${name}.explanation`),
       limitIds: Object.freeze([...limitIds]),
@@ -571,14 +949,27 @@ export function validateAnalysis(analysis, snapshot, {
     );
   let behavior;
   if (analysis.behavior !== undefined) {
-    object(analysis.behavior, "behavior", ["summary", "steps"]);
+    object(analysis.behavior, "behavior", [
+      "summary",
+      "steps",
+      "visual",
+      "microworld",
+    ]);
     const steps = array(analysis.behavior.steps, "behavior.steps", 12);
     if (steps.length < 2) throw new Error("behavior.steps needs at least two steps");
+    const visual = analysis.behavior.visual === undefined
+      ? undefined
+      : validateVisual(analysis.behavior.visual, sourceMap);
+    const microworld = analysis.behavior.microworld === undefined
+      ? undefined
+      : validateMicroworld(analysis.behavior.microworld, sourceMap);
     behavior = Object.freeze({
+      microworld,
       steps: steps.map(
         (value, index) => claim(value, `behavior.steps[${index}]`, sourceMap),
       ),
       summary: claim(analysis.behavior.summary, "behavior.summary", sourceMap),
+      visual,
     });
   }
 
@@ -638,7 +1029,7 @@ export function validateAnalysis(analysis, snapshot, {
   ]) {
     if (
       value.basis === "unknown"
-      || !value.evidence.some((item) => codeSources.has(item.sourceKind))
+      || !value.evidence.some((item) => changeSources.has(item.sourceKind))
     ) {
       throw new Error(`${name} must be grounded in collected code`);
     }

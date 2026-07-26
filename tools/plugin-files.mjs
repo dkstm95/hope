@@ -80,6 +80,7 @@ export const generatedPluginFiles = Object.freeze([
     "analysis-v1.schema.json",
     "cli.mjs",
     "constants.mjs",
+    "context.mjs",
     "derive.mjs",
     "finalize.mjs",
     "github.mjs",

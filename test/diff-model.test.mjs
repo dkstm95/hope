@@ -3,7 +3,11 @@ import test from "node:test";
 
 import { digestJson } from "../features/diff/hash.mjs";
 import { validateAnalysis } from "../features/diff/validate.mjs";
-import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
+import {
+  makeAnalysis,
+  makeSnapshot,
+  makeTeachingBehavior,
+} from "../test-support/diff-fixture.mjs";
 
 const runId = "1".repeat(32);
 
@@ -19,8 +23,8 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(validated.sourceIndex.length, snapshot.sources.length);
   assert.equal("text" in validated.sourceIndex[0], false);
   assert.deepEqual(validated.resources, {
-    analysisCanonicalBytes: 2390,
-    analysisFileBytes: 2390,
+    analysisCanonicalBytes: 2441,
+    analysisFileBytes: 2441,
     authoredProseBytes: 842,
     evidenceBytes: 178,
     evidenceLines: 5,
@@ -279,6 +283,66 @@ test("context checks account for limits with status-specific evidence", () => {
     () => validateAnalysis(notApplicableWithLimit, snapshot, { runId }),
     /cannot link limits when not applicable/u,
   );
+
+  const statedWithCode = makeAnalysis(snapshot, runId);
+  statedWithCode.contextChecks[0].basis = "stated";
+  assert.throws(
+    () => validateAnalysis(statedWithCode, snapshot, { runId }),
+    /stated-source basis/u,
+  );
+
+  const codeWithDescription = makeAnalysis(snapshot, runId);
+  codeWithDescription.contextChecks[0].evidence = [{
+    endLine: 1,
+    sourceId: "source-2",
+    startLine: 1,
+  }];
+  assert.throws(
+    () => validateAnalysis(codeWithDescription, snapshot, { runId }),
+    /non-code evidence as a code basis/u,
+  );
+});
+
+test("exact-revision context is code evidence but cannot replace change evidence", () => {
+  const original = makeSnapshot();
+  const { digest: _digest, ...value } = original;
+  value.sources = [
+    ...value.sources,
+    {
+      id: "source-4",
+      kind: "context-file",
+      lineCount: 3,
+      path: "src/caller.js",
+      revision: original.snapshot.head,
+      text: "export function caller() {\n  return retry()\n}",
+    },
+  ];
+  const snapshot = {
+    ...value,
+    digest: digestJson(value),
+  };
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.contextChecks[0] = {
+    basis: "code",
+    evidence: [{ endLine: 2, sourceId: "source-4", startLine: 1 }],
+    explanation: "The exact head revision caller was checked.",
+    limitIds: [],
+    status: "checked",
+    subject: "Direct caller",
+  };
+  assert.doesNotThrow(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+  );
+
+  analysis.coreChange.before.evidence = [{
+    endLine: 2,
+    sourceId: "source-4",
+    startLine: 1,
+  }];
+  assert.throws(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+    /coreChange\.before must be grounded in collected code/u,
+  );
 });
 
 test("review item basis must match its evidence kind", () => {
@@ -474,5 +538,192 @@ test("overlapping evidence ranges count every rendered code line", () => {
   assert.throws(
     () => validateAnalysis(analysis, budgetSnapshot, { runId }),
     /more than 600 highlighted code lines/u,
+  );
+});
+
+test("behavior accepts one grounded visual of every supported type", () => {
+  const snapshot = makeSnapshot();
+  for (const kind of ["flow", "decision-table", "sequence", "component-map"]) {
+    const analysis = makeAnalysis(snapshot, runId);
+    analysis.behavior = makeTeachingBehavior({
+      includeMicroworld: false,
+      visualKind: kind,
+    });
+
+    const validated = validateAnalysis(analysis, snapshot, { runId });
+    assert.equal(validated.behavior.visual.kind, kind);
+    assert.equal(validated.behavior.summary.text.includes("final failure"), true);
+    assert.equal(validated.behavior.steps.length, 2);
+    assert.equal(validated.behavior.visual.evidence[0].sourceKind, "patch");
+    assert.equal(Object.isFrozen(validated.behavior.visual), true);
+  }
+});
+
+test("decision-table cells count toward the generated prose budget", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.behavior = makeTeachingBehavior({
+    includeMicroworld: false,
+    visualKind: "decision-table",
+  });
+  analysis.behavior.visual.columns = Array.from(
+    { length: 6 },
+    (_, index) => `Column ${index + 1}`,
+  );
+  analysis.behavior.visual.rows = Array.from({ length: 12 }, (_, row) => ({
+    case: `Case ${row + 1}`,
+    cells: Array.from({ length: 6 }, () => "x".repeat(800)),
+  }));
+
+  assert.throws(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+    /Analysis prose exceeds/u,
+  );
+});
+
+test("behavior accepts a grounded, exhaustive declarative microworld", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.behavior = makeTeachingBehavior();
+
+  const validated = validateAnalysis(analysis, snapshot, { runId });
+  assert.equal(validated.behavior.microworld.controls.length, 2);
+  assert.deepEqual(
+    validated.behavior.microworld.scenarios.map((scenario) => scenario.selectionKey),
+    [
+      "attempt=failed|saved-error=missing",
+      "attempt=failed|saved-error=present",
+      "attempt=succeeded|saved-error=missing",
+      "attempt=succeeded|saved-error=present",
+    ],
+  );
+  assert.equal(Object.isFrozen(validated.behavior.microworld), true);
+  assert.equal(Object.isFrozen(validated.behavior.microworld.controls), true);
+  assert.equal(Object.isFrozen(validated.behavior.microworld.scenarios[0].when), true);
+  assert.ok(validated.resources.authoredProseBytes > 842);
+});
+
+test("visual validation rejects malformed structure and ungrounded claims", () => {
+  const snapshot = makeSnapshot();
+
+  const cells = makeAnalysis(snapshot, runId);
+  cells.behavior = makeTeachingBehavior({ includeMicroworld: false });
+  cells.behavior.visual.rows[0].cells.pop();
+  assert.throws(
+    () => validateAnalysis(cells, snapshot, { runId }),
+    /must match the decision-table column count/u,
+  );
+
+  const unknownParticipant = makeAnalysis(snapshot, runId);
+  unknownParticipant.behavior = makeTeachingBehavior({
+    includeMicroworld: false,
+    visualKind: "sequence",
+  });
+  unknownParticipant.behavior.visual.messages[0].to = "missing";
+  assert.throws(
+    () => validateAnalysis(unknownParticipant, snapshot, { runId }),
+    /unknown participant/u,
+  );
+
+  const duplicateComponent = makeAnalysis(snapshot, runId);
+  duplicateComponent.behavior = makeTeachingBehavior({
+    includeMicroworld: false,
+    visualKind: "component-map",
+  });
+  duplicateComponent.behavior.visual.components[1].id = "retry";
+  assert.throws(
+    () => validateAnalysis(duplicateComponent, snapshot, { runId }),
+    /duplicate id/u,
+  );
+
+  const noEvidence = makeAnalysis(snapshot, runId);
+  noEvidence.behavior = makeTeachingBehavior({ includeMicroworld: false });
+  noEvidence.behavior.visual.evidence = [];
+  assert.throws(
+    () => validateAnalysis(noEvidence, snapshot, { runId }),
+    /must include evidence/u,
+  );
+
+  const wrongBasis = makeAnalysis(snapshot, runId);
+  wrongBasis.behavior = makeTeachingBehavior({ includeMicroworld: false });
+  wrongBasis.behavior.visual.basis = "stated";
+  assert.throws(
+    () => validateAnalysis(wrongBasis, snapshot, { runId }),
+    /stated-source basis/u,
+  );
+});
+
+test("microworld validation rejects unsafe or incomplete state models", () => {
+  const snapshot = makeSnapshot();
+
+  const missing = makeAnalysis(snapshot, runId);
+  missing.behavior = makeTeachingBehavior();
+  missing.behavior.microworld.scenarios.pop();
+  assert.throws(
+    () => validateAnalysis(missing, snapshot, { runId }),
+    /missing a control combination/u,
+  );
+
+  const duplicate = makeAnalysis(snapshot, runId);
+  duplicate.behavior = makeTeachingBehavior();
+  duplicate.behavior.microworld.scenarios[1].when = [
+    ...duplicate.behavior.microworld.scenarios[0].when,
+  ];
+  assert.throws(
+    () => validateAnalysis(duplicate, snapshot, { runId }),
+    /repeats a control combination/u,
+  );
+
+  const unknownDefault = makeAnalysis(snapshot, runId);
+  unknownDefault.behavior = makeTeachingBehavior();
+  unknownDefault.behavior.microworld.controls[0].defaultOptionId = "unknown";
+  assert.throws(
+    () => validateAnalysis(unknownDefault, snapshot, { runId }),
+    /defaultOptionId refers to an unknown option/u,
+  );
+
+  const partialBinding = makeAnalysis(snapshot, runId);
+  partialBinding.behavior = makeTeachingBehavior();
+  partialBinding.behavior.microworld.scenarios[0].when.pop();
+  assert.throws(
+    () => validateAnalysis(partialBinding, snapshot, { runId }),
+    /must bind every control exactly once/u,
+  );
+
+  const unknownOption = makeAnalysis(snapshot, runId);
+  unknownOption.behavior = makeTeachingBehavior();
+  unknownOption.behavior.microworld.scenarios[0].when[0].optionId = "unknown";
+  assert.throws(
+    () => validateAnalysis(unknownOption, snapshot, { runId }),
+    /refers to an unknown option/u,
+  );
+
+  const tooManyCombinations = makeAnalysis(snapshot, runId);
+  tooManyCombinations.behavior = makeTeachingBehavior();
+  tooManyCombinations.behavior.microworld.controls[0].options = [
+    { id: "one", label: "One" },
+    { id: "two", label: "Two" },
+    { id: "three", label: "Three" },
+    { id: "four", label: "Four" },
+  ];
+  tooManyCombinations.behavior.microworld.controls[0].defaultOptionId = "one";
+  tooManyCombinations.behavior.microworld.controls[1].options = [
+    { id: "one", label: "One" },
+    { id: "two", label: "Two" },
+    { id: "three", label: "Three" },
+    { id: "four", label: "Four" },
+  ];
+  tooManyCombinations.behavior.microworld.controls[1].defaultOptionId = "one";
+  assert.throws(
+    () => validateAnalysis(tooManyCombinations, snapshot, { runId }),
+    /more than 12 combinations/u,
+  );
+
+  const unknownField = makeAnalysis(snapshot, runId);
+  unknownField.behavior = makeTeachingBehavior();
+  unknownField.behavior.microworld.script = "run repository code";
+  assert.throws(
+    () => validateAnalysis(unknownField, snapshot, { runId }),
+    /unknown field: script/u,
   );
 });

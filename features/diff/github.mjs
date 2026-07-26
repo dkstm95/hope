@@ -49,6 +49,20 @@ function contentPath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
+function repositoryIdentity(value, name) {
+  const match = typeof value === "string"
+    ? value.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/u)
+    : undefined;
+  if (
+    !match
+    || [match[1], match[2]].includes(".")
+    || [match[1], match[2]].includes("..")
+  ) {
+    throw new Error(`GitHub returned an invalid ${name} repository identity`);
+  }
+  return Object.freeze({ name: match[2], owner: match[1] });
+}
+
 function unavailableReason(kind, detail) {
   return {
     "credential-pattern": "The file body matched a high-confidence credential pattern",
@@ -96,7 +110,21 @@ function ghFailure(error) {
     return new Error("GitHub CLI is required. Install gh and authenticate it before using Hope diff.");
   }
   const status = Number.isInteger(error?.code) ? ` (exit ${error.code})` : "";
-  return new Error(`GitHub collection failed${status}. Check gh auth and the pull request URL.`);
+  const failure = new Error(
+    `GitHub collection failed${status}. Check gh auth and the pull request URL.`,
+  );
+  const responseStatus = String(error?.stderr ?? "").match(
+    /\bHTTP\s+([45][0-9]{2})\b/iu,
+  );
+  if (responseStatus) {
+    Object.defineProperty(failure, "githubStatus", {
+      configurable: false,
+      enumerable: false,
+      value: Number.parseInt(responseStatus[1], 10),
+      writable: false,
+    });
+  }
+  return failure;
 }
 
 export async function runGhApi(path, {
@@ -220,9 +248,9 @@ function addSource(sources, kind, text, extra = {}) {
   return value.id;
 }
 
-async function collectFileBodies(target, pull, providerFiles, options) {
-  const [baseOwner, baseRepository] = pull.base.repo.full_name.split("/");
-  const [headOwner, headRepository] = pull.head.repo.full_name.split("/");
+async function collectFileBodies(pull, mergeBase, providerFiles, options) {
+  const baseRepository = repositoryIdentity(pull.base.repo.full_name, "base");
+  const headRepository = repositoryIdentity(pull.head.repo.full_name, "head");
   let total = 0;
   const values = [];
   for (const file of [...providerFiles].sort((left, right) => (
@@ -309,17 +337,17 @@ async function collectFileBodies(target, pull, providerFiles, options) {
       file.status === "added"
         ? { state: "absent" }
         : readContent(
-          baseOwner,
-          baseRepository,
+          baseRepository.owner,
+          baseRepository.name,
           beforePath,
-          pull.base.sha,
+          mergeBase,
           options,
         ),
       file.status === "removed"
         ? { state: "absent" }
         : readContent(
-          headOwner,
-          headRepository,
+          headRepository.owner,
+          headRepository.name,
           file.filename,
           pull.head.sha,
           options,
@@ -327,11 +355,6 @@ async function collectFileBodies(target, pull, providerFiles, options) {
     ]);
     const texts = [before.text, after.text].filter(Boolean);
     const fileBytes = texts.reduce((sum, text) => sum + byteLength(text), 0);
-    if (fileBytes > LIMITS.safeBodyBytes) {
-      throw new Error(
-        `${file.filename} exceeds Hope's ${LIMITS.safeBodyBytes}-byte safe-text limit`,
-      );
-    }
     total += fileBytes;
     if (total > LIMITS.safeBodyTotalBytes) {
       throw new Error(
@@ -346,17 +369,26 @@ async function collectFileBodies(target, pull, providerFiles, options) {
       || item.state === "oversized"
       || item.state === "special"
     ));
+    const safeSizeUnavailable = fileBytes > LIMITS.safeBodyBytes
+      ? {
+        reason: unavailableReason("safe-size-limit"),
+        reasonKind: "safe-size-limit",
+      }
+      : undefined;
     const bodyState = redaction
       ? "redacted"
-      : unavailable
+      : unavailable || safeSizeUnavailable
         ? "metadata-only"
         : "included";
     values.push({
       additions: file.additions,
       after: bodyState === "included" ? after.text : undefined,
       before: bodyState === "included" ? before.text : undefined,
-      bodyReason: redaction ? unavailableReason(redaction) : unavailable?.reason,
-      bodyReasonKind: redaction ?? unavailable?.reasonKind,
+      bodyReason: redaction
+        ? unavailableReason(redaction)
+        : (unavailable ?? safeSizeUnavailable)?.reason,
+      bodyReasonKind: redaction
+        ?? (unavailable ?? safeSizeUnavailable)?.reasonKind,
       bodyState,
       deletions: file.deletions,
       filename: file.filename,
@@ -440,7 +472,10 @@ export async function collectGitHubPullRequest(value, {
     throw new Error("GitHub returned a duplicate changed-file path");
   }
 
-  const collectedFiles = await collectFileBodies(target, pull, providerFiles, options);
+  const mergeBase = compare.merge_base_commit.sha;
+  const baseRepository = repositoryIdentity(pull.base.repo.full_name, "base");
+  const headRepository = repositoryIdentity(pull.head.repo.full_name, "head");
+  const collectedFiles = await collectFileBodies(pull, mergeBase, providerFiles, options);
   const sources = [];
   addSource(sources, "pull-request-title", title);
   addSource(sources, "pull-request-description", body);
@@ -454,8 +489,8 @@ export async function collectGitHubPullRequest(value, {
     {
       id: "limit-1",
       kind: "unchanged-context",
-      reason: "The first Hope diff path collects changed files, not unchanged files elsewhere in the repository",
-      subject: "Unchanged files outside the changed-file set",
+      reason: "Hope collects only exact-revision context files explicitly requested after initial inspection; other unchanged code remains unchecked",
+      subject: "Other unchanged code outside collected context",
     },
     {
       id: "limit-2",
@@ -477,7 +512,7 @@ export async function collectGitHubPullRequest(value, {
       sourceIds.push(addSource(sources, "before-file", file.before, {
         fileId: id,
         path: file.previousFilename ?? file.filename,
-        revision: pull.base.sha,
+        revision: mergeBase,
       }));
       sourceIds.push(addSource(sources, "after-file", file.after, {
         fileId: id,
@@ -521,6 +556,8 @@ export async function collectGitHubPullRequest(value, {
       url: target.url,
     },
     repository: {
+      base: baseRepository,
+      head: headRepository,
       name: target.repository,
       owner: target.owner,
       provider: "github",
@@ -534,7 +571,7 @@ export async function collectGitHubPullRequest(value, {
     snapshot: {
       base: pull.base.sha,
       head: pull.head.sha,
-      mergeBase: compare.merge_base_commit.sha,
+      mergeBase,
     },
     sources,
   };
@@ -587,3 +624,8 @@ export async function revalidateGitHubSnapshot(collected, { clock = () => new Da
     revalidatedAt: clock().toISOString(),
   });
 }
+
+export {
+  unavailableReason as githubUnavailableReason,
+  readContent as readGitHubContent,
+};

@@ -172,7 +172,9 @@ function languageFromPath(path) {
 
 function evidenceLanguage(evidence) {
   if (evidence.sourceKind === "patch") return languageFromPath(evidence.path);
-  if (!["after-file", "before-file"].includes(evidence.sourceKind)) return undefined;
+  if (!["after-file", "before-file", "context-file"].includes(evidence.sourceKind)) {
+    return undefined;
+  }
   return languageFromPath(evidence.path);
 }
 

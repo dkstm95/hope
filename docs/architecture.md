@@ -94,6 +94,10 @@ The current diff implementation starts from [diff.md](diff.md). It collects an
 exact GitHub pull-request snapshot, exposes bounded inspection pages, validates
 one structured analysis, rechecks the snapshot, and publishes one private
 self-contained HTML file without replacing an existing file.
+After the initial inspection, the skill can ask the shared runtime for a
+bounded set of grounded files at the captured head or merge-base revision. The
+runtime commits those context sources through an atomic replacement inspection
+plan, so analysis never mixes page generations.
 
 The Claude and Codex skill is the first complete AI analysis path. It can use
 the active host session to produce a structured analysis. The independent

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import {
   access,
   mkdtemp,
@@ -16,6 +18,7 @@ import {
   LEGACY_RUN_VERSION,
   LIMITS,
 } from "../features/diff/constants.mjs";
+import { digestJson } from "../features/diff/hash.mjs";
 import {
   finishDiff,
   prepareDiff,
@@ -29,9 +32,20 @@ import {
   inspectDiffRun,
   loadDiffRun,
   removeDiffRun,
+  replaceDiffRunPlan,
   serializeInspectionPage,
 } from "../features/diff/run.mjs";
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
+
+function revisedSnapshot(snapshot, marker) {
+  const value = JSON.parse(JSON.stringify(snapshot));
+  delete value.digest;
+  value.sources[1].text = `${value.sources[1].text} ${marker}`;
+  return Object.freeze({
+    ...value,
+    digest: digestJson(value),
+  });
+}
 
 test("an invalid explicit output fails before GitHub collection", async () => {
   let collected = false;
@@ -164,6 +178,257 @@ test("an in-flight v1 run can resume with the original analysis contract", async
   assert.equal(validatedReview.reviewItems.length, 80);
   assert.equal(validatedReview.resources.analysisFileBytes, Buffer.byteLength(serialized));
   assert.equal(result.resources.analysisFileBytes, Buffer.byteLength(serialized));
+});
+
+test("an inspected current run atomically adopts a new inspection plan", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-replace-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  const revised = revisedSnapshot(snapshot, "Context was added.");
+  const inspected = await loadDiffRun(created.path, { temporaryRoot });
+
+  const replaced = await replaceDiffRunPlan(inspected, revised, {
+    temporaryRoot,
+  });
+
+  assert.equal(replaced.snapshot.digest, revised.digest);
+  assert.equal(replaced.manifest.snapshotDigest, revised.digest);
+  assert.equal(replaced.manifest.snapshotFile, `snapshot.${revised.digest}.json`);
+  assert.equal(replaced.manifest.pagesFile, `pages.${revised.digest}.json`);
+  assert.equal(replaced.manifest.phase, "prepared");
+  assert.deepEqual(replaced.manifest.deliveredPages, []);
+  assert.equal(replaced.manifest.pageCount, replaced.pages.length);
+  assert.deepEqual(replaced.manifest.resources, replaced.resources);
+  await access(join(created.path, replaced.manifest.snapshotFile));
+  await access(join(created.path, replaced.manifest.pagesFile));
+
+  const first = await inspectDiffRun(created.path, 1, { temporaryRoot });
+  assert.equal(first.page, 1);
+  const resumed = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(resumed.manifest.deliveredPages.length, 1);
+  assert.equal(resumed.snapshot.digest, revised.digest);
+});
+
+test("inspection-plan pointers reject traversal and symlinked generation files", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-pointer-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  const revised = revisedSnapshot(snapshot, "Pointer validation.");
+  const replaced = await replaceDiffRunPlan(created.path, revised, {
+    temporaryRoot,
+  });
+  const manifestPath = join(created.path, "run.json");
+  const snapshotPath = join(created.path, replaced.manifest.snapshotFile);
+  const originalManifest = await readFile(manifestPath, "utf8");
+  context.after(async () => {
+    await writeFile(manifestPath, originalManifest, "utf8").catch(() => {});
+    await unlink(snapshotPath).catch(() => {});
+    await writeFile(
+      snapshotPath,
+      `${JSON.stringify(revised, null, 2)}\n`,
+      { flag: "wx", mode: 0o600 },
+    ).catch(() => {});
+    await removeDiffRun(created.path, { temporaryRoot }).catch(() => {});
+  });
+
+  const traversing = JSON.parse(originalManifest);
+  traversing.snapshotFile = "../snapshot.json";
+  await writeFile(manifestPath, `${JSON.stringify(traversing, null, 2)}\n`, "utf8");
+  await assert.rejects(
+    loadDiffRun(created.path, { temporaryRoot }),
+    /plan pointers are unsafe/u,
+  );
+
+  await writeFile(manifestPath, originalManifest, "utf8");
+  await unlink(snapshotPath);
+  await symlink(join(created.path, "snapshot.json"), snapshotPath);
+  await assert.rejects(
+    loadDiffRun(created.path, { temporaryRoot }),
+    /snapshot is not a regular file/u,
+  );
+});
+
+test("a failed inspection-plan write leaves the previous manifest authoritative", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-write-failure-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  const revised = revisedSnapshot(snapshot, "This plan will not commit.");
+  let writes = 0;
+
+  await assert.rejects(
+    replaceDiffRunPlan(created.path, revised, {
+      temporaryRoot,
+      writeJson: async (path, value) => {
+        writes += 1;
+        if (writes === 2) throw new Error("new pages could not be written");
+        await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, {
+          flag: "wx",
+          mode: 0o600,
+        });
+      },
+    }),
+    /new pages could not be written/u,
+  );
+
+  const resumed = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(resumed.snapshot.digest, snapshot.digest);
+  assert.equal(resumed.manifest.snapshotFile, undefined);
+  assert.equal(resumed.manifest.pagesFile, undefined);
+  assert.equal(resumed.manifest.phase, "prepared");
+});
+
+test("forced termination during inspection-plan generation preserves the previous plan", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-forced-stop-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  const revised = revisedSnapshot(snapshot, "The process will stop before commit.");
+  const runModule = new URL("../features/diff/run.mjs", import.meta.url).href;
+  const childScript = [
+    'import { open } from "node:fs/promises";',
+    'import { basename } from "node:path";',
+    `const { replaceDiffRunPlan } = await import(${JSON.stringify(runModule)});`,
+    `const runPath = ${JSON.stringify(created.path)};`,
+    `const temporaryRoot = ${JSON.stringify(temporaryRoot)};`,
+    `const snapshot = ${JSON.stringify(revised)};`,
+    "const writeJson = async (path, value) => {",
+    '  const handle = await open(path, "wx", 0o600);',
+    "  try {",
+    '    await handle.writeFile(`${JSON.stringify(value, null, 2)}\\n`, "utf8");',
+    "    await handle.sync();",
+    "  } finally {",
+    "    await handle.close();",
+    "  }",
+    '  if (basename(path).startsWith("snapshot.")) {',
+    '    process.stdout.write("snapshot-written\\n");',
+    "    setInterval(() => {}, 1_000);",
+    "    await new Promise(() => {});",
+    "  }",
+    "};",
+    "await replaceDiffRunPlan(runPath, snapshot, {",
+    "  temporaryRoot,",
+    "  writeJson,",
+    "});",
+  ].join("\n");
+  const child = spawn(
+    process.execPath,
+    ["--input-type=module", "--eval", childScript],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+  child.stdout.setEncoding("utf8");
+  await new Promise((resolve, reject) => {
+    let stdout = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+      if (stdout.includes("snapshot-written\n")) resolve();
+    });
+    child.once("exit", (code) => {
+      reject(new Error(`plan child exited early (${code}): ${stderr}`));
+    });
+  });
+  const exit = once(child, "exit");
+  child.kill("SIGKILL");
+  await exit;
+
+  const resumed = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(resumed.snapshot.digest, snapshot.digest);
+  assert.equal(resumed.manifest.snapshotFile, undefined);
+  assert.equal(resumed.manifest.pagesFile, undefined);
+  await access(join(created.path, `snapshot.${revised.digest}.json`));
+  await assert.rejects(
+    access(join(created.path, `pages.${revised.digest}.json`)),
+    /ENOENT/u,
+  );
+
+  const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  await utimes(join(created.path, ".finish.lock"), stale, stale);
+  const recovered = await replaceDiffRunPlan(created.path, revised, {
+    temporaryRoot,
+  });
+  assert.equal(recovered.snapshot.digest, revised.digest);
+  assert.equal(recovered.manifest.phase, "prepared");
+  await access(join(created.path, recovered.manifest.pagesFile));
+});
+
+test("a stale analysis or finalization claim blocks inspection-plan replacement", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-state-"));
+  const snapshot = makeSnapshot();
+  const withAnalysis = await createDiffRun(snapshot, { temporaryRoot });
+  const finalizing = await createDiffRun(snapshot, { temporaryRoot });
+  context.after(async () => {
+    await removeDiffRun(withAnalysis.path, { temporaryRoot }).catch(() => {});
+    await removeDiffRun(finalizing.path, { temporaryRoot }).catch(() => {});
+  });
+  await writeFile(withAnalysis.analysisPath, "{}\n", {
+    flag: "wx",
+    mode: 0o600,
+  });
+  await assert.rejects(
+    replaceDiffRunPlan(
+      withAnalysis.path,
+      revisedSnapshot(snapshot, "Stale analysis."),
+      { temporaryRoot },
+    ),
+    /after an analysis file exists/u,
+  );
+
+  const run = await loadDiffRun(finalizing.path, { temporaryRoot });
+  const claim = await claimDiffRunFinalization(run);
+  try {
+    await assert.rejects(
+      replaceDiffRunPlan(
+        finalizing.path,
+        revisedSnapshot(snapshot, "Finalization started."),
+        { temporaryRoot },
+      ),
+      /already being finalized/u,
+    );
+  } finally {
+    await claim.release();
+  }
+});
+
+test("a legacy run cannot adopt a generation-based inspection plan", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-legacy-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  const manifestPath = join(created.path, "run.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  manifest.runVersion = LEGACY_RUN_VERSION;
+  delete manifest.resources;
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+  await assert.rejects(
+    replaceDiffRunPlan(
+      created.path,
+      revisedSnapshot(snapshot, "Legacy run."),
+      { temporaryRoot },
+    ),
+    /Only a current Hope diff run/u,
+  );
 });
 
 test("a v2 run cannot drop its resource policy", async (context) => {
@@ -492,6 +757,114 @@ test("expiry cleanup leaves an actively finalized old run in place", async () =>
   }
 });
 
+test("a newer lease generation fences a suspended expiry cleanup", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-cleanup-fence-"));
+  const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const created = await createDiffRun(makeSnapshot(), {
+    clock: () => old,
+    temporaryRoot,
+  });
+  const run = await loadDiffRun(created.path, { temporaryRoot });
+  let continueCleanup;
+  let cleanupClaimed;
+  const claimed = new Promise((resolve) => {
+    cleanupClaimed = resolve;
+  });
+  const blocked = new Promise((resolve) => {
+    continueCleanup = resolve;
+  });
+  const cleanup = cleanupExpiredRuns({
+    onCleanupClaimed: async ({ path }) => {
+      assert.equal(path, created.path);
+      cleanupClaimed();
+      await blocked;
+    },
+    temporaryRoot,
+  });
+  await claimed;
+
+  const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  await utimes(join(created.path, ".finish.lock"), stale, stale);
+  const replacement = await claimDiffRunFinalization(run);
+  await replacement.assertOwned();
+  continueCleanup();
+
+  assert.deepEqual(await cleanup, []);
+  await access(created.path);
+  await replacement.assertOwned();
+  await replacement.release();
+  await removeDiffRun(created.path, { temporaryRoot });
+});
+
+test("expiry cleanup reclaims a run terminated between private source writes", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-forced-stop-"));
+  const runModule = new URL("../features/diff/run.mjs", import.meta.url).href;
+  const fixtureModule = new URL("../test-support/diff-fixture.mjs", import.meta.url).href;
+  const childScript = [
+    'import { open } from "node:fs/promises";',
+    'import { basename, dirname } from "node:path";',
+    `const { createDiffRun } = await import(${JSON.stringify(runModule)});`,
+    `const { makeSnapshot } = await import(${JSON.stringify(fixtureModule)});`,
+    `const temporaryRoot = ${JSON.stringify(temporaryRoot)};`,
+    "const writeJson = async (path, value) => {",
+    '  const handle = await open(path, "wx", 0o600);',
+    "  try {",
+    '    await handle.writeFile(`${JSON.stringify(value, null, 2)}\\n`, "utf8");',
+    "    await handle.sync();",
+    "  } finally {",
+    "    await handle.close();",
+    "  }",
+    '  if (basename(path) === "snapshot.json") {',
+    '    process.stdout.write(`${dirname(path)}\\n`);',
+    "    setInterval(() => {}, 1_000);",
+    "    await new Promise(() => {});",
+    "  }",
+    "};",
+    "await createDiffRun(makeSnapshot(), {",
+    '  clock: () => new Date("2026-07-20T00:00:00.000Z"),',
+    "  temporaryRoot,",
+    "  writeJson,",
+    "});",
+  ].join("\n");
+  const child = spawn(
+    process.execPath,
+    ["--input-type=module", "--eval", childScript],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+  child.stdout.setEncoding("utf8");
+  const runPath = await new Promise((resolve, reject) => {
+    let stdout = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+      const newline = stdout.indexOf("\n");
+      if (newline >= 0) resolve(stdout.slice(0, newline));
+    });
+    child.once("exit", (code) => {
+      reject(new Error(`forced-stop child exited early (${code}): ${stderr}`));
+    });
+  });
+  const exit = once(child, "exit");
+  child.kill("SIGKILL");
+  await exit;
+
+  const manifest = JSON.parse(await readFile(join(runPath, "run.json"), "utf8"));
+  assert.equal(manifest.owner, "hope-diff-run");
+  await access(join(runPath, "snapshot.json"));
+  await assert.rejects(access(join(runPath, "pages.json")), /ENOENT/u);
+
+  const removed = await cleanupExpiredRuns({
+    clock: () => new Date("2026-07-22T00:00:00.000Z"),
+    temporaryRoot,
+  });
+  assert.deepEqual(removed, [runPath]);
+  await assert.rejects(access(runPath), /ENOENT/u);
+});
+
 test("a heartbeat keeps a long finalization lease active", async () => {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-stale-expiry-"));
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -533,6 +906,33 @@ test("expiry cleanup reclaims a stale lease even when its PID is reused", async 
   await claim.release();
 });
 
+test("concurrent stale-lease recovery elects only one new owner", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-stale-race-"));
+  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+  const run = await loadDiffRun(created.path, { temporaryRoot });
+  const original = await claimDiffRunFinalization(run, {
+    scheduleHeartbeat: () => undefined,
+  });
+  const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  await utimes(join(created.path, ".finish.lock"), stale, stale);
+
+  const attempts = await Promise.allSettled([
+    claimDiffRunFinalization(run),
+    claimDiffRunFinalization(run),
+  ]);
+  const fulfilled = attempts.filter((attempt) => attempt.status === "fulfilled");
+  const rejected = attempts.filter((attempt) => attempt.status === "rejected");
+  assert.equal(fulfilled.length, 1);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason?.code, "EEXIST");
+
+  const winner = fulfilled[0].value;
+  await winner.assertOwned();
+  await Promise.all([original.release(), winner.release()]);
+  await assert.rejects(winner.assertOwned(), /lease was lost/u);
+  await removeDiffRun(created.path, { temporaryRoot });
+});
+
 test("expiry cleanup reclaims an old incomplete finalization claim", async () => {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-incomplete-claim-"));
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -544,6 +944,51 @@ test("expiry cleanup reclaims an old incomplete finalization claim", async () =>
   await writeFile(claimPath, "", { flag: "wx", mode: 0o600 });
   const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
   await utimes(claimPath, stale, stale);
+
+  const removed = await cleanupExpiredRuns({ temporaryRoot });
+  assert.deepEqual(removed, [created.path]);
+  await assert.rejects(access(created.path), /ENOENT/u);
+});
+
+test("a fresh run recovers an abandoned next-generation lease after expiry", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-lease-generation-"));
+  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+  const run = await loadDiffRun(created.path, { temporaryRoot });
+  await claimDiffRunFinalization(run, {
+    scheduleHeartbeat: () => undefined,
+  });
+  const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  await utimes(join(created.path, ".finish.lock"), stale, stale);
+
+  // A force-kill can leave a newly created generation empty before its JSON
+  // body is written. The immutable generation remains a fencing record and a
+  // later claimant advances without deleting or replacing it.
+  const abandonedPath = join(created.path, ".finish.lock.1");
+  await writeFile(abandonedPath, "", { flag: "wx", mode: 0o600 });
+  await utimes(abandonedPath, stale, stale);
+
+  const recovered = await claimDiffRunFinalization(run);
+  await recovered.assertOwned();
+  await access(join(created.path, ".finish.lock.2"));
+  await recovered.release();
+  await assert.rejects(access(join(created.path, ".finish.lock.2")), /ENOENT/u);
+  await removeDiffRun(created.path, { temporaryRoot });
+});
+
+test("expiry cleanup reclaims an old run with an abandoned lease generation", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-lease-cleanup-"));
+  const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const created = await createDiffRun(makeSnapshot(), {
+    clock: () => old,
+    temporaryRoot,
+  });
+  const initialPath = join(created.path, ".finish.lock");
+  const abandonedPath = join(created.path, ".finish.lock.1");
+  await writeFile(initialPath, "", { flag: "wx", mode: 0o600 });
+  await writeFile(abandonedPath, "", { flag: "wx", mode: 0o600 });
+  const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  await utimes(initialPath, stale, stale);
+  await utimes(abandonedPath, stale, stale);
 
   const removed = await cleanupExpiredRuns({ temporaryRoot });
   assert.deepEqual(removed, [created.path]);
@@ -610,6 +1055,126 @@ test("a run is cleaned before its review becomes visible", async (context) => {
     /cleanup failed/u,
   );
   assert.equal(published, false);
+});
+
+test("a publication failure after successful run removal is not a cleanup failure", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-publication-failure-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+
+  await assert.rejects(
+    finishDiff(created.path, {
+      finalize: async () => {
+        throw new Error("publication stopped");
+      },
+      render: async () => ({ bytes: Buffer.from("review"), digest: "digest" }),
+      revalidate: async () => ({
+        matches: true,
+        revalidatedAt: "2026-07-23T00:01:00.000Z",
+      }),
+      temporaryRoot,
+    }),
+    (error) => {
+      assert.equal(error.message, "publication stopped");
+      assert.equal(error.cleanupPending, undefined);
+      return true;
+    },
+  );
+  await assert.rejects(access(created.path), /ENOENT/u);
+});
+
+test("a normal failure reports when its private run cleanup also fails", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-cleanup-diagnostic-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+
+  await assert.rejects(
+    finishDiff(created.path, {
+      removeRun: async () => {
+        throw new Error("cleanup storage is unavailable");
+      },
+      render: async () => {
+        throw new Error("renderer stopped");
+      },
+      temporaryRoot,
+    }),
+    (error) => {
+      assert.match(error.message, /^renderer stopped/u);
+      assert.match(error.message, /could not remove its private review data/u);
+      assert.match(error.message, /later Hope run will retry expiry cleanup/u);
+      assert.equal(error.cause?.message, "renderer stopped");
+      assert.equal(error.cleanupError?.message, "cleanup storage is unavailable");
+      assert.equal(error.cleanupPending, true);
+      return true;
+    },
+  );
+  await access(created.path);
+});
+
+test("a lease release failure preserves the primary and cleanup diagnostics", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-release-diagnostic-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+
+  await assert.rejects(
+    finishDiff(created.path, {
+      claimFinalization: async () => ({
+        release: async () => {
+          throw new Error("lease release failed");
+        },
+      }),
+      removeRun: async () => {
+        throw new Error("cleanup storage is unavailable");
+      },
+      render: async () => {
+        throw new Error("renderer stopped");
+      },
+      temporaryRoot,
+    }),
+    (error) => {
+      assert.match(error.message, /^renderer stopped/u);
+      assert.match(error.message, /could not remove its private review data/u);
+      assert.match(error.message, /could not release its private finalization lease/u);
+      assert.equal(error.cause?.cause?.message, "renderer stopped");
+      assert.equal(error.cleanupError?.message, "cleanup storage is unavailable");
+      assert.equal(error.releaseError?.message, "lease release failed");
+      assert.equal(error.cleanupPending, true);
+      return true;
+    },
+  );
+  await access(created.path);
 });
 
 test("inspection pages must be read in order and the last handoff is replayable", async (context) => {

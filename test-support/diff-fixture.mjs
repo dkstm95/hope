@@ -84,6 +84,166 @@ function reference(sourceId, startLine, endLine = startLine) {
   return { endLine, sourceId, startLine };
 }
 
+export function makeTeachingBehavior({
+  includeMicroworld = true,
+  visualKind = "decision-table",
+} = {}) {
+  const evidence = [reference("source-3", 2, 4)];
+  const grounded = {
+    basis: "code",
+    evidence,
+  };
+  const visuals = {
+    "component-map": {
+      ...grounded,
+      caption: "The retry branch passes the saved failure to its caller.",
+      components: [
+        { detail: "Keeps the final failure.", id: "retry", label: "Retry branch" },
+        { detail: "Receives the preserved failure.", id: "caller", label: "Caller" },
+      ],
+      connections: [
+        { from: "retry", label: "throws the saved failure", to: "caller" },
+      ],
+      kind: "component-map",
+      title: "Failure handoff",
+    },
+    "decision-table": {
+      ...grounded,
+      caption: "The saved state determines which failure reaches the caller.",
+      columns: ["Previous behavior", "New behavior"],
+      kind: "decision-table",
+      rows: [
+        {
+          case: "No saved failure",
+          cells: ["Generic failure", "Generic failure"],
+        },
+        {
+          case: "Saved failure",
+          cells: ["Generic failure", "Saved failure"],
+        },
+      ],
+      title: "Retry outcome",
+    },
+    flow: {
+      ...grounded,
+      caption: "The final failure now survives the retry boundary.",
+      items: [
+        { detail: "The retry attempt fails.", label: "Receive failure" },
+        { detail: "The branch keeps and throws that failure.", label: "Preserve failure" },
+      ],
+      kind: "flow",
+      title: "Failure path",
+    },
+    sequence: {
+      ...grounded,
+      caption: "The retry branch returns the saved failure to the caller.",
+      kind: "sequence",
+      messages: [
+        { from: "attempt", label: "reports the final failure", to: "retry" },
+        { from: "retry", label: "throws the saved failure", to: "caller" },
+      ],
+      participants: [
+        { id: "attempt", label: "Attempt" },
+        { id: "retry", label: "Retry branch" },
+        { id: "caller", label: "Caller" },
+      ],
+      title: "Failure sequence",
+    },
+  };
+  const behavior = {
+    summary: {
+      ...grounded,
+      text: "The final failure is preserved across the retry boundary.",
+    },
+    steps: [
+      {
+        ...grounded,
+        text: "A retry attempt produces a failure.",
+      },
+      {
+        ...grounded,
+        text: "The branch stores and throws the final failure.",
+      },
+    ],
+    visual: visuals[visualKind],
+  };
+  if (includeMicroworld) {
+    const combinations = [
+      ["failed", "missing"],
+      ["failed", "present"],
+      ["succeeded", "missing"],
+      ["succeeded", "present"],
+    ];
+    behavior.microworld = {
+      ...grounded,
+      controls: [
+        {
+          defaultOptionId: "failed",
+          id: "attempt",
+          kind: "input",
+          label: "Final attempt",
+          options: [
+            { id: "failed", label: "Failed" },
+            { id: "succeeded", label: "Succeeded" },
+          ],
+        },
+        {
+          defaultOptionId: "missing",
+          id: "saved-error",
+          kind: "state",
+          label: "Saved failure",
+          options: [
+            { id: "missing", label: "Missing" },
+            { id: "present", label: "Present" },
+          ],
+        },
+      ],
+      evidence,
+      instructions: "Change the attempt result and saved state to compare outcomes.",
+      omits: "Caller-specific recovery and logging outside the changed branch.",
+      scenarios: combinations.map(([attempt, savedError]) => {
+        const hasSavedError = savedError === "present";
+        const succeeded = attempt === "succeeded";
+        const outcome = succeeded
+          ? "The successful value continues."
+          : hasSavedError
+            ? "The saved failure reaches the caller."
+            : "A generic failure reaches the caller.";
+        return {
+          after: {
+            outcome,
+            steps: [
+              succeeded ? "Keep the successful result." : "Read the final failure.",
+              hasSavedError ? "Use the saved failure." : "Use the generic fallback.",
+            ],
+          },
+          before: {
+            outcome: succeeded
+              ? "The successful value continues."
+              : "A generic failure reaches the caller.",
+            steps: [
+              succeeded ? "Keep the successful result." : "Discard the final failure.",
+              succeeded ? "Return the value." : "Create a generic failure.",
+            ],
+          },
+          id: `${attempt}-${savedError}`,
+          lesson: succeeded || !hasSavedError
+            ? "The changed branch has the same visible result."
+            : "Only a stored final failure changes the visible result.",
+          title: `${attempt === "failed" ? "Failed" : "Succeeded"} with ${hasSavedError ? "saved" : "missing"} failure`,
+          when: [
+            { controlId: "attempt", optionId: attempt },
+            { controlId: "saved-error", optionId: savedError },
+          ],
+        };
+      }),
+      simplifies: "The model treats retry completion as one final branch.",
+      title: "Retry result explorer",
+    };
+  }
+  return behavior;
+}
+
 export function makeAnalysis(snapshot, runId) {
   return {
     codeSteps: [
@@ -97,6 +257,7 @@ export function makeAnalysis(snapshot, runId) {
     ],
     contextChecks: [
       {
+        basis: "code",
         evidence: [reference("source-3", 1, 4)],
         explanation: "The changed retry branch and its direct result were checked.",
         limitIds: [],
@@ -104,6 +265,7 @@ export function makeAnalysis(snapshot, runId) {
         subject: "Changed retry behavior",
       },
       {
+        basis: "unknown",
         evidence: [],
         explanation: "Unchanged direct callers were not collected.",
         limitIds: ["limit-1"],
@@ -111,6 +273,7 @@ export function makeAnalysis(snapshot, runId) {
         subject: "Unchanged direct callers",
       },
       {
+        basis: "unknown",
         evidence: [],
         explanation: "This change does not modify stored data or a migration.",
         limitIds: [],
