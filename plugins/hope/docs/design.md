@@ -52,6 +52,15 @@ On a narrow screen:
 - open its links in a bounded panel directly below the product bar;
 - use larger body text and touch targets.
 
+When the theme and contents controls appear together, give both a 44-pixel
+control height, the same border role, and the same corner radius. An icon-only
+control may be narrower, but it must not look like a smaller control family.
+
+The product bar owns repository and pull request identity. The title area owns
+the artifact title and the compact **Commit** label. Do not repeat repository
+identity or add a persistent sentence explaining that an offline artifact does
+not update itself.
+
 A complex drawer is allowed only after its focus, keyboard, scroll, and deep
 link behavior is tested.
 
@@ -110,6 +119,24 @@ Do not draw a strong rule between every sentence or row. Do not nest full
 component borders inside the first-screen summary. Compact summary items use
 rows; their detailed versions may use cards later in the document.
 
+Use one quiet marker gutter to help the eye follow body content:
+
+- ordinary paragraphs have no marker;
+- two or more parallel claims use one small dot each;
+- ordered behavior and code steps use `01`, `02`, `03`;
+- a status dot, section number, disclosure arrow, or other existing marker is
+  not paired with another generic bullet; and
+- nested lists stop after one level and use a neutral marker inside.
+
+Keep the first-screen review result especially compact. Render each preview as
+a small kind marker, plain importance text, and title. Do not add a
+representative status, total, or kind counts above the previews. When no item
+exists, show one plain empty-result sentence. Show concrete material scope
+limits without a generic scope badge, and omit that synopsis row when no
+material limit exists. Keep the same label-and-value grid used by the other
+synopsis rows. Separate preview items with spacing, not rules. Use semantic
+`ul` and `ol` elements whenever the content is actually a list.
+
 When a change has two to five short behavior steps, show them as connected
 cards: horizontal on a wide screen and vertical on a narrow screen. Use the
 same text and order in both layouts. Fall back to a normal list when the steps
@@ -165,6 +192,23 @@ Supported interactions can include:
 - switch the current document theme;
 - try a safe declarative microworld; and
 - reveal a quiz explanation.
+
+The **Evidence and checked scope** section is a dense reference appendix. Keep
+the whole section closed initially. Its source groups, context checks, scope
+limits, checked-file group, and artifact details must also open independently
+and start closed. Use native disclosure controls so they work without
+JavaScript. Opening a fragment link must reveal every disclosure that contains
+its target.
+
+Code markup must contain explicit line separators. One source line must remain
+one visible line even without layout styles; long lines scroll inside the code
+surface instead of merging with adjacent lines.
+
+Do not make audit completeness look like repeated interface content. Merge
+changed-file source metadata into the changed-file table, keep other sources in
+a separate small table, and group exclusions that have the same reason. The
+collapsed interface stays compact while expanded details still account for
+every source, file, and limit.
 
 Do not show a section-copy control while artifacts use temporary local paths.
 Stable section IDs remain available for navigation. Add copying only when Hope

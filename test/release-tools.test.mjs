@@ -7,6 +7,8 @@ import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
+import { normalizeLineEndings } from "../tools/build-plugin.mjs";
+import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 import {
   isSemanticVersion,
   replaceVersion,
@@ -61,6 +63,13 @@ test("the package file list rejects ambiguous or unsafe paths", () => {
   assert.throws(() => parsePackageFileList("../secret\n"), /unsafe/iu);
   assert.throws(() => parsePackageFileList("folder\\file\n"), /unsafe/iu);
   assert.throws(() => parsePackageFileList("folder/./file\n"), /unsafe/iu);
+});
+
+test("release file lists compare across platform line endings", () => {
+  const expected = `${pluginPackageFiles.join("\n")}\n`;
+  const windowsCheckout = expected.replace(/\n/gu, "\r\n");
+
+  assert.equal(normalizeLineEndings(windowsCheckout), expected);
 });
 
 test("CI installs locked dependencies before running checks or builds", async () => {

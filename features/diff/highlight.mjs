@@ -307,7 +307,7 @@ export async function createCodeHighlighter() {
           : "";
         return `<span class="syntax-line syntax-line-patch syntax-line-${line.kind}${coordinateClass}"${coordinates}>`
           + `<span class="syntax-content">${prefixHtml}${tokens}</span></span>`;
-      }).join("");
+      }).join("\n");
     }
     if (!language) return escapeHtml(evidence.excerpt);
     try {
@@ -320,7 +320,7 @@ export async function createCodeHighlighter() {
           `<span class="${tokenClass(token.variants)}">${escapeHtml(token.content)}</span>`
         )).join("");
         return `<span class="syntax-line"><span class="syntax-content">${tokens}</span></span>`;
-      }).join("");
+      }).join("\n");
     } catch {
       return escapeHtml(evidence.excerpt);
     }

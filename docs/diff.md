@@ -81,8 +81,10 @@ change without a code revision. Bind claims from these sources to the captured
 content, source identity, and collection time. Do not present them as immutable
 parts of the code snapshot.
 
-The first screen shows the reviewed head revision and capture time. It says
-that the offline file does not track later pull request changes.
+The first screen shows the reviewed head revision with the compact label
+**Commit** and its capture time. A short head hash identifies that commit; it
+must not be labeled as the whole snapshot. The full base, head, merge-base,
+repository, and capture details remain in artifact details.
 
 ## One review artifact
 
@@ -112,12 +114,20 @@ seconds. Show information in this order:
 2. **Core change** — a short previous and new explanation.
 3. **Why it matters** — the effect on a person, caller, system, process, or
    data.
-4. **Review status** — item counts and the top one to three items.
-5. **Scope status** — sufficient or limited, plus the material effect of each
-   limit.
+4. **Review items** — the top one to three items, or a clear empty result.
+5. **Known scope limits** — each material effect, only when at least one exists.
 
 The first screen is a short synopsis. The main explanation lives in **Core
 change**. Group long lists and link to their full explanation.
+
+Show repository and pull request identity once in the product bar. Do not
+repeat it under the artifact title. Do not add a representative status, total,
+or kind counts above review-item previews; each preview already names its kind
+and importance. Show `No important item found in the checked scope` only when
+there are no items. Show concrete material scope limits without a generic
+`limited` badge, and omit the first-screen scope row when there are none. A
+top-item preview contains kind, importance, and title; its explanation, effect,
+action, closing condition, and evidence live in the full item.
 
 A change may intentionally leave runtime behavior unchanged. For a refactor,
 documentation change, build change, dependency update, or test-only change,
@@ -186,6 +196,22 @@ material sources not checked, and resulting limits. Important evidence also
 stays beside the claim it supports. This section is an index, not the only
 evidence location.
 
+Treat this dense index as an appendix. The section and each source group,
+context check, scope limit, checked-file group, and artifact-detail group start
+closed and can be opened independently. A direct link opens the controls needed
+to reveal its target.
+
+Do not list a changed file once as a captured patch and again as a checked
+file. Join file sources to the changed-file row by stable file ID. Keep pull
+request text, commit titles, and other sources without a changed-file ID in a
+small separate source table.
+
+Show checked and not-applicable context in the context group. Show a limited
+context with the scope limits it accounts for instead of repeating it in both
+groups. Group limits that share the same stable reason and material state,
+while preserving every subject, impact, link target, and file disposition in
+independently expandable details.
+
 ## Context to inspect
 
 A diff is not always enough. Start with concrete questions:
@@ -224,7 +250,8 @@ runtime behavior.
 
 ## Review result
 
-A review can contain several item kinds at once. Keep three things separate:
+A review can contain several item kinds at once. Keep three things separate
+inside the validated review model:
 
 - all review items;
 - a review status derived from their kinds; and
@@ -239,8 +266,11 @@ Else, at least one Verify   -> More verification needed
 No items                    -> No important item found in the checked scope
 ```
 
-Also show the count of every present kind. Limited scope must not hide a found
-item. A found item must not make the scope look sufficient.
+The derived status and counts support validation and future integrations. Do
+not show them as a first-screen dashboard. Sort the visible item previews by
+importance and action, show up to three, and link to the remaining count.
+Limited scope must not hide a found item. A found item must not make the scope
+look sufficient.
 
 ## Review items
 

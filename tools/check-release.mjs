@@ -5,6 +5,7 @@ import { access, readFile } from "node:fs/promises";
 
 import {
   expectedPluginFile,
+  normalizeLineEndings,
   pluginBundleEntries,
 } from "./build-plugin.mjs";
 import { pluginPackageFiles } from "./plugin-files.mjs";
@@ -178,7 +179,7 @@ assert.match(readme, /claude --plugin-dir \.\/plugins\/hope/u);
 assert.match(readmeKo, /src="plugins\/hope\/assets\/telescope\.svg"/u);
 assert.match(readmeKo, /claude --plugin-dir \.\/plugins\/hope/u);
 assert.equal(
-  await read("tools/plugin-package-files.txt"),
+  normalizeLineEndings(await read("tools/plugin-package-files.txt")),
   `${pluginPackageFiles.join("\n")}\n`,
 );
 

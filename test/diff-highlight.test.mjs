@@ -52,8 +52,7 @@ test("patches mark changed lines while unknown files stay inert", async () => {
   assert.match(patch, /data-old-line="10" data-new-line=""/u);
   assert.match(patch, /data-old-line="" data-new-line="20"/u);
   assert.match(patch, /data-old-line="11" data-new-line="21"/u);
-  assert.match(patch, /<\/span><span class="syntax-line/u);
-  assert.doesNotMatch(patch, /<\/span>\s+<span class="syntax-line/u);
+  assert.match(patch, /<\/span>\n<span class="syntax-line/u);
   assert.equal(unknown, "&lt;tag&gt;plain&lt;/tag&gt;");
 });
 
@@ -81,7 +80,7 @@ test("bidirectional controls are shown instead of changing visual order", async 
   assert.doesNotMatch(rendered, /\u202E/u);
 });
 
-test("highlighted source uses adjacent block lines without spacer text nodes", async () => {
+test("highlighted source contains explicit line separators", async () => {
   const highlighter = await createCodeHighlighter();
   const rendered = highlighter.render({
     excerpt: "const first = 1;\nconst second = 2;",
@@ -89,6 +88,5 @@ test("highlighted source uses adjacent block lines without spacer text nodes", a
     sourceKind: "after-file",
   });
 
-  assert.match(rendered, /<\/span><\/span><span class="syntax-line"/u);
-  assert.doesNotMatch(rendered, /<\/span><\/span>\s+<span class="syntax-line"/u);
+  assert.match(rendered, /<\/span><\/span>\n<span class="syntax-line"/u);
 });

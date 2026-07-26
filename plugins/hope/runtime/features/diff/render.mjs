@@ -197,13 +197,13 @@ function reviewItem(item, dictionary, review, codeHighlighter, { compact = false
     <div class="item-head">
       <span class="status kind-${html(item.kind)}">${html(kindLabel(item.kind, dictionary))}</span>
       <span class="importance">${html(importanceLabel(item.importance, dictionary))}</span>
-      <span class="item-basis">${html(label(dictionary, basisKey(item.basis)))}</span>
+      ${compact ? "" : `<span class="item-basis">${html(label(dictionary, basisKey(item.basis)))}</span>`}
     </div>
-    <h3>${compact
-      ? `<a href="#${html(item.id)}">${userText(item.title)}</a>`
-      : userText(item.title)}</h3>
-    <p>${userText(item.explanation)}</p>
+    ${compact
+      ? `<h4><a href="#${html(item.id)}">${userText(item.title)}</a></h4>`
+      : `<h3>${userText(item.title)}</h3>`}
     ${compact ? "" : `
+      <p>${userText(item.explanation)}</p>
       ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
         <span>${html(label(dictionary, "item.relatedLimits"))}</span>
         ${relatedLimits.map((limit) => {
@@ -232,20 +232,13 @@ function section({ id, title, content }) {
   </section>`;
 }
 
-function resultLabel(result, dictionary) {
-  if (result.status === "none") return label(dictionary, "review.noItems");
-  return label(dictionary, `review.status.${result.status}`);
-}
-
-function scopeLabel(scope, dictionary) {
-  return label(dictionary, scope === "limited" ? "scope.limited" : "scope.sufficient");
-}
-
-function countSummary(result, dictionary) {
-  return ["resolve", "decide", "verify"]
-    .filter((kind) => result.counts[kind] > 0)
-    .map((kind) => `${kindLabel(kind, dictionary)} ${result.counts[kind]}`)
-    .join(" · ");
+function collapsibleSection({ id, title, content }) {
+  return `<details class="review-section review-section-collapsible" id="${html(id)}">
+    <summary class="section-heading">
+      <h2>${html(title)}</h2>
+    </summary>
+    <div class="section-content">${content}</div>
+  </details>`;
 }
 
 function limitText(limit, dictionary) {
@@ -279,22 +272,24 @@ function contextCheck(
   const relatedLimits = check.limitIds.map((limitId) => (
     review.limits.find((limit) => limit.id === limitId)
   )).filter(Boolean);
-  return `<article class="context-check">
-    <div class="context-check-head">
+  return `<details class="context-check">
+    <summary class="context-check-head">
       <h4>${userText(check.subject)}</h4>
       <span class="context-status context-${html(check.status)}">${html(label(dictionary, `context.${check.status === "not-applicable" ? "notApplicable" : check.status}`))}</span>
+    </summary>
+    <div class="disclosure-content">
+      <p>${userText(check.explanation)}</p>
+      ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
+        ${relatedLimits.map((limit) => {
+          const displayed = limitText(limit, dictionary);
+          return `<a href="#scope-${html(limit.id)}">${userText(displayed.subject)}</a>`;
+        }).join(" · ")}
+      </p>`}
+      ${evidenceBlock(check.evidence, dictionary, review, codeHighlighter, {
+        context: check.subject,
+      })}
     </div>
-    <p>${userText(check.explanation)}</p>
-    ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
-      ${relatedLimits.map((limit) => {
-        const displayed = limitText(limit, dictionary);
-        return `<a href="#scope-${html(limit.id)}">${userText(displayed.subject)}</a>`;
-      }).join(" · ")}
-    </p>`}
-    ${evidenceBlock(check.evidence, dictionary, review, codeHighlighter, {
-      context: check.subject,
-    })}
-  </article>`;
+  </details>`;
 }
 
 function synopsis(review, dictionary, codeHighlighter) {
@@ -346,42 +341,56 @@ function synopsis(review, dictionary, codeHighlighter) {
           codeHighlighter,
         )}</div>
       </div>
-      <div class="status-row synopsis-status">
-        <span class="status summary-${html(review.result.status)}">${html(resultLabel(review.result, dictionary))}</span>
-        <span class="status scope-${html(review.result.scope)}">${html(scopeLabel(review.result.scope, dictionary))}</span>
-      </div>
       <div class="synopsis-row synopsis-review">
         <h3>${html(label(dictionary, "synopsis.items"))}</h3>
-        <div class="synopsis-value">
-          <p class="summary-line">${html(countSummary(review.result, dictionary) || resultLabel(review.result, dictionary))}</p>
-          ${visibleItems.map((item) => reviewItem(
-            item,
-            dictionary,
-            review,
-            codeHighlighter,
-            { compact: true },
-          )).join("")}
+        <div class="synopsis-value synopsis-review-value">
+          ${review.reviewItems.length === 0
+            ? `<p class="review-empty">${html(label(dictionary, "review.noItems"))}</p>`
+            : `<ul class="review-items review-items-compact" role="list">${visibleItems.map(
+            (item) => `<li>${reviewItem(
+              item,
+              dictionary,
+              review,
+              codeHighlighter,
+              { compact: true },
+            )}</li>`,
+          ).join("")}</ul>`}
           ${hiddenItems > 0
             ? `<p class="more-link"><a href="#judge">${html(countedLabel(dictionary, "review.moreItems", hiddenItems))}</a></p>`
             : ""}
         </div>
       </div>
-      <div class="synopsis-row">
+      ${materialLimits.length === 0 ? "" : `<div class="synopsis-row">
         <h3>${html(label(dictionary, "synopsis.scope"))}</h3>
         <div class="synopsis-value">
-          <p class="summary-line">${html(scopeLabel(review.result.scope, dictionary))}</p>
-          ${visibleLimits.map((limit) => `<p><a href="#scope-${html(limit.id)}">${userText(limit.impact)}</a></p>`).join("")}
+          <ul class="scope-impact-list">${visibleLimits.map(
+            (limit) => `<li><a href="#scope-${html(limit.id)}">${userText(limit.impact)}</a></li>`,
+          ).join("")}</ul>
           ${hiddenLimits > 0
             ? `<p class="more-link"><a href="#evidence-and-scope">${html(countedLabel(dictionary, "scope.moreLimits", hiddenLimits))}</a></p>`
             : ""}
         </div>
-      </div>
+      </div>`}
     </div>
   </section>`;
 }
 
 function evidenceSection(review, dictionary, codeHighlighter) {
-  const sourceRows = review.sourceIndex.map((source) => {
+  const knownFileIds = new Set(review.files.map((file) => file.id));
+  const sourcesByFile = new Map();
+  for (const source of review.sourceIndex) {
+    if (!source.fileId) continue;
+    if (!knownFileIds.has(source.fileId)) {
+      throw new Error("Source index refers to an unknown file");
+    }
+    const sources = sourcesByFile.get(source.fileId) ?? [];
+    sources.push(source);
+    sourcesByFile.set(source.fileId, sources);
+  }
+  const otherSources = review.sourceIndex.filter(
+    (source) => !source.fileId,
+  );
+  const sourceRows = otherSources.map((source) => {
     const pullRequestSource = [
       "pull-request-title",
       "pull-request-description",
@@ -398,63 +407,199 @@ function evidenceSection(review, dictionary, codeHighlighter) {
       <td>${html(countedLabel(dictionary, "source.lines", source.lineCount))}</td>
     </tr>`;
   }).join("");
-  const files = review.files.map((file) => `<tr>
-    <td>${userText(file.path)}</td>
-    <td>${html(label(dictionary, `file.status.${file.providerStatus}`))}</td>
-    <td>${html(label(dictionary, `file.use.${file.disposition}`))}</td>
-    <td>+${file.additions} −${file.deletions}</td>
-  </tr>`).join("");
-  const limits = review.limits.map((limit) => {
-    const displayed = limitText(limit, dictionary);
-    return `<article class="scope-limit" id="scope-${html(limit.id)}">
-    <div class="scope-limit-head">
+  const files = review.files.map((file) => {
+    const sources = sourcesByFile.get(file.id) ?? [];
+    const captured = sources.length > 0
+      ? `${[...new Set(sources.map(
+        (source) => label(dictionary, `source.${source.kind}`),
+      ))].join(" · ")} · ${countedLabel(
+        dictionary,
+        "source.lines",
+        sources.reduce((total, source) => total + source.lineCount, 0),
+      )}`
+      : file.bodyState === "metadata-only"
+        ? label(dictionary, "file.body.metadataOnly")
+        : label(dictionary, "file.body.redacted");
+    return `<tr>
+      <td>${userText(file.path)}</td>
+      <td>${html(label(dictionary, `file.status.${file.providerStatus}`))}</td>
+      <td>${html(label(dictionary, `file.use.${file.disposition}`))}</td>
+      <td>${html(captured)}</td>
+      <td>+${file.additions} −${file.deletions}</td>
+    </tr>`;
+  }).join("");
+  const displayedLimits = review.limits.map((limit) => ({
+    displayed: limitText(limit, dictionary),
+    limit,
+  }));
+  const groupedLimits = new Map();
+  for (const entry of displayedLimits) {
+    const stableReason = entry.limit.reasonKind
+      ? `${entry.limit.kind}:${entry.limit.reasonKind}`
+      : `${entry.limit.kind}:${entry.limit.reason.normalize("NFC").replace(/\s+/gu, " ").trim()}`;
+    const key = JSON.stringify([entry.limit.material, stableReason]);
+    const group = groupedLimits.get(key) ?? { checks: [], entries: [], key };
+    group.entries.push(entry);
+    groupedLimits.set(key, group);
+  }
+  const groupByLimitId = new Map();
+  for (const group of groupedLimits.values()) {
+    for (const entry of group.entries) {
+      groupByLimitId.set(entry.limit.id, group);
+    }
+  }
+  const crossGroupChecks = [];
+  for (const check of review.contextChecks.filter(
+    (entry) => entry.status === "limited",
+  )) {
+    const groups = [...new Set(check.limitIds.map(
+      (limitId) => groupByLimitId.get(limitId),
+    ).filter(Boolean))];
+    if (groups.length === 1) {
+      groups[0].checks.push(check);
+    } else {
+      crossGroupChecks.push(check);
+    }
+  }
+  const renderContextNotes = (checks) => (
+    checks.length === 0
+      ? ""
+      : `<div class="scope-context-notes">${checks.map((check) => (
+        `<section class="scope-context-note">
+          <h4>${userText(check.subject)}</h4>
+          <p>${userText(check.explanation)}</p>
+          ${evidenceBlock(check.evidence, dictionary, review, codeHighlighter, {
+            context: check.subject,
+          })}
+        </section>`
+      )).join("")}</div>`
+  );
+  const renderSingleLimit = ({ checks, entries }) => {
+    const { displayed, limit } = entries[0];
+    return (
+    `<details class="scope-limit" id="scope-${html(limit.id)}">
+    <summary class="scope-limit-head">
       <h3>${userText(displayed.subject)}</h3>
       <span class="scope-impact">${html(label(dictionary, limit.material ? "scope.material" : "scope.nonMaterial"))}</span>
+    </summary>
+    <div class="disclosure-content">
+      <dl>
+        <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userText(displayed.reason)}</dd></div>
+        <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userText(limit.impact)}</dd></div>
+      </dl>
+      ${renderContextNotes(checks)}
     </div>
-    <dl>
-      <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userText(displayed.reason)}</dd></div>
-      <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userText(limit.impact)}</dd></div>
-    </dl>
-  </article>`;
-  }).join("");
-  const snapshot = review.snapshot;
-  return section({
-    content: `
-      <div class="evidence-group">
-        <h3>${html(label(dictionary, "evidence.sources"))}</h3>
-        <div class="table-scroll">
-          <table>
-            <caption class="sr-only">${html(label(dictionary, "evidence.sources"))}</caption>
-            <thead><tr><th>${html(label(dictionary, "common.evidence"))}</th><th>${html(label(dictionary, "source.location"))}</th><th>${html(label(dictionary, "source.revision"))}</th><th>${html(label(dictionary, "file.lines"))}</th></tr></thead>
-            <tbody>${sourceRows}</tbody>
-          </table>
-        </div>
-      </div>
-      <div class="evidence-group">
-        <h3>${html(label(dictionary, "evidence.context"))}</h3>
-        <div class="context-checks">${review.contextChecks.map((check) => contextCheck(
-          check,
-          dictionary,
-          review,
-          codeHighlighter,
+  </details>`
+    );
+  };
+  const renderLimitGroup = (group) => {
+    if (group.entries.length === 1) return renderSingleLimit(group);
+    const material = group.entries[0].limit.material;
+    return `<details class="scope-limit scope-limit-group">
+      <summary class="scope-limit-head">
+        <h3>${html(countedLabel(dictionary, "scope.groupedItems", group.entries.length))}</h3>
+        <span class="scope-impact">${html(label(dictionary, material ? "scope.material" : "scope.nonMaterial"))}</span>
+      </summary>
+      <div class="disclosure-content">
+        <dl class="scope-shared-reason">
+          <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userText(group.entries[0].displayed.reason)}</dd></div>
+        </dl>
+        ${renderContextNotes(group.checks)}
+        <div class="scope-group-items">${group.entries.map(({ displayed, limit }) => (
+          `<details class="scope-limit-item" id="scope-${html(limit.id)}">
+            <summary><h4>${userText(displayed.subject)}</h4></summary>
+            <div class="scope-limit-item-content">
+              <dl>
+                <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userText(limit.impact)}</dd></div>
+              </dl>
+            </div>
+          </details>`
         )).join("")}</div>
       </div>
-      ${limits ? `<div class="scope-limits">${limits}</div>` : ""}
-      <div class="evidence-group">
-        <h3>${html(label(dictionary, "evidence.checkedFiles"))}</h3>
-        <div class="table-scroll">
-          <table>
-            <caption class="sr-only">${html(label(dictionary, "evidence.checkedFiles"))}</caption>
-            <thead><tr><th>${html(label(dictionary, "file.name"))}</th><th>${html(label(dictionary, "file.change"))}</th><th>${html(label(dictionary, "file.use"))}</th><th>${html(label(dictionary, "file.lines"))}</th></tr></thead>
-            <tbody>${files}</tbody>
-          </table>
-        </div>
+    </details>`;
+  };
+  const limitGroups = [...groupedLimits.values()];
+  const limitCategory = (material) => {
+    const groups = limitGroups.filter(
+      (group) => group.entries[0].limit.material === material,
+    );
+    const count = groups.reduce(
+      (total, group) => total + group.entries.length,
+      0,
+    );
+    if (count === 0) return "";
+    const key = material
+      ? "evidence.materialLimits"
+      : "evidence.nonMaterialLimits";
+    return `<details class="evidence-group scope-category">
+      <summary><h3>${html(countedLabel(dictionary, key, count))}</h3></summary>
+      <div class="evidence-group-content">
+        <div class="scope-limits">${groups.map(renderLimitGroup).join("")}</div>
       </div>
+    </details>`;
+  };
+  const visibleContextChecks = review.contextChecks.filter(
+    (check) => check.status !== "limited",
+  );
+  const snapshot = review.snapshot;
+  const baseRows = snapshot.snapshot.base === snapshot.snapshot.mergeBase
+    ? `<div><dt>${html(label(dictionary, "artifact.baseAndMergeBase"))}</dt><dd><code>${html(snapshot.snapshot.base)}</code></dd></div>`
+    : `<div><dt>${html(label(dictionary, "artifact.base"))}</dt><dd><code>${html(snapshot.snapshot.base)}</code></dd></div>
+          <div><dt>${html(label(dictionary, "artifact.mergeBase"))}</dt><dd><code>${html(snapshot.snapshot.mergeBase)}</code></dd></div>`;
+  return collapsibleSection({
+    content: `
+      <details class="evidence-group">
+        <summary><h3>${html(label(dictionary, "evidence.sources"))}</h3></summary>
+        <div class="evidence-group-content">
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">${html(label(dictionary, "evidence.sources"))}</caption>
+              <thead><tr><th>${html(label(dictionary, "common.evidence"))}</th><th>${html(label(dictionary, "source.location"))}</th><th>${html(label(dictionary, "source.revision"))}</th><th>${html(label(dictionary, "source.lineCount"))}</th></tr></thead>
+              <tbody>${sourceRows}</tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+      ${visibleContextChecks.length === 0 ? "" : `<details class="evidence-group">
+        <summary><h3>${html(label(dictionary, "evidence.context"))}</h3></summary>
+        <div class="evidence-group-content">
+          <div class="context-checks">${visibleContextChecks.map((check) => contextCheck(
+            check,
+            dictionary,
+            review,
+            codeHighlighter,
+          )).join("")}</div>
+        </div>
+      </details>`}
+      ${crossGroupChecks.length === 0 ? "" : `<details class="evidence-group">
+        <summary><h3>${html(label(dictionary, "evidence.limitedContext"))}</h3></summary>
+        <div class="evidence-group-content">
+          <div class="context-checks">${crossGroupChecks.map((check) => contextCheck(
+            check,
+            dictionary,
+            review,
+            codeHighlighter,
+          )).join("")}</div>
+        </div>
+      </details>`}
+      ${limitCategory(true)}
+      ${limitCategory(false)}
+      <details class="evidence-group">
+        <summary><h3>${html(label(dictionary, "evidence.checkedFiles"))}</h3></summary>
+        <div class="evidence-group-content">
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">${html(label(dictionary, "evidence.checkedFiles"))}</caption>
+              <thead><tr><th>${html(label(dictionary, "file.name"))}</th><th>${html(label(dictionary, "file.change"))}</th><th>${html(label(dictionary, "file.use"))}</th><th>${html(label(dictionary, "file.captured"))}</th><th>${html(label(dictionary, "file.lines"))}</th></tr></thead>
+              <tbody>${files}</tbody>
+            </table>
+          </div>
+        </div>
+      </details>
       <details class="artifact-details">
         <summary>${html(label(dictionary, "artifact.details"))}</summary>
         <dl>
-          <div><dt>${html(label(dictionary, "artifact.base"))}</dt><dd><code>${html(snapshot.snapshot.base)}</code></dd></div>
-          <div><dt>${html(label(dictionary, "artifact.mergeBase"))}</dt><dd><code>${html(snapshot.snapshot.mergeBase)}</code></dd></div>
+          ${baseRows}
           <div><dt>${html(label(dictionary, "artifact.head"))}</dt><dd><code>${html(snapshot.snapshot.head)}</code></dd></div>
           <div><dt>${html(label(dictionary, "artifact.capturedAt"))}</dt><dd><time datetime="${html(snapshot.capturedAt)}" title="${html(snapshot.capturedAt)}">${html(formatTimestamp(snapshot.capturedAt))}</time></dd></div>
           <div><dt>${html(label(dictionary, "artifact.provider"))}</dt><dd>GitHub</dd></div>
@@ -471,11 +616,16 @@ function evidenceSection(review, dictionary, codeHighlighter) {
 function buildSections(review, dictionary, codeHighlighter) {
   const sections = [];
   if (review.background.length > 0) {
+    const backgroundClaims = review.background.map(
+      (item) => titledClaim(item, dictionary, review, codeHighlighter),
+    );
     sections.push({
       html: section({
-        content: review.background.map(
-          (item) => titledClaim(item, dictionary, review, codeHighlighter),
-        ).join(""),
+        content: backgroundClaims.length > 1
+          ? `<ul class="titled-claim-list">${backgroundClaims.map(
+            (claim) => `<li>${claim}</li>`,
+          ).join("")}</ul>`
+          : backgroundClaims.join(""),
         id: "background",
         title: label(dictionary, "section.background"),
       }),
@@ -483,11 +633,16 @@ function buildSections(review, dictionary, codeHighlighter) {
       title: label(dictionary, "section.background"),
     });
   }
+  const coreDetails = review.coreChange.details.map(
+    (item) => claimBlock(item, dictionary, review, codeHighlighter, "core-detail"),
+  );
   sections.push({
     html: section({
-      content: review.coreChange.details.map(
-        (item) => claimBlock(item, dictionary, review, codeHighlighter, "core-detail"),
-      ).join(""),
+      content: coreDetails.length > 1
+        ? `<ul class="claim-list core-detail-list">${coreDetails.map(
+          (detail) => `<li>${detail}</li>`,
+        ).join("")}</ul>`
+        : coreDetails.join(""),
       id: "core-change",
       title: label(dictionary, "section.core"),
     }),
@@ -523,13 +678,15 @@ function buildSections(review, dictionary, codeHighlighter) {
   if (review.codeSteps.length > 0) {
     sections.push({
       html: section({
-        content: review.codeSteps.map((item, index) => titledClaim(
-          item,
-          dictionary,
-          review,
-          codeHighlighter,
-          { evidenceOpen: index === 0 },
-        )).join(""),
+        content: `<ol class="code-step-list">${review.codeSteps.map(
+          (item, index) => `<li>${titledClaim(
+            item,
+            dictionary,
+            review,
+            codeHighlighter,
+            { evidenceOpen: index === 0 },
+          )}</li>`,
+        ).join("")}</ol>`,
         id: "follow-code",
         title: label(dictionary, "section.code"),
       }),
@@ -540,9 +697,14 @@ function buildSections(review, dictionary, codeHighlighter) {
   if (review.reviewItems.length > 0) {
     sections.push({
       html: section({
-        content: `<div class="review-items">${review.reviewItems.map(
-          (item) => reviewItem(item, dictionary, review, codeHighlighter),
-        ).join("")}</div>`,
+          content: `<ul class="review-items review-items-full" role="list">${review.reviewItems.map(
+          (item) => `<li>${reviewItem(
+            item,
+            dictionary,
+            review,
+            codeHighlighter,
+          )}</li>`,
+        ).join("")}</ul>`,
         id: "judge",
         title: label(dictionary, "section.judge"),
       }),
@@ -686,6 +848,13 @@ a {
   color: var(--accent);
   text-underline-offset: .2em;
 }
+[id]:target { scroll-margin-top: ${space5}px; }
+.evidence-item:target,
+.scope-limit:target,
+.scope-limit-item:target {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
 button,
 summary { font: inherit; }
 button { color: inherit; }
@@ -723,7 +892,7 @@ button { color: inherit; }
   max-width: ${LAYOUT.documentWidth}px;
   margin: auto;
   min-height: 52px;
-  padding: ${space3}px ${space5}px;
+  padding: ${space1}px ${space5}px;
   align-items: center;
   gap: ${space4}px;
 }
@@ -770,35 +939,25 @@ button { color: inherit; }
   color: var(--accent);
   text-decoration: underline;
 }
-.pr-meta,
-.pr-snapshot {
+.pr-target {
+  margin-top: ${space2}px;
   color: var(--muted);
   font-size: ${TYPE.supporting.wide.fontSize}px;
   font-weight: 500;
-}
-.pr-meta { margin-top: ${space2}px; }
-.pr-snapshot {
   font-family: "Hope Code", ui-monospace, monospace;
   font-weight: 400;
-}
-.pr-freshness {
-  max-width: ${LAYOUT.proseWidth};
-  margin-top: ${space1}px;
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
 }
 
 .theme-button {
   border: 1px solid var(--component-border);
-  border-radius: ${space1}px;
+  border-radius: ${space2}px;
   background: var(--panel);
   cursor: pointer;
 }
 .theme-button {
   display: inline-grid;
-  width: ${space6}px;
-  height: ${space6}px;
+  width: 44px;
+  height: 44px;
   padding: ${space1}px;
   place-items: center;
 }
@@ -879,6 +1038,7 @@ button { color: inherit; }
   line-height: ${narrowSection.lineHeight};
 }
 .synopsis-grid > div > h3,
+.synopsis-review-head > h3,
 .before-after > div > h3 {
   margin: 0 0 ${space1}px;
   color: var(--muted);
@@ -894,7 +1054,6 @@ button { color: inherit; }
   flex-wrap: wrap;
   gap: ${space2}px;
 }
-.synopsis-status { padding-top: ${space1}px; }
 .status,
 .importance {
   display: inline-flex;
@@ -906,15 +1065,9 @@ button { color: inherit; }
   line-height: ${TYPE.micro.lineHeight};
   font-weight: 500;
 }
-.status.kind-resolve,
-.summary-action { color: var(--resolve); }
-.status.kind-decide,
-.summary-decision { color: var(--decide); }
-.status.kind-verify,
-.summary-verify { color: var(--verify); }
-.scope-limited,
-.scope-sufficient,
-.summary-none { color: var(--scope); }
+.status.kind-resolve { color: var(--resolve); }
+.status.kind-decide { color: var(--decide); }
+.status.kind-verify { color: var(--verify); }
 .synopsis-grid {
   display: grid;
   padding-top: ${space4}px;
@@ -933,6 +1086,7 @@ button { color: inherit; }
 .synopsis-value {
   min-width: 0;
 }
+.review-empty { margin: 0; }
 .claim p,
 .summary-line,
 .synopsis-grid > div > p,
@@ -1033,20 +1187,16 @@ button { color: inherit; }
   color: var(--code-fg);
 }
 .syntax-line {
-  display: block;
-  width: max-content;
-  min-width: 100%;
+  display: inline;
 }
 .syntax-line-patch {
-  display: inline-grid;
-  grid-template-columns: 8ch minmax(0, 1fr);
-}
-.syntax-line-patch.syntax-line-unlocated {
-  grid-template-columns: minmax(0, 1fr);
+  display: inline;
 }
 .syntax-line-patch::before {
+  display: inline-block;
   position: sticky;
   left: 0;
+  width: 8ch;
   padding-right: 1ch;
   border-right: 1px solid var(--border);
   background: var(--code-bg);
@@ -1072,6 +1222,23 @@ button { color: inherit; }
   margin: 0;
   padding: ${space4}px 0 ${space5}px;
   border-bottom: 1px solid var(--border);
+}
+.review-section-collapsible > .section-heading {
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.review-section-collapsible:not([open]) > .section-heading { margin-bottom: 0; }
+.review-section-collapsible > .section-heading::-webkit-details-marker { display: none; }
+.review-section-collapsible > .section-heading::after {
+  display: inline-block;
+  margin-left: auto;
+  content: "›";
+  flex: 0 0 auto;
+  transition: transform 120ms ease;
+}
+.review-section-collapsible[open] > .section-heading::after {
+  transform: rotate(90deg);
 }
 .section-heading {
   display: flex;
@@ -1101,8 +1268,62 @@ button { color: inherit; }
   font-family: "Hope Code", ui-monospace, monospace;
   font-weight: 400;
 }
-.explanation-step + .explanation-step,
-.review-item + .review-item { margin-top: ${space4}px; }
+.explanation-step + .explanation-step { margin-top: ${space4}px; }
+.claim-list,
+.code-step-list,
+.titled-claim-list,
+.review-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.claim-list > li {
+  position: relative;
+  padding-left: 20px;
+}
+.claim-list > li + li { margin-top: ${space2}px; }
+.claim-list > li::before,
+.titled-claim-list > li::before {
+  position: absolute;
+  top: .72em;
+  left: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  content: "";
+}
+.titled-claim-list > li {
+  position: relative;
+  padding-left: 20px;
+}
+.titled-claim-list > li + li { margin-top: ${space4}px; }
+.review-items-full > li + li { margin-top: ${space4}px; }
+.scope-impact-list {
+  margin: 0;
+  padding-left: 20px;
+}
+.scope-impact-list > li {
+  padding-left: ${space1}px;
+}
+.scope-impact-list > li + li { margin-top: ${space1}px; }
+.scope-impact-list > li::marker { color: var(--scope); }
+.code-step-list {
+  counter-reset: code-step;
+}
+.code-step-list > li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: ${space2}px;
+  counter-increment: code-step;
+}
+.code-step-list > li + li { margin-top: ${space4}px; }
+.code-step-list > li::before {
+  color: var(--muted);
+  content: counter(code-step, decimal-leading-zero);
+  font: 400 ${TYPE.supporting.wide.fontSize}px/${wideSubsection.lineHeight} "Hope Code", ui-monospace, monospace;
+}
+.code-step-list .explanation-step { min-width: 0; }
 .explanation-step h3,
 .review-item h3,
 .scope-limit h3 {
@@ -1113,15 +1334,46 @@ button { color: inherit; }
 .evidence-group + .evidence-group,
 .evidence-group + .scope-limits,
 .scope-limits + .evidence-group { margin-top: ${space4}px; }
-.evidence-group > h3 {
-  margin: 0 0 ${space2}px;
+.evidence-group {
+  border: 1px solid var(--component-border);
+  background: var(--panel);
+}
+.evidence-group > summary {
+  display: flex;
+  min-height: 44px;
+  padding: ${space3}px;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+  list-style: none;
+}
+.evidence-group > summary h3 {
+  margin: 0;
   font-size: ${wideSubsection.fontSize}px;
   line-height: ${wideSubsection.lineHeight};
 }
+.evidence-group-content { padding: 0 ${space3}px ${space3}px; }
 .flow { padding-left: ${space5}px; }
 .flow > li {
   margin: ${space3}px 0;
   padding-left: ${space2}px;
+}
+.flow:not(.flow-short) {
+  padding: 0;
+  list-style: none;
+  counter-reset: behavior-step;
+}
+.flow:not(.flow-short) > li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  padding: 0;
+  gap: ${space2}px;
+  counter-increment: behavior-step;
+}
+.flow:not(.flow-short) > li::before {
+  color: var(--muted);
+  content: counter(behavior-step, decimal-leading-zero);
+  font: 400 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Code", ui-monospace, monospace;
 }
 .flow-short {
   display: flex;
@@ -1162,21 +1414,51 @@ button { color: inherit; }
 .review-item-compact {
   padding: ${space2}px 0;
   border: 0;
-  border-bottom: 1px solid var(--border);
   background: transparent;
 }
-.review-item-compact:last-of-type { border-bottom: 0; }
-.review-item-compact h3 {
-  margin: ${space1}px 0 0;
+.review-items-compact > li:first-child .review-item-compact { padding-top: 0; }
+.review-items-compact > li + li { margin-top: ${space2}px; }
+.review-item-compact .item-head {
+  gap: ${space1}px;
+}
+.review-item-compact .status,
+.review-item-compact .importance {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  line-height: ${TYPE.supporting.wide.lineHeight};
+}
+.review-item-compact .status {
+  gap: ${space1}px;
+}
+.review-item-compact .status::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+.review-item-compact .importance {
+  color: var(--muted);
+}
+.review-item-compact .importance::before {
+  margin-right: ${space1}px;
+  content: "·";
+}
+.review-item-compact h4 {
+  margin: ${space1}px 0 0 14px;
   font-size: inherit;
   line-height: inherit;
+  font-weight: 500;
 }
-.review-item-compact h3 a {
+.review-item-compact h4 a {
   color: inherit;
   text-decoration: none;
 }
-.review-item-compact h3 a:hover,
-.review-item-compact h3 a:focus-visible {
+.review-item-compact h4 a:hover,
+.review-item-compact h4 a:focus-visible {
   color: var(--accent);
   text-decoration: underline;
 }
@@ -1213,7 +1495,6 @@ button { color: inherit; }
 
 .scope-limits {
   display: grid;
-  margin-bottom: ${space4}px;
   gap: ${space3}px;
 }
 .context-checks {
@@ -1222,21 +1503,25 @@ button { color: inherit; }
 }
 .context-check,
 .scope-limit {
-  padding: ${space3}px;
   border: 1px solid var(--component-border);
   background: var(--panel);
 }
 .context-check-head,
 .scope-limit-head {
   display: flex;
+  min-height: 44px;
+  padding: ${space3}px;
   align-items: baseline;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: ${space2}px;
+  cursor: pointer;
+  list-style: none;
 }
 .context-check h4,
 .scope-limit-head h3 { margin: 0; }
-.context-check > p { margin: ${space2}px 0; }
+.disclosure-content { padding: 0 ${space3}px ${space3}px; }
+.disclosure-content > p { margin: 0 0 ${space2}px; }
 .context-status,
 .scope-impact {
   color: var(--muted);
@@ -1246,6 +1531,44 @@ button { color: inherit; }
 .context-checked { color: var(--accent); }
 .context-limited { color: var(--scope); }
 .scope-limit dl { margin: 0; }
+.scope-shared-reason { margin-bottom: ${space3}px !important; }
+.scope-context-notes {
+  display: grid;
+  margin: ${space3}px 0;
+  gap: ${space3}px;
+}
+.scope-context-note {
+  padding-left: ${space3}px;
+  border-left: 2px solid var(--border);
+}
+.scope-context-note h4 {
+  margin: 0 0 ${space1}px;
+}
+.scope-context-note > p {
+  margin: 0;
+}
+.scope-group-items {
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+.scope-limit-item + .scope-limit-item {
+  border-top: 1px solid var(--border);
+}
+.scope-limit-item > summary {
+  display: flex;
+  min-height: 44px;
+  padding: ${space2}px ${space3}px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+.scope-limit-item h4 {
+  margin: 0;
+  font-size: inherit;
+}
+.scope-limit-item-content {
+  padding: 0 ${space3}px ${space3}px;
+}
 .table-scroll {
   overflow: auto;
   border: 1px solid var(--component-border);
@@ -1273,6 +1596,10 @@ td:first-child {
 }
 .artifact-details { margin-top: ${space3}px; }
 .evidence > summary,
+.evidence-group > summary,
+.context-check > summary,
+.scope-limit > summary,
+.scope-limit-item > summary,
 .artifact-details > summary,
 .quiz > details > summary {
   display: flex;
@@ -1285,11 +1612,19 @@ td:first-child {
 }
 .evidence > summary { min-height: 32px; }
 .evidence > summary::-webkit-details-marker,
+.evidence-group > summary::-webkit-details-marker,
+.context-check > summary::-webkit-details-marker,
+.scope-limit > summary::-webkit-details-marker,
+.scope-limit-item > summary::-webkit-details-marker,
 .artifact-details > summary::-webkit-details-marker,
 .quiz > details > summary::-webkit-details-marker {
   display: none;
 }
 .evidence > summary::before,
+.evidence-group > summary::before,
+.context-check > summary::before,
+.scope-limit > summary::before,
+.scope-limit-item > summary::before,
 .artifact-details > summary::before,
 .quiz > details > summary::before {
   content: "›";
@@ -1298,6 +1633,10 @@ td:first-child {
   transition: transform 120ms ease;
 }
 .evidence[open] > summary::before,
+.evidence-group[open] > summary::before,
+.context-check[open] > summary::before,
+.scope-limit[open] > summary::before,
+.scope-limit-item[open] > summary::before,
 .artifact-details[open] > summary::before,
 .quiz > details[open] > summary::before {
   transform: rotate(90deg);
@@ -1338,6 +1677,7 @@ td:first-child {
     align-items: center;
     gap: ${space2}px;
     border: 1px solid var(--component-border);
+    border-radius: ${space2}px;
     background: var(--panel);
     cursor: pointer;
     font-weight: 500;
@@ -1380,7 +1720,7 @@ td:first-child {
     line-height: ${narrow.lineHeight};
   }
   .topbar-inner {
-    padding: ${space3}px ${space4}px;
+    padding: ${space1}px ${space4}px;
   }
   .top-context {
     overflow: hidden;
@@ -1392,9 +1732,7 @@ td:first-child {
     font-size: ${narrowPageTitle.fontSize}px;
     line-height: ${narrowPageTitle.lineHeight};
   }
-  .pr-meta,
-  .pr-snapshot,
-  .pr-freshness {
+  .pr-target {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
     line-height: ${TYPE.supporting.narrow.lineHeight};
   }
@@ -1415,6 +1753,20 @@ td:first-child {
   .review-item h3 {
     font-size: ${narrowSubsection.fontSize}px;
     line-height: ${narrowSubsection.lineHeight};
+  }
+  .review-item-compact h4 {
+    font-size: inherit;
+    line-height: inherit;
+  }
+  .review-item-compact .status,
+  .review-item-compact .importance,
+  .review-empty {
+    font-size: ${TYPE.supporting.narrow.fontSize}px;
+    line-height: ${TYPE.supporting.narrow.lineHeight};
+  }
+  .code-step-list > li::before,
+  .flow:not(.flow-short) > li::before {
+    font-size: ${TYPE.supporting.narrow.fontSize}px;
   }
   .evidence pre {
     font-size: ${narrowCode.fontSize}px;
@@ -1439,10 +1791,6 @@ td:first-child {
     content: "↓";
     transform: translateX(50%);
   }
-  .theme-button {
-    width: 44px;
-    height: 44px;
-  }
   .toc-mobile-panel ol {
     grid-template-columns: 1fr;
   }
@@ -1450,12 +1798,18 @@ td:first-child {
 
 @media (max-width: ${LAYOUT.compactBreakpoint}px) {
   .layout { padding: ${space3}px; }
-  .topbar-inner { padding: ${space3}px; }
+  .topbar-inner {
+    padding: ${space1}px ${space3}px;
+    gap: ${space2}px;
+  }
   .status,
   .importance,
   .claim-basis,
   .item-basis { font-size: ${TYPE.micro.compactFontSize}px; }
-  .top-context { display: none; }
+  .top-context {
+    font-size: ${TYPE.micro.compactFontSize}px;
+    text-align: left;
+  }
   .synopsis-row { grid-template-columns: 1fr; gap: ${space1}px; }
 }
 
@@ -1473,6 +1827,10 @@ td:first-child {
   .synopsis,
   .scope-limit { forced-color-adjust: auto; }
   .review-section { border-left-color: Highlight; }
+  .claim-list > li::before,
+  .titled-claim-list > li::before {
+    background: CanvasText;
+  }
 }
 
 ${syntaxStyles}
@@ -1503,6 +1861,14 @@ ${syntaxStyles}
   .review-section,
   .review-item,
   .evidence-item { break-inside: avoid; }
+  .review-section-collapsible > .section-content,
+  .evidence-group > .evidence-group-content,
+  .context-check > .disclosure-content,
+  .scope-limit > .disclosure-content,
+  .scope-limit-item > .scope-limit-item-content,
+  .artifact-details > dl {
+    display: block !important;
+  }
   a {
     color: inherit;
     text-decoration: none;
@@ -1516,7 +1882,7 @@ function clientScript(dictionary) {
     dark: label(dictionary, "common.useDarkTheme"),
     light: label(dictionary, "common.useLightTheme"),
   });
-  return `(()=>{"use strict";const labels=${labels};const root=document.documentElement;const theme=document.getElementById("theme-toggle");const toc=document.querySelector(".toc-mobile");const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};syncTheme();theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});toc?.addEventListener("click",event=>{if(event.target.closest("a"))toc.open=false;});matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;};addEventListener("hashchange",openTarget);openTarget();})();`;
+  return `(()=>{"use strict";const labels=${labels};const root=document.documentElement;const theme=document.getElementById("theme-toggle");const toc=document.querySelector(".toc-mobile");const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};syncTheme();theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});toc?.addEventListener("click",event=>{if(event.target.closest("a"))toc.open=false;});matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;requestAnimationFrame(()=>target.scrollIntoView({block:"start"}));};addEventListener("hashchange",openTarget);addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});openTarget();})();`;
 }
 
 export async function renderReview(review, { fonts } = {}) {
@@ -1587,9 +1953,7 @@ export async function renderReview(review, { fonts } = {}) {
     <main class="main" id="review">
       <div class="pr-hero">
         <h1><a href="${html(prUrl)}" rel="noreferrer noopener" target="_blank">${userText(title)}</a></h1>
-        <div class="pr-meta">${html(owner)}/${html(name)} · PR #${review.snapshot.pullRequest.number}</div>
-        <div class="pr-snapshot">${html(label(dictionary, "artifact.snapshot"))} ${html(review.snapshot.snapshot.head.slice(0, 8))} · <time datetime="${html(review.snapshot.capturedAt)}" title="${html(review.snapshot.capturedAt)}">${html(formatTimestamp(review.snapshot.capturedAt))}</time></div>
-        <div class="pr-freshness">${html(label(dictionary, "artifact.notice"))}</div>
+        <div class="pr-target">${html(label(dictionary, "artifact.head"))} ${html(review.snapshot.snapshot.head.slice(0, 8))} · <time datetime="${html(review.snapshot.capturedAt)}" title="${html(review.snapshot.capturedAt)}">${html(formatTimestamp(review.snapshot.capturedAt))}</time></div>
       </div>
       ${synopsisHtml}
       ${sections.map((item) => item.html).join("")}
