@@ -4,108 +4,65 @@
 
 <h1 align="center">Hope</h1>
 
-<p align="center"><strong>An AI work harness with supported plugin and skill entry points.</strong></p>
+<p align="center"><strong>Hope looks for practical ways for people and AI to work better together.</strong></p>
 
 <p align="center"><a href="README.ko.md">한국어</a></p>
 
-Hope is organized around two separate entry paths:
-
-- use the independent Hope harness;
-- use the Hope plugin and skill in Codex or Claude Code.
-
-Both paths call the same feature code. Neither path owns a second copy. The
-Claude and Codex skill is the first complete diff path. The independent
-harness shares its settings, collection, validation, rendering, and lifecycle
-code while its own AI adapter remains explicit future work.
-[PRINCIPLES.md](PRINCIPLES.md) defines the project direction, and
-[docs/architecture.md](docs/architecture.md) defines the current structure.
-
 ## Current state
 
-Hope diff explains one exact GitHub pull request as a private, self-contained
-HTML file. It chooses an open pull request from the current repository when no
-URL is supplied, or accepts a canonical GitHub pull-request URL.
+Hope's long-term goal is an independent harness environment. Today, Hope is
+available as a plugin and skills for Codex and Claude Code while the independent
+harness is still being built.
 
-The Claude and Codex skill uses the active AI session only for the structured
-analysis. Shared Hope code collects the pull request, validates every file and
-evidence reference, rechecks the snapshot, renders the offline file, and
-removes the private run data.
+## Install
 
-Global Hope settings choose `ko-KR` or `en-US` and `system`, `light`, or `dark`
-for both entry paths.
+Hope requires Node.js 20 or newer and an authenticated
+[GitHub CLI](https://cli.github.com/). Run `gh auth login` first if needed.
 
-## Requirements
+The simplest option is to ask Codex or Claude Code:
 
-Hope requires Node.js 20 or newer and an authenticated GitHub CLI. Codex or
-Claude Code is also required for automatic AI analysis through the plugin
-path.
-
-## Harness
-
-Run the harness without Codex or Claude:
-
-```bash
-npm run hope -- --help
-npm run hope -- diff
-npm run hope -- settings show
+```text
+Install Hope from https://github.com/dkstm95/hope for this host.
+Follow the repository README and tell me if I need to restart.
 ```
 
-The command lives in `harness/` and calls feature code in `features/`.
-`hope diff` currently reports that the independent harness has no AI model
-adapter instead of pretending to complete an analysis.
-
-## Plugins and skill
-
-The single package in `plugins/hope/` supports both Codex and Claude Code. Each
-host reads its own manifest, while both hosts use the same `diff` skill and the
-same generated feature code.
-
-Claude Code can load the package directly during development:
+To install it yourself in Codex:
 
 ```bash
-claude --plugin-dir ./plugins/hope
+codex plugin marketplace add dkstm95/hope
+codex plugin add hope@hope
 ```
 
-Use `$hope:diff` in Codex or `/hope:diff` in Claude Code. Use
-`$hope:settings` or `/hope:settings` to save the shared language and theme
-defaults. The repository also includes a Claude Code marketplace catalog, so a
-published checkout can be added with:
+To install it yourself in Claude Code:
 
 ```bash
 claude plugin marketplace add dkstm95/hope
 claude plugin install hope@hope
 ```
 
-The editable sources remain in root `docs/`, `features/`, `settings/`,
-`locales/`, and `design/`. Run `npm run build:plugin` to update the package
-copies. Release checks compare every generated file with its source so they
-cannot become a second implementation or source of truth.
+Start a new Codex or Claude Code session after installation.
 
-Commit the rebuilt package copies with every source change. A push that changes
-only the source fails verification instead of silently publishing an old
-plugin copy.
+## Features
 
-## Develop
+### Diff
 
-Install the locked development dependencies once. The generated plugin remains
-self-contained and does not install packages when a person uses it.
+Diff explains one exact GitHub pull request as a private, self-contained HTML
+file. With no URL, it prefers a pull request for the current branch. Otherwise,
+it chooses the latest open pull request created by the current GitHub user.
 
-```bash
-npm install
-npm run check
+Use `$hope:diff` in Codex or `/hope:diff` in Claude Code. Add a GitHub pull
+request URL when you want to choose the pull request yourself.
+
+```text
+$hope:diff https://github.com/owner/repository/pull/123
 ```
 
-Prepare a release with one command. Pass the version without a `v` prefix:
+### Settings
 
-```bash
-npm run release:prepare -- 0.4.1-alpha
-```
+Hope keeps one language and theme preference for its features. Choose `ko-KR`
+or `en-US`, and `system`, `light`, or `dark`.
 
-This updates the package and both host manifests, rebuilds the plugin copies,
-and runs all checks. Review and commit the resulting files before creating the
-matching `v0.4.1-alpha` tag. The release packages only the files listed in
-`tools/plugin-package-files.txt`, and the tag commit must already belong to
-`main`.
+Use `$hope:settings` in Codex or `/hope:settings` in Claude Code.
 
 ## License
 
