@@ -18,9 +18,12 @@
 
 ## Install
 
-Install the Hope plugin in Codex or Claude Code. Hope requires Node.js 20 or
-newer. Diff also requires an authenticated
-[GitHub CLI](https://cli.github.com/). Run `gh auth login` first if needed.
+Install the Hope plugin in Codex or Claude Code.
+
+You need:
+
+- Node.js 20 or newer
+- An authenticated [GitHub CLI](https://cli.github.com/) to use Diff. Run `gh auth login` first if needed.
 
 The simplest option is to ask Codex or Claude Code:
 
@@ -49,8 +52,15 @@ Start a new Codex or Claude Code session after installation.
 
 ### Diff
 
-Diff helps you understand a `github.com` pull request at a specific commit. It
-creates one local, self-contained HTML file.
+Diff helps you understand code changes and provides the explanations and evidence you need to make your own decision.
+
+The result is one local HTML file.
+
+> With no URL, Diff looks for an open pull request created by the current user in the target repository. Add a GitHub pull request URL to choose one.
+
+```text
+$hope:diff https://github.com/owner/repository/pull/123
+```
 
 <p align="center">
   <img
@@ -59,31 +69,6 @@ creates one local, self-contained HTML file.
   >
 </p>
 
-Use `$hope:diff` in Codex or `/hope:diff` in Claude Code. Add a GitHub pull
-request URL when you want to choose the pull request yourself.
-
-```text
-$hope:diff https://github.com/owner/repository/pull/123
-```
-
-With no URL, run Hope inside the intended repository. Hope looks at open pull
-requests created by the current GitHub user in that repository. It first
-chooses one for the current branch. If none exists, it chooses the newest one.
-
-Hope reads the pull request text, commit titles, and available text from changed
-files. It does not inspect unchanged repository files, pull request discussions,
-review comments, or CI results. It does not run tests, build or lint commands,
-or other repository code.
-
-The active Codex or Claude Code session processes the review under its host and
-account policies. The finished HTML file is stored locally and works offline.
-It records the commit shown in the file and does not update when the pull
-request changes. Run Diff again after a change.
-
-Diff provides explanations and evidence for your decision. It does not
-recommend approval or rejection. It does not merge, change, or comment on the
-pull request.
-
 <p align="center">
   <img
     src="assets/readme/hope-diff-playwright-41939-details.png"
@@ -91,15 +76,19 @@ pull request.
   >
 </p>
 
+Diff reads the pull request text, commit titles, and available text from changed files.
+
+It does not inspect unchanged repository files, pull request discussions, review comments, or CI results.
+
+It does not run tests, build or lint commands, or other repository code.
+
+> Run Diff again when the pull request changes.
+
 ### Settings
 
-Settings lets you save one language and theme preference for every Hope path.
+Save the language and theme preferences Hope should use.
 
-Use `$hope:settings` in Codex or `/hope:settings` in Claude Code to view,
-change, or reset the preference.
-
-Without a saved preference, Hope follows the current host or operating system
-language and uses the system theme.
+Without a saved preference, Hope follows the current host or operating system language and uses the system theme.
 
 ## License
 
