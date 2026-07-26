@@ -175,9 +175,19 @@ assert.match(verify, /CHECK_RESULT: \$\{\{ needs\.check\.result \}\}/u);
 assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
 assert.match(verify, /npm run test:browser/u);
 assert.match(readme, /src="plugins\/hope\/assets\/telescope\.svg"/u);
-assert.match(readme, /claude --plugin-dir \.\/plugins\/hope/u);
+assert.match(readme, /codex plugin marketplace add dkstm95\/hope/u);
+assert.match(readme, /codex plugin add hope@hope/u);
+assert.match(readme, /claude plugin marketplace add dkstm95\/hope/u);
+assert.match(readme, /claude plugin install hope@hope/u);
+assert.match(readme, /\$hope:diff/u);
+assert.match(readme, /\/hope:diff/u);
 assert.match(readmeKo, /src="plugins\/hope\/assets\/telescope\.svg"/u);
-assert.match(readmeKo, /claude --plugin-dir \.\/plugins\/hope/u);
+assert.match(readmeKo, /codex plugin marketplace add dkstm95\/hope/u);
+assert.match(readmeKo, /codex plugin add hope@hope/u);
+assert.match(readmeKo, /claude plugin marketplace add dkstm95\/hope/u);
+assert.match(readmeKo, /claude plugin install hope@hope/u);
+assert.match(readmeKo, /\$hope:diff/u);
+assert.match(readmeKo, /\/hope:diff/u);
 assert.equal(
   normalizeLineEndings(await read("tools/plugin-package-files.txt")),
   `${pluginPackageFiles.join("\n")}\n`,
