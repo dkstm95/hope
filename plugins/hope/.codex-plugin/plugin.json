@@ -13,8 +13,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
-    "shortDescription": "Understand a pull request before deciding",
-    "longDescription": "Hope explains one exact GitHub pull-request snapshot as a private, evidence-linked, self-contained HTML review. Codex and Claude Code share the same feature runtime, language settings, themes, and product contract.",
+    "shortDescription": "Practical ways for people and AI to work better together",
+    "longDescription": "Diff helps you understand code changes and provides the explanations and evidence you need to make your own decision. It produces one local HTML file without running repository code. Settings saves the language and theme Hope should use.",
     "developerName": "SeungIl",
     "category": "Engineering",
     "capabilities": ["Read", "Interactive"],
