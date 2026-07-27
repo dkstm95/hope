@@ -72,6 +72,13 @@ copies only those files into a new staging directory before creating the zip.
 An unrelated or temporary file under `plugins/hope/` cannot enter a release by
 accident.
 
+A public plugin version identifies one immutable package. After its matching
+tag exists, the project check rejects package changes until the public version
+changes. During development, one command rebuilds and validates the package,
+reinstalls it through the configured local `hope` marketplace, and checks every
+cached file against its source. It never changes the tracked manifests or
+marketplace configuration.
+
 The package has two host manifests:
 
 ```text

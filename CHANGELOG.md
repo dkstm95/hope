@@ -2,6 +2,8 @@
 
 ## 0.4.0-alpha - Unreleased
 
+- Add one verified Codex development reinstall command and reject changes to
+  a plugin package after its public version tag exists.
 - Apply Hope's shared writing standard across project documentation without
   changing technical, security, or legal meaning.
 - Add Hope write as one shared core, independent harness boundary, and thin
