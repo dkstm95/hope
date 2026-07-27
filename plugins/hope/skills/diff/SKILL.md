@@ -43,7 +43,8 @@ The JSON result gives:
 - the chosen pull request;
 - the private run path;
 - the analysis path;
-- the analysis schema path; and
+- the analysis schema path;
+- the shared writing standard and its version; and
 - the planned inspection page count and serialized byte count.
 
 Tell the person which PR Hope selected before continuing. Do not ask about
@@ -97,9 +98,10 @@ reported context limit instead of guessing or searching with another tool.
 
 ## Write the analysis
 
-Read the complete analysis schema returned by `prepare`. This skill and that
-schema form the compact authoring contract for a run. During normal execution,
-do not reread the generated product or design documents.
+Read the complete analysis schema and `writingStandard.text` returned by
+`prepare`. Use them with this skill as the compact authoring contract for the
+run. During normal execution, do not reread the generated product or design
+documents.
 
 Write one JSON object to the exact `analysisPath` returned by Hope. Use a
 file-writing tool, not shell interpolation or an inline heredoc.
@@ -108,6 +110,10 @@ Follow these rules:
 
 - Copy `runId`, `snapshotDigest`, and `locale` from `prepare`.
 - Use only source IDs and line ranges shown in inspection pages.
+- Follow `writingStandard.text` for every user-facing prose field. Apply its
+  final check before writing the analysis. The evidence, uncertainty,
+  exact-source, and locale rules below are more specific. Keep them when
+  simpler wording would change the meaning.
 - Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` short enough
   for the first screen. Use `coreChange.details` for the main explanation.
   Start that explanation with the purpose, previous and new behavior, affected

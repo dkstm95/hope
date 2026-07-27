@@ -173,6 +173,8 @@ assert.doesNotMatch(claudeMarketplaceEntry.description, /rebuild status/u);
 assert.match(skill, /^---\r?\nname: diff\r?\ndescription: /u);
 assert.match(skill, /runtime\/features\/diff\/cli\.mjs/u);
 assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/runtime\/features\/diff\/cli\.mjs/u);
+assert.match(skill, /writingStandard\.text/u);
+assert.doesNotMatch(skill, /Prefer a short, familiar word/u);
 assert.match(settingsSkill, /^---\r?\nname: settings\r?\ndescription: /u);
 assert.match(settingsSkill, /runtime\/settings\/cli\.mjs/u);
 assert.match(writeSkill, /^---\r?\nname: write\r?\ndescription: /u);

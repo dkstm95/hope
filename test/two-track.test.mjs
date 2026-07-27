@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import {
   DIFF_MODEL_ADAPTER_CODE,
   DIFF_MODEL_ADAPTER_MESSAGE,
+  prepareDiff,
   runDiff,
 } from "../features/diff/index.mjs";
 import {
@@ -16,6 +17,8 @@ import {
   parseDiffArguments,
 } from "../features/diff/cli.mjs";
 import {
+  loadWritingStandard,
+  WRITE_BRIEF_VERSION,
   WRITE_MODEL_ADAPTER_MESSAGE,
   runWrite,
 } from "../features/write/index.mjs";
@@ -242,16 +245,66 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(diff, /Use `coreChange\.details` for the main explanation/u);
   assert.match(diff, /Add `contextChecks`/u);
   assert.match(diff, /Make each claim no broader than its evidence/u);
+  assert.match(diff, /writingStandard\.text/u);
   assert.match(diff, /Write generated prose as plain text/u);
   assert.match(diff, /serialized byte count/u);
-  assert.match(diff, /do not reread the generated[\s\n]+product or design documents/u);
+  assert.match(
+    diff,
+    /do not reread the generated\s+product or design\s+documents/u,
+  );
   assert.doesNotMatch(diff, /\.\.\/\.\.\/docs\/diff\.md/u);
+  assert.doesNotMatch(diff, /Prefer a short, familiar word/u);
   assert.match(diff, /validate --run <run-path>/u);
   assert.match(settings, /runtime\/settings\/cli\.mjs/u);
   assert.match(write, /runtime\/features\/write\/cli\.mjs/u);
   assert.match(write, /brief --mode <draft\|edit\|review>/u);
   assert.doesNotMatch(write, /Prefer a short, familiar word/u);
   assert.equal(pluginWritingStandard, coreWritingStandard);
+});
+
+test("core and generated Diff preparation return one writing standard", async () => {
+  const pluginDiff = await import(
+    "../plugins/hope/runtime/features/diff/index.mjs"
+  );
+  const snapshot = {
+    pullRequest: {
+      number: 142,
+      title: "Keep the last retry error",
+      url: "https://github.com/example/hope/pull/142",
+    },
+  };
+  const dependencies = {
+    collect: async () => snapshot,
+    createRun: async () => ({
+      analysisPath: join(tmpdir(), "hope-analysis.json"),
+      pageCount: 1,
+      path: join(tmpdir(), "hope-run"),
+      runId: "3".repeat(32),
+      snapshotDigest: "d".repeat(64),
+    }),
+    preflightOutput: async () => undefined,
+    resolveSettings: async () => ({
+      locale: "en-US",
+      localeSource: "default",
+      theme: "system",
+      themeSource: "default",
+    }),
+  };
+  const options = {
+    url: "https://github.com/example/hope/pull/142",
+  };
+
+  const [core, plugin] = await Promise.all([
+    prepareDiff(options, dependencies),
+    pluginDiff.prepareDiff(options, dependencies),
+  ]);
+  const expected = await loadWritingStandard();
+
+  assert.deepEqual(core.writingStandard, {
+    text: expected,
+    version: WRITE_BRIEF_VERSION,
+  });
+  assert.deepEqual(plugin.writingStandard, core.writingStandard);
 });
 
 test("the harness and generated runtime report the same missing AI boundary", () => {

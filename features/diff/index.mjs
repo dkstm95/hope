@@ -2,6 +2,10 @@ import { lstat, open } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { resolveSettings } from "../../settings/index.mjs";
+import {
+  loadWritingStandard,
+  WRITE_BRIEF_VERSION,
+} from "../write/index.mjs";
 import { LIMITS, RUN_VERSION } from "./constants.mjs";
 import { collectGitHubContext } from "./context.mjs";
 import { finalizeReview, preflightReviewOutput } from "./finalize.mjs";
@@ -223,12 +227,15 @@ export async function prepareDiff({
   const preparedOutputPath = await (
     dependencies.preflightOutput ?? preflightReviewOutput
   )(outputPath);
-  const settings = await (dependencies.resolveSettings ?? resolveSettings)({
-    hostLocale,
-    locale,
-    theme,
-    ...(dependencies.settingsOptions ?? {}),
-  });
+  const [settings, writingStandardText] = await Promise.all([
+    (dependencies.resolveSettings ?? resolveSettings)({
+      hostLocale,
+      locale,
+      theme,
+      ...(dependencies.settingsOptions ?? {}),
+    }),
+    (dependencies.loadWritingStandard ?? loadWritingStandard)(),
+  ]);
   const target = url
     ? parseGitHubPullRequestUrl(url)
     : await (dependencies.discoverTarget ?? discoverGitHubPullRequest)(
@@ -256,6 +263,10 @@ export async function prepareDiff({
     pullRequest: snapshot.pullRequest,
     selection: target.selection ?? "explicit",
     theme: settings.theme,
+    writingStandard: Object.freeze({
+      text: writingStandardText,
+      version: WRITE_BRIEF_VERSION,
+    }),
   });
 }
 

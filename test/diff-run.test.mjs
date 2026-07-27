@@ -76,6 +76,35 @@ test("an invalid explicit output fails before GitHub collection", async () => {
   assert.equal(collected, false);
 });
 
+test("a missing writing standard fails before GitHub collection", async () => {
+  let collected = false;
+  await assert.rejects(
+    prepareDiff(
+      {
+        url: "https://github.com/example/hope/pull/142",
+      },
+      {
+        collect: async () => {
+          collected = true;
+          return makeSnapshot();
+        },
+        loadWritingStandard: async () => {
+          throw new Error("writing standard unavailable");
+        },
+        preflightOutput: async () => undefined,
+        resolveSettings: async () => ({
+          locale: "en-US",
+          localeSource: "default",
+          theme: "system",
+          themeSource: "default",
+        }),
+      },
+    ),
+    /writing standard unavailable/u,
+  );
+  assert.equal(collected, false);
+});
+
 test("a DiffRun requires every page and publishes one review", async () => {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-test-"));
   const snapshot = makeSnapshot();

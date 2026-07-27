@@ -552,6 +552,12 @@ titles, paths, commands, code, and excerpts exactly in their source and
 evidence surfaces. Generated explanations use the resolved locale while
 keeping necessary source terms unchanged.
 
+Before analysis, the shared runtime returns Hope's current writing standard and
+its version with the prepared run. The active host follows that standard for
+every generated explanation, review item, teaching aid, and quiz. Diff's
+evidence, uncertainty, exact-source, and locale rules are more specific. They
+take priority when simpler wording would change the meaning.
+
 Generated explanations render as plain text. Hope does not parse Markdown or
 HTML. The analysis must not add formatting. Version 1 validation rejects
 backticks to prevent visible inline-code markers. When exact syntax needs a
