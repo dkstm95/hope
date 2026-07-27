@@ -42,6 +42,9 @@ jobs:
           unzip -p "hope-${GITHUB_REF_NAME}.zip" .claude-plugin/plugin.json > /dev/null
           unzip -p "hope-${GITHUB_REF_NAME}.zip" .codex-plugin/plugin.json > /dev/null
           unzip -p "hope-${GITHUB_REF_NAME}.zip" skills/diff/SKILL.md > /dev/null
+          unzip -p "hope-${GITHUB_REF_NAME}.zip" skills/write/SKILL.md > /dev/null
+          unzip -p "hope-${GITHUB_REF_NAME}.zip" runtime/features/write/cli.mjs > /dev/null
+          unzip -p "hope-${GITHUB_REF_NAME}.zip" runtime/features/write/standard.md > /dev/null
           sha256sum "hope-${GITHUB_REF_NAME}.zip" > "hope-${GITHUB_REF_NAME}.zip.sha256"
       - name: Create prerelease
         env:

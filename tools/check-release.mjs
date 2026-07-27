@@ -22,9 +22,11 @@ const currentVersion = packageJson.version;
 const requiredFiles = [
   ".agents/plugins/marketplace.json",
   ".claude-plugin/marketplace.json",
+  "AGENTS.md",
   "docs/architecture.md",
   "docs/design.md",
   "docs/diff.md",
+  "docs/write.md",
   "design/fonts/HopeCode.woff2",
   "design/fonts/HopeSansBold.woff2",
   "design/fonts/HopeSansLight.woff2",
@@ -36,6 +38,9 @@ const requiredFiles = [
   "features/diff/analysis-v1.schema.json",
   "features/diff/cli.mjs",
   "features/diff/index.mjs",
+  "features/write/cli.mjs",
+  "features/write/index.mjs",
+  "features/write/standard.md",
   "harness/hope.mjs",
   "locales/index.mjs",
   "settings/cli.mjs",
@@ -62,6 +67,7 @@ const retiredPaths = [
   "plugins/hope/skills/diff/references/change-request-v1.schema.json",
   "plugins/hope/skills/diff/references/review-model-v1.schema.json",
   "plugins/hope/skills/diff/scripts/hope-diff.mjs",
+  "plugins/hope/skills/write/references/plain-writing.md",
 ];
 
 await Promise.all([
@@ -97,8 +103,11 @@ const [
   claudeMarketplace,
   skill,
   settingsSkill,
+  writeSkill,
+  writingStandard,
   architecture,
   diff,
+  write,
   release,
   verify,
   readme,
@@ -111,8 +120,11 @@ const [
     readJson(".claude-plugin/marketplace.json"),
     read("plugins/hope/skills/diff/SKILL.md"),
     read("plugins/hope/skills/settings/SKILL.md"),
+    read("plugins/hope/skills/write/SKILL.md"),
+    read("features/write/standard.md"),
     read("docs/architecture.md"),
     read("docs/diff.md"),
+    read("docs/write.md"),
     read(".github/workflows/release.yml"),
     read(".github/workflows/verify.yml"),
     read("README.md"),
@@ -161,12 +173,20 @@ assert.match(skill, /runtime\/features\/diff\/cli\.mjs/u);
 assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/runtime\/features\/diff\/cli\.mjs/u);
 assert.match(settingsSkill, /^---\r?\nname: settings\r?\ndescription: /u);
 assert.match(settingsSkill, /runtime\/settings\/cli\.mjs/u);
+assert.match(writeSkill, /^---\r?\nname: write\r?\ndescription: /u);
+assert.match(writeSkill, /runtime\/features\/write\/cli\.mjs/u);
+assert.doesNotMatch(writeSkill, /Prefer a short, familiar word/u);
+assert.match(writingStandard, /^# Plain writing standard\r?\n/u);
+assert.match(writingStandard, /Politics and the English Language/u);
 assert.match(architecture, /harness -> features <- host adapters/u);
 assert.match(architecture, /\.codex-plugin\/plugin\.json/u);
 assert.match(architecture, /\.claude-plugin\/plugin\.json/u);
 assert.match(diff, /^# Hope diff\r?\n/u);
 assert.match(diff, /ko-KR/u);
 assert.match(diff, /en-US/u);
+assert.match(write, /^# Hope write\r?\n/u);
+assert.match(write, /features\/write\/standard\.md/u);
+assert.match(write, /hope write/u);
 assert.match(release, /npm run build:plugin/u);
 assert.match(release, /npx playwright install --with-deps chromium/u);
 assert.match(release, /npm run test:browser/u);
@@ -176,6 +196,11 @@ assert.match(release, /node tools\/stage-plugin\.mjs/u);
 assert.match(release, /diff -u tools\/plugin-package-files\.txt/u);
 assert.match(release, /unzip -p [^\n]* \.claude-plugin\/plugin\.json/u);
 assert.match(release, /unzip -p [^\n]* \.codex-plugin\/plugin\.json/u);
+assert.match(release, /unzip -p [^\n]* skills\/write\/SKILL\.md/u);
+assert.match(
+  release,
+  /unzip -p [^\n]* runtime\/features\/write\/standard\.md/u,
+);
 assert.match(release, /--generate-notes/u);
 assert.match(verify, /name: Verify/u);
 assert.match(verify, /needs: \[check, browser\]/u);

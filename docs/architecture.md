@@ -7,6 +7,7 @@ non-model boundaries and reports that its AI adapter is not available yet.
 
 [PRINCIPLES.md](../PRINCIPLES.md) defines the project direction.
 [diff.md](diff.md) defines Hope diff.
+[write.md](write.md) defines Hope write.
 [design.md](design.md) defines the shared visual language.
 
 ## Two tracks
@@ -80,6 +81,7 @@ plugins/hope/
 ├── .claude-plugin/plugin.json
 ├── skills/diff/SKILL.md
 ├── skills/settings/SKILL.md
+├── skills/write/SKILL.md
 ├── docs/                  generated product definitions
 └── runtime/               generated feature code
 ```
@@ -112,6 +114,17 @@ documents for every review. Those documents remain the source of truth for
 implementation and maintenance; the runtime validator and renderer own their
 fixed behavior.
 
+## Current write boundary
+
+The write implementation starts from [write.md](write.md). The editable writing
+standard lives once under `features/write/standard.md`. The feature core returns
+that standard with a `draft`, `edit`, or `review` response contract.
+
+The Claude and Codex Skill chooses a mode and asks the generated runtime for the
+same brief. It does not carry another copy of the writing rules. The independent
+harness routes `hope write` to the same feature. Automatic writing reports that
+its model adapter is unavailable until the harness has one.
+
 ## Add a feature
 
 1. Start with a clear user goal.
@@ -119,6 +132,10 @@ fixed behavior.
 3. expose it through `harness/`.
 4. Add a thin skill only when an AI host needs one.
 5. Add shared helpers only after two real features need the same rule.
+
+Do not call a feature complete because its Skill or plugin manifest validates.
+Require a test that proves every supported entry path reaches the same core
+boundary.
 
 Use names that describe the work or data. Do not add a generic runner,
 manager, engine, registry, or base class without a concrete second use.

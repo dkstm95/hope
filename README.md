@@ -88,6 +88,24 @@ It does not run tests, build or lint commands, or other repository code.
 
 > Run Diff again when the pull request changes.
 
+### Write
+
+Write helps you draft, edit, or review prose with one shared plain-writing
+standard. It favors familiar words, direct sentences, and visible conclusions
+while preserving meaning, facts, uncertainty, citations, and voice.
+
+```text
+$hope:write Rewrite this wiki page so it is clear on the first read.
+```
+
+Use `/hope:write` in Claude Code. Write follows the current language and any
+more specific project rules. It can draft new text, change a requested file, or
+give concrete revisions when you ask only for a review.
+
+The independent harness exposes the same core as `hope write`. Automatic
+writing currently needs the Claude or Codex Skill because the harness does not
+have its own model adapter yet.
+
 ### Settings
 
 Save the language and theme preferences Hope should use.

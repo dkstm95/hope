@@ -15,6 +15,13 @@ import {
   main as runDiffCommand,
   parseDiffArguments,
 } from "../features/diff/cli.mjs";
+import {
+  WRITE_MODEL_ADAPTER_MESSAGE,
+  runWrite,
+} from "../features/write/index.mjs";
+import {
+  parseWriteArguments,
+} from "../features/write/cli.mjs";
 import { main, parseArguments } from "../harness/hope.mjs";
 import { normalizeLineEndings } from "../tools/build-plugin.mjs";
 
@@ -25,7 +32,7 @@ test("generated plugin text uses the same line endings on every system", () => {
   assert.equal(normalizeLineEndings("one\r\ntwo\rthree\n"), "one\ntwo\nthree\n");
 });
 
-test("the harness parses independent diff and settings entries", () => {
+test("the harness parses every independent feature entry", () => {
   assert.deepEqual(parseArguments(["diff"]), {
     arguments: [],
     command: "diff",
@@ -33,6 +40,14 @@ test("the harness parses independent diff and settings entries", () => {
   assert.deepEqual(parseArguments(["settings", "show"]), {
     arguments: ["show"],
     command: "settings",
+  });
+  assert.deepEqual(parseArguments(["write"]), {
+    arguments: [],
+    command: "write",
+  });
+  assert.deepEqual(parseWriteArguments(["brief", "--mode", "edit"]), {
+    command: "brief",
+    mode: "edit",
   });
   assert.deepEqual(parseDiffArguments([
     "prepare",
@@ -166,15 +181,16 @@ test("the harness reports the package version", async () => {
   assert.equal(output, `${packageJson.version}\n`);
 });
 
-test("the independent harness does not pretend to have an AI adapter", () => {
+test("the independent harness reports each missing AI adapter", () => {
   assert.throws(runDiff, (error) => {
     assert.equal(error.code, DIFF_MODEL_ADAPTER_CODE);
     assert.equal(error.message, DIFF_MODEL_ADAPTER_MESSAGE);
     return true;
   });
+  assert.throws(runWrite, new RegExp(WRITE_MODEL_ADAPTER_MESSAGE, "u"));
 });
 
-test("the harness delegates diff and settings to shared commands", async () => {
+test("the harness delegates every entry to its shared command", async () => {
   const received = [];
   await main(["diff"], {
     runDiffCommand: async (arguments_) => received.push(["diff", arguments_]),
@@ -182,17 +198,31 @@ test("the harness delegates diff and settings to shared commands", async () => {
   await main(["settings", "show"], {
     runSettingsCommand: async (arguments_) => received.push(["settings", arguments_]),
   });
+  await main(["write"], {
+    runWriteCommand: async (arguments_) => received.push(["write", arguments_]),
+  });
   assert.deepEqual(received, [
     ["diff", ["automatic"]],
     ["settings", ["show"]],
+    ["write", []],
   ]);
 });
 
-test("Codex and Claude Code share one diff skill and one settings skill", async () => {
+test("Codex and Claude Code share the same Hope skills", async () => {
   const diffDirectory = resolve(root, "plugins/hope/skills/diff");
   const settingsDirectory = resolve(root, "plugins/hope/skills/settings");
+  const writeDirectory = resolve(root, "plugins/hope/skills/write");
   const diff = await readFile(resolve(diffDirectory, "SKILL.md"), "utf8");
   const settings = await readFile(resolve(settingsDirectory, "SKILL.md"), "utf8");
+  const write = await readFile(resolve(writeDirectory, "SKILL.md"), "utf8");
+  const coreWritingStandard = await readFile(
+    resolve(root, "features/write/standard.md"),
+    "utf8",
+  );
+  const pluginWritingStandard = await readFile(
+    resolve(root, "plugins/hope/runtime/features/write/standard.md"),
+    "utf8",
+  );
   const codexPlugin = JSON.parse(await readFile(
     resolve(root, "plugins/hope/.codex-plugin/plugin.json"),
     "utf8",
@@ -204,6 +234,7 @@ test("Codex and Claude Code share one diff skill and one settings skill", async 
 
   await access(resolve(root, "plugins/hope/runtime/features/diff/cli.mjs"));
   await access(resolve(root, "plugins/hope/runtime/settings/cli.mjs"));
+  await access(resolve(root, "plugins/hope/runtime/features/write/cli.mjs"));
   assert.equal(codexPlugin.skills, "./skills/");
   assert.equal(claudePlugin.skills, "./skills/");
   assert.match(diff, /runtime\/features\/diff\/cli\.mjs/u);
@@ -217,6 +248,10 @@ test("Codex and Claude Code share one diff skill and one settings skill", async 
   assert.doesNotMatch(diff, /\.\.\/\.\.\/docs\/diff\.md/u);
   assert.match(diff, /validate --run <run-path>/u);
   assert.match(settings, /runtime\/settings\/cli\.mjs/u);
+  assert.match(write, /runtime\/features\/write\/cli\.mjs/u);
+  assert.match(write, /brief --mode <draft\|edit\|review>/u);
+  assert.doesNotMatch(write, /Prefer a short, familiar word/u);
+  assert.equal(pluginWritingStandard, coreWritingStandard);
 });
 
 test("the harness and generated runtime report the same missing AI boundary", () => {
@@ -234,6 +269,27 @@ test("the harness and generated runtime report the same missing AI boundary", ()
   assert.equal(plugin.status, 2);
   assert.match(harness.stderr, new RegExp(DIFF_MODEL_ADAPTER_MESSAGE, "u"));
   assert.match(plugin.stderr, new RegExp(DIFF_MODEL_ADAPTER_MESSAGE, "u"));
+
+  const writeHarness = spawnSync(
+    process.execPath,
+    [resolve(root, "harness/hope.mjs"), "write"],
+    { encoding: "utf8" },
+  );
+  const writePlugin = spawnSync(
+    process.execPath,
+    [resolve(root, "plugins/hope/runtime/features/write/cli.mjs"), "automatic"],
+    { encoding: "utf8" },
+  );
+  assert.equal(writeHarness.status, 2);
+  assert.equal(writePlugin.status, 2);
+  assert.match(
+    writeHarness.stderr,
+    new RegExp(WRITE_MODEL_ADAPTER_MESSAGE, "u"),
+  );
+  assert.match(
+    writePlugin.stderr,
+    new RegExp(WRITE_MODEL_ADAPTER_MESSAGE, "u"),
+  );
 });
 
 test("the harness and plugin share one global settings file", async () => {

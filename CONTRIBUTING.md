@@ -3,6 +3,7 @@
 Read [PRINCIPLES.md](PRINCIPLES.md) before making a project-wide decision. Read
 [docs/architecture.md](docs/architecture.md) before changing the main folders.
 Read [docs/diff.md](docs/diff.md) before implementing Hope diff.
+Read [docs/write.md](docs/write.md) before implementing Hope write.
 
 ## Main rules
 
@@ -35,6 +36,13 @@ list.
 Start with one useful end-to-end path. Put shared behavior under `features/`,
 expose it through the independent harness, and add a skill only when an AI host
 needs instructions to use that behavior.
+
+A new Skill directory is not an implemented feature. Before describing a
+feature as complete, require its product definition, shared core boundary,
+harness route or documented entry-path exception, generated plugin runtime, and
+a test proving that every supported entry path reaches the same boundary. Skill
+and plugin validation checks packaging; they do not replace this architecture
+check.
 
 If a feature creates or deletes anything, define ownership, preview, consent,
 identity checks, and failure behavior before implementing cleanup.
