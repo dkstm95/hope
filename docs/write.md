@@ -23,6 +23,11 @@ The feature returns that standard with the selected mode and the matching
 response contract. A host adapter must use the returned brief instead of
 carrying another copy of the rules.
 
+Hope diff also loads this standard from the write core. It returns the standard
+with each prepared review so the active host can apply it to every generated
+sentence. Diff adds its own evidence and uncertainty rules without copying the
+writing rules.
+
 ## Two entry paths
 
 The Claude and Codex Skill uses the active host session to produce prose. It

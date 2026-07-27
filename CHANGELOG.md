@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.4.0-alpha - Unreleased
+## 0.4.1-alpha - 2026-07-27
+
+- Apply Hope's shared writing standard to every model-written Diff review field
+  while keeping Diff's evidence and uncertainty rules.
+
+## 0.4.0-alpha - 2026-07-22
 
 - Add one verified Codex development reinstall command and reject changes to
   a plugin package after its public version tag exists.
