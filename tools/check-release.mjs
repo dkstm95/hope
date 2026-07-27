@@ -47,6 +47,8 @@ const requiredFiles = [
   "settings/index.mjs",
   "tools/plugin-files.mjs",
   "tools/plugin-package-files.txt",
+  "tools/check-plugin-version.mjs",
+  "tools/install-plugin-dev.mjs",
   "tools/prepare-release.mjs",
   "tools/stage-plugin.mjs",
   "PRINCIPLES.md",
@@ -203,6 +205,7 @@ assert.match(
 );
 assert.match(release, /--generate-notes/u);
 assert.match(verify, /name: Verify/u);
+assert.equal((verify.match(/fetch-depth: 0/gu) ?? []).length, 2);
 assert.match(verify, /needs: \[check, browser\]/u);
 assert.match(verify, /CHECK_RESULT: \$\{\{ needs\.check\.result \}\}/u);
 assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
@@ -217,6 +220,9 @@ assert.match(readmeKo, /codex plugin marketplace add dkstm95\/hope/u);
 assert.match(readmeKo, /codex plugin add hope@hope/u);
 assert.match(readmeKo, /claude plugin marketplace add dkstm95\/hope/u);
 assert.match(readmeKo, /claude plugin install hope@hope/u);
+assert.equal(packageJson.scripts["check:plugin-version"], "node tools/check-plugin-version.mjs");
+assert.equal(packageJson.scripts["plugin:dev:install"], "node tools/install-plugin-dev.mjs");
+assert.match(packageJson.scripts.check, /check:plugin-version/u);
 assert.equal(
   normalizeLineEndings(await read("tools/plugin-package-files.txt")),
   `${pluginPackageFiles.join("\n")}\n`,

@@ -31,6 +31,26 @@ changing the zip command. Add an intentional package file to
 `tools/plugin-package-files.txt`; the package test then checks the complete
 list.
 
+Once a version tag exists, its plugin package is immutable. `npm run check`
+fails when `plugins/hope/` changes without a new public version.
+
+## Test the plugin in Codex
+
+Install the current plugin package for local development with one command:
+
+```bash
+npm run plugin:dev:install
+```
+
+The command rebuilds and validates the plugin. It reinstalls `hope@hope` from
+the configured local `hope` marketplace, then checks that every cached file
+matches the package source. It does not change the tracked manifests or
+marketplace configuration.
+
+Start a new Codex task after installation. Do not bump the public version only
+to refresh a local cache. Use `release:prepare` when the package is ready for a
+real release.
+
 ## Add a feature
 
 Start with one useful end-to-end path. Put shared behavior under `features/`,

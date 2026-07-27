@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import test from "node:test";
@@ -8,6 +15,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
 import { normalizeLineEndings } from "../tools/build-plugin.mjs";
+import {
+  assertReleasedPluginVersionIsImmutable,
+} from "../tools/check-plugin-version.mjs";
+import {
+  parseInstallResult,
+  verifyInstalledPlugin,
+} from "../tools/install-plugin-dev.mjs";
 import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 import {
   isSemanticVersion,
@@ -55,6 +69,73 @@ test("release versions use one supported form", () => {
     '{\n  "version": "1.0.0",\n  "items": ["one", "two"]\n}\n',
   );
   assert.throws(() => replaceVersion('{"name":"hope"}', "1.0.0"), /does not declare/u);
+});
+
+test("development installation verifies the selected plugin and cache", async (context) => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-dev-cache-test-"));
+  context.after(async () => await rm(temporaryRoot, { recursive: true, force: true }));
+
+  const manifest = JSON.parse(await readFile(
+    join(pluginRoot, ".codex-plugin/plugin.json"),
+    "utf8",
+  ));
+  const installResult = parseInstallResult(JSON.stringify({
+    pluginId: "hope@hope",
+    name: "hope",
+    marketplaceName: "hope",
+    version: manifest.version,
+    installedPath: temporaryRoot,
+  }), manifest.version);
+  assert.equal(installResult.version, manifest.version);
+  assert.throws(
+    () => parseInstallResult("not json", manifest.version),
+    /did not return/u,
+  );
+  assert.throws(
+    () => parseInstallResult(JSON.stringify({
+      ...installResult,
+      version: "0.0.0",
+    }), manifest.version),
+    /unexpected/u,
+  );
+
+  await rm(temporaryRoot, { recursive: true, force: true });
+  await stagePlugin(temporaryRoot);
+  assert.deepEqual(
+    await verifyInstalledPlugin(temporaryRoot),
+    await readPackageFileList(),
+  );
+  await writeFile(
+    join(temporaryRoot, "skills/diff/SKILL.md"),
+    "changed\n",
+    "utf8",
+  );
+  await assert.rejects(
+    verifyInstalledPlugin(temporaryRoot),
+    /does not match/u,
+  );
+});
+
+test("a released plugin package requires a new public version", () => {
+  const missingTag = assertReleasedPluginVersionIsImmutable("1.0.0", {
+    git: () => ({ status: 1, stderr: "" }),
+  });
+  assert.deepEqual(missingTag, { released: false, tag: "v1.0.0" });
+
+  const matchingTag = assertReleasedPluginVersionIsImmutable("1.0.0", {
+    git: () => ({ status: 0, stderr: "" }),
+  });
+  assert.deepEqual(matchingTag, { released: true, tag: "v1.0.0" });
+
+  assert.throws(
+    () => assertReleasedPluginVersionIsImmutable("1.0.0", {
+      git: (arguments_) => ({
+        status: arguments_[0] === "diff" ? 1 : 0,
+        stderr: "",
+      }),
+    }),
+    /already released as v1\.0\.0/u,
+  );
 });
 
 test("the package file list rejects ambiguous or unsafe paths", () => {
