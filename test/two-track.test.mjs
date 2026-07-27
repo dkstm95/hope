@@ -17,6 +17,7 @@ import {
   parseDiffArguments,
 } from "../features/diff/cli.mjs";
 import {
+  loadWritingStandard,
   WRITE_BRIEF_VERSION,
   WRITE_MODEL_ADAPTER_MESSAGE,
   runWrite,
@@ -297,10 +298,7 @@ test("core and generated Diff preparation return one writing standard", async ()
     prepareDiff(options, dependencies),
     pluginDiff.prepareDiff(options, dependencies),
   ]);
-  const expected = await readFile(
-    resolve(root, "features/write/standard.md"),
-    "utf8",
-  );
+  const expected = await loadWritingStandard();
 
   assert.deepEqual(core.writingStandard, {
     text: expected,
