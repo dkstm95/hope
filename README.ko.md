@@ -34,16 +34,16 @@ https://github.com/dkstm95/hope 저장소의 Hope를 현재 AI 도구에 설치�
 저장소의 README에 따라 설치하고, 다시 시작해야 한다면 알려 주세요.
 ```
 
-Codex에 직접 설치하려면 다음 명령을 실행하세요.
+직접 설치하려면 사용 중인 도구의 명령을 실행하세요.
 
 ```bash
+# Codex
 codex plugin marketplace add dkstm95/hope
 codex plugin add hope@hope
 ```
 
-Claude Code에 직접 설치하려면 다음 명령을 실행하세요.
-
 ```bash
+# Claude Code
 claude plugin marketplace add dkstm95/hope
 claude plugin install hope@hope
 ```
@@ -93,20 +93,21 @@ Diff는 PR 설명, 커밋 제목, 수집할 수 있는 변경 파일의 본문�
 
 ### Write
 
-Write는 하나의 쉬운 글쓰기 원칙으로 글을 작성하고, 고치고, 검토합니다.
+Write는 조지 오웰의 글쓰기 원칙에 따라 글을 쓰고, 고치고, 검토합니다.
 익숙한 단어와 직접적인 문장을 쓰고 결론을 먼저 보여줍니다. 뜻, 사실,
 불확실성, 인용, 말투는 보존합니다.
 
 ```text
+Codex
 $hope:write 이 wiki 문서를 한 번에 이해할 수 있도록 고쳐 주세요.
+
+Claude Code
+/hope:write 이 wiki 문서를 한 번에 이해할 수 있도록 고쳐 주세요.
 ```
 
-Claude Code에서는 `/hope:write`를 사용합니다. Write는 현재 대화의 언어와
-더 구체적인 프로젝트 규칙을 따릅니다. 새 글을 쓰거나, 요청한 파일을 직접
-고치거나, 검토만 요청받으면 구체적인 수정안을 제시합니다.
-
-독립 실행형 harness도 같은 코어를 `hope write`로 제공합니다. 아직 harness
-자체 모델 어댑터가 없으므로 자동 글쓰기는 Claude나 Codex Skill을 사용합니다.
+Write는 현재 대화의 언어와 더 구체적인 프로젝트 규칙을 따릅니다. 새 글을
+쓰거나, 요청한 파일을 직접 고치거나, 검토만 요청받으면 구체적인 수정안을
+제시합니다.
 
 ### Settings
 

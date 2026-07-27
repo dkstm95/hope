@@ -33,16 +33,16 @@ Install Hope from https://github.com/dkstm95/hope for this host.
 Follow the repository README and tell me if I need to restart.
 ```
 
-To install it yourself in Codex:
+To install it yourself, run the commands for your host.
 
 ```bash
+# Codex
 codex plugin marketplace add dkstm95/hope
 codex plugin add hope@hope
 ```
 
-To install it yourself in Claude Code:
-
 ```bash
+# Claude Code
 claude plugin marketplace add dkstm95/hope
 claude plugin install hope@hope
 ```
@@ -93,21 +93,21 @@ It does not run tests, build or lint commands, or other repository code.
 
 ### Write
 
-Write helps you draft, edit, or review prose with one shared plain-writing
-standard. It favors familiar words, direct sentences, and visible conclusions
-while preserving meaning, facts, uncertainty, citations, and voice.
+Write follows George Orwell's writing principles to help you draft, edit, or
+review prose. It favors familiar words, direct sentences, and visible
+conclusions while preserving meaning, facts, uncertainty, citations, and voice.
 
 ```text
+Codex
 $hope:write Rewrite this wiki page so it is clear on the first read.
+
+Claude Code
+/hope:write Rewrite this wiki page so it is clear on the first read.
 ```
 
-Use `/hope:write` in Claude Code. Write follows the current language and any
-more specific project rules. It can draft new text, change a requested file, or
-give concrete revisions when you ask only for a review.
-
-The independent harness exposes the same core as `hope write`. Automatic
-writing currently needs the Claude or Codex Skill because the harness does not
-have its own model adapter yet.
+Write follows the current language and any more specific project rules. It can
+draft new text, change a requested file, or give concrete revisions when you
+ask only for a review.
 
 ### Settings
 
