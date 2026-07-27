@@ -1,7 +1,7 @@
 {
   "name": "hope",
   "version": "0.4.0-alpha",
-  "description": "Understand GitHub pull requests with evidence-linked Hope reviews and shared language and theme settings. Requires Node.js 20 or newer.",
+  "description": "Understand pull requests, write clear prose, and save shared Hope preferences. Requires Node.js 20 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -9,17 +9,18 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["harness", "diff", "pull-request", "code-understanding"],
+  "keywords": ["harness", "diff", "pull-request", "writing", "documentation"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
     "shortDescription": "Practical ways for people and AI to work better together",
-    "longDescription": "Diff helps you understand code changes and provides the explanations and evidence you need to make your own decision. It produces one local HTML file without running repository code. Settings saves the language and theme Hope should use.",
+    "longDescription": "Diff explains code changes with evidence for your decision. Write helps you draft, edit, or review clear prose without losing its meaning. Settings saves the language and theme Hope should use.",
     "developerName": "SeungIl",
     "category": "Engineering",
-    "capabilities": ["Read", "Interactive"],
+    "capabilities": ["Read", "Write", "Interactive"],
     "defaultPrompt": [
-      "Use $hope:diff to explain the current pull request."
+      "Use $hope:diff to explain the current pull request.",
+      "Use $hope:write to make this text clear and direct."
     ],
     "brandColor": "#087EA4",
     "composerIcon": "./assets/hope-protected-light-128.png",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "hope",
-  "description": "Hope plugins for understanding and working with code changes.",
+  "description": "Hope plugins for understanding code changes and writing clear prose.",
   "owner": {
     "name": "SeungIl"
   },
@@ -9,14 +9,14 @@
     {
       "name": "hope",
       "source": "./plugins/hope",
-      "description": "Adds evidence-linked GitHub pull-request reviews and shared Hope settings to Claude Code. Requires Node.js 20 or newer.",
+      "description": "Adds evidence-linked pull-request reviews, clear writing, and shared Hope settings to Claude Code. Requires Node.js 20 or newer.",
       "author": {
         "name": "SeungIl"
       },
       "homepage": "https://github.com/dkstm95/hope#readme",
       "repository": "https://github.com/dkstm95/hope",
       "license": "MIT",
-      "keywords": ["harness", "diff", "pull-request", "code-understanding"],
+      "keywords": ["harness", "diff", "pull-request", "writing", "documentation"],
       "category": "development"
     }
   ]

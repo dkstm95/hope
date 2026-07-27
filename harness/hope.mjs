@@ -5,6 +5,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { main as runDiffCommand } from "../features/diff/cli.mjs";
+import {
+  WRITE_MODEL_ADAPTER_CODE,
+} from "../features/write/index.mjs";
+import { main as runWriteCommand } from "../features/write/cli.mjs";
 import { main as runSettingsCommand } from "../settings/cli.mjs";
 
 const { version: VERSION } = createRequire(import.meta.url)("../package.json");
@@ -17,9 +21,10 @@ function usage() {
     "  hope --help",
     "  hope --version",
     "  hope diff",
+    "  hope write",
     "  hope settings <show|set|reset>",
     "",
-    "Automatic diff analysis currently runs through the Hope Claude or Codex skill.",
+    "Automatic diff analysis and writing currently run through the Hope Claude or Codex skill.",
   ].join("\n");
 }
 
@@ -31,7 +36,7 @@ export function parseArguments(argv) {
     return { command: "version" };
   }
   const [command, ...rest] = argv;
-  if (!["diff", "settings"].includes(command)) {
+  if (!["diff", "settings", "write"].includes(command)) {
     throw new TypeError(`Unknown Hope command: ${command}`);
   }
   return { arguments: rest, command };
@@ -54,6 +59,12 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       { ...dependencies, stdout },
     );
   }
+  if (options.command === "write") {
+    return await (dependencies.runWriteCommand ?? runWriteCommand)(
+      options.arguments,
+      { ...dependencies, stdout },
+    );
+  }
   return await (dependencies.runDiffCommand ?? runDiffCommand)(
     options.arguments.length === 0 ? ["automatic"] : options.arguments,
     { ...dependencies, stdout },
@@ -72,6 +83,11 @@ const isEntrypoint = (() => {
 if (isEntrypoint) {
   main().catch((error) => {
     process.stderr.write(`hope: ${error.message}\n`);
-    process.exitCode = error.code === "HOPE_DIFF_MODEL_ADAPTER_REQUIRED" ? 2 : 1;
+    process.exitCode = [
+      "HOPE_DIFF_MODEL_ADAPTER_REQUIRED",
+      WRITE_MODEL_ADAPTER_CODE,
+    ].includes(error.code)
+      ? 2
+      : 1;
   });
 }

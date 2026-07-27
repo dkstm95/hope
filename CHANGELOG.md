@@ -2,6 +2,9 @@
 
 ## 0.4.0-alpha - Unreleased
 
+- Add Hope write as one shared core, independent harness boundary, and thin
+  `hope:write` Skill for drafting, editing, and reviewing prose without losing
+  meaning, facts, or voice.
 - Make the repository root the Hope package so the independent harness,
   shared features, product documents, and Codex skill ship together.
 - Add an independent `hope` harness entry and keep the Codex skill as a thin

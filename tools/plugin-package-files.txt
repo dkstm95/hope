@@ -6,6 +6,7 @@ assets/hope-protected-light-128.png
 assets/hope-protected-light.png
 docs/design.md
 docs/diff.md
+docs/write.md
 runtime/design/fonts/HopeCode.woff2
 runtime/design/fonts/HopeSansBold.woff2
 runtime/design/fonts/HopeSansLight.woff2
@@ -30,6 +31,9 @@ runtime/features/diff/run.mjs
 runtime/features/diff/target.mjs
 runtime/features/diff/text.mjs
 runtime/features/diff/validate.mjs
+runtime/features/write/cli.mjs
+runtime/features/write/index.mjs
+runtime/features/write/standard.md
 runtime/locales/en-US/common.json
 runtime/locales/en-US/diff.json
 runtime/locales/index.mjs
@@ -43,3 +47,6 @@ skills/diff/assets/hope-protected-light.png
 skills/settings/SKILL.md
 skills/settings/agents/openai.yaml
 skills/settings/assets/hope-protected-light.png
+skills/write/SKILL.md
+skills/write/agents/openai.yaml
+skills/write/assets/hope-protected-light.png

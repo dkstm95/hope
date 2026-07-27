@@ -39,6 +39,11 @@ export const generatedPluginFiles = Object.freeze([
     "<!-- Generated from docs/diff.md. Do not edit. -->\n\n",
   ),
   generatedText(
+    "docs/write.md",
+    "plugins/hope/docs/write.md",
+    "<!-- Generated from docs/write.md. Do not edit. -->\n\n",
+  ),
+  generatedText(
     "design/fonts/OFL-D2Coding.txt",
     "plugins/hope/runtime/design/fonts/OFL-D2Coding.txt",
   ),
@@ -99,6 +104,13 @@ export const generatedPluginFiles = Object.freeze([
       ? `// Generated from features/diff/${name}. Do not edit.\n`
       : "",
   )),
+  ...["cli.mjs", "index.mjs", "standard.md"].map((name) => generatedText(
+    `features/write/${name}`,
+    `plugins/hope/runtime/features/write/${name}`,
+    name.endsWith(".mjs")
+      ? `// Generated from features/write/${name}. Do not edit.\n`
+      : "",
+  )),
   generatedText(
     "locales/index.mjs",
     "plugins/hope/runtime/locales/index.mjs",
@@ -133,6 +145,9 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/settings/SKILL.md",
   "plugins/hope/skills/settings/agents/openai.yaml",
   "plugins/hope/skills/settings/assets/hope-protected-light.png",
+  "plugins/hope/skills/write/SKILL.md",
+  "plugins/hope/skills/write/agents/openai.yaml",
+  "plugins/hope/skills/write/assets/hope-protected-light.png",
 ]);
 
 export const pluginPackageFiles = Object.freeze([
