@@ -52,7 +52,8 @@ Start a new Codex or Claude Code session after installation.
 
 ### Diff
 
-Diff helps you understand code changes and provides the explanations and evidence you need to make your own decision.
+Diff explains code changes with evidence, helping you make your own decisions
+and carry that understanding into later work.
 
 The result is one local HTML file.
 
