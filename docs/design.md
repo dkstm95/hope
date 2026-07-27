@@ -22,7 +22,7 @@ content over decoration.
 
 The source repository keeps reference images under
 `docs/design/baseline-v1/`. They show the intended density and tone. They are
-comparison material, not pixel-perfect specifications and do not ship in the
+comparison material, not pixel-perfect specifications. They do not ship in the
 runtime plugin.
 
 `design/tokens.mjs` is the code source of truth for shared colors, type sizes,
@@ -56,8 +56,8 @@ control may be narrower, but it must not look like a smaller control family.
 
 The product bar owns repository and pull request identity. The synopsis card
 header owns the artifact title, compact **Commit** label, and capture time. Do
-not repeat repository identity or add a persistent sentence explaining that an
-offline artifact does not update itself.
+not repeat repository identity. Do not add a persistent sentence that explains
+that an offline artifact does not update itself.
 
 A complex drawer is allowed only after its focus, keyboard, scroll, and deep
 link behavior is tested.
@@ -128,12 +128,13 @@ Use one quiet marker gutter to help the eye follow body content:
 
 Keep the first-screen review result especially compact. Render each preview as
 a small kind marker, plain importance text, and title. Do not add a
-representative status, total, or kind counts above the previews. When no item
-exists, show one plain empty-result sentence. Show concrete material scope
-limits without a generic scope badge, and omit that synopsis row when no
-material limit exists. Keep the same label-and-value grid used by the other
+representative status, total, or kind counts above the previews.
+
+When no item exists, show one plain empty-result sentence. Show concrete
+material scope limits without a generic scope badge. Omit that synopsis row
+when no material limit exists. Use the same label-and-value grid as the other
 synopsis rows. Separate preview items with spacing, not rules. Use semantic
-`ul` and `ol` elements whenever the content is actually a list.
+`ul` and `ol` elements for content that is a list.
 
 Make the first-screen synopsis one self-contained component. Put the pull
 request title, reviewed commit, and capture time in its header. Do not place a
@@ -160,12 +161,13 @@ without looking beige or gray. Exact Hope surface values live only in
 `design/tokens.mjs`.
 
 Code is a separate visual surface. Use GitHub Light Default inside code regions
-in light mode and GitHub Dark Default inside code regions in dark mode. A
-document theme change switches both at once, but it does not replace the Hope
-palette outside code. Highlight syntax during artifact generation with trusted,
-fixed grammars and themes. Insert repository text only as escaped token
-content. If Hope does not support a file language, show its escaped source
-without guessed highlighting.
+in light mode and GitHub Dark Default inside code regions in dark mode. A theme
+change switches both at once. It does not replace the Hope palette outside
+code.
+
+Highlight syntax during artifact generation with trusted, fixed grammars and
+themes. Insert repository text only as escaped token content. If Hope does not
+support a file language, show its escaped source without guessed highlighting.
 
 The initial theme comes from the resolved Hope setting:
 
@@ -198,7 +200,7 @@ Supported interactions can include:
 - open or close evidence;
 - move through the table of contents;
 - switch the current document theme;
-- try a safe declarative microworld; and
+- try a safe declarative microworld;
 - draft an optional quiz response without submitting or saving it; and
 - reveal the quiz answer and evidence through a separate disclosure.
 
@@ -212,12 +214,13 @@ Print output omits the reader's transient quiz response. It shows each
 question, answer, and supporting evidence regardless of the current disclosure
 state.
 
-The **Evidence and scope** section is a dense reference appendix. Keep
-the whole section open initially so the available groups remain visible. Its
-source groups, context checks, scope limits, checked-file group, and artifact
-details must open independently and start closed. Use native disclosure
-controls so they work without JavaScript. Opening a fragment link must reveal
-every disclosure that contains its target.
+The **Evidence and scope** section is a dense reference appendix. Keep the whole
+section open initially so the available groups remain visible. Its source
+groups, context checks, scope limits, checked-file group, and artifact details
+must open independently and start closed.
+
+Use native disclosure controls so they work without JavaScript. Opening a
+fragment link must reveal every disclosure that contains its target.
 
 Code markup must contain explicit line separators. One source line must remain
 one visible line even without layout styles; long lines scroll inside the code
@@ -225,9 +228,9 @@ surface instead of merging with adjacent lines.
 
 Do not make audit completeness look like repeated interface content. Merge
 changed-file source metadata into the changed-file table, keep other sources in
-a separate small table, and group exclusions that have the same reason. The
-collapsed interface stays compact while expanded details still account for
-every source, file, and limit.
+a separate small table, and group exclusions with the same reason. Keep the
+collapsed interface compact. Expanded details must still account for every
+source, file, and limit.
 
 Do not show a section-copy control while artifacts use temporary local paths.
 Stable section IDs remain available for navigation. Add copying only when Hope
@@ -251,9 +254,9 @@ Every artifact needs:
 - a text alternative for every diagram or interactive explanation; and
 - correct `lang`, `dir`, and bidirectional isolation for mixed content.
 
-Keep mobile controls at least 44 by 44 CSS pixels. Do not reduce a status or
-control label below 12px on a narrow screen. Supporting labels and interactive
-summaries use the medium face; body prose keeps the light face.
+Keep mobile controls at least 44 by 44 CSS pixels. On a narrow screen, keep
+status and control labels at 12px or larger. Supporting labels and interactive
+summaries use the medium face. Body prose keeps the light face.
 
 Test the final file through `file://`, not only through a web server.
 

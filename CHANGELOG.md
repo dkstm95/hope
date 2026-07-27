@@ -2,6 +2,8 @@
 
 ## 0.4.0-alpha - Unreleased
 
+- Apply Hope's shared writing standard across project documentation without
+  changing technical, security, or legal meaning.
 - Add Hope write as one shared core, independent harness boundary, and thin
   `hope:write` Skill for drafting, editing, and reviewing prose without losing
   meaning, facts, or voice.
@@ -31,12 +33,12 @@
   available yet.
 - Generate every plugin runtime, locale, design, and product-document copy from
   root sources and verify the exact release file list.
-- Reduce Diff resource use by packing short inspection sources, emitting compact
-  model pages, loading the renderer on demand, registering only the needed
-  syntax grammars, parallelizing independent GitHub reads, caching evidence
-  ranges, and rejecting oversized analyses before rendering. Report
-  content-free byte and count metrics without presenting them as model token
-  usage, while keeping in-flight v1 runs resumable under the v2 run protocol.
+- Reduce Diff resource use by packing short inspection sources and emitting
+  compact model pages. Load the renderer on demand, register only the needed
+  syntax grammars, parallelize independent GitHub reads, cache evidence ranges,
+  and reject oversized analyses before rendering. Report content-free byte and
+  count metrics without presenting them as model token usage. Keep in-flight
+  v1 runs resumable under the v2 run protocol.
 - Read incomplete-patch before bodies from the exact merge base, downgrade
   combined oversized before/after text to a visible metadata-only limit, and
   preserve fork head/base repository identities for exact context reads.

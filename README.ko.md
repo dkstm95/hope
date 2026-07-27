@@ -23,9 +23,11 @@ Hope 플러그인은 Codex와 Claude Code에 설치할 수 있습니다.
 다음 항목들이 필요합니다.
 
 - Node.js 20 이상
-- Diff를 사용하려면 인증된 [GitHub CLI](https://cli.github.com/)가 필요합니다. 필요하다면 먼저 `gh auth login`을 실행하세요.
+- Diff를 사용하려면 인증된 [GitHub CLI](https://cli.github.com/)가
+  필요합니다. 필요하다면 먼저 `gh auth login`을 실행하세요.
 
-가장 간단한 방법은 Codex나 Claude Code에 다음과 같이 요청하는 것입니다.
+가장 간단한 설치 방법은 Codex나 Claude Code에 다음과 같이 요청하는
+것입니다.
 
 ```text
 https://github.com/dkstm95/hope 저장소의 Hope를 현재 AI 도구에 설치해 주세요.
@@ -52,12 +54,13 @@ claude plugin install hope@hope
 
 ### Diff
 
-Diff는 코드 변경을 근거와 함께 설명하여 사용자가 스스로 판단하고, 그 이해를
-이후 작업에 활용하도록 돕습니다.
+Diff는 코드 변경을 근거와 함께 설명합니다. 사용자는 이를 바탕으로 스스로
+판단하고, 이해한 내용을 이후 작업에 활용할 수 있습니다.
 
-결과는 하나의 로컬 HTML 파일로 생성됩니다.
+Diff는 하나의 로컬 HTML 파일을 만듭니다.
 
-> URL 없이 실행하면 대상 저장소에서 사용자가 만든 열린 PR을 찾습니다. 특정 PR을 고르려면 GitHub PR URL을 함께 입력하세요.
+> URL 없이 실행하면 대상 저장소에서 사용자가 만든 열린 PR을 찾습니다.
+> 특정 PR을 고르려면 해당 GitHub PR URL을 함께 입력하세요.
 
 ```text
 $hope:diff https://github.com/owner/repository/pull/123
@@ -78,8 +81,8 @@ $hope:diff https://github.com/owner/repository/pull/123
 </p>
 
 Diff는 PR 설명, 커밋 제목, 수집할 수 있는 변경 파일의 본문을 읽습니다.
-수집한 출처에서 구체적인 관련 경로를 확인한 경우, 검토 대상의 정확한 head
-또는 merge-base 커밋에서 제한된 수의 파일을 추가할 수 있습니다.
+출처에서 관련 경로를 확인하면 검토 대상의 정확한 head 또는 merge-base
+커밋에서 제한된 수의 파일을 추가로 읽을 수 있습니다.
 
 관련 없는 저장소 파일을 검색하지 않으며, PR 토론, 리뷰 댓글, CI 결과는
 확인하지 않습니다.
@@ -109,7 +112,8 @@ Claude Code에서는 `/hope:write`를 사용합니다. Write는 현재 대화의
 
 Hope에서 사용할 언어와 테마 설정을 저장할 수 있습니다.
 
-저장된 설정이 없으면 Hope는 현재 도구나 운영체제의 언어를 따르고 시스템 테마를 사용합니다.
+저장된 설정이 없으면 Hope는 현재 도구나 운영체제의 언어를 따르고 시스템
+테마를 사용합니다.
 
 ## 라이선스
 
