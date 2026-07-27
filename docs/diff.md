@@ -1,9 +1,8 @@
 # Hope diff
 
-This is the shared product definition for Hope diff. It defines what the
-feature must help a person understand and what it must not claim. The harness,
-plugins, skills, and future implementation must follow this file without
-redefining it.
+This file defines Hope diff. It states what the feature must help a person
+understand and what it must not claim. The harness, plugins, skills, and future
+implementation must follow this definition instead of creating their own.
 
 The current implementation delivers this contract through the Claude and
 Codex skill. The independent harness shares collection, settings, validation,
@@ -50,11 +49,11 @@ input, but the contract is provider-neutral. Local staged, unstaged, and
 untracked files are outside the review.
 
 The normal artifact is the only user-visible local write. Hope may use private
-temporary state while it works and must remove that state at the end. Hope
-creates the artifact outside the repository unless the person explicitly
-selects a repository path. Hope does not merge the pull request, change other
-project files, post comments, or update an external system without a separate,
-explicit action.
+temporary state while it works, but must remove that state at the end. Unless
+the person selects a repository path, Hope creates the artifact outside the
+repository. Hope does not merge the pull request, change other project files,
+post comments, or update an external system without a separate, explicit
+action.
 
 The artifact works offline, but generation may not be local-only. Content
 needed for the review is processed in the active Claude or Codex session under
@@ -72,9 +71,9 @@ An exact code snapshot includes:
 A branch name, pull request number, or head revision alone is not enough.
 
 A request for the current pull request fails if its target changes during
-generation. Revalidate it immediately before the completed local artifact
-becomes visible. An explicitly requested historical snapshot remains valid as
-history, but it must not be described as the current pull request.
+generation. Hope revalidates the target immediately before the completed local
+artifact becomes visible. An explicitly requested historical snapshot remains
+valid as history, but Hope must not describe it as the current pull request.
 
 Pull request text, discussions, issues, linked documents, and CI state can
 change without a code revision. Bind claims from these sources to the captured
@@ -107,11 +106,11 @@ These statements are not the same:
 
 ## First screen
 
-The first screen gives the shape of the change and its limits in about 30
-seconds. Its summary card starts with the pull request title, reviewed head
-commit, and capture time. The capture time records when Hope captured the pull
-request inputs. It is not the commit date or HTML creation time. Follow that
-identity with information in this order:
+The first screen shows the shape and limits of the change in about 30 seconds.
+Its summary card starts with the pull request title, reviewed head commit, and
+capture time. The capture time is when Hope captured the pull request inputs,
+not the commit date or HTML creation time. Follow that identity with information
+in this order:
 
 1. **Goal** — the result the change is trying to create.
 2. **AS-IS and TO-BE** — a short previous and new explanation.
@@ -126,13 +125,15 @@ of contents label and as an accessible section name. The main explanation
 lives in **Core change**. Group long lists and link to their full explanation.
 
 Show repository and pull request identity once in the product bar. Do not
-repeat it under the artifact title. Do not add a representative status, total,
-or kind counts above review-item previews; each preview already names its kind
-and importance. Show `No important item found in the checked scope` only when
-there are no items. Show concrete material scope limits without a generic
-`limited` badge, and omit the first-screen scope row when there are none. A
-top-item preview contains kind, importance, and title; its explanation, effect,
-action, closing condition, and evidence live in the full item.
+repeat it under the artifact title. Each review-item preview already names its
+kind and importance, so do not add a representative status, total, or kind
+counts above the previews.
+
+Show `No important item found in the checked scope` only when there are no
+items. Show concrete material scope limits without a generic `limited` badge.
+Omit the first-screen scope row when there are no limits. A top-item preview
+contains kind, importance, and title. Its explanation, effect, action, closing
+condition, and evidence belong in the full item.
 
 A change may intentionally leave runtime behavior unchanged. For a refactor,
 documentation change, build change, dependency update, or test-only change,
@@ -209,15 +210,15 @@ or meeting a minimum length.
 ### Evidence and scope
 
 Show the exact code snapshot, captured supporting sources, checked files,
-material sources not checked, and resulting limits. Important evidence also
-stays beside the claim it supports. This section is an index, not the only
-evidence location.
+material sources not checked, and resulting limits. Keep important evidence
+beside the claim it supports. This section is an index, not the only evidence
+location.
 
 Treat this dense index as an appendix. Keep the section open initially so its
-available groups are visible without another action. Each source group, context
-check, scope limit, checked-file group, and artifact-detail group starts closed
-and can be opened independently. A direct link opens the controls needed to
-reveal its target.
+groups are visible without another action. Each source group, context check,
+scope limit, checked-file group, and artifact-detail group starts closed and can
+be opened independently. A direct link opens every control needed to reveal its
+target.
 
 Do not list a changed file once as a captured patch and again as a checked
 file. Join file sources to the changed-file row by stable file ID. Keep pull
@@ -246,12 +247,13 @@ those questions.
 
 The first inspection plan contains the change sources. After reading it, the
 active host may request at most twelve concrete repository-relative context
-files whose paths are grounded in those sources. Collect each requested file
-from the captured head or merge-base revision, keep it in the private snapshot
-as context evidence, and atomically replace the inspection plan before analysis.
-Read the replacement plan from the beginning. This bounded path does not search
-the repository or make an ungrounded path guess; context that still cannot be
-collected remains an explicit scope limit.
+files whose paths are grounded in those sources. Hope collects each file from
+the captured head or merge-base revision and keeps it in the private snapshot
+as context evidence. It atomically replaces the inspection plan before
+analysis, and the host reads the new plan from the beginning.
+
+This bounded path does not search the repository or guess an ungrounded path.
+Context that Hope still cannot collect remains an explicit scope limit.
 
 When a material question remains, follow directly linked issues, specs, design
 documents, discussions, one more relevant call step, migrations, schemas,
@@ -259,12 +261,11 @@ deployment settings, or project documents. Do not explore unrelated code,
 unlinked history, arbitrary web results, local uncommitted changes, or similar
 implementations without a grounded reason.
 
-Compare source claims with the actual changed-file map and collected code.
-When a pull request description or commit title names a file, behavior, or
-verification result that the snapshot contradicts, make that mismatch an
-explicit review item when it could change the reader's understanding or
-decision. A smooth code explanation must not hide stale or contradictory
-source text.
+Compare source claims with the changed-file map and collected code. The snapshot
+may contradict a claim about a file, behavior, or verification result in a pull
+request description or commit title. Make that mismatch a review item when it
+could change the reader's understanding or decision. Do not let a smooth code
+explanation hide stale or contradictory source text.
 
 Keep two code-source roles distinct:
 
@@ -295,9 +296,9 @@ No items                    -> No important item found in the checked scope
 
 The derived status and counts support validation and future integrations. Do
 not show them as a first-screen dashboard. Sort the visible item previews by
-importance and action, show up to three, and link to the remaining count.
-Limited scope must not hide a found item. A found item must not make the scope
-look sufficient.
+importance and action. Show up to three and link to the remaining count. Limited
+scope must not hide a found item. A found item must not make the scope look
+sufficient.
 
 ## Review items
 
@@ -312,8 +313,9 @@ A known risk is not always Resolve. Use Decide when accepting it is a human
 trade-off. Use Verify when the risk itself is not established.
 
 Every item identifies its kind, importance, issue, effect, next action, closing
-condition, basis, and supporting evidence. A closing condition can be met by finding
-a failure. The uncertainty then closes and a new Resolve item may be needed.
+condition, basis, and supporting evidence. Finding a failure can meet the
+closing condition. That closes the uncertainty and may create a new Resolve
+item.
 
 Do not assign a decision owner. Mention a responsible person only when a source
 clearly identifies one. `CODEOWNERS` does not prove decision authority.
@@ -371,9 +373,11 @@ that basis.
 
 Do not repeat one concern as both a review item and a question. A scope limit is
 an inspection-boundary fact. Add a Verify item only when a concrete, useful
-follow-up can resolve the uncertainty. The analysis references that limit by
-its internal ID, and the renderer creates the user-facing link. The item
-describes the action instead of restating the limit.
+follow-up can resolve the uncertainty.
+
+The analysis references the limit by its internal ID, and the renderer creates
+the user-facing link. The item describes the action instead of restating the
+limit.
 
 ## Coverage and failure
 
@@ -391,10 +395,9 @@ Each scope limit states what Hope could not check, why, and what Hope therefore
 cannot explain or judge.
 
 The collector records every known unchecked input. The analysis marks whether
-each omission materially limits a main explanation or judgment and explains
+each omission materially limits a main explanation or judgment. It also explains
 why. Only material omissions make the user-facing status **Scope limited**.
-Non-material omissions remain visible in checked-scope details so they cannot
-disappear silently.
+Non-material omissions remain visible in checked-scope details.
 
 Account for every provider-reported changed file once as explained, supporting,
 mechanical, metadata-only, or redacted. A readable safe-text file must be
@@ -406,9 +409,9 @@ unavailable content. It cannot count as a fully inspected file.
 When GitHub does not provide a text diff for a zero-line change, record the
 file as metadata-only without requesting its body. When a body is larger than
 Hope's safe text limit, record that deliberate safety boundary as
-metadata-only instead of treating the file as inspected or aborting an
-otherwise grounded review. Both omissions remain visible and the analysis must
-state whether they limit a main explanation or judgment.
+metadata-only. Do not treat the file as inspected or abort an otherwise
+grounded review. Both omissions remain visible. The analysis must state whether
+they limit a main explanation or judgment.
 
 A limited review can be created only when:
 
@@ -429,12 +432,14 @@ On failure, explain the cause and next step. Do not create or expose an
 incomplete review, and do not replace an older valid artifact.
 
 Inspection pages may carry several short source chunks under one untrusted
-page envelope. Source IDs and line ranges remain distinct. Hope reports planned
-inspection pages and serialized bytes, source bytes, actual analysis-file and
-canonical JSON bytes, evidence counts, and artifact bytes as content-free
-processing details. These counters support comparison and diagnosis; they are
-not model token counts or proof that a host received every planned page. Record
-exact input or output tokens only when the active host supplies them.
+page envelope. Source IDs and line ranges remain distinct.
+
+Hope reports content-free processing details: planned inspection pages and
+serialized bytes, source bytes, actual analysis-file and canonical JSON bytes,
+evidence counts, and artifact bytes. These counters support comparison and
+diagnosis. They are not model token counts or proof that a host received every
+planned page. Record exact input or output tokens only when the active host
+supplies them.
 
 Reject an analysis before rendering when it exceeds the bounded authoring
 budget: 128 KiB for both the analysis file and canonical JSON, 48 KiB of
@@ -461,18 +466,18 @@ The review may contain one optional microworld as a visually separate **Try
 it** block inside **Behavior flow**.
 
 Use a microworld when changing an input, condition, or state helps the reader
-predict the result. State what evidence grounds it, what it simplifies, and
-what it leaves out. The self-contained HTML uses a safe explanation model. It
-does not execute repository code or present its output as a test result.
+predict the result. State what evidence grounds it, what the model simplifies,
+and what it leaves out. The self-contained HTML uses a safe explanation model.
+It does not execute repository code or present its output as a test result.
 
 An experiment that executes real code belongs to the harness, not this offline
 artifact. It needs its own isolated execution boundary.
 
 Use one optional quiz with three to five evidence-backed questions only when
 prediction adds value. Give each answer a self-check explanation and evidence
-link. Keep the reader's optional response separate from the answer, and reveal
-the answer only through its own disclosure. Do not add an aggregate score,
-pass threshold, or forced response.
+link. Keep the reader's optional response separate from the answer. Reveal the
+answer only through its own disclosure. Do not add an aggregate score, pass
+threshold, or forced response.
 
 ## Optional verification
 
@@ -485,10 +490,10 @@ actually ran. A synthetic merge result is not a head-revision result. A dirty,
 stale, or different tree cannot confirm a claim about the reviewed snapshot.
 
 Treat every repository-controlled command as untrusted, including standard
-test scripts. Run it only in an enforced disposable environment without ambient
-secrets, external writes, or network access. If Hope cannot enforce that
-boundary, ask for explicit approval of the concrete exposure and effects or do
-not run it.
+test scripts. Run it only in an enforced disposable environment without
+ambient secrets, external writes, or network access. If Hope cannot enforce
+that boundary, ask for explicit approval of the concrete exposure and effects.
+Otherwise, do not run the command.
 
 Normal read-only provider collection uses the authenticated host session.
 Consent in this section applies to optional command execution and new external
@@ -546,7 +551,7 @@ evidence surfaces. Generated explanations use the resolved locale while
 keeping necessary source terms unchanged.
 
 Generated explanations render as plain text. Hope does not parse Markdown or
-HTML, so the analysis must not add formatting. Version 1 validation rejects
+HTML. The analysis must not add formatting. Version 1 validation rejects
 backticks to prevent visible inline-code markers. When exact syntax needs a
 backtick, show it in an evidence excerpt instead of generated prose.
 
@@ -575,14 +580,14 @@ fails, do not expose a new final artifact or change the external destination.
 
 Remove private collection and model files after normal success, failure, or
 cooperative cancellation. A process crash or forced termination can prevent
-immediate cleanup. Each run therefore needs an ownership record, restrictive
-permissions, and safe expiry cleanup on a later Hope invocation. Never infer
+immediate cleanup. Each run therefore needs an ownership record and restrictive
+permissions. A later Hope invocation safely cleans up expired runs. Never infer
 ownership from a directory name alone.
 
 Validate drafted analysis before finalization. This preflight is read-only: it
-does not render or publish an artifact, change the run phase, consume a repair
-attempt, or delete the run. Correct clear contract errors and repeat the
-preflight without collecting the pull request again.
+does not render or publish an artifact. It also does not change the run phase,
+consume a repair attempt, or delete the run. Correct clear contract errors and
+repeat the preflight without collecting the pull request again.
 
 Finalization validates the analysis again. A failed final validation may keep
 the private run for one explicit repair attempt. The next final validation

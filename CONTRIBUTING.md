@@ -34,15 +34,20 @@ list.
 ## Add a feature
 
 Start with one useful end-to-end path. Put shared behavior under `features/`,
-expose it through the independent harness, and add a skill only when an AI host
-needs instructions to use that behavior.
+then expose it through the independent harness. Add a skill only when an AI
+host needs instructions to use that behavior.
 
 A new Skill directory is not an implemented feature. Before describing a
-feature as complete, require its product definition, shared core boundary,
-harness route or documented entry-path exception, generated plugin runtime, and
-a test proving that every supported entry path reaches the same boundary. Skill
-and plugin validation checks packaging; they do not replace this architecture
-check.
+feature as complete, require:
+
+- its product definition;
+- a shared core boundary;
+- a harness route or documented entry-path exception;
+- a generated plugin runtime; and
+- a test that proves every supported entry path reaches the same boundary.
+
+Skill and plugin validation checks packaging. They do not replace this
+architecture check.
 
 If a feature creates or deletes anything, define ownership, preview, consent,
 identity checks, and failure behavior before implementing cleanup.

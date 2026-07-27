@@ -1,9 +1,9 @@
 # Hope architecture
 
-Hope separates an independent harness from plugin or skill entry points. They
-are two ways into the same feature code. The Claude and Codex skill provide the
-first complete diff path. The independent harness already owns the same
-non-model boundaries and reports that its AI adapter is not available yet.
+Hope has two entry paths into the same feature code: an independent harness and
+host plugins or skills. The shared Claude and Codex skill provides the first
+complete diff path. The harness already owns the same non-model boundaries, but
+reports that its AI adapter is not available yet.
 
 [PRINCIPLES.md](../PRINCIPLES.md) defines the project direction.
 [diff.md](diff.md) defines Hope diff.
@@ -55,12 +55,11 @@ hope/
 ```
 
 Root `docs/`, `features/`, `settings/`, `locales/`, and `design/` are editable
-sources. The plugin package contains generated copies because both hosts
-install `plugins/hope/` as one package directory. `tools/build-plugin.mjs`
-creates those copies, and the release check requires generated content to match
-its source. Never edit a generated copy by hand. The package includes every
-Hope file it uses, but its JavaScript commands still require Node.js 20 or
-newer.
+sources. Both hosts install `plugins/hope/` as one package directory, so the
+plugin contains generated copies of those sources. `tools/build-plugin.mjs`
+creates the copies. The release check requires each copy to match its source.
+Never edit a generated copy by hand. The package includes every Hope file it
+uses, but its JavaScript commands still require Node.js 20 or newer.
 
 The root harness loads syntax-highlighting dependencies from the locked Node
 package graph. The plugin build bundles the fixed highlighter, GitHub light and
@@ -96,17 +95,18 @@ The current diff implementation starts from [diff.md](diff.md). It collects an
 exact GitHub pull-request snapshot, exposes bounded inspection pages, validates
 one structured analysis, rechecks the snapshot, and publishes one private
 self-contained HTML file without replacing an existing file.
-After the initial inspection, the skill can ask the shared runtime for a
-bounded set of grounded files at the captured head or merge-base revision. The
-runtime commits those context sources through an atomic replacement inspection
-plan, so analysis never mixes page generations.
+
+After the first inspection, the skill can ask the shared runtime for a limited
+set of grounded files at the captured head or merge-base revision. The runtime
+adds those context sources through an atomic replacement inspection plan. This
+prevents the analysis from mixing page generations.
 
 The Claude and Codex skill is the first complete AI analysis path. It can use
-the active host session to produce a structured analysis. The independent
-harness shares settings, collection, validation, rendering, and lifecycle code,
-but must not claim automatic AI analysis until it has a real model adapter of
-its own. This is still one feature implementation with two honest entry
-boundaries, not separate diff implementations.
+the active host session to produce a structured analysis. The harness shares
+settings, collection, validation, rendering, and lifecycle code. It must not
+claim automatic AI analysis until it has a real model adapter of its own. These
+are two honest entry boundaries to one feature implementation, not separate
+diff implementations.
 
 The skill carries only compact authoring rules and points to the generated
 analysis schema. It does not load the full human-facing product and design
@@ -117,8 +117,8 @@ fixed behavior.
 ## Current write boundary
 
 The write implementation starts from [write.md](write.md). The editable writing
-standard lives once under `features/write/standard.md`. The feature core returns
-that standard with a `draft`, `edit`, or `review` response contract.
+standard lives only in `features/write/standard.md`. The feature core returns
+the standard with a `draft`, `edit`, or `review` response contract.
 
 The Claude and Codex Skill chooses a mode and asks the generated runtime for the
 same brief. It does not carry another copy of the writing rules. The independent
@@ -129,7 +129,7 @@ its model adapter is unavailable until the harness has one.
 
 1. Start with a clear user goal.
 2. Put shared behavior in `features/<name>`.
-3. expose it through `harness/`.
+3. Expose it through `harness/`.
 4. Add a thin skill only when an AI host needs one.
 5. Add shared helpers only after two real features need the same rule.
 

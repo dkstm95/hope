@@ -23,7 +23,8 @@ Install the Hope plugin in Codex or Claude Code.
 You need:
 
 - Node.js 20 or newer
-- An authenticated [GitHub CLI](https://cli.github.com/) to use Diff. Run `gh auth login` first if needed.
+- An authenticated [GitHub CLI](https://cli.github.com/) to use Diff. Run
+  `gh auth login` first if needed.
 
 The simplest option is to ask Codex or Claude Code:
 
@@ -55,9 +56,11 @@ Start a new Codex or Claude Code session after installation.
 Diff explains code changes with evidence, helping you make your own decisions
 and carry that understanding into later work.
 
-The result is one local HTML file.
+Diff creates one local HTML file.
 
-> With no URL, Diff looks for an open pull request created by the current user in the target repository. Add a GitHub pull request URL to choose one.
+> With no URL, Diff looks for an open pull request created by the current user
+> in the target repository. To choose a specific pull request, add its GitHub
+> URL.
 
 ```text
 $hope:diff https://github.com/owner/repository/pull/123
@@ -77,9 +80,9 @@ $hope:diff https://github.com/owner/repository/pull/123
   >
 </p>
 
-Diff reads the pull request text, commit titles, and available text from changed files.
-When a collected source identifies a concrete related path, Diff can add a bounded
-set of files from the exact reviewed head or merge-base revision.
+Diff reads the pull request text, commit titles, and available text from changed
+files. If a source identifies a related path, Diff can also read a limited set
+of files from the exact reviewed head or merge-base revision.
 
 It does not search unrelated repository files or inspect pull request discussions,
 review comments, or CI results.
@@ -110,7 +113,8 @@ have its own model adapter yet.
 
 Save the language and theme preferences Hope should use.
 
-Without a saved preference, Hope follows the current host or operating system language and uses the system theme.
+Without a saved preference, Hope follows the current host or operating system
+language and uses the system theme.
 
 ## License
 
