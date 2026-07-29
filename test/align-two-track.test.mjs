@@ -67,8 +67,9 @@ test("core and generated Align reach the same brief and validator", async () => 
   ]);
   const { schemaPath: coreSchemaPath, ...coreContract } = coreBrief;
   const { schemaPath: pluginSchemaPath, ...pluginContract } = pluginBrief;
-  assert.match(coreSchemaPath, /features\/align\/session-v1\.schema\.json$/u);
-  assert.match(pluginSchemaPath, /features\/align\/session-v1\.schema\.json$/u);
+  const schemaSuffix = join("features", "align", "session-v1.schema.json");
+  assert.ok(coreSchemaPath.endsWith(schemaSuffix));
+  assert.ok(pluginSchemaPath.endsWith(schemaSuffix));
   assert.deepEqual(pluginContract, coreContract);
   assert.deepEqual(
     pluginValidator.validateAlignState(makeAlignState()),
