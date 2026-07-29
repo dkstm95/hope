@@ -8,6 +8,7 @@ import {
   addDiffContext,
   cancelDiff,
   DIFF_MODEL_ADAPTER_CODE,
+  DIFF_REVALIDATION_RETRYABLE_CODE,
   finishDiff,
   prepareDiff,
   readDiffPage,
@@ -191,6 +192,34 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   return result;
 }
 
+export function diffErrorDetails(error) {
+  if (
+    error?.code !== "HOPE_ANALYSIS_INVALID"
+    && error?.code !== DIFF_REVALIDATION_RETRYABLE_CODE
+  ) {
+    return "";
+  }
+  const details = { canRetry: error.canRetry, code: error.code };
+  if (error.command !== undefined) details.command = error.command;
+  if (error.runPath !== undefined) details.runPath = error.runPath;
+  return `\n${JSON.stringify(details)}`;
+}
+
+export function diffExitCode(error) {
+  if (error?.code === DIFF_MODEL_ADAPTER_CODE) return 2;
+  if (error?.code === "HOPE_ANALYSIS_INVALID") return 3;
+  if (error?.code === "HOPE_DIFF_STALE") return 4;
+  if (error?.code === DIFF_REVALIDATION_RETRYABLE_CODE) return 5;
+  return 1;
+}
+
+export function diffErrorReport(error, { prefix = "hope diff" } = {}) {
+  return Object.freeze({
+    exitCode: diffExitCode(error),
+    message: `${prefix}: ${error.message}${diffErrorDetails(error)}\n`,
+  });
+}
+
 const isEntrypoint = (() => {
   if (!process.argv[1]) return false;
   try {
@@ -202,16 +231,8 @@ const isEntrypoint = (() => {
 
 if (isEntrypoint) {
   main().catch((error) => {
-    const details = error.code === "HOPE_ANALYSIS_INVALID"
-      ? `\n${JSON.stringify({ canRetry: error.canRetry, code: error.code })}`
-      : "";
-    process.stderr.write(`hope diff: ${error.message}${details}\n`);
-    process.exitCode = error.code === DIFF_MODEL_ADAPTER_CODE
-      ? 2
-      : error.code === "HOPE_ANALYSIS_INVALID"
-        ? 3
-        : error.code === "HOPE_DIFF_STALE"
-          ? 4
-          : 1;
+    const report = diffErrorReport(error);
+    process.stderr.write(report.message);
+    process.exitCode = report.exitCode;
   });
 }

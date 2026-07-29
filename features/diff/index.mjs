@@ -11,6 +11,7 @@ import { collectGitHubContext } from "./context.mjs";
 import { finalizeReview, preflightReviewOutput } from "./finalize.mjs";
 import {
   collectGitHubPullRequest,
+  isRetryableGitHubAccessError,
   parseGitHubPullRequestUrl,
   revalidateGitHubSnapshot,
 } from "./github.mjs";
@@ -30,6 +31,12 @@ import { validateAnalysis } from "./validate.mjs";
 export const DIFF_MODEL_ADAPTER_CODE = "HOPE_DIFF_MODEL_ADAPTER_REQUIRED";
 export const DIFF_MODEL_ADAPTER_MESSAGE =
   "Automatic Hope diff analysis currently runs through the Claude or Codex skill.";
+export const DIFF_REVALIDATION_RETRYABLE_CODE =
+  "HOPE_DIFF_REVALIDATION_RETRYABLE";
+export const DIFF_REVALIDATION_RETRYABLE_MESSAGE =
+  "Hope could not revalidate the pull request, so no review was created. "
+  + "The private review run was kept. Restore GitHub access, then retry finish "
+  + "with the same run.";
 
 async function readAnalysis(path, {
   maximumBytes = LIMITS.modelBytes,
@@ -179,6 +186,8 @@ function withCleanupFailure(error, cleanupError) {
   combined.name = original.name;
   if (original.code !== undefined) combined.code = original.code;
   if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
+  if (original.command !== undefined) combined.command = original.command;
+  if (original.runPath !== undefined) combined.runPath = original.runPath;
   combined.cleanupPending = true;
   Object.defineProperty(combined, "cleanupError", {
     configurable: false,
@@ -199,6 +208,8 @@ function withFinalizationReleaseFailure(error, releaseError) {
   combined.name = original.name;
   if (original.code !== undefined) combined.code = original.code;
   if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
+  if (original.command !== undefined) combined.command = original.command;
+  if (original.runPath !== undefined) combined.runPath = original.runPath;
   combined.cleanupPending = true;
   if (original.cleanupError !== undefined) {
     Object.defineProperty(combined, "cleanupError", {
@@ -215,6 +226,19 @@ function withFinalizationReleaseFailure(error, releaseError) {
     writable: false,
   });
   return combined;
+}
+
+function revalidationRetryable(error, runPath) {
+  const original = error instanceof Error ? error : new Error(String(error));
+  const retryable = new Error(
+    DIFF_REVALIDATION_RETRYABLE_MESSAGE,
+    { cause: original },
+  );
+  retryable.code = DIFF_REVALIDATION_RETRYABLE_CODE;
+  retryable.canRetry = true;
+  retryable.command = "finish";
+  retryable.runPath = runPath;
+  return retryable;
 }
 
 export async function prepareDiff({
@@ -387,6 +411,7 @@ export async function finishDiff(runPath, dependencies = {}) {
     try {
       validated = await validateRunAnalysis(run, dependencies);
     } catch (error) {
+      await finalizationClaim.renew();
       const result = await (dependencies.recordFailure ?? recordAnalysisFailure)(run, {
         temporaryRoot: dependencies.temporaryRoot,
       });
@@ -396,14 +421,22 @@ export async function finishDiff(runPath, dependencies = {}) {
     }
 
     let runRemoved = false;
+    let preserveRun = false;
     try {
       const rendered = await renderValidatedAnalysis(validated, dependencies);
-      const revalidation = await (
-        dependencies.revalidate ?? revalidateGitHubSnapshot
-      )(run.snapshot, {
-        clock: dependencies.clock,
-        gh: dependencies.gh,
-      });
+      let revalidation;
+      try {
+        revalidation = await (
+          dependencies.revalidate ?? revalidateGitHubSnapshot
+        )(run.snapshot, {
+          clock: dependencies.clock,
+          gh: dependencies.gh,
+        });
+      } catch (error) {
+        if (!isRetryableGitHubAccessError(error)) throw error;
+        preserveRun = true;
+        throw revalidationRetryable(error, run.path);
+      }
       if (!revalidation.matches) {
         const error = new Error(
           "The pull request changed while Hope was reviewing it. No review was created.",
@@ -435,8 +468,9 @@ export async function finishDiff(runPath, dependencies = {}) {
         result: validated.result,
       });
     } catch (error) {
-      if (!runRemoved) {
+      if (!runRemoved && !preserveRun) {
         try {
+          await finalizationClaim.renew();
           await (dependencies.removeRun ?? removeDiffRun)(run.path, {
             temporaryRoot: dependencies.temporaryRoot,
           });

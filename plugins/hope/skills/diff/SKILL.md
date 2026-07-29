@@ -229,6 +229,10 @@ private run. Run `finish` only after validation succeeds.
 
 ## Finish
 
+Finalization revalidates the pull request. Run it with the same authenticated
+GitHub access used by `prepare`. If the host grants network access per command,
+obtain that access before the first `finish` attempt.
+
 Run:
 
 ```text
@@ -237,7 +241,15 @@ finish --run <run-path>
 
 If Hope returns `HOPE_ANALYSIS_INVALID` with `canRetry: true`, fix only the
 reported contract error and run `finish` one more time. Never make more than
-one repair attempt. Other errors are final for this invocation.
+one repair attempt.
+
+If Hope returns `HOPE_DIFF_REVALIDATION_RETRYABLE` with `canRetry: true`, restore
+authenticated GitHub access and use only the structured error's `command` and
+`runPath` fields to run `finish` again. Pass `runPath` as a separate argument.
+These fields let a later session resume without conversation history. Do not
+prepare again, reread inspection pages, or rewrite the validated analysis. If
+the same access failure repeats without progress, run `cancel` once instead of
+looping. Other errors are final for this invocation.
 
 On success, report the reviewed PR, exact head, result scope, and absolute HTML
 path. Do not open, publish, merge, comment, or change the pull request.

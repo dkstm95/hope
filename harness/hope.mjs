@@ -8,7 +8,10 @@ import {
   ALIGN_MODEL_ADAPTER_CODE,
 } from "../features/align/index.mjs";
 import { main as runAlignCommand } from "../features/align/cli.mjs";
-import { main as runDiffCommand } from "../features/diff/cli.mjs";
+import {
+  diffErrorReport,
+  main as runDiffCommand,
+} from "../features/diff/cli.mjs";
 import {
   TOXIC_REVIEW_MODEL_ADAPTER_CODE,
 } from "../features/toxic-review/index.mjs";
@@ -115,16 +118,24 @@ const isEntrypoint = (() => {
   }
 })();
 
+export function harnessErrorReport(error) {
+  if ([
+    ALIGN_MODEL_ADAPTER_CODE,
+    TOXIC_REVIEW_MODEL_ADAPTER_CODE,
+    WRITE_MODEL_ADAPTER_CODE,
+  ].includes(error?.code)) {
+    return Object.freeze({
+      exitCode: 2,
+      message: `hope: ${error.message}\n`,
+    });
+  }
+  return diffErrorReport(error, { prefix: "hope" });
+}
+
 if (isEntrypoint) {
   main().catch((error) => {
-    process.stderr.write(`hope: ${error.message}\n`);
-    process.exitCode = [
-      ALIGN_MODEL_ADAPTER_CODE,
-      "HOPE_DIFF_MODEL_ADAPTER_REQUIRED",
-      TOXIC_REVIEW_MODEL_ADAPTER_CODE,
-      WRITE_MODEL_ADAPTER_CODE,
-    ].includes(error.code)
-      ? 2
-      : 1;
+    const report = harnessErrorReport(error);
+    process.stderr.write(report.message);
+    process.exitCode = report.exitCode;
   });
 }

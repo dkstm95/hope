@@ -105,13 +105,23 @@ export function parseGitHubPullRequestUrl(value) {
   });
 }
 
+class RetryableGitHubAccessError extends Error {}
+
+export function isRetryableGitHubAccessError(error) {
+  return error instanceof RetryableGitHubAccessError;
+}
+
 function ghFailure(error) {
   if (error?.code === "ENOENT") {
-    return new Error("GitHub CLI is required. Install gh and authenticate it before using Hope diff.");
+    return new RetryableGitHubAccessError(
+      "GitHub CLI is required. Install gh and authenticate it before using Hope diff.",
+      { cause: error },
+    );
   }
   const status = Number.isInteger(error?.code) ? ` (exit ${error.code})` : "";
-  const failure = new Error(
+  const failure = new RetryableGitHubAccessError(
     `GitHub collection failed${status}. Check gh auth and the pull request URL.`,
+    { cause: error },
   );
   const responseStatus = String(error?.stderr ?? "").match(
     /\bHTTP\s+([45][0-9]{2})\b/iu,
@@ -610,10 +620,14 @@ export async function revalidateGitHubSnapshot(collected, { clock = () => new Da
     `${prefix}/compare/${encodeURIComponent(currentBase)}...${encodeURIComponent(currentHead)}`,
     options,
   );
+  const currentMergeBase = compare.merge_base_commit?.sha;
+  if (typeof currentMergeBase !== "string") {
+    throw new Error("GitHub returned an invalid comparison during revalidation");
+  }
   const current = {
     base: currentBase,
     head: currentHead,
-    mergeBase: compare.merge_base_commit?.sha,
+    mergeBase: currentMergeBase,
   };
   const matches = current.base === collected.snapshot.base
     && current.head === collected.snapshot.head

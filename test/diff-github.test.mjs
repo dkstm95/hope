@@ -598,3 +598,21 @@ test("revalidation skips the comparison after the base or head changes", async (
   assert.equal(result.current.mergeBase, undefined);
   assert.equal(compareRequests, 0);
 });
+
+test("revalidation rejects a malformed comparison instead of reporting staleness", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    { gh: fakeGitHub(), locale: "en-US", theme: "system" },
+  );
+  const github = fakeGitHub();
+  const gh = async (command, arguments_) => {
+    const path = arguments_.at(-1);
+    if (path.includes("/compare/")) return response({});
+    return await github(command, arguments_);
+  };
+
+  await assert.rejects(
+    revalidateGitHubSnapshot(snapshot, { gh }),
+    /invalid comparison during revalidation/u,
+  );
+});
