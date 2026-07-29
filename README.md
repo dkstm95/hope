@@ -10,7 +10,7 @@
 
 <p align="center">
   <strong>
-    Hope looks for practical ways for people and AI to work better together.
+    Hope looks for practical ways for human and AI to work better together.
   </strong>
 </p>
 
