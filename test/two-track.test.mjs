@@ -333,7 +333,7 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(diff, /serialized byte count/u);
   assert.match(
     diff,
-    /do not reread the generated\s+product or design\s+documents/u,
+    /do not\s+reread the generated\s+product or design\s+documents/u,
   );
   assert.doesNotMatch(diff, /\.\.\/\.\.\/docs\/diff\.md/u);
   assert.doesNotMatch(diff, /Prefer a short, familiar word/u);

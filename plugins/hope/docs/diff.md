@@ -159,10 +159,11 @@ help this change.
 | 1 | Background | Existing behavior, terms, or components are needed. |
 | 2 | Core change | Always. |
 | 3 | Behavior flow | A flow, branch, state change, comparison, or experiment helps. |
-| 4 | Code flow | Selected implementation detail adds useful understanding. |
-| 5 | Review items | At least one actionable review item exists. |
-| 6 | Check understanding | Prediction questions add learning value. |
-| 7 | Evidence and scope | Always. |
+| 4 | Teaching aid choices | Always. |
+| 5 | Code flow | Selected implementation detail adds useful understanding. |
+| 6 | Review items | At least one actionable review item exists. |
+| 7 | Check understanding | Prediction questions add learning value. |
+| 8 | Evidence and scope | Always. |
 
 ### Background
 
@@ -179,6 +180,12 @@ important result. Lead with behavior or practical effect, not file names.
 Explain behavior before code. Use a flow, conditions and results, state change,
 comparison, or small experiment only when it makes the result easier to
 predict.
+
+### Teaching aid choices
+
+Show the visual, microworld, and quiz decisions in a fixed order. Keep all
+three visible when none is included. Show a reason for every current decision
+and the separate teaching job for each included aid.
 
 ### Code flow
 
@@ -469,6 +476,14 @@ Record a short reason for every decision. An included aid also records its
 distinct teaching job. The validator requires each decision to match the
 corresponding analysis payload.
 
+The artifact always shows all three decisions in **Teaching aid choices**. It
+shows the reason for each decision and the distinct teaching job for each
+included aid. Keep this section when every aid is omitted so the person can
+distinguish an intentional omission from a missing evaluation. A legacy
+analysis that did not record these fields shows only whether each aid is
+present. It does not describe absence as an intentional omission or invent a
+reason or teaching job.
+
 Choose the primary aid in this order:
 
 1. Use a microworld for a small bounded input, condition, or state whose
@@ -498,6 +513,11 @@ Use a microworld when changing an input, condition, or state helps the reader
 predict the result. State what evidence grounds it, what the model simplifies,
 and what it leaves out. The self-contained HTML uses a safe explanation model.
 It does not execute repository code or present its output as a test result.
+
+Use declarative explanation text only. Do not put repository code, commands,
+expressions, URLs, or scripts in a microworld. Never claim that a microworld
+ran repository code or produced a test result. The shared teaching-aid
+contract carries these authoring rules to every supported host.
 
 The model uses one to three controls and at most twelve complete control
 combinations. Before authoring scenario prose, give the controls to the shared

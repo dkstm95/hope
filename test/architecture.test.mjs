@@ -83,6 +83,8 @@ test("Diff leaves teaching-aid decisions in its runtime contract", async () => {
   assert.doesNotMatch(diff, /three to five evidence-backed questions/u);
   assert.match(teachingAids, /selectionOrder/u);
   assert.match(teachingAids, /TEACHING_AID_DECISIONS/u);
+  assert.match(teachingAids, /authoring/u);
+  assert.match(teachingAids, /Never claim.*ran repository code.*test result/u);
 });
 
 test("project work requires Hope Write wherever clearer language helps", async () => {

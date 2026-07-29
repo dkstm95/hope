@@ -102,9 +102,9 @@ reported context limit instead of guessing or searching with another tool.
 Read the complete analysis schema, `writingStandard.text`, and `teachingAids`
 returned by `prepare`. Use them with this skill as the authoring contract for
 the run. The runtime's `teachingAids` field is the complete selection,
-decision, omission, quiz-size, and microworld-coverage contract. Do not replace
-it with another rule. During normal execution, do not reread the generated
-product or design documents.
+decision, omission, authoring-safety, quiz-size, and microworld-coverage
+contract. Do not replace it with another rule. During normal execution, do not
+reread the generated product or design documents.
 
 Write one JSON object to the exact `analysisPath` returned by Hope. Use a
 file-writing tool, not shell interpolation or an inline heredoc.

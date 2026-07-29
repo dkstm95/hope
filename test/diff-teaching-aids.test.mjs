@@ -38,6 +38,7 @@ function controls({
 test("the shared teaching-aid contract owns selection and omission decisions", () => {
   const contract = createTeachingAidContract();
   assert.equal(contract.analysisVersion, 2);
+  assert.equal(contract.version, 2);
   assert.deepEqual(contract.decisions.aids, ["visual", "microworld", "quiz"]);
   assert.deepEqual(
     contract.selectionOrder.map((item) => item.aid),
@@ -63,10 +64,26 @@ test("the shared teaching-aid contract owns selection and omission decisions", (
   assert.equal(contract.quiz.minimumQuestions, 1);
   assert.equal(contract.microworld.maximumScenarios, 12);
   assert.match(contract.microworld.skeletonCommand, /microworld-skeleton/u);
+  assert.equal(
+    contract.microworld.authoring.content,
+    "Use declarative explanation text only.",
+  );
+  assert.deepEqual(contract.microworld.authoring.forbidden, [
+    "repository code",
+    "commands",
+    "expressions",
+    "URLs",
+    "scripts",
+  ]);
+  assert.match(
+    contract.microworld.authoring.truthBoundary,
+    /Never claim.*ran repository code.*test result/u,
+  );
 });
 
 test("the runtime creates an exhaustive bounded microworld skeleton", () => {
   const skeleton = createMicroworldSkeleton({ controls: controls() });
+  assert.equal(skeleton.version, 2);
   assert.equal(skeleton.scenarios.length, 4);
   assert.deepEqual(
     skeleton.scenarios.map((scenario) => scenario.when),

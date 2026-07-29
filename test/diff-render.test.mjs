@@ -51,6 +51,23 @@ function withLocaleSource(snapshot, localeSource) {
   });
 }
 
+function teachingAidCards(html) {
+  const section = html.match(
+    /<section class="review-section" id="teaching-aids">[\s\S]*?<\/section>/u,
+  )?.[0] ?? "";
+  const cards = [...section.matchAll(
+    /<article class="teaching-aid-choice decision-([^"]+)">([\s\S]*?)<\/article>/gu,
+  )].map((match) => ({
+    body: match[2],
+    decision: match[1],
+    label: match[2].match(
+      /<span class="teaching-aid-decision">([^<]+)<\/span>/u,
+    )?.[1],
+    name: match[2].match(/<h3>([^<]+)<\/h3>/u)?.[1],
+  }));
+  return { cards, section };
+}
+
 test("rendering is byte-identical and keeps untrusted content inert", async () => {
   const snapshot = makeSnapshot({
     title: '</title><script src="https://evil.example/x.js"></script>',
@@ -76,6 +93,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
+  assert.equal(first.rendererVersion, 3);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -302,6 +320,168 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.doesNotMatch(html, />explained</u);
 });
 
+test("the artifact shows every teaching-aid decision when all aids are omitted", async () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.teachingAids.visual.reason =
+    "</article><script src=https://evil.example/reason.js></script>";
+  const review = validateAnalysis(analysis, snapshot, { runId });
+  const html = (await renderReview(review)).bytes.toString("utf8");
+  const section = html.match(
+    /<section class="review-section" id="teaching-aids">[\s\S]*?<\/section>/u,
+  )?.[0] ?? "";
+
+  assert.match(section, /<h2>Teaching aid choices<\/h2>/u);
+  assert.match(
+    section,
+    /Why each teaching aid appears or does not appear in this review\./u,
+  );
+  assert.equal(
+    (section.match(/class="teaching-aid-choice decision-omitted"/gu) ?? []).length,
+    3,
+  );
+  assert.match(section, /<h3>Visual<\/h3>/u);
+  assert.match(section, /<h3>Microworld<\/h3>/u);
+  assert.match(section, /<h3>Quiz<\/h3>/u);
+  assert.equal((section.match(/>Omitted<\/span>/gu) ?? []).length, 3);
+  assert.match(
+    section,
+    /&lt;\/article&gt;&lt;script src=https:\/\/evil\.example\/reason\.js&gt;&lt;\/script&gt;/u,
+  );
+  assert.doesNotMatch(section, /<script src=https:\/\/evil/u);
+  assert.match(html, /<a href="#teaching-aids">Teaching aid choices<\/a>/u);
+});
+
+test("the artifact preserves mixed and all-included teaching-aid states", async () => {
+  const snapshot = makeSnapshot();
+  const mixed = makeAnalysis(snapshot, runId);
+  mixed.behavior = makeTeachingBehavior({ includeMicroworld: false });
+  mixed.teachingAids = makeTeachingAidDecisions({ visual: true });
+  mixed.teachingAids.microworld = {
+    decision: "not-applicable",
+    reason: "This change has no bounded state to explore.",
+  };
+  mixed.teachingAids.quiz.reason =
+    "The visual and prose already cover the useful prediction.";
+
+  const allIncluded = makeAnalysis(snapshot, runId);
+  addTeachingBehavior(allIncluded);
+  allIncluded.quiz = [{
+    answer: "The saved final failure reaches the caller.",
+    evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
+    question: "Which failure reaches the caller after the final retry?",
+  }];
+  markQuizIncluded(allIncluded);
+
+  const cases = [
+    {
+      analysis: mixed,
+      decisions: ["included", "not-applicable", "omitted"],
+      jobs: [
+        "Show the retry branch and outcome relationship.",
+        undefined,
+        undefined,
+      ],
+      labels: ["Included", "Not applicable", "Omitted"],
+      reasons: [
+        "This aid makes a distinct behavior easier to predict.",
+        "This change has no bounded state to explore.",
+        "The visual and prose already cover the useful prediction.",
+      ],
+    },
+    {
+      analysis: allIncluded,
+      decisions: ["included", "included", "included"],
+      jobs: [
+        "Show the retry branch and outcome relationship.",
+        "Let the reader compare retry outcomes by changing bounded state.",
+        "Check one non-trivial prediction about the final failure.",
+      ],
+      labels: ["Included", "Included", "Included"],
+      reasons: Array(3).fill(
+        "This aid makes a distinct behavior easier to predict.",
+      ),
+    },
+  ];
+
+  for (const expected of cases) {
+    const review = validateAnalysis(expected.analysis, snapshot, { runId });
+    const html = (await renderReview(review)).bytes.toString("utf8");
+    const { cards } = teachingAidCards(html);
+    assert.deepEqual(cards.map((card) => card.name), [
+      "Visual",
+      "Microworld",
+      "Quiz",
+    ]);
+    assert.deepEqual(cards.map((card) => card.decision), expected.decisions);
+    assert.deepEqual(cards.map((card) => card.label), expected.labels);
+    expected.reasons.forEach((reason, index) => {
+      assert.match(cards[index].body, new RegExp(reason.replaceAll(".", "\\."), "u"));
+    });
+    expected.jobs.forEach((job, index) => {
+      if (job === undefined) {
+        assert.doesNotMatch(cards[index].body, /<dt>Teaching job<\/dt>/u);
+      } else {
+        assert.match(cards[index].body, new RegExp(job.replaceAll(".", "\\."), "u"));
+      }
+    });
+  }
+});
+
+test("legacy artifacts show presence without inventing decisions", async () => {
+  const cases = [
+    {
+      currentDecision: /Included|Omitted|Not applicable/u,
+      job: "This older analysis did not record a distinct teaching job.",
+      labels: ["Present", "Not present", "Not present"],
+      locale: "en-US",
+      reason: "This older analysis did not record a reason.",
+      summary:
+        "This older analysis did not record teaching-aid choices. Hope can show only whether each aid appears.",
+      title: "Teaching aid choices",
+    },
+    {
+      currentDecision: /포함|생략|해당 없음/u,
+      job: "이전 분석에는 별도의 설명 역할이 기록되지 않았습니다.",
+      labels: ["있음", "없음", "없음"],
+      locale: "ko-KR",
+      reason: "이전 분석에는 이유가 기록되지 않았습니다.",
+      summary:
+        "이전 분석에는 교육 보조 자료 선택이 기록되지 않았습니다. Hope는 각 자료가 있는지만 표시할 수 있습니다.",
+      title: "교육 보조 자료 선택",
+    },
+  ];
+
+  for (const expected of cases) {
+    const snapshot = makeSnapshot({ locale: expected.locale });
+    const analysis = makeAnalysis(snapshot, runId);
+    analysis.behavior = makeTeachingBehavior({ includeMicroworld: false });
+    analysis.schemaVersion = 1;
+    delete analysis.teachingAids;
+    const review = validateAnalysis(analysis, snapshot, {
+      analysisVersion: 1,
+      runId,
+    });
+    const html = (await renderReview(review)).bytes.toString("utf8");
+    const { cards, section } = teachingAidCards(html);
+
+    assert.match(section, new RegExp(`<h2>${expected.title}</h2>`, "u"));
+    assert.match(section, new RegExp(expected.summary.replaceAll(".", "\\."), "u"));
+    assert.deepEqual(cards.map((card) => card.label), expected.labels);
+    assert.equal(
+      (section.match(new RegExp(expected.reason.replaceAll(".", "\\."), "gu")) ?? [])
+        .length,
+      3,
+    );
+    assert.equal(
+      (section.match(new RegExp(expected.job.replaceAll(".", "\\."), "gu")) ?? [])
+        .length,
+      1,
+    );
+    assert.doesNotMatch(section, expected.currentDecision);
+  }
+});
+
 test("the artifact visibly warns about an English or Korean locale fallback", async () => {
   const cases = [
     {
@@ -525,6 +705,18 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.match(html, /<dt>This model simplifies<\/dt>/u);
   assert.match(html, /<dt>This model leaves out<\/dt>/u);
   assert.match(html, /class="claim-meta teaching-aid-meta"/u);
+  assert.equal(
+    (html.match(/class="teaching-aid-choice decision-included"/gu) ?? []).length,
+    2,
+  );
+  assert.match(
+    html,
+    /Let the reader compare retry outcomes by changing bounded state\./u,
+  );
+  assert.match(
+    html,
+    /Show the retry branch and outcome relationship\./u,
+  );
   assert.match(html, /src\/retry\.js · change excerpt 2–4/u);
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/u);
   assert.match(

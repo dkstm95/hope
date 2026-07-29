@@ -226,6 +226,17 @@ export function createTeachingAidContract() {
       omitted: "Use when the aid was considered but prose or another aid already makes its distinct teaching job easy to understand.",
     }),
     microworld: Object.freeze({
+      authoring: Object.freeze({
+        content: "Use declarative explanation text only.",
+        forbidden: Object.freeze([
+          "repository code",
+          "commands",
+          "expressions",
+          "URLs",
+          "scripts",
+        ]),
+        truthBoundary: "Never claim that the microworld ran repository code or produced a test result.",
+      }),
       completeCoverage: true,
       maximumScenarios: 12,
       skeletonCommand: "microworld-skeleton --input <private-controls.json>",

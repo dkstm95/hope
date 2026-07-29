@@ -203,6 +203,7 @@ assert.match(skill, /runtime\/features\/diff\/cli\.mjs/u);
 assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/runtime\/features\/diff\/cli\.mjs/u);
 assert.match(skill, /writingStandard\.text/u);
 assert.match(skill, /`teachingAids`/u);
+assert.match(skill, /authoring-safety/u);
 assert.match(skill, /microworld-skeleton/u);
 assert.doesNotMatch(skill, /Add at most one `behavior\.microworld`/u);
 assert.doesNotMatch(skill, /Prefer a short, familiar word/u);
