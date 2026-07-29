@@ -185,8 +185,10 @@ change. Do not teach the whole system.
 
 ### Core change
 
-Explain the purpose, previous state, new state, affected people or systems, and
-important result. Lead with behavior or practical effect, not file names.
+Use the required core details to explain how the change works, which conditions
+matter, and what result they create. Do not repeat the synopsis's **Goal**,
+**AS-IS**, **TO-BE**, or **Impact** claims. Lead with behavior or practical
+effect, not file names.
 
 ### Behavior flow
 

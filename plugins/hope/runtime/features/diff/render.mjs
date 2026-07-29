@@ -954,36 +954,15 @@ function buildSections(review, dictionary, codeHighlighter) {
   const coreDetails = review.coreChange.details.map(
     (item) => claimBlock(item, dictionary, review, codeHighlighter, "core-detail"),
   );
-  const coreNarrative = [
-    {
-      ...review.purpose,
-      title: label(dictionary, "synopsis.purpose"),
-    },
-    {
-      ...review.coreChange.before,
-      title: label(dictionary, "synopsis.before"),
-    },
-    {
-      ...review.coreChange.after,
-      title: label(dictionary, "synopsis.now"),
-    },
-    {
-      ...review.coreChange.why,
-      title: label(dictionary, "synopsis.why"),
-    },
-  ].map(
-    (item) => `<li>${titledClaim(item, dictionary, review, codeHighlighter)}</li>`,
-  ).join("");
   sections.push({
     html: section({
-      content: `<ol class="core-narrative">${coreNarrative}</ol>
-        ${coreDetails.length === 0 ? "" : `<div class="core-details">${
-          coreDetails.length > 1
-            ? `<ul class="claim-list core-detail-list">${coreDetails.map(
-              (detail) => `<li>${detail}</li>`,
-            ).join("")}</ul>`
-            : coreDetails.join("")
-        }</div>`}`,
+      content: `<div class="core-details">${
+        coreDetails.length > 1
+          ? `<ul class="claim-list core-detail-list">${coreDetails.map(
+            (detail) => `<li>${detail}</li>`,
+          ).join("")}</ul>`
+          : coreDetails.join("")
+      }</div>`,
       id: "core-change",
       title: label(dictionary, "section.core"),
     }),
@@ -1749,51 +1728,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   font-weight: 400;
 }
 .explanation-step + .explanation-step { margin-top: ${space4}px; }
-.core-narrative {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: core-claim;
-}
-.core-narrative > li {
-  display: grid;
-  position: relative;
-  min-width: 0;
-  padding: 0 0 ${space4}px 44px;
-  grid-template-columns: minmax(0, 1fr);
-  counter-increment: core-claim;
-}
-.core-narrative > li:not(:last-child)::after {
-  position: absolute;
-  top: 28px;
-  bottom: 0;
-  left: 14px;
-  border-left: 1px solid var(--border);
-  content: "";
-}
-.core-narrative > li::before {
-  display: inline-grid;
-  position: absolute;
-  z-index: 1;
-  top: 0;
-  left: 0;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border: 1px solid var(--component-border);
-  border-radius: 50%;
-  background: var(--panel);
-  color: var(--accent);
-  content: counter(core-claim, decimal-leading-zero);
-  font: 400 ${TYPE.micro.fontSize}px/1 "Hope Code", ui-monospace, monospace;
-}
-.core-narrative > li:last-child { padding-bottom: 0; }
-.core-narrative .explanation-step + .explanation-step { margin-top: 0; }
-.core-details {
-  margin-top: ${space4}px;
-  padding-top: ${space3}px;
-  border-top: 1px solid var(--border);
-}
+.core-details { margin: 0; }
 .claim-list,
 .code-step-list,
 .titled-claim-list,
