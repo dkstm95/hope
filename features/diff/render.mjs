@@ -10,9 +10,14 @@ import {
   TYPE,
 } from "../../design/tokens.mjs";
 import { label, loadLocale } from "../../locales/index.mjs";
-import { LIMITS, RENDERER_VERSION } from "./constants.mjs";
+import {
+  LEGACY_ANALYSIS_VERSION,
+  LIMITS,
+  RENDERER_VERSION,
+} from "./constants.mjs";
 import { sha256 } from "./hash.mjs";
 import { createCodeHighlighter } from "./highlight.mjs";
+import { TEACHING_AID_NAMES } from "./teaching-aids.mjs";
 import { exposeBidiControls } from "./text.mjs";
 
 const fontUrls = Object.freeze({
@@ -468,6 +473,57 @@ function collapsibleSection({ id, title, content, initiallyOpen = false }) {
     </summary>
     <div class="section-content">${content}</div>
   </details>`;
+}
+
+function teachingAidChoices(review, dictionary) {
+  const legacy = review.analysisSchemaVersion === LEGACY_ANALYSIS_VERSION;
+  const choices = TEACHING_AID_NAMES.map((name) => {
+    const choice = review.teachingAids[name];
+    const reason = legacy
+      ? label(dictionary, "teachingAid.legacyReason")
+      : choice.reason;
+    let teachingJob;
+    if (choice.decision === "included") {
+      teachingJob = legacy
+        ? label(dictionary, "teachingAid.legacyTeachingJob")
+        : choice.teachingJob;
+    }
+    const decisionLabel = legacy
+      ? label(
+          dictionary,
+          choice.decision === "included"
+            ? "teachingAid.legacyPresence.present"
+            : "teachingAid.legacyPresence.notPresent",
+        )
+      : label(dictionary, `teachingAid.decision.${choice.decision}`);
+    return `<li>
+      <article class="teaching-aid-choice decision-${html(choice.decision)}">
+        <header>
+          <h3>${html(label(dictionary, `teachingAid.${name}`))}</h3>
+          <span class="teaching-aid-decision">${html(decisionLabel)}</span>
+        </header>
+        <dl>
+          <div>
+            <dt>${html(label(dictionary, "teachingAid.reason"))}</dt>
+            <dd>${userText(reason)}</dd>
+          </div>
+          ${teachingJob === undefined ? "" : `<div>
+            <dt>${html(label(dictionary, "teachingAid.teachingJob"))}</dt>
+            <dd>${userText(teachingJob)}</dd>
+          </div>`}
+        </dl>
+      </article>
+    </li>`;
+  }).join("");
+  return section({
+    content: `<p class="teaching-aid-summary">${html(label(
+      dictionary,
+      legacy ? "teachingAid.legacySummary" : "teachingAid.summary",
+    ))}</p>
+      <ul class="teaching-aid-choices">${choices}</ul>`,
+    id: "teaching-aids",
+    title: label(dictionary, "section.teachingAids"),
+  });
 }
 
 function limitText(limit, dictionary) {
@@ -941,6 +997,11 @@ function buildSections(review, dictionary, codeHighlighter) {
       title: label(dictionary, "section.explore"),
     });
   }
+  sections.push({
+    html: teachingAidChoices(review, dictionary),
+    id: "teaching-aids",
+    title: label(dictionary, "section.teachingAids"),
+  });
   if (review.codeSteps.length > 0) {
     sections.push({
       html: section({
@@ -1711,6 +1772,60 @@ select { color: inherit; }
   background: var(--panel);
   overflow-wrap: anywhere;
 }
+.teaching-aid-summary {
+  max-width: ${LAYOUT.proseWidth};
+  margin: 0 0 ${space3}px;
+}
+.teaching-aid-choices {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: ${space3}px;
+  list-style: none;
+}
+.teaching-aid-choice {
+  height: 100%;
+  padding: ${space3}px;
+  border: 1px solid var(--component-border);
+  background: var(--panel);
+}
+.teaching-aid-choice > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${space2}px;
+}
+.teaching-aid-choice h3 {
+  margin: 0;
+  font-size: ${wideSubsection.fontSize}px;
+  line-height: ${wideSubsection.lineHeight};
+}
+.teaching-aid-decision {
+  padding: ${space1}px ${space2}px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: ${TYPE.micro.fontSize}px;
+  line-height: ${TYPE.micro.lineHeight};
+  font-weight: 500;
+  white-space: nowrap;
+}
+.decision-included .teaching-aid-decision { color: var(--accent); }
+.decision-not-applicable .teaching-aid-decision { color: var(--scope); }
+.teaching-aid-choice dl {
+  display: grid;
+  margin: ${space3}px 0 0;
+  gap: ${space2}px;
+}
+.teaching-aid-choice dt {
+  color: var(--muted);
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 500;
+}
+.teaching-aid-choice dd {
+  margin: ${space1}px 0 0;
+}
 .behavior-visual > header h3,
 .microworld > header h3 {
   margin: 0;
@@ -2358,6 +2473,7 @@ td:first-child {
     transform: translateX(50%);
   }
   .visual-components,
+  .teaching-aid-choices,
   .microworld-comparison,
   .microworld-boundary {
     grid-template-columns: 1fr;
@@ -2441,6 +2557,7 @@ ${syntaxStyles}
   .review-item,
   .evidence-item,
   .behavior-visual,
+  .teaching-aid-choice,
   .microworld,
   .quiz-question { break-inside: avoid; }
   .review-section-collapsible > .section-content,

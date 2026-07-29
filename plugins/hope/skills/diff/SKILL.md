@@ -45,6 +45,7 @@ The JSON result gives:
 - the analysis path;
 - the analysis schema path;
 - the shared writing standard and its version; and
+- the shared teaching-aid contract and its evaluation cases; and
 - the planned inspection page count and serialized byte count.
 
 Tell the person which PR Hope selected before continuing. Do not ask about
@@ -98,10 +99,12 @@ reported context limit instead of guessing or searching with another tool.
 
 ## Write the analysis
 
-Read the complete analysis schema and `writingStandard.text` returned by
-`prepare`. Use them with this skill as the compact authoring contract for the
-run. During normal execution, do not reread the generated product or design
-documents.
+Read the complete analysis schema, `writingStandard.text`, and `teachingAids`
+returned by `prepare`. Use them with this skill as the authoring contract for
+the run. The runtime's `teachingAids` field is the complete selection,
+decision, omission, authoring-safety, quiz-size, and microworld-coverage
+contract. Do not replace it with another rule. During normal execution, do not
+reread the generated product or design documents.
 
 Write one JSON object to the exact `analysisPath` returned by Hope. Use a
 file-writing tool, not shell interpolation or an inline heredoc.
@@ -124,19 +127,11 @@ Follow these rules:
   small experiment helps the reader predict the result. Describe inputs,
   states, and outcomes. Do not repeat the file, function, type, or inheritance
   order from `codeSteps`.
-- Add at most one `behavior.visual`, and only when it makes an important
-  relationship materially easier to understand than the behavior summary and
-  steps alone. Choose `flow` for a process, `decision-table` for branches,
-  `sequence` for ordered interactions, or `component-map` for structure.
-  Ground its title, caption, and contents in evidence. Do not use it only to
-  restate the steps.
-- Add at most one `behavior.microworld`, and only when changing a small input,
-  condition, or state helps the reader predict behavior. Use one to three
-  declarative controls and provide every control combination, with no more
-  than 12 scenarios total. Ground the model in evidence and state what it
-  simplifies and omits. This is an explanation model, not an execution or test
-  result. Never put repository code, commands, expressions, URLs, or scripts in
-  it. Never claim that interacting with it ran the repository.
+- Record every decision required by `teachingAids`. When it selects a
+  microworld, write its controls to a private JSON file and run
+  `microworld-skeleton --input <private-controls.json>`. Copy every returned
+  scenario ID and condition list into the analysis, add the grounded scenario
+  prose required by the schema, and remove the private controls file.
 - Add `contextChecks` for the concrete context categories that mattered to the
   review. Mark each as `checked`, `not-applicable`, or `limited`. A checked
   category needs a grounded `basis` and evidence whose source role matches that
@@ -183,9 +178,6 @@ Follow these rules:
 - When runtime behavior intentionally stays unchanged, say so and explain the
   maintenance, development, build, documentation, dependency, or test effect.
   Do not invent a runtime before and after.
-- If you add a quiz, ask the reader to predict behavior, preserve an important
-  condition, or find a failure case. Do not ask for names, paths, or copied
-  sentences.
 - Keep provider titles, code, paths, commands, and excerpts exact in their
   source and evidence fields. In generated prose, use plain names. Put exact
   syntax that needs formatting characters in evidence. Do not copy it into
@@ -195,9 +187,8 @@ Follow these rules:
   a reader can recognize. Keep internal IDs only in schema reference fields.
 - Write generated prose in the resolved locale.
 - Write generated prose as plain text. Hope does not parse Markdown or HTML.
-  Do not add formatting. Version 1 validation rejects backticks so they cannot
+  Do not add formatting. Analysis validation rejects backticks so they cannot
   appear as visible inline-code markers.
-- Omit optional sections that do not teach or clarify this change.
 - Keep one idea in one primary field and reuse the smallest exact evidence
   range when another field genuinely needs the same support. Do not fill the
   available maxima. Normally use at most 12 review items, 6 core details, and 12

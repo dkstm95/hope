@@ -6,7 +6,13 @@ import {
   loadWritingStandard,
   WRITE_BRIEF_VERSION,
 } from "../write/index.mjs";
-import { LIMITS, RUN_VERSION } from "./constants.mjs";
+import { readBoundedJson } from "../work-snapshot/index.mjs";
+import {
+  ANALYSIS_VERSION,
+  CONTEXT_RUN_VERSION,
+  LEGACY_ANALYSIS_VERSION,
+  LIMITS,
+} from "./constants.mjs";
 import { collectGitHubContext } from "./context.mjs";
 import { finalizeReview, preflightReviewOutput } from "./finalize.mjs";
 import {
@@ -26,6 +32,10 @@ import {
   replaceDiffRunPlan,
 } from "./run.mjs";
 import { discoverGitHubPullRequest } from "./target.mjs";
+import {
+  createMicroworldSkeleton,
+  createTeachingAidContract,
+} from "./teaching-aids.mjs";
 import { validateAnalysis } from "./validate.mjs";
 
 export const DIFF_MODEL_ADAPTER_CODE = "HOPE_DIFF_MODEL_ADAPTER_REQUIRED";
@@ -153,7 +163,9 @@ function snapshotWithContext(snapshot, candidates) {
 }
 
 async function validateRunAnalysis(run, dependencies = {}) {
-  const enforceResourceLimits = run.manifest.runVersion === RUN_VERSION;
+  const enforceResourceLimits = (
+    run.manifest.runVersion >= CONTEXT_RUN_VERSION
+  );
   const analysis = await readAnalysis(run.analysisPath, {
     maximumBytes: enforceResourceLimits
       ? LIMITS.modelBytes
@@ -163,6 +175,7 @@ async function validateRunAnalysis(run, dependencies = {}) {
     analysis.value,
     run.snapshot,
     {
+      analysisVersion: run.manifest.analysisVersion ?? LEGACY_ANALYSIS_VERSION,
       analysisFileBytes: analysis.fileBytes,
       enforceResourceLimits,
       runId: run.manifest.runId,
@@ -281,17 +294,32 @@ export async function prepareDiff({
   return Object.freeze({
     ...run,
     analysisSchemaPath: fileURLToPath(
-      new URL("./analysis-v1.schema.json", import.meta.url),
+      new URL("./analysis-v2.schema.json", import.meta.url),
     ),
+    analysisSchemaVersion: ANALYSIS_VERSION,
     locale: settings.locale,
     pullRequest: snapshot.pullRequest,
     selection: target.selection ?? "explicit",
     theme: settings.theme,
+    teachingAids: createTeachingAidContract(),
     writingStandard: Object.freeze({
       text: writingStandardText,
       version: WRITE_BRIEF_VERSION,
     }),
   });
+}
+
+export async function buildMicroworldSkeleton(inputPath, dependencies = {}) {
+  if (typeof inputPath !== "string" || inputPath.length === 0) {
+    throw new TypeError("Hope diff microworld skeleton needs an input path");
+  }
+  const input = await (
+    dependencies.readMicroworldInput ?? readBoundedJson
+  )(inputPath, {
+    label: "Hope diff microworld controls",
+    maximumBytes: 32 * 1024,
+  });
+  return createMicroworldSkeleton(input.value);
 }
 
 export async function readDiffPage(runPath, page, dependencies = {}) {

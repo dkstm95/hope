@@ -15,6 +15,8 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
 import {
+  ANALYSIS_VERSION,
+  CONTEXT_RUN_VERSION,
   LEGACY_RUN_VERSION,
   LIMITS,
   RUN_VERSION,
@@ -26,7 +28,27 @@ const RUN_TTL_MS = 24 * 60 * 60 * 1000;
 const FINALIZATION_CLAIM = ".finish.lock";
 const FINALIZATION_LEASE_TTL_MS = 60 * 60 * 1000;
 const FINALIZATION_HEARTBEAT_MS = 60 * 1000;
-const SUPPORTED_RUN_VERSIONS = new Set([LEGACY_RUN_VERSION, RUN_VERSION]);
+const SUPPORTED_RUN_VERSIONS = new Set([
+  LEGACY_RUN_VERSION,
+  CONTEXT_RUN_VERSION,
+  RUN_VERSION,
+]);
+
+function validRunContractVersions(manifest) {
+  return (
+    SUPPORTED_RUN_VERSIONS.has(manifest.runVersion)
+    && (
+      (
+        manifest.runVersion === RUN_VERSION
+        && manifest.analysisVersion === ANALYSIS_VERSION
+      )
+      || (
+        manifest.runVersion !== RUN_VERSION
+        && manifest.analysisVersion === undefined
+      )
+    )
+  );
+}
 
 function planFileNames(manifest) {
   const hasSnapshotFile = manifest.snapshotFile !== undefined;
@@ -43,7 +65,7 @@ function planFileNames(manifest) {
   const expectedSnapshot = `snapshot.${manifest.snapshotDigest}.json`;
   const expectedPages = `pages.${manifest.snapshotDigest}.json`;
   if (
-    manifest.runVersion !== RUN_VERSION
+    manifest.runVersion < CONTEXT_RUN_VERSION
     || manifest.snapshotFile !== expectedSnapshot
     || manifest.pagesFile !== expectedPages
     || basename(manifest.snapshotFile) !== manifest.snapshotFile
@@ -653,7 +675,7 @@ export async function cleanupExpiredRuns({
       if (
         manifest.owner !== RUN_OWNER
         || manifest.runId !== entry.name.slice(4)
-        || !SUPPORTED_RUN_VERSIONS.has(manifest.runVersion)
+        || !validRunContractVersions(manifest)
       ) {
         continue;
       }
@@ -701,6 +723,7 @@ export async function createDiffRun(snapshot, {
   const manifest = {
     analysisAttempts: 0,
     analysisFile: "analysis.json",
+    analysisVersion: ANALYSIS_VERSION,
     createdAt: clock().toISOString(),
     deliveredPages: [],
     outputPath: outputPath ? resolve(outputPath) : undefined,
@@ -758,8 +781,8 @@ export async function loadDiffRun(value, {
   const manifest = await readRunJson(manifestPath, "run manifest");
   if (
     manifest.owner !== RUN_OWNER
-    || !SUPPORTED_RUN_VERSIONS.has(manifest.runVersion)
     || manifest.runId !== basename(path).slice(4)
+    || !validRunContractVersions(manifest)
   ) {
     throw new Error("Hope diff run ownership does not match");
   }
@@ -787,7 +810,7 @@ export async function loadDiffRun(value, {
     || !Array.isArray(manifest.deliveredPages)
     || manifest.deliveredPages.length > pages.length
     || (
-      manifest.runVersion === RUN_VERSION
+      manifest.runVersion >= CONTEXT_RUN_VERSION
       && !validRunResources(manifest.resources)
     )
     || (
@@ -847,8 +870,8 @@ export async function replaceDiffRunPlan(runValue, snapshot, {
     throw new TypeError("Hope diff plan replacement needs a run path");
   }
   const loaded = await loadDiffRun(runPath, { temporaryRoot });
-  if (loaded.manifest.runVersion !== RUN_VERSION) {
-    throw new Error("Only a current Hope diff run can replace its inspection plan");
+  if (loaded.manifest.runVersion < CONTEXT_RUN_VERSION) {
+    throw new Error("This Hope diff run cannot replace its inspection plan");
   }
   let claim;
   try {

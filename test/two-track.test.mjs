@@ -110,6 +110,14 @@ test("the harness parses every independent feature entry", () => {
     ],
     runPath: "/tmp/hope-run",
   });
+  assert.deepEqual(parseDiffArguments([
+    "microworld-skeleton",
+    "--input",
+    "/tmp/hope-controls.json",
+  ]), {
+    command: "microworld-skeleton",
+    inputPath: "/tmp/hope-controls.json",
+  });
 });
 
 test("the diff command delegates read-only analysis validation", async () => {
@@ -128,6 +136,31 @@ test("the diff command delegates read-only analysis validation", async () => {
   });
   assert.equal(received, "/tmp/hope-run");
   assert.equal(output, `${JSON.stringify({ valid: true }, null, 2)}\n`);
+});
+
+test("the diff command delegates microworld skeleton generation", async () => {
+  let received;
+  let output = "";
+  await runDiffCommand([
+    "microworld-skeleton",
+    "--input",
+    "/tmp/hope-controls.json",
+  ], {
+    buildMicroworldSkeleton: async (inputPath) => {
+      received = inputPath;
+      return { scenarios: [], version: 1 };
+    },
+    stdout: {
+      write(value) {
+        output += value;
+      },
+    },
+  });
+  assert.equal(received, "/tmp/hope-controls.json");
+  assert.equal(
+    output,
+    `${JSON.stringify({ scenarios: [], version: 1 }, null, 2)}\n`,
+  );
 });
 
 test("the diff command delegates bounded exact-revision context collection", async () => {
@@ -300,7 +333,7 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(diff, /serialized byte count/u);
   assert.match(
     diff,
-    /do not reread the generated\s+product or design\s+documents/u,
+    /do not\s+reread the generated\s+product or design\s+documents/u,
   );
   assert.doesNotMatch(diff, /\.\.\/\.\.\/docs\/diff\.md/u);
   assert.doesNotMatch(diff, /Prefer a short, familiar word/u);
@@ -358,6 +391,9 @@ test("core and generated Diff preparation return one writing standard", async ()
     version: WRITE_BRIEF_VERSION,
   });
   assert.deepEqual(plugin.writingStandard, core.writingStandard);
+  assert.equal(core.analysisSchemaVersion, 2);
+  assert.match(core.analysisSchemaPath, /analysis-v2\.schema\.json$/u);
+  assert.deepEqual(plugin.teachingAids, core.teachingAids);
 });
 
 test("the harness and generated runtime report the same missing AI boundary", () => {
