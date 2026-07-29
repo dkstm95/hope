@@ -406,13 +406,14 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     ".review-items-full .item-actions",
   ).first().evaluate((element) => getComputedStyle(element).gridTemplateColumns);
   expect(itemActionColumns.split(" ")).toHaveLength(3);
-  await expect(page.locator("#core-change .core-narrative > li")).toHaveCount(4);
-  await expect(page.locator("#core-change .core-narrative h3")).toHaveText([
-    "목표",
-    "AS-IS",
-    "TO-BE",
-    "영향",
-  ]);
+  await expect(page.locator("#core-change .core-narrative")).toHaveCount(0);
+  await expect(page.locator("#core-change .core-detail")).toHaveCount(1);
+  await expect(page.locator("#core-change")).toContainText(
+    "The changed branch keeps the last error before it exits.",
+  );
+  await expect(page.locator("#core-change")).not.toContainText(
+    "Return the final error after all retries fail.",
+  );
   await expect(page.locator("#synopsis .synopsis-state")).toHaveCount(0);
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
   await expect(page.locator("#explore .flow")).toHaveCount(1);

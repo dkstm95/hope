@@ -93,7 +93,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 4);
+  assert.equal(first.rendererVersion, 5);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -231,12 +231,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   const coreChange = html.match(
     /<section class="review-section" id="core-change">[\s\S]*?<\/section>/u,
   )?.[0] ?? "";
-  assert.equal((coreChange.match(/<ol class="core-narrative">/gu) ?? []).length, 1);
-  assert.equal((coreChange.match(/<li><article class="explanation-step">/gu) ?? []).length, 4);
-  assert.ok(coreChange.indexOf(">Goal</bdi>") < coreChange.indexOf(">AS-IS</bdi>"));
-  assert.ok(coreChange.indexOf(">AS-IS</bdi>") < coreChange.indexOf(">TO-BE</bdi>"));
-  assert.ok(coreChange.indexOf(">TO-BE</bdi>") < coreChange.indexOf(">Impact</bdi>"));
+  assert.doesNotMatch(coreChange, /class="core-narrative"/u);
+  assert.doesNotMatch(coreChange, />Goal<\/bdi>|>AS-IS<\/bdi>|>TO-BE<\/bdi>|>Impact<\/bdi>/u);
   assert.match(coreChange, /class="core-details"/u);
+  assert.match(coreChange, /class="claim core-detail"/u);
   assert.match(html, /<ul class="claim-list core-detail-list">/u);
   assert.match(html, /<ul class="titled-claim-list"><li><article/u);
   assert.match(html, /<ol class="code-step-list">/u);

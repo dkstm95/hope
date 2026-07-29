@@ -2,7 +2,7 @@
 export const CONTRACT_VERSION = 1;
 export const LEGACY_ANALYSIS_VERSION = 1;
 export const ANALYSIS_VERSION = 2;
-export const RENDERER_VERSION = 4;
+export const RENDERER_VERSION = 5;
 export const LEGACY_RUN_VERSION = 1;
 export const CONTEXT_RUN_VERSION = 2;
 export const RUN_VERSION = 3;
