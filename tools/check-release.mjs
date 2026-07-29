@@ -24,6 +24,30 @@ const requiredFiles = [
   ".claude-plugin/marketplace.json",
   "AGENTS.md",
   "CLAUDE.md",
+  "assets/readme/hope-align-en.png",
+  "assets/readme/hope-align-ko.png",
+  "assets/readme/hope-align-scenarios-en.png",
+  "assets/readme/hope-align-scenarios-ko.png",
+  "assets/readme/hope-align-scope-en.png",
+  "assets/readme/hope-align-scope-ko.png",
+  "assets/readme/hope-align-understanding-en.png",
+  "assets/readme/hope-align-understanding-ko.png",
+  "assets/readme/hope-align-work-en.png",
+  "assets/readme/hope-align-work-ko.png",
+  "assets/readme/hope-diff-behavior-en.png",
+  "assets/readme/hope-diff-behavior-ko.png",
+  "assets/readme/hope-diff-code-en.png",
+  "assets/readme/hope-diff-code-ko.png",
+  "assets/readme/hope-diff-core-en.png",
+  "assets/readme/hope-diff-core-ko.png",
+  "assets/readme/hope-diff-en.png",
+  "assets/readme/hope-diff-evidence-en.png",
+  "assets/readme/hope-diff-evidence-ko.png",
+  "assets/readme/hope-diff-ko.png",
+  "assets/readme/hope-diff-review-en.png",
+  "assets/readme/hope-diff-review-ko.png",
+  "assets/readme/hope-diff-teaching-en.png",
+  "assets/readme/hope-diff-teaching-ko.png",
   "docs/align.md",
   "docs/architecture.md",
   "docs/design.md",
@@ -62,6 +86,7 @@ const requiredFiles = [
   "tools/check-plugin-version.mjs",
   "tools/install-plugin-dev.mjs",
   "tools/prepare-release.mjs",
+  "tools/render-readme-assets.mjs",
   "tools/stage-plugin.mjs",
   "PRINCIPLES.md",
   "README.md",
@@ -268,17 +293,47 @@ assert.match(verify, /CHECK_RESULT: \$\{\{ needs\.check\.result \}\}/u);
 assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
 assert.match(verify, /npm run test:browser/u);
 assert.match(readme, /src="plugins\/hope\/assets\/hope-protected-light\.png"/u);
-assert.match(readme, /codex plugin marketplace add dkstm95\/hope/u);
-assert.match(readme, /codex plugin add hope@hope/u);
-assert.match(readme, /claude plugin marketplace add dkstm95\/hope/u);
-assert.match(readme, /claude plugin install hope@hope/u);
 assert.match(readmeKo, /src="plugins\/hope\/assets\/hope-protected-light\.png"/u);
-assert.match(readmeKo, /codex plugin marketplace add dkstm95\/hope/u);
-assert.match(readmeKo, /codex plugin add hope@hope/u);
-assert.match(readmeKo, /claude plugin marketplace add dkstm95\/hope/u);
-assert.match(readmeKo, /claude plugin install hope@hope/u);
+for (const [file, text] of [
+  ["README.md", readme],
+  ["README.ko.md", readmeKo],
+]) {
+  const locale = file === "README.md" ? "en" : "ko";
+  assert.match(text, /https:\/\/github\.com\/dkstm95\/hope/u);
+  assert.match(text, /codex plugin marketplace add dkstm95\/hope/u);
+  assert.match(text, /claude plugin marketplace add dkstm95\/hope/u);
+  assert.doesNotMatch(text, /\$hope:|```mermaid/iu);
+  for (const asset of [
+    "align",
+    "align-scope",
+    "align-scenarios",
+    "align-understanding",
+    "align-work",
+    "diff",
+    "diff-core",
+    "diff-behavior",
+    "diff-teaching",
+    "diff-code",
+    "diff-review",
+    "diff-evidence",
+  ]) {
+    assert.match(
+      text,
+      new RegExp(`assets/readme/hope-${asset}-${locale}\\.png`, "u"),
+      `${file} must show the ${asset} artifact image`,
+    );
+  }
+  assert.doesNotMatch(
+    text,
+    /assets\/readme\/hope-(?:toxic-review|polish|write|settings)-/u,
+  );
+}
 assert.equal(packageJson.scripts["check:plugin-version"], "node tools/check-plugin-version.mjs");
 assert.equal(packageJson.scripts["plugin:dev:install"], "node tools/install-plugin-dev.mjs");
+assert.equal(
+  packageJson.scripts["render:readme-assets"],
+  "node tools/render-readme-assets.mjs",
+);
 assert.match(packageJson.scripts.check, /check:plugin-version/u);
 assert.equal(
   normalizeLineEndings(await read("tools/plugin-package-files.txt")),

@@ -26,7 +26,7 @@ You need:
 - An authenticated [GitHub CLI](https://cli.github.com/) to use Diff. Run
   `gh auth login` first if needed.
 
-The simplest option is to ask Codex or Claude Code:
+The simplest option is to ask an AI:
 
 ```text
 Install Hope from https://github.com/dkstm95/hope for this host.
@@ -49,153 +49,151 @@ claude plugin install hope@hope
 
 Start a new Codex or Claude Code session after installation.
 
+## Choose a feature
+
+| When you need to… | Use | What you get |
+| --- | --- | --- |
+| Settle a task before implementation | **Align** | A visible shared understanding and approval boundary |
+| Critically assess work | **Toxic Review** | One evidence-based result ordered by priority |
+| Understand changes and use that understanding in decisions or later work | **Diff** | One local HTML review with evidence and next checks |
+| Refine a work product | **Polish** | One bounded cleanup pass with a stated verification scope |
+| Draft, edit, or review language | **Write** | A clear draft, edit, or review that preserves meaning |
+| Keep language and theme preferences | **Settings** | Defaults shared by supported Hope artifacts |
+
 ## Features
 
 ### Align
 
-Align finds important misunderstandings before implementation. It adapts its
-questions to the task's risk, separates user decisions from repository facts
-and AI proposals, and waits for explicit approval before the next step.
+Align finds important misunderstandings before implementation begins.
+It reads available evidence, adapts its questions to risk, and keeps unresolved choices visible.
 
-```text
-Codex
-$hope:align Help us align on this feature before implementation.
+> Example: “Help us settle the upload recovery behavior before implementation.”
 
-Claude Code
-/hope:align Help us align on this feature before implementation.
-```
+![Hope Align example showing a failed-upload recovery decision, current blockers, scope, and success conditions](assets/readme/hope-align-en.png)
 
-Each round starts by briefly restating the goal, scope, expected behavior, and
-material assumptions. Align reads available repository evidence instead of
-asking the person to repeat facts, and it keeps open questions and assumptions
-visible. It proposes readiness only after scope, success conditions, scenarios,
-and verifiable pieces of work are settled and no material question or
-assumption remains open.
+*An actual Align HTML artifact generated from a failed-upload recovery example.*
 
-Align can create a self-contained HTML snapshot of the current shared
-understanding. The snapshot shows scope, examples, assumptions, open questions,
-design perspectives, and verifiable pieces of work.
+| Scope and success | Expected behavior |
+| --- | --- |
+| [![The work boundary and success conditions in an Align artifact](assets/readme/hope-align-scope-en.png)](assets/readme/hope-align-scope-en.png) | [![A representative scenario and expected behavior in an Align artifact](assets/readme/hope-align-scenarios-en.png)](assets/readme/hope-align-scenarios-en.png) |
+| Shared understanding and next decision | Verifiable work |
+| [![The open question, choices, recommendation, and settled decision in an Align artifact](assets/readme/hope-align-understanding-en.png)](assets/readme/hope-align-understanding-en.png) | [![The user change, scope, verification, and failure recovery in an Align artifact](assets/readme/hope-align-work-en.png)](assets/readme/hope-align-work-en.png) |
 
-Before asking for approval, Align runs one bounded Polish pass over the exact
-candidate and validates the result again.
+Align separates repository facts, user decisions, AI proposals, assumptions, and open questions.
+It records scope, success conditions, representative scenarios, and verifiable pieces of work.
+When the candidate is ready, Align invokes Polish once and checks the result again.
+Align waits for explicit approval and never implements the task itself.
+
+The current shared understanding can be rendered as one self-contained HTML file.
+The artifact remains useful during the interview instead of acting only as a final report.
+
+---
 
 ### Toxic Review
 
-Toxic Review challenges an idea, requirement, UI, plan, implementation, PR, or
-other work product without attacking people. It selects only the review roles
-that match the current risk, adjudicates their findings, and presents one
-result ordered by priority.
+Toxic Review challenges a named work product without attacking the people who made it.
+It selects only the perspectives that match the target, stage, evidence, and risk.
 
-```text
-Codex
-$hope:toxic-review Challenge this plan before we commit to it.
+> Example: “Find the material risks in this migration plan.”
 
-Claude Code
-/hope:toxic-review Challenge this plan before we commit to it.
-```
+> **Output:** Returns one adjudicated review in the current conversation instead of creating a separate HTML file.
 
-Each finding identifies the issue, practical impact, proposed action,
-confidence, and supporting evidence. The main reviewer classifies every finding
-as accepted, partially accepted, rejected, deferred, or duplicate. Deferred
-risks remain visible as unresolved work.
+Each finding names the issue, practical impact, proposed action, confidence, and evidence.
+The main reviewer accepts, partially accepts, rejects, defers, or deduplicates every finding.
+The final result contains one adjudicated voice instead of pasted reviewer opinions.
+Finding no material issue in the checked scope is a valid result.
 
-Finding no material issue in the checked scope is a valid result. Toxic Review
-does not manufacture criticism to fill a quota.
+Toxic Review does not automatically invoke Align or Diff.
+It can use their exact artifacts as evidence when you provide them.
 
-### Polish
-
-Polish makes one bounded cleanup pass over a named completed work product. It
-can simplify or refactor code, tests, documentation, comments, examples, and
-errors. It can also merge duplicates or remove content when the captured
-evidence shows that the content is unnecessary.
-
-```text
-Codex
-$hope:polish Clean up this implementation without changing its behavior.
-
-Claude Code
-/hope:polish Clean up this implementation without changing its behavior.
-```
-
-Polish creates a plan for the exact target instead of applying a fixed
-checklist. It preserves public contracts, behavior, meaning, facts,
-uncertainty, citations, and voice. If a cleanup would require a product
-decision, it stops and asks for alignment. Finding no supported change is a
-valid result.
+---
 
 ### Diff
 
-Diff explains code changes with evidence, helping you make your own decisions
-and carry that understanding into later work.
+Diff explains a GitHub pull request with evidence from one exact snapshot.
+It helps you understand the change before you decide what to do with it.
 
-Diff creates one local HTML file.
+![Hope Diff result for nanoid pull request 601 showing the goal, before and after behavior, impact, and verification item](assets/readme/hope-diff-en.png)
 
-> With no URL, Diff looks for an open pull request created by the current user
-> in the target repository. To choose a specific pull request, add its GitHub
-> URL.
+*An actual Diff HTML artifact generated from [nanoid PR #601](https://github.com/ai/nanoid/pull/601).*
 
-```text
-$hope:diff https://github.com/owner/repository/pull/123
-```
+| Core change | Behavior model |
+| --- | --- |
+| [![The core change explanation in a Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![The input comparison and behavior flow in a Diff artifact](assets/readme/hope-diff-behavior-en.png)](assets/readme/hope-diff-behavior-en.png) |
+| Teaching aid choices | Evidence-linked code flow |
+| [![A Diff artifact explaining which teaching aids it includes and why](assets/readme/hope-diff-teaching-en.png)](assets/readme/hope-diff-teaching-en.png) | [![Code steps and supporting evidence links in a Diff artifact](assets/readme/hope-diff-code-en.png)](assets/readme/hope-diff-code-en.png) |
+| Next check for an informed judgment | Evidence and checked scope |
+| [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
 
-<p align="center">
-  <img
-    src="assets/readme/hope-diff-light-horizontal.png"
-    alt="Hope Diff result in light mode showing the summary, behavior flow, code flow, review items, and comprehension prompts"
-  >
-</p>
+Diff reads the pull request text, commit titles, changed text files, and a bounded set of grounded context paths.
+It produces one self-contained local HTML file with light and dark themes.
+The artifact can include a behavior model or understanding check when either helps explain the change.
 
-<p align="center">
-  <img
-    src="assets/readme/hope-diff-dark-horizontal.png"
-    alt="Hope Diff result in dark mode showing the summary, behavior flow, code flow, review items, and comprehension prompts"
-  >
-</p>
+With no URL, Diff selects the current branch's pull request or your latest open pull request in the repository.
+Run Diff again when the pull request changes.
 
-Diff reads the pull request text, commit titles, and available text from changed
-files. If a source identifies a related path, Diff can also read a limited set
-of files from the exact reviewed head or merge-base revision.
+<details>
+<summary><strong>What Diff deliberately does not inspect or run</strong></summary>
 
-It does not search unrelated repository files or inspect pull request discussions,
-review comments, or CI results.
+- It does not search unrelated repository files.
+- It does not inspect pull request discussions, review comments, or CI results.
+- It does not run tests, builds, linters, or other repository code.
+- It does not approve, reject, merge, comment on, or change the pull request.
 
-It does not run tests, build or lint commands, or other repository code.
+</details>
 
-> Run Diff again when the pull request changes.
+---
+
+### Polish
+
+Polish makes one bounded cleanup pass over a named completed work product.
+It protects settled behavior and meaning while improving the result.
+
+> Example: “Shorten this completed guideline without changing its requirement.”
+
+> **Output:** Leaves the revised work product and verification result in the current workflow instead of creating a separate HTML file.
+
+Polish creates a plan for the exact target instead of applying a fixed checklist.
+It may simplify, refactor, consolidate, or remove content when captured evidence supports the change.
+It preserves public contracts, behavior, meaning, facts, uncertainty, citations, and voice.
+A no-change result is valid.
+
+Polish returns `needs-alignment` when cleanup requires a material product decision.
+It does not invoke Align automatically.
+For language-bearing changes, Polish uses the shared Write standard directly.
+
+---
 
 ### Write
 
-Write applies George Orwell's writing principles wherever clearer language
-would improve the work. It can help with prompts, documentation, responses,
-interface text, errors, comments, names, and other text inside an
-implementation. It uses familiar words and direct sentences while preserving
-meaning, facts, uncertainty, citations, and voice.
+Write drafts, edits, or reviews language without losing meaning, facts, uncertainty, citations, or voice.
+Its standard also keeps language consistent across other Hope features.
 
-```text
-Codex
-$hope:write Rewrite this wiki page so it is clear on the first read.
+> Example: “Make this save error clear without inventing a cause.”
 
-Claude Code
-/hope:write Rewrite this wiki page so it is clear on the first read.
-```
+> **Output:** Applies the draft, edit, or review to the current conversation or target file instead of creating a separate HTML file.
 
-Write follows the current language and any more specific project rules. It can
-run as its own task or as a writing pass inside other work:
+| Mode | Use it to |
+| --- | --- |
+| `draft` | Create new prose from the request and available context. |
+| `edit` | Change the requested prose or files. |
+| `review` | Report material clarity, meaning, or flow problems without changing files. |
 
-- `draft` creates new prose from the request and available context.
-- `edit` changes the requested prose or files.
-- `review` reports material clarity, meaning, or flow problems without changing
-  files.
+Use Write for a language-only task.
+Use Polish for a bounded revision of a completed work product that may also change its structure.
 
-Use Write for a language-only task. Use Polish for a bounded revision of a
-completed work product that may also change its structure.
+---
 
 ### Settings
 
-Save the language and theme preferences Hope should use.
+Settings stores the language and initial theme used by supported Hope artifacts.
+The same preferences are available through the harness and installed plugin.
 
-Without a saved preference, Hope follows the current host or operating system
-language and uses the system theme.
+> **Output:** Saves a global configuration file instead of creating a visual artifact.
+
+Without a saved language, Hope follows the host, operating system, and default fallback in that order.
+Without a saved theme, Hope uses the system theme.
+Changing Settings affects new artifacts and does not rewrite an existing offline file.
 
 ## License
 
