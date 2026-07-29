@@ -1,12 +1,20 @@
 import {
+  ANALYSIS_VERSION,
   BASIS,
   CONTRACT_VERSION,
   FILE_DISPOSITIONS,
   IMPORTANCE,
+  LEGACY_ANALYSIS_VERSION,
   LIMITS,
   REVIEW_KINDS,
 } from "./constants.mjs";
 import { deriveReviewResult, sortReviewItems } from "./derive.mjs";
+import {
+  microworldSelections,
+  normalizeMicroworldControls,
+  TEACHING_AID_DECISIONS,
+  TEACHING_AID_NAMES,
+} from "./teaching-aids.mjs";
 import { containsBidiControl } from "./text.mjs";
 
 const changeSources = new Set(["patch", "before-file", "after-file"]);
@@ -19,7 +27,6 @@ const statedSources = new Set([
 const contextStatuses = ["checked", "not-applicable", "limited"];
 const aidBases = ["stated", "code", "inferred"];
 const visualKinds = ["flow", "decision-table", "sequence", "component-map"];
-const controlKinds = ["input", "condition", "state"];
 const proseFields = new Set([
   "answer",
   "caption",
@@ -40,9 +47,11 @@ const proseFields = new Set([
   "omits",
   "outcome",
   "question",
+  "reason",
   "simplifies",
   "steps",
   "subject",
+  "teachingJob",
   "text",
   "title",
 ]);
@@ -471,19 +480,6 @@ function selectionKey(controls, pairs) {
   }).join("|");
 }
 
-function expectedSelections(controls) {
-  let combinations = [[]];
-  for (const control of controls) {
-    combinations = combinations.flatMap((combination) => (
-      control.options.map((option) => [
-        ...combination,
-        { controlId: control.id, optionId: option.id },
-      ])
-    ));
-  }
-  return combinations;
-}
-
 function validateMicroworld(value, sourceMap) {
   const name = "behavior.microworld";
   object(value, name, [
@@ -497,52 +493,9 @@ function validateMicroworld(value, sourceMap) {
     "scenarios",
   ]);
   const grounded = groundedAid(value, name, sourceMap);
-  const controls = boundedArray(value.controls, `${name}.controls`, 1, 3).map(
-    (control, index) => {
-      const controlName = `${name}.controls[${index}]`;
-      object(control, controlName, [
-        "id",
-        "kind",
-        "label",
-        "defaultOptionId",
-        "options",
-      ]);
-      const options = boundedArray(
-        control.options,
-        `${controlName}.options`,
-        2,
-        4,
-      ).map((option, optionIndex) => {
-        const optionName = `${controlName}.options[${optionIndex}]`;
-        object(option, optionName, ["id", "label"]);
-        return Object.freeze({
-          id: identifier(option.id, `${optionName}.id`),
-          label: text(option.label, `${optionName}.label`),
-        });
-      });
-      const optionIds = new Set();
-      for (const option of options) {
-        if (optionIds.has(option.id)) {
-          throw new Error(`${controlName}.options contains a duplicate id`);
-        }
-        optionIds.add(option.id);
-      }
-      const defaultOptionId = identifier(
-        control.defaultOptionId,
-        `${controlName}.defaultOptionId`,
-      );
-      if (!optionIds.has(defaultOptionId)) {
-        throw new Error(`${controlName}.defaultOptionId refers to an unknown option`);
-      }
-      return Object.freeze({
-        defaultOptionId,
-        id: identifier(control.id, `${controlName}.id`),
-        kind: enumeration(control.kind, `${controlName}.kind`, controlKinds),
-        label: text(control.label, `${controlName}.label`),
-        options: Object.freeze(options),
-      });
-    },
-  );
+  const controls = normalizeMicroworldControls(value.controls, {
+    name: `${name}.controls`,
+  });
   const controlsById = new Map();
   for (const control of controls) {
     if (controlsById.has(control.id)) {
@@ -550,10 +503,7 @@ function validateMicroworld(value, sourceMap) {
     }
     controlsById.set(control.id, control);
   }
-  const expected = expectedSelections(controls);
-  if (expected.length > 12) {
-    throw new Error(`${name}.controls produce more than 12 combinations`);
-  }
+  const expected = microworldSelections(controls);
   const expectedKeys = new Set(expected.map((pairs) => selectionKey(controls, pairs)));
   const actualKeys = new Set();
   const scenarioIds = new Set();
@@ -633,6 +583,98 @@ function validateMicroworld(value, sourceMap) {
     simplifies: text(value.simplifies, `${name}.simplifies`),
     title: text(value.title, `${name}.title`),
   });
+}
+
+function validateTeachingAidDecision(value, name) {
+  object(value, name, ["decision", "reason", "teachingJob"]);
+  const decision = enumeration(
+    value.decision,
+    `${name}.decision`,
+    TEACHING_AID_DECISIONS,
+  );
+  const reason = text(value.reason, `${name}.reason`);
+  if (decision === "included") {
+    if (value.teachingJob === undefined) {
+      throw new Error(`${name}.teachingJob is required when the aid is included`);
+    }
+    return Object.freeze({
+      decision,
+      reason,
+      teachingJob: text(value.teachingJob, `${name}.teachingJob`),
+    });
+  }
+  if (value.teachingJob !== undefined) {
+    throw new Error(`${name}.teachingJob is allowed only when the aid is included`);
+  }
+  return Object.freeze({ decision, reason });
+}
+
+function legacyTeachingAidDecisions(behavior, quiz) {
+  const included = {
+    microworld: Boolean(behavior?.microworld),
+    quiz: quiz.length > 0,
+    visual: Boolean(behavior?.visual),
+  };
+  return Object.freeze(Object.fromEntries(TEACHING_AID_NAMES.map((name) => [
+    name,
+    Object.freeze({
+      decision: included[name] ? "included" : "omitted",
+      reason: "Legacy analysis did not record a teaching-aid decision.",
+      ...(included[name]
+        ? { teachingJob: "Legacy analysis included this teaching aid." }
+        : {}),
+    }),
+  ])));
+}
+
+function validateTeachingAidDecisions(value, {
+  analysisVersion,
+  behavior,
+  quiz,
+}) {
+  if (analysisVersion === LEGACY_ANALYSIS_VERSION) {
+    if (value !== undefined) {
+      throw new Error("Legacy Hope analysis cannot include teachingAids");
+    }
+    return legacyTeachingAidDecisions(behavior, quiz);
+  }
+  object(value, "teachingAids", TEACHING_AID_NAMES);
+  const decisions = Object.freeze(Object.fromEntries(
+    TEACHING_AID_NAMES.map((name) => [
+      name,
+      validateTeachingAidDecision(value[name], `teachingAids.${name}`),
+    ]),
+  ));
+  const payloads = {
+    microworld: Boolean(behavior?.microworld),
+    quiz: quiz.length > 0,
+    visual: Boolean(behavior?.visual),
+  };
+  for (const name of TEACHING_AID_NAMES) {
+    const included = decisions[name].decision === "included";
+    if (included !== payloads[name]) {
+      throw new Error(
+        `teachingAids.${name}.decision must match the ${name} payload`,
+      );
+    }
+  }
+  const teachingJobs = new Map();
+  for (const name of TEACHING_AID_NAMES) {
+    const teachingJob = decisions[name].teachingJob;
+    if (teachingJob === undefined) continue;
+    const key = teachingJob
+      .normalize("NFKC")
+      .trim()
+      .replace(/\s+/gu, " ")
+      .toLocaleLowerCase("en-US");
+    if (teachingJobs.has(key)) {
+      throw new Error(
+        `teachingAids.${name}.teachingJob repeats the teaching job for ${teachingJobs.get(key)}`,
+      );
+    }
+    teachingJobs.set(key, name);
+  }
+  return decisions;
 }
 
 function reviewItem(value, index, sourceMap, limitMap) {
@@ -887,6 +929,7 @@ function validateCodeSteps(values, sourceMap, fileMap) {
 }
 
 export function validateAnalysis(analysis, snapshot, {
+  analysisVersion = ANALYSIS_VERSION,
   analysisFileBytes,
   enforceResourceLimits = true,
   runId,
@@ -909,8 +952,12 @@ export function validateAnalysis(analysis, snapshot, {
     "fileDispositions",
     "limitImpacts",
     "quiz",
+    "teachingAids",
   ]);
-  if (analysis.schemaVersion !== CONTRACT_VERSION) {
+  if (
+    ![LEGACY_ANALYSIS_VERSION, ANALYSIS_VERSION].includes(analysisVersion)
+    || analysis.schemaVersion !== analysisVersion
+  ) {
     throw new RangeError("Unsupported Hope analysis schema");
   }
   if (analysis.runId !== runId) throw new Error("Analysis runId does not match");
@@ -994,7 +1041,10 @@ export function validateAnalysis(analysis, snapshot, {
   let quiz = [];
   if (analysis.quiz !== undefined) {
     const values = array(analysis.quiz, "quiz", 5);
-    if (values.length < 3) throw new Error("quiz needs at least three questions");
+    const minimumQuestions = analysisVersion === LEGACY_ANALYSIS_VERSION ? 3 : 1;
+    if (values.length < minimumQuestions) {
+      throw new Error(`quiz needs at least ${minimumQuestions} questions`);
+    }
     quiz = values.map((value, index) => {
       const name = `quiz[${index}]`;
       object(value, name, ["question", "answer", "evidence"]);
@@ -1008,6 +1058,11 @@ export function validateAnalysis(analysis, snapshot, {
       });
     });
   }
+  const teachingAids = validateTeachingAidDecisions(analysis.teachingAids, {
+    analysisVersion,
+    behavior,
+    quiz,
+  });
 
   const coreChange = Object.freeze({
     after: claim(core.after, "coreChange.after", sourceMap),
@@ -1047,7 +1102,7 @@ export function validateAnalysis(analysis, snapshot, {
     revision: source.revision,
   }));
   const codeSteps = validateCodeSteps(analysis.codeSteps, sourceMap, fileMap);
-  const resources = analysisResources(
+  const analysisResourceValues = analysisResources(
     analysis,
     [
       background,
@@ -1061,9 +1116,30 @@ export function validateAnalysis(analysis, snapshot, {
     ],
     { analysisFileBytes, enforceLimits: enforceResourceLimits },
   );
+  const decisionValues = Object.values(teachingAids);
+  const resources = Object.freeze({
+    ...analysisResourceValues,
+    teachingAidDecisions: analysisVersion === ANALYSIS_VERSION
+      ? decisionValues.length
+      : 0,
+    teachingAidMicroworldIncluded: teachingAids.microworld.decision === "included"
+      ? 1
+      : 0,
+    teachingAidQuizIncluded: teachingAids.quiz.decision === "included" ? 1 : 0,
+    teachingAidVisualIncluded: teachingAids.visual.decision === "included" ? 1 : 0,
+    teachingAidsIncluded: decisionValues.filter(
+      (item) => item.decision === "included",
+    ).length,
+    teachingAidsNotApplicable: decisionValues.filter(
+      (item) => item.decision === "not-applicable",
+    ).length,
+    teachingAidsOmitted: decisionValues.filter(
+      (item) => item.decision === "omitted",
+    ).length,
+  });
 
   return Object.freeze({
-    analysisSchemaVersion: CONTRACT_VERSION,
+    analysisSchemaVersion: analysisVersion,
     background: Object.freeze(background),
     behavior,
     codeSteps: Object.freeze(codeSteps),
@@ -1086,5 +1162,6 @@ export function validateAnalysis(analysis, snapshot, {
       settings: snapshot.settings,
       snapshot: snapshot.snapshot,
     }),
+    teachingAids,
   });
 }

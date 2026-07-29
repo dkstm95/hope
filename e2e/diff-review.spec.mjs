@@ -10,6 +10,7 @@ import { validateAnalysis } from "../features/diff/validate.mjs";
 import {
   makeAnalysis,
   makeSnapshot,
+  makeTeachingAidDecisions,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
 
@@ -225,6 +226,11 @@ test.beforeAll(async () => {
     }],
     question: `모든 재시도가 실패하면 어떤 오류가 전달되나요? ${index + 1}`,
   }));
+  analysis.teachingAids = makeTeachingAidDecisions({
+    microworld: true,
+    quiz: true,
+    visual: true,
+  });
   const review = validateAnalysis(analysis, snapshot, { runId });
   const rendered = await renderReview(review);
   const artifactPath = join(artifactDirectory, "hope-review.html");
@@ -238,6 +244,7 @@ test.beforeAll(async () => {
       includeMicroworld: false,
       visualKind: kind,
     });
+    visualAnalysis.teachingAids = makeTeachingAidDecisions({ visual: true });
     const visualReview = validateAnalysis(visualAnalysis, visualSnapshot, { runId });
     const visualRendered = await renderReview(visualReview);
     const visualPath = join(artifactDirectory, `${kind}.html`);

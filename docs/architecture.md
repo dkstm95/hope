@@ -120,12 +120,15 @@ own. These are two honest entry boundaries to one feature implementation, not
 separate diff implementations.
 
 The shared diff runtime loads the writing standard from the write core and
-returns it with each prepared run. The Skill combines that standard with its
-compact diff authoring rules and the generated analysis schema. It does not
-carry another copy of the writing rules or load the full human-facing product
-and design documents for every review. Those documents remain the source of
-truth for implementation and maintenance. The runtime validator and renderer
-own their fixed behavior.
+returns it with each prepared run. The runtime also returns the versioned
+teaching-aid decision and selection contract with representative evaluation
+cases, and can generate the complete condition skeleton for a bounded
+microworld. The Skill combines those runtime contracts with its remaining
+compact evidence rules and the generated analysis schema. It does not carry
+another copy of the writing or teaching-aid rules or load the full human-facing
+product and design documents for every review. Those documents remain the
+source of truth for implementation and maintenance. The runtime validator and
+renderer own their fixed behavior.
 
 ## Current align boundary
 

@@ -1,7 +1,11 @@
 export const CONTRACT_VERSION = 1;
+export const LEGACY_ANALYSIS_VERSION = 1;
+export const ANALYSIS_VERSION = 2;
 export const RENDERER_VERSION = 2;
 export const LEGACY_RUN_VERSION = 1;
-export const RUN_VERSION = 2;
+export const CONTEXT_RUN_VERSION = 2;
+export const RUN_VERSION = 3;
+export const TEACHING_AID_CONTRACT_VERSION = 1;
 
 export const LIMITS = Object.freeze({
   analysisProseBytes: 48 * 1024,

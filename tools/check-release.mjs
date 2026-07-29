@@ -43,6 +43,7 @@ const requiredFiles = [
   "features/align/session-v1.schema.json",
   "features/artifact/index.mjs",
   "features/diff/analysis-v1.schema.json",
+  "features/diff/analysis-v2.schema.json",
   "features/diff/cli.mjs",
   "features/diff/index.mjs",
   "features/toxic-review/cli.mjs",
@@ -201,6 +202,9 @@ assert.match(skill, /^---\r?\nname: diff\r?\ndescription: /u);
 assert.match(skill, /runtime\/features\/diff\/cli\.mjs/u);
 assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/runtime\/features\/diff\/cli\.mjs/u);
 assert.match(skill, /writingStandard\.text/u);
+assert.match(skill, /`teachingAids`/u);
+assert.match(skill, /microworld-skeleton/u);
+assert.doesNotMatch(skill, /Add at most one `behavior\.microworld`/u);
 assert.doesNotMatch(skill, /Prefer a short, familiar word/u);
 assert.match(settingsSkill, /^---\r?\nname: settings\r?\ndescription: /u);
 assert.match(settingsSkill, /runtime\/settings\/cli\.mjs/u);

@@ -13,10 +13,28 @@ import { validateAnalysis } from "../features/diff/validate.mjs";
 import {
   makeAnalysis,
   makeSnapshot,
+  makeTeachingAidDecisions,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
 
 const runId = "3".repeat(32);
+
+function addTeachingBehavior(analysis, options = {}) {
+  const includeMicroworld = options.includeMicroworld ?? true;
+  analysis.behavior = makeTeachingBehavior(options);
+  analysis.teachingAids = makeTeachingAidDecisions({
+    microworld: includeMicroworld,
+    visual: true,
+  });
+  return analysis.behavior;
+}
+
+function markQuizIncluded(analysis) {
+  analysis.teachingAids = {
+    ...analysis.teachingAids,
+    quiz: makeTeachingAidDecisions({ quiz: true }).quiz,
+  };
+}
 
 function withLocaleSource(snapshot, localeSource) {
   const { digest: _digest, ...value } = snapshot;
@@ -329,6 +347,7 @@ test("quiz responses stay visually unlabeled and separate from the answer", asyn
     }],
     question: `모든 재시도가 실패하면 어떤 오류가 전달되나요? ${index + 1}`,
   }));
+  markQuizIncluded(analysis);
   const review = validateAnalysis(analysis, snapshot, { runId });
   const html = (await renderReview(review)).bytes.toString("utf8");
 
@@ -478,7 +497,7 @@ test("only two to four brief behavior steps use the responsive flow", async () =
 test("behavior renders a grounded visual and a separate fixed microworld safely", async () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
-  analysis.behavior = makeTeachingBehavior();
+  addTeachingBehavior(analysis);
   analysis.behavior.visual.title = "<img src=x onerror=alert(1)>";
   analysis.behavior.microworld.instructions = "</script><script>alert(1)</script>";
   const review = validateAnalysis(analysis, snapshot, { runId });
@@ -540,7 +559,7 @@ test("all visual kinds use typed, fixed renderer structures", async () => {
   const snapshot = makeSnapshot();
   for (const [kind, marker] of Object.entries(markers)) {
     const analysis = makeAnalysis(snapshot, runId);
-    analysis.behavior = makeTeachingBehavior({
+    addTeachingBehavior(analysis, {
       includeMicroworld: false,
       visualKind: kind,
     });

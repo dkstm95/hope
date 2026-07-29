@@ -6,10 +6,28 @@ import { validateAnalysis } from "../features/diff/validate.mjs";
 import {
   makeAnalysis,
   makeSnapshot,
+  makeTeachingAidDecisions,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
 
 const runId = "1".repeat(32);
+
+function addTeachingBehavior(analysis, options = {}) {
+  const includeMicroworld = options.includeMicroworld ?? true;
+  analysis.behavior = makeTeachingBehavior(options);
+  analysis.teachingAids = makeTeachingAidDecisions({
+    microworld: includeMicroworld,
+    visual: true,
+  });
+  return analysis.behavior;
+}
+
+function markQuizIncluded(analysis) {
+  analysis.teachingAids = {
+    ...analysis.teachingAids,
+    quiz: makeTeachingAidDecisions({ quiz: true }).quiz,
+  };
+}
 
 test("analysis validation derives trusted status, scope, evidence, and file use", () => {
   const snapshot = makeSnapshot();
@@ -23,13 +41,20 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(validated.sourceIndex.length, snapshot.sources.length);
   assert.equal("text" in validated.sourceIndex[0], false);
   assert.deepEqual(validated.resources, {
-    analysisCanonicalBytes: 2441,
-    analysisFileBytes: 2441,
-    authoredProseBytes: 842,
+    analysisCanonicalBytes: 2766,
+    analysisFileBytes: 2766,
+    authoredProseBytes: 1016,
     evidenceBytes: 178,
     evidenceLines: 5,
     evidenceReferences: 9,
     highlightedLines: 8,
+    teachingAidDecisions: 3,
+    teachingAidMicroworldIncluded: 0,
+    teachingAidQuizIncluded: 0,
+    teachingAidVisualIncluded: 0,
+    teachingAidsIncluded: 0,
+    teachingAidsNotApplicable: 0,
+    teachingAidsOmitted: 3,
     uniqueEvidenceRanges: 4,
   });
   assert.equal(
@@ -150,6 +175,7 @@ test("quiz evidence follows the published schema limit", () => {
     evidence,
     question: `Question ${index + 1}`,
   }));
+  markQuizIncluded(analysis);
 
   assert.throws(
     () => validateAnalysis(analysis, snapshot, { runId }),
@@ -545,7 +571,7 @@ test("behavior accepts one grounded visual of every supported type", () => {
   const snapshot = makeSnapshot();
   for (const kind of ["flow", "decision-table", "sequence", "component-map"]) {
     const analysis = makeAnalysis(snapshot, runId);
-    analysis.behavior = makeTeachingBehavior({
+    addTeachingBehavior(analysis, {
       includeMicroworld: false,
       visualKind: kind,
     });
@@ -562,7 +588,7 @@ test("behavior accepts one grounded visual of every supported type", () => {
 test("decision-table cells count toward the generated prose budget", () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
-  analysis.behavior = makeTeachingBehavior({
+  addTeachingBehavior(analysis, {
     includeMicroworld: false,
     visualKind: "decision-table",
   });
@@ -584,7 +610,7 @@ test("decision-table cells count toward the generated prose budget", () => {
 test("behavior accepts a grounded, exhaustive declarative microworld", () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
-  analysis.behavior = makeTeachingBehavior();
+  addTeachingBehavior(analysis);
 
   const validated = validateAnalysis(analysis, snapshot, { runId });
   assert.equal(validated.behavior.microworld.controls.length, 2);
@@ -607,7 +633,7 @@ test("visual validation rejects malformed structure and ungrounded claims", () =
   const snapshot = makeSnapshot();
 
   const cells = makeAnalysis(snapshot, runId);
-  cells.behavior = makeTeachingBehavior({ includeMicroworld: false });
+  addTeachingBehavior(cells, { includeMicroworld: false });
   cells.behavior.visual.rows[0].cells.pop();
   assert.throws(
     () => validateAnalysis(cells, snapshot, { runId }),
@@ -615,7 +641,7 @@ test("visual validation rejects malformed structure and ungrounded claims", () =
   );
 
   const unknownParticipant = makeAnalysis(snapshot, runId);
-  unknownParticipant.behavior = makeTeachingBehavior({
+  addTeachingBehavior(unknownParticipant, {
     includeMicroworld: false,
     visualKind: "sequence",
   });
@@ -626,7 +652,7 @@ test("visual validation rejects malformed structure and ungrounded claims", () =
   );
 
   const duplicateComponent = makeAnalysis(snapshot, runId);
-  duplicateComponent.behavior = makeTeachingBehavior({
+  addTeachingBehavior(duplicateComponent, {
     includeMicroworld: false,
     visualKind: "component-map",
   });
@@ -637,7 +663,7 @@ test("visual validation rejects malformed structure and ungrounded claims", () =
   );
 
   const noEvidence = makeAnalysis(snapshot, runId);
-  noEvidence.behavior = makeTeachingBehavior({ includeMicroworld: false });
+  addTeachingBehavior(noEvidence, { includeMicroworld: false });
   noEvidence.behavior.visual.evidence = [];
   assert.throws(
     () => validateAnalysis(noEvidence, snapshot, { runId }),
@@ -645,7 +671,7 @@ test("visual validation rejects malformed structure and ungrounded claims", () =
   );
 
   const wrongBasis = makeAnalysis(snapshot, runId);
-  wrongBasis.behavior = makeTeachingBehavior({ includeMicroworld: false });
+  addTeachingBehavior(wrongBasis, { includeMicroworld: false });
   wrongBasis.behavior.visual.basis = "stated";
   assert.throws(
     () => validateAnalysis(wrongBasis, snapshot, { runId }),
@@ -657,7 +683,7 @@ test("microworld validation rejects unsafe or incomplete state models", () => {
   const snapshot = makeSnapshot();
 
   const missing = makeAnalysis(snapshot, runId);
-  missing.behavior = makeTeachingBehavior();
+  addTeachingBehavior(missing);
   missing.behavior.microworld.scenarios.pop();
   assert.throws(
     () => validateAnalysis(missing, snapshot, { runId }),
@@ -665,7 +691,7 @@ test("microworld validation rejects unsafe or incomplete state models", () => {
   );
 
   const duplicate = makeAnalysis(snapshot, runId);
-  duplicate.behavior = makeTeachingBehavior();
+  addTeachingBehavior(duplicate);
   duplicate.behavior.microworld.scenarios[1].when = [
     ...duplicate.behavior.microworld.scenarios[0].when,
   ];
@@ -675,7 +701,7 @@ test("microworld validation rejects unsafe or incomplete state models", () => {
   );
 
   const unknownDefault = makeAnalysis(snapshot, runId);
-  unknownDefault.behavior = makeTeachingBehavior();
+  addTeachingBehavior(unknownDefault);
   unknownDefault.behavior.microworld.controls[0].defaultOptionId = "unknown";
   assert.throws(
     () => validateAnalysis(unknownDefault, snapshot, { runId }),
@@ -683,7 +709,7 @@ test("microworld validation rejects unsafe or incomplete state models", () => {
   );
 
   const partialBinding = makeAnalysis(snapshot, runId);
-  partialBinding.behavior = makeTeachingBehavior();
+  addTeachingBehavior(partialBinding);
   partialBinding.behavior.microworld.scenarios[0].when.pop();
   assert.throws(
     () => validateAnalysis(partialBinding, snapshot, { runId }),
@@ -691,7 +717,7 @@ test("microworld validation rejects unsafe or incomplete state models", () => {
   );
 
   const unknownOption = makeAnalysis(snapshot, runId);
-  unknownOption.behavior = makeTeachingBehavior();
+  addTeachingBehavior(unknownOption);
   unknownOption.behavior.microworld.scenarios[0].when[0].optionId = "unknown";
   assert.throws(
     () => validateAnalysis(unknownOption, snapshot, { runId }),
@@ -699,7 +725,7 @@ test("microworld validation rejects unsafe or incomplete state models", () => {
   );
 
   const tooManyCombinations = makeAnalysis(snapshot, runId);
-  tooManyCombinations.behavior = makeTeachingBehavior();
+  addTeachingBehavior(tooManyCombinations);
   tooManyCombinations.behavior.microworld.controls[0].options = [
     { id: "one", label: "One" },
     { id: "two", label: "Two" },
@@ -720,7 +746,7 @@ test("microworld validation rejects unsafe or incomplete state models", () => {
   );
 
   const unknownField = makeAnalysis(snapshot, runId);
-  unknownField.behavior = makeTeachingBehavior();
+  addTeachingBehavior(unknownField);
   unknownField.behavior.microworld.script = "run repository code";
   assert.throws(
     () => validateAnalysis(unknownField, snapshot, { runId }),

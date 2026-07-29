@@ -112,6 +112,7 @@ export const generatedPluginFiles = Object.freeze([
   ),
   ...[
     "analysis-v1.schema.json",
+    "analysis-v2.schema.json",
     "cli.mjs",
     "constants.mjs",
     "context.mjs",
@@ -124,6 +125,7 @@ export const generatedPluginFiles = Object.freeze([
     "render.mjs",
     "run.mjs",
     "target.mjs",
+    "teaching-aids.mjs",
     "text.mjs",
     "validate.mjs",
   ].map((name) => generatedText(
