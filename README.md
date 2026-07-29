@@ -144,8 +144,12 @@ Claude Code
 ```
 
 Write follows the current language and any more specific project rules. It can
-draft, edit, or review language as its own task or as a writing pass inside
-other work.
+run as its own task or as a writing pass inside other work:
+
+- `draft` creates new prose from the request and available context.
+- `edit` changes the requested prose or files.
+- `review` reports material clarity, meaning, or flow problems without changing
+  files.
 
 ### Settings
 
