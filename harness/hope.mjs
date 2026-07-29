@@ -19,6 +19,10 @@ import {
   main as runToxicReviewCommand,
 } from "../features/toxic-review/cli.mjs";
 import {
+  POLISH_MODEL_ADAPTER_CODE,
+} from "../features/polish/index.mjs";
+import { main as runPolishCommand } from "../features/polish/cli.mjs";
+import {
   createTaskWritingPass,
   WRITE_MODEL_ADAPTER_CODE,
 } from "../features/write/index.mjs";
@@ -36,6 +40,7 @@ function usage() {
     "  hope --version",
     "  hope align",
     "  hope diff",
+    "  hope polish",
     "  hope toxic-review",
     "  hope write",
     "  hope settings <show|set|reset>",
@@ -52,7 +57,16 @@ export function parseArguments(argv) {
     return { command: "version" };
   }
   const [command, ...rest] = argv;
-  if (!["align", "diff", "settings", "toxic-review", "write"].includes(command)) {
+  if (
+    ![
+      "align",
+      "diff",
+      "polish",
+      "settings",
+      "toxic-review",
+      "write",
+    ].includes(command)
+  ) {
     throw new TypeError(`Unknown Hope command: ${command}`);
   }
   return { arguments: rest, command };
@@ -103,6 +117,12 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       taskDependencies,
     );
   }
+  if (options.command === "polish") {
+    return await (dependencies.runPolishCommand ?? runPolishCommand)(
+      options.arguments.length === 0 ? ["automatic"] : options.arguments,
+      taskDependencies,
+    );
+  }
   return await (dependencies.runDiffCommand ?? runDiffCommand)(
     options.arguments.length === 0 ? ["automatic"] : options.arguments,
     taskDependencies,
@@ -121,6 +141,7 @@ const isEntrypoint = (() => {
 export function harnessErrorReport(error) {
   if ([
     ALIGN_MODEL_ADAPTER_CODE,
+    POLISH_MODEL_ADAPTER_CODE,
     TOXIC_REVIEW_MODEL_ADAPTER_CODE,
     WRITE_MODEL_ADAPTER_CODE,
   ].includes(error?.code)) {

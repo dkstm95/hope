@@ -5,14 +5,19 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  completeAlignPolish,
   createAlignBrief,
+  prepareAlignPolishCandidate,
   renderAlignFile,
   runAlign,
   ALIGN_MODEL_ADAPTER_CODE,
 } from "../features/align/index.mjs";
 import { ALIGN_LIMITS } from "../features/align/constants.mjs";
 import { renderAlignSession } from "../features/align/render.mjs";
-import { validateAlignState } from "../features/align/validate.mjs";
+import {
+  alignCandidateDigest,
+  validateAlignState,
+} from "../features/align/validate.mjs";
 import {
   parseAlignArguments,
 } from "../features/align/cli.mjs";
@@ -20,6 +25,65 @@ import {
   makeAlignApproval,
   makeAlignState,
 } from "../test-support/align-fixture.mjs";
+import { makePolishRun } from "../test-support/polish-fixture.mjs";
+
+function makeAlignPolishRun({
+  beforePath,
+  candidateDigest,
+  resultDigest = candidateDigest,
+  status = "revised",
+}) {
+  const run = makePolishRun();
+  const source = {
+    id: "align-candidate",
+    kind: "artifact",
+    label: "Align approval candidate",
+    locator: beforePath,
+    digest: candidateDigest,
+  };
+  run.snapshot.sources = [
+    source,
+    {
+      id: "request-1",
+      kind: "conversation",
+      label: "Polish authority",
+      locator: "conversation turn 1",
+      digest: `sha256:${"b".repeat(64)}`,
+    },
+  ];
+  run.target.sourceIds = ["align-candidate"];
+  run.preservation[0].sourceIds = ["align-candidate", "request-1"];
+  run.plan[0].sourceIds = ["align-candidate"];
+  run.outcome.changes[0].sourceIds = ["align-candidate"];
+  run.verification[0].sourceIds = ["align-candidate"];
+  run.outcome.outputSnapshot.sources = [{
+    ...source,
+    digest: resultDigest,
+  }];
+  if (status !== "revised") {
+    run.plan = [];
+    run.outcome.changes = [];
+    run.application = {
+      status: "not-needed",
+      authoritySourceIds: [],
+      beforeIdentityChecked: false,
+      finalIdentityChecked: false,
+    };
+  }
+  if (status === "no-change") {
+    run.outcome.status = "no-change";
+  }
+  if (status === "needs-alignment") {
+    run.verification = [];
+    run.preservation[0].verificationIds = [];
+    run.outcome = {
+      status: "needs-alignment",
+      changes: [],
+      unresolved: ["A material wording choice needs user input."],
+    };
+  }
+  return run;
+}
 
 function overviewMarkup(html) {
   const start = html.indexOf('<section class="overview"');
@@ -381,6 +445,7 @@ test("align brief and CLI keep risk-adaptive behavior in the core", async () => 
   assert.equal(brief.ui, true);
   assert.equal(brief.writingStandard.text, "shared standard\n");
   assert.match(brief.rendering, /related decisions are settled/u);
+  assert.match(brief.polishing[0], /before asking for approval/u);
   assert.deepEqual(
     parseAlignArguments(["brief", "--risk", "low", "--ui", "no"]),
     {
@@ -393,4 +458,172 @@ test("align brief and CLI keep risk-adaptive behavior in the core", async () => 
     },
   );
   assert.throws(runAlign, (error) => error.code === ALIGN_MODEL_ADAPTER_CODE);
+});
+
+test("align prepares one exact contract-ready target for Polish", async () => {
+  const state = makeAlignState();
+  const digest = alignCandidateDigest(validateAlignState(state));
+  const candidate = await prepareAlignPolishCandidate(
+    "/tmp/align-candidate.json",
+    {
+      readInput: async () => ({
+        digest,
+        fileBytes: 1,
+        value: state,
+      }),
+    },
+  );
+  assert.equal(candidate.feature, "align-polish-candidate");
+  assert.equal(candidate.source.digest, digest);
+  assert.equal(candidate.source.kind, "artifact");
+  assert.match(candidate.next, /Run Hope Polish once/u);
+  assert.deepEqual(
+    parseAlignArguments([
+      "polish-candidate",
+      "--input",
+      "/tmp/align-candidate.json",
+    ]),
+    {
+      command: "polish-candidate",
+      inputPath: "/tmp/align-candidate.json",
+    },
+  );
+
+  await assert.rejects(
+    prepareAlignPolishCandidate("/tmp/align-candidate.json", {
+      readInput: async () => ({
+        digest,
+        fileBytes: 1,
+        value: makeAlignState({
+          readiness: {
+            state: "interviewing",
+            rationale: "The candidate is not ready.",
+          },
+        }),
+      }),
+    }),
+    /contract-ready, ready-proposed candidate/u,
+  );
+});
+
+test("align consumes one revised Polish result and rejects a repeat", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hope-align-polish-"));
+  const beforePath = join(root, "before.json");
+  const afterPath = join(root, "after.json");
+  const polishPath = join(root, "polish.json");
+  const before = makeAlignState();
+  const after = makeAlignState({
+    revision: before.revision + 1,
+    changes: [
+      ...before.changes,
+      {
+        round: before.interviewRounds,
+        summary: "Polish removed repeated wording without changing the contract.",
+      },
+    ],
+  });
+  const candidateDigest = alignCandidateDigest(validateAlignState(before));
+  const resultDigest = alignCandidateDigest(validateAlignState(after));
+  const polish = makeAlignPolishRun({
+    beforePath,
+    candidateDigest,
+    resultDigest,
+  });
+  await Promise.all([
+    writeFile(beforePath, JSON.stringify(before), { mode: 0o600 }),
+    writeFile(afterPath, JSON.stringify(after), { mode: 0o600 }),
+    writeFile(polishPath, JSON.stringify(polish), { mode: 0o600 }),
+  ]);
+  const completed = await completeAlignPolish({
+    beforePath,
+    afterPath,
+    polishPath,
+  });
+  assert.equal(completed.receipt.outcome, "revised");
+  assert.equal(completed.state.polish.resultDigest, resultDigest);
+  assert.equal(validateAlignState(completed.state).polish.outcome, "revised");
+
+  await writeFile(beforePath, JSON.stringify(completed.state), { mode: 0o600 });
+  await assert.rejects(
+    prepareAlignPolishCandidate(beforePath),
+    (error) => error.code === "HOPE_ALIGN_POLISH_ALREADY_COMPLETED",
+  );
+  assert.deepEqual(
+    parseAlignArguments([
+      "complete-polish",
+      "--before",
+      beforePath,
+      "--polish",
+      polishPath,
+      "--after",
+      afterPath,
+    ]),
+    {
+      command: "complete-polish",
+      beforePath,
+      polishPath,
+      afterPath,
+    },
+  );
+});
+
+test("align consumes no-change and needs-alignment Polish results", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hope-align-polish-outcomes-"));
+  const beforePath = join(root, "before.json");
+  const noChangePath = join(root, "no-change.json");
+  const needsPath = join(root, "needs-alignment.json");
+  const afterPath = join(root, "after.json");
+  const before = makeAlignState();
+  const candidateDigest = alignCandidateDigest(validateAlignState(before));
+  await writeFile(beforePath, JSON.stringify(before), { mode: 0o600 });
+
+  const noChange = makeAlignPolishRun({
+    beforePath,
+    candidateDigest,
+    status: "no-change",
+  });
+  await writeFile(noChangePath, JSON.stringify(noChange), { mode: 0o600 });
+  const unchanged = await completeAlignPolish({
+    beforePath,
+    polishPath: noChangePath,
+  });
+  assert.equal(unchanged.receipt.outcome, "no-change");
+  assert.equal(unchanged.receipt.candidateDigest, unchanged.receipt.resultDigest);
+
+  const after = makeAlignState({
+    revision: before.revision + 1,
+    records: {
+      ...before.records,
+      openQuestions: [
+        {
+          id: "question-polish",
+          question: "Which meaning should the repeated sentence preserve?",
+          whyItMatters: "Removing it could change the product contract.",
+          recommendation: "Ask the person before revising.",
+          options: [
+            { label: "Keep", effect: "Preserves the current wording." },
+            { label: "Remove", effect: "Treats it as accidental repetition." },
+          ],
+        },
+      ],
+    },
+    readiness: {
+      state: "interviewing",
+      rationale: "Polish found a material ambiguity.",
+    },
+  });
+  await writeFile(afterPath, JSON.stringify(after), { mode: 0o600 });
+  const needsAlignment = makeAlignPolishRun({
+    beforePath,
+    candidateDigest,
+    status: "needs-alignment",
+  });
+  await writeFile(needsPath, JSON.stringify(needsAlignment), { mode: 0o600 });
+  const stopped = await completeAlignPolish({
+    beforePath,
+    afterPath,
+    polishPath: needsPath,
+  });
+  assert.equal(stopped.receipt.outcome, "needs-alignment");
+  assert.equal(stopped.state.readiness.state, "interviewing");
 });

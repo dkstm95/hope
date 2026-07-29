@@ -8,6 +8,7 @@ reports that its AI adapter is not available yet.
 [PRINCIPLES.md](../PRINCIPLES.md) defines the project direction.
 [diff.md](diff.md) defines Hope diff.
 [align.md](align.md) defines Hope align.
+[polish.md](polish.md) defines Hope polish.
 [toxic-review.md](toxic-review.md) defines Hope toxic review.
 [write.md](write.md) defines Hope write.
 [design.md](design.md) defines the shared visual language.
@@ -89,6 +90,7 @@ plugins/hope/
 ├── .claude-plugin/plugin.json
 ├── skills/align/SKILL.md
 ├── skills/diff/SKILL.md
+├── skills/polish/SKILL.md
 ├── skills/settings/SKILL.md
 ├── skills/toxic-review/SKILL.md
 ├── skills/write/SKILL.md
@@ -146,6 +148,28 @@ all authored text and never replaces an existing artifact.
 The independent harness exposes the same brief, validator, and renderer. It
 reports that automatic interviewing is unavailable until it has a model
 adapter. The Skill is an adapter to the generated copy of that core.
+
+When Align reaches a contract-ready approval candidate, its shared core binds
+the normalized candidate to an exact digest. The host invokes Polish once for
+that candidate, then uses Align's shared `complete-polish` transition to
+revalidate the resulting state and attach a digest-bound receipt. The receipt
+prevents another pass over the same candidate. The dependency direction is
+`Align -> Polish`; Polish does not import or invoke Align.
+
+## Current polish boundary
+
+The current polish implementation starts from [polish.md](polish.md). The
+active Claude or Codex host inspects an exact target snapshot, creates one
+run-specific plan, performs at most one bounded revision, and records its
+verification. The shared core validates the target and output identities,
+preservation and evidence links, change budget, no-change and
+needs-alignment outcomes, verification scope, and whether a revision is only
+proposed or was applied with captured authority and identity checks.
+
+The independent harness exposes the same brief and validator. It does not
+claim automatic AI editing without a model adapter. The Skill coordinates the
+active host but does not own the Polish contract or result status. Polish uses
+the shared Write standard for language-bearing changes.
 
 ## Current toxic-review boundary
 

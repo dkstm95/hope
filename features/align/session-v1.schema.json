@@ -275,6 +275,33 @@
         },
         "rationale": { "$ref": "#/$defs/text" }
       }
+    },
+    "polish": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateDigest",
+        "resultDigest",
+        "outcome",
+        "verificationStatus",
+        "changeSummary"
+      ],
+      "properties": {
+        "candidateDigest": { "$ref": "#/$defs/digest" },
+        "resultDigest": { "$ref": "#/$defs/digest" },
+        "outcome": {
+          "enum": ["revised", "no-change", "needs-alignment"]
+        },
+        "verificationStatus": {
+          "enum": [
+            "verified-in-checked-scope",
+            "incomplete",
+            "failed",
+            "not-completed"
+          ]
+        },
+        "changeSummary": { "$ref": "#/$defs/textList" }
+      }
     }
   },
   "$defs": {
@@ -287,6 +314,10 @@
     "id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
     },
     "textList": {
       "type": "array",

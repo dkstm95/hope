@@ -1,0 +1,5 @@
+interface:
+  display_name: "Hope Polish"
+  short_description: "Refine work without changing meaning or behavior"
+  brand_color: "#087EA4"
+  default_prompt: "Use $hope:polish to refine this work while preserving its meaning and behavior."

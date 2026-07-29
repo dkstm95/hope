@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "hope",
   "version": "0.5.0-alpha",
-  "description": "Adds alignment before implementation, evidence-based work review, PR explanations, clear writing, and shared settings. Requires Node.js 20 or newer.",
+  "description": "Adds alignment before implementation, bounded work polishing, evidence-based review, PR explanations, clear writing, and shared settings. Requires Node.js 20 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -10,6 +10,6 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["harness", "alignment", "review", "diff", "pull-request", "writing"],
+  "keywords": ["harness", "alignment", "polish", "refactoring", "review", "diff", "pull-request", "writing"],
   "skills": "./skills/"
 }

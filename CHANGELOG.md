@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0-alpha - 2026-07-29
+
+- Add Hope Align as an adaptive, evidence-backed pre-implementation interview
+  with validated readiness, explicit approval boundaries, and a
+  self-contained shared-understanding artifact.
+- Add Hope Toxic Review as a strict, multi-perspective review with independent
+  findings, evidence-bound adjudication, and honest no-finding results.
+- Add Hope Polish as one bounded cleanup and refactoring pass for named work
+  products. It supports evidence-backed consolidation and removal, records
+  proposed and applied revisions separately, and stops on material ambiguity.
+- Run Polish once on each contract-ready Align candidate before approval, then
+  revalidate the state and record a digest-bound receipt.
+
 ## 0.4.1-alpha - 2026-07-27
 
 - Apply Hope's shared writing standard to every model-written Diff review field

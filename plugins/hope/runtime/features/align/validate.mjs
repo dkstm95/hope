@@ -1,4 +1,6 @@
 // Generated from features/align/validate.mjs. Do not edit.
+import { createHash } from "node:crypto";
+
 import {
   serializedJsonBytes,
   stringBytes,
@@ -25,6 +27,18 @@ const uncertaintyClasses = Object.freeze([
   "implementation-check",
   "deferred",
 ]);
+const polishOutcomes = Object.freeze([
+  "revised",
+  "no-change",
+  "needs-alignment",
+]);
+const polishVerificationStatuses = Object.freeze([
+  "verified-in-checked-scope",
+  "incomplete",
+  "failed",
+  "not-completed",
+]);
+const digestPattern = /^sha256:[a-f0-9]{64}$/u;
 
 function plainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -394,6 +408,47 @@ function validateObservedMetrics(value, errors) {
   return result;
 }
 
+function digest(value, path, errors) {
+  const result = text(value, path, errors);
+  if (result && !digestPattern.test(result)) {
+    errors.push(`${path} must be a sha256 content digest`);
+  }
+  return result;
+}
+
+function candidateProjection(value) {
+  return {
+    version: value.version,
+    title: value.title,
+    taskRisk: value.taskRisk,
+    ui: value.ui,
+    revision: value.revision,
+    interviewRounds: value.interviewRounds,
+    locale: value.locale,
+    theme: value.theme,
+    snapshot: value.snapshot,
+    understanding: value.understanding,
+    records: value.records,
+    assumptions: value.assumptions,
+    uncertainties: value.uncertainties,
+    perspectives: value.perspectives,
+    slices: value.slices,
+    changes: value.changes,
+    readiness: {
+      state: value.readiness.state,
+      rationale: value.readiness.rationale,
+    },
+  };
+}
+
+export function alignCandidateDigest(value) {
+  const bytes = Buffer.from(
+    JSON.stringify(candidateProjection(value)),
+    "utf8",
+  );
+  return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
 export function validateAlignState(value, {
   approval: trustedApproval,
   inputFileBytes,
@@ -409,6 +464,7 @@ export function validateAlignState(value, {
       "interviewRounds",
       "locale",
       "perspectives",
+      "polish",
       "readiness",
       "records",
       "revision",
@@ -487,6 +543,96 @@ export function validateAlignState(value, {
     readiness,
     observedMetrics: validateObservedMetrics(trustedObservedMetrics, errors),
   };
+  let polish;
+  if (input.polish !== undefined) {
+    const polishInput = object(input.polish, "polish", errors);
+    addUnknownKeys(
+      polishInput,
+      [
+        "candidateDigest",
+        "changeSummary",
+        "outcome",
+        "resultDigest",
+        "verificationStatus",
+      ],
+      "polish",
+      errors,
+    );
+    polish = {
+      candidateDigest: digest(
+        polishInput.candidateDigest,
+        "polish.candidateDigest",
+        errors,
+      ),
+      resultDigest: digest(
+        polishInput.resultDigest,
+        "polish.resultDigest",
+        errors,
+      ),
+      outcome: choice(
+        polishInput.outcome,
+        polishOutcomes,
+        "polish.outcome",
+        errors,
+      ),
+      verificationStatus: choice(
+        polishInput.verificationStatus,
+        polishVerificationStatuses,
+        "polish.verificationStatus",
+        errors,
+      ),
+      changeSummary: stringList(
+        polishInput.changeSummary,
+        "polish.changeSummary",
+        errors,
+      ),
+    };
+    const currentDigest = alignCandidateDigest(normalized);
+    if (polish.resultDigest !== currentDigest) {
+      errors.push(
+        "polish.resultDigest must match the current Align candidate",
+      );
+    }
+    if (polish.outcome === "revised") {
+      if (polish.candidateDigest === polish.resultDigest) {
+        errors.push("a revised Polish receipt must change the candidate digest");
+      }
+      if (polish.changeSummary.length === 0) {
+        errors.push("a revised Polish receipt requires a change summary");
+      }
+      if (readiness.state !== "ready-proposed") {
+        errors.push(
+          "a revised Polish receipt requires readiness.state ready-proposed",
+        );
+      }
+    } else if (polish.changeSummary.length > 0) {
+      errors.push(
+        `${polish.outcome} Polish receipt cannot contain a change summary`,
+      );
+    }
+    if (
+      polish.outcome === "no-change"
+      && polish.candidateDigest !== polish.resultDigest
+    ) {
+      errors.push("a no-change Polish receipt must keep the candidate digest");
+    }
+    if (
+      polish.outcome === "no-change"
+      && readiness.state !== "ready-proposed"
+    ) {
+      errors.push(
+        "a no-change Polish receipt requires readiness.state ready-proposed",
+      );
+    }
+    if (
+      polish.outcome === "needs-alignment"
+      && readiness.state !== "interviewing"
+    ) {
+      errors.push(
+        "a needs-alignment Polish receipt requires readiness.state interviewing",
+      );
+    }
+  }
   if (typeof normalized.ui !== "boolean") errors.push("align.ui must be a boolean");
   for (const kind of ALIGN_PERSPECTIVES) {
     if (!perspectives.some((perspective) => perspective.kind === kind)) {
@@ -635,6 +781,7 @@ export function validateAlignState(value, {
 
   return Object.freeze({
     ...normalized,
+    ...(polish ? { polish } : {}),
     result: Object.freeze({
       blockers: Object.freeze(uniqueBlockers),
       contractReady: uniqueBlockers.length === 0,

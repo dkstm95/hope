@@ -1,7 +1,7 @@
 {
   "name": "hope",
   "version": "0.5.0-alpha",
-  "description": "Align before implementation, challenge work with evidence, understand pull requests, improve writing, and save shared preferences. Requires Node.js 20 or newer.",
+  "description": "Align before implementation, polish completed work, challenge it with evidence, understand pull requests, improve writing, and save shared preferences. Requires Node.js 20 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -9,17 +9,18 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["harness", "alignment", "review", "diff", "pull-request", "writing"],
+  "keywords": ["harness", "alignment", "polish", "refactoring", "review", "diff", "pull-request", "writing"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
     "shortDescription": "Practical ways for people and AI to work better together",
-    "longDescription": "Align finds important misunderstandings before implementation. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can decide. Write improves language without changing its meaning. Settings saves Hope preferences.",
+    "longDescription": "Align finds important misunderstandings before implementation. Polish refines completed work under an explicit preservation contract. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can decide. Write improves language without changing its meaning. Settings saves Hope preferences.",
     "developerName": "SeungIl",
     "category": "Engineering",
     "capabilities": ["Read", "Write", "Interactive"],
     "defaultPrompt": [
       "Use $hope:align to build a shared understanding before implementation.",
+      "Use $hope:polish to refine completed work without changing its meaning or behavior.",
       "Use $hope:toxic-review to challenge this plan.",
       "Use $hope:diff to explain the current pull request.",
       "Use $hope:write wherever clearer language would improve this task."

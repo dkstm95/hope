@@ -44,6 +44,11 @@ The returned JSON is Hope's complete writing brief. Follow its `standard` and
 mode-specific `response`. Also follow the person's request and any more
 specific project rule.
 
+Use Write for a standalone language-only draft, edit, or review. Use Hope
+Polish when the person instead asks for one bounded revision of a named
+completed work product that may include structural cleanup, refactoring,
+consolidation, or supported removal.
+
 Write in the current language unless the person or project asks for another
 one. Preserve exact text when the brief requires it. When clarifying an input
 prompt, do not silently change its scope or resolve a material ambiguity. Do

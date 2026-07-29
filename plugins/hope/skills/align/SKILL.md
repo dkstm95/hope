@@ -38,7 +38,7 @@ brief --risk <risk> --ui <yes|no>
 
 Add `--host-locale <locale>` when the host provides one. The returned JSON is
 the complete Align workflow. Follow its `snapshot`, `interview`, `state`,
-`approval`, `rendering`, `response`, `lifecycle`, `writingStandard`,
+`polishing`, `approval`, `rendering`, `response`, `lifecycle`, `writingStandard`,
 `schemaPath`, and `limits` fields. Do not replace those rules with another
 static interview contract in this Skill.
 
@@ -51,6 +51,26 @@ by `schemaPath`, then validate it with:
 ```text
 validate --input <private-state.json>
 ```
+
+When validation reports `contractReady`, prepare the exact approval candidate:
+
+```text
+polish-candidate --input <private-state.json>
+```
+
+Follow the returned candidate and the brief's `polishing` contract. Invoke the
+Polish runtime at `runtime/features/polish/cli.mjs` once for that exact digest.
+Then consume the result through the shared transition:
+
+```text
+complete-polish --before <candidate-state.json> --polish <private-run.json> [--after <resulting-state.json>]
+```
+
+Supply `--after` for `revised` and `needs-alignment`; omit it for `no-change`.
+Replace the private Align state with the returned `state`, which contains the
+validated receipt. Do not author the receipt yourself. A revised state must
+already include its incremented revision and change record. If the transition
+returns an interviewing state after `needs-alignment`, continue the interview.
 
 Render when the brief requires it:
 
