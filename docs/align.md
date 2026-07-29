@@ -115,6 +115,48 @@ is not a separate final report. Render after several related decisions are
 settled or when the person asks to inspect the current state. Do not regenerate
 it after every sentence.
 
+### First screen
+
+The first screen helps the person answer four questions in about 30 seconds:
+
+1. What work are we aligning on?
+2. Which alignment phase are we in?
+3. What goal and success conditions are already shared?
+4. What is the next material choice or approval action?
+
+Show the three readiness phases as one compact path. Mark the current phase and
+completed earlier phases with text as well as shape. Do not turn interview
+rounds, source counts, byte counts, or other internal resource measurements
+into a first-screen dashboard.
+
+When an open question exists, show the first question and Hope's recommendation
+as the primary next action. Link to the full choices instead of repeating every
+choice on the first screen. When no question remains, show the readiness
+rationale and the next approval or implementation action.
+
+Translate blocker codes into actions a person can recognize. Keep the exact
+codes in structured state, but do not use them as the main interface language.
+
+### Reading order
+
+Keep this order across Align artifacts. Omit a conditional section when it has
+no content.
+
+| Order | Section | Job |
+| --- | --- | --- |
+| 1 | Alignment at a glance | Show phase, goal, readiness, and the next action. |
+| 2 | Scope | Make included work, excluded work, and success conditions easy to compare. |
+| 3 | Expected behavior | Test the shared model with representative cases and boundaries. |
+| 4 | Current shared understanding | Put open questions first, then decisions, proposals, and repository facts. |
+| 5 | Assumptions and uncertainty | Keep unconfirmed claims and implementation-time checks visible. |
+| 6 | Verifiable pieces of work | Show the path from user-visible change to verification and recovery. |
+| 7 | Design perspectives | Explain why perspectives were active or skipped. |
+| 8 | History, sources, and resource use | Preserve audit detail without dominating the main reading path. |
+
+Keep open questions, scope, expected behavior, and verifiable work visible.
+Start design perspectives, change history, sources, and resource use collapsed.
+A direct fragment link opens every disclosure needed to reveal its target.
+
 The artifact shows:
 
 - the goal, phase, risk, source basis, and current blockers;
@@ -133,15 +175,16 @@ model text is escaped. A future interactive prototype must earn its own safe
 declarative contract.
 
 The renderer uses Hope design tokens, embeds the fixed fonts, supports light
-and dark themes, and remains useful with JavaScript disabled. It never replaces
-an existing output path.
+and dark themes, offers the same theme and responsive contents controls as
+other Hope artifacts, and remains useful with JavaScript disabled. It never
+replaces an existing output path.
 
 ## Resource limits
 
 Version 1 accepts at most 128 KiB of structured input, 64 KiB of generated
 prose, 64 source references, 64 decisions or facts per group, 48 scenarios,
 24 perspectives, and 48 slices. Structured input may contain at most 128
-nesting levels and 65,536 values. The artifact is limited to 4 MiB.
+nesting levels and 65,536 values. The artifact is limited to 8 MiB.
 
 These are safety ceilings, not targets. The brief asks the host to keep only
 the evidence, decisions, and questions that can change the work.

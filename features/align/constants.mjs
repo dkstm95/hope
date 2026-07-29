@@ -1,8 +1,8 @@
 export const ALIGN_CONTRACT_VERSION = 1;
-export const ALIGN_RENDERER_VERSION = 1;
+export const ALIGN_RENDERER_VERSION = 2;
 
 export const ALIGN_LIMITS = Object.freeze({
-  artifactBytes: 4 * 1024 * 1024,
+  artifactBytes: 8 * 1024 * 1024,
   groupItems: 64,
   inputBytes: 128 * 1024,
   perspectives: 24,
