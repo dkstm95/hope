@@ -70,14 +70,13 @@ test("core and generated Toxic Review reach the same brief and validator", async
   ]);
   const { schemaPath: coreSchemaPath, ...coreContract } = coreBrief;
   const { schemaPath: pluginSchemaPath, ...pluginContract } = pluginBrief;
-  assert.match(
-    coreSchemaPath,
-    /features\/toxic-review\/review-v1\.schema\.json$/u,
+  const schemaSuffix = join(
+    "features",
+    "toxic-review",
+    "review-v1.schema.json",
   );
-  assert.match(
-    pluginSchemaPath,
-    /features\/toxic-review\/review-v1\.schema\.json$/u,
-  );
+  assert.ok(coreSchemaPath.endsWith(schemaSuffix));
+  assert.ok(pluginSchemaPath.endsWith(schemaSuffix));
   assert.deepEqual(pluginContract, coreContract);
   assert.deepEqual(
     pluginValidator.validateToxicReview(makeToxicReview()),
