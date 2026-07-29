@@ -10,6 +10,7 @@ import { validateAnalysis } from "../features/diff/validate.mjs";
 import {
   makeAnalysis,
   makeSnapshot,
+  makeTeachingAidDecisions,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
 
@@ -23,6 +24,7 @@ const viewports = {
 
 let artifactDirectory;
 let artifactUrl;
+let omittedArtifactUrl;
 const visualArtifactUrls = {};
 
 test.beforeAll(async () => {
@@ -225,11 +227,27 @@ test.beforeAll(async () => {
     }],
     question: `모든 재시도가 실패하면 어떤 오류가 전달되나요? ${index + 1}`,
   }));
+  analysis.teachingAids = makeTeachingAidDecisions({
+    microworld: true,
+    quiz: true,
+    visual: true,
+  });
   const review = validateAnalysis(analysis, snapshot, { runId });
   const rendered = await renderReview(review);
   const artifactPath = join(artifactDirectory, "hope-review.html");
   await writeFile(artifactPath, rendered.bytes);
   artifactUrl = pathToFileURL(artifactPath).href;
+
+  const omittedSnapshot = makeSnapshot({ locale: "ko-KR" });
+  const omittedAnalysis = makeAnalysis(omittedSnapshot, runId);
+  for (const choice of Object.values(omittedAnalysis.teachingAids)) {
+    choice.reason = "글만으로도 이 변경을 쉽게 이해할 수 있습니다.";
+  }
+  const omittedReview = validateAnalysis(omittedAnalysis, omittedSnapshot, { runId });
+  const omittedRendered = await renderReview(omittedReview);
+  const omittedPath = join(artifactDirectory, "all-aids-omitted.html");
+  await writeFile(omittedPath, omittedRendered.bytes);
+  omittedArtifactUrl = pathToFileURL(omittedPath).href;
 
   const visualSnapshot = makeSnapshot();
   for (const kind of ["sequence", "component-map"]) {
@@ -238,6 +256,11 @@ test.beforeAll(async () => {
       includeMicroworld: false,
       visualKind: kind,
     });
+    visualAnalysis.teachingAids = makeTeachingAidDecisions({ visual: true });
+    visualAnalysis.teachingAids.microworld = {
+      decision: "not-applicable",
+      reason: "This change has no bounded state to explore.",
+    };
     const visualReview = validateAnalysis(visualAnalysis, visualSnapshot, { runId });
     const visualRendered = await renderReview(visualReview);
     const visualPath = join(artifactDirectory, `${kind}.html`);
@@ -479,6 +502,61 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   await page.setViewportSize(viewports.mobile);
   await expectNoPageOverflow(page);
   expect(remoteRequests).toEqual([]);
+});
+
+test("the artifact explains every teaching-aid omission", async ({ page }) => {
+  await page.setViewportSize(viewports.mobile);
+  await page.goto(omittedArtifactUrl);
+
+  const section = page.locator("#teaching-aids");
+  await expect(section).toBeVisible();
+  await expect(section.getByRole("heading", {
+    exact: true,
+    name: "교육 보조 자료 선택",
+  })).toBeVisible();
+  await expect(section.locator(".teaching-aid-choice")).toHaveCount(3);
+  await expect(section.locator(".teaching-aid-decision")).toHaveText([
+    "생략",
+    "생략",
+    "생략",
+  ]);
+  await expect(section.locator("h3")).toHaveText([
+    "시각 자료",
+    "마이크로월드",
+    "퀴즈",
+  ]);
+  await expect(section.locator("dd")).toHaveText([
+    "글만으로도 이 변경을 쉽게 이해할 수 있습니다.",
+    "글만으로도 이 변경을 쉽게 이해할 수 있습니다.",
+    "글만으로도 이 변경을 쉽게 이해할 수 있습니다.",
+  ]);
+  await expectNoPageOverflow(page);
+});
+
+test("the artifact distinguishes mixed teaching-aid decisions", async ({ page }) => {
+  await page.setViewportSize(viewports.mobile);
+  await page.goto(visualArtifactUrls.sequence);
+
+  const section = page.locator("#teaching-aids");
+  const cards = section.locator(".teaching-aid-choice");
+  await expect(cards).toHaveCount(3);
+  await expect(section.locator(".teaching-aid-decision")).toHaveText([
+    "Included",
+    "Not applicable",
+    "Omitted",
+  ]);
+  await expect(cards.nth(0)).toContainText(
+    "Show the retry branch and outcome relationship.",
+  );
+  await expect(cards.nth(1)).toContainText(
+    "This change has no bounded state to explore.",
+  );
+  await expect(cards.nth(2)).toContainText(
+    "The prose and selected aids already explain this behavior.",
+  );
+  await expect(cards.nth(1).getByText("Teaching job", { exact: true })).toHaveCount(0);
+  await expect(cards.nth(2).getByText("Teaching job", { exact: true })).toHaveCount(0);
+  await expectNoPageOverflow(page);
 });
 
 test("visual routes expose endpoints and direction to the accessibility tree", async ({

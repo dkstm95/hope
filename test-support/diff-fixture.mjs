@@ -244,6 +244,37 @@ export function makeTeachingBehavior({
   return behavior;
 }
 
+export function makeTeachingAidDecisions({
+  microworld = false,
+  quiz = false,
+  visual = false,
+} = {}) {
+  const decision = (included, teachingJob) => included
+    ? {
+        decision: "included",
+        reason: "This aid makes a distinct behavior easier to predict.",
+        teachingJob,
+      }
+    : {
+        decision: "omitted",
+        reason: "The prose and selected aids already explain this behavior.",
+      };
+  return {
+    microworld: decision(
+      microworld,
+      "Let the reader compare retry outcomes by changing bounded state.",
+    ),
+    quiz: decision(
+      quiz,
+      "Check one non-trivial prediction about the final failure.",
+    ),
+    visual: decision(
+      visual,
+      "Show the retry branch and outcome relationship.",
+    ),
+  };
+}
+
 export function makeAnalysis(snapshot, runId) {
   return {
     codeSteps: [
@@ -336,7 +367,8 @@ export function makeAnalysis(snapshot, runId) {
       },
     ],
     runId,
-    schemaVersion: 1,
+    schemaVersion: 2,
     snapshotDigest: snapshot.digest,
+    teachingAids: makeTeachingAidDecisions(),
   };
 }

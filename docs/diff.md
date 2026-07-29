@@ -157,10 +157,11 @@ help this change.
 | 1 | Background | Existing behavior, terms, or components are needed. |
 | 2 | Core change | Always. |
 | 3 | Behavior flow | A flow, branch, state change, comparison, or experiment helps. |
-| 4 | Code flow | Selected implementation detail adds useful understanding. |
-| 5 | Review items | At least one actionable review item exists. |
-| 6 | Check understanding | Prediction questions add learning value. |
-| 7 | Evidence and scope | Always. |
+| 4 | Teaching aid choices | Always. |
+| 5 | Code flow | Selected implementation detail adds useful understanding. |
+| 6 | Review items | At least one actionable review item exists. |
+| 7 | Check understanding | Prediction questions add learning value. |
+| 8 | Evidence and scope | Always. |
 
 ### Background
 
@@ -177,6 +178,12 @@ important result. Lead with behavior or practical effect, not file names.
 Explain behavior before code. Use a flow, conditions and results, state change,
 comparison, or small experiment only when it makes the result easier to
 predict.
+
+### Teaching aid choices
+
+Show the visual, microworld, and quiz decisions in a fixed order. Keep all
+three visible when none is included. Show a reason for every current decision
+and the separate teaching job for each included aid.
 
 ### Code flow
 
@@ -436,10 +443,11 @@ page envelope. Source IDs and line ranges remain distinct.
 
 Hope reports content-free processing details: planned inspection pages and
 serialized bytes, source bytes, actual analysis-file and canonical JSON bytes,
-evidence counts, and artifact bytes. These counters support comparison and
-diagnosis. They are not model token counts or proof that a host received every
-planned page. Record exact input or output tokens only when the active host
-supplies them.
+evidence counts, teaching-aid decision and per-aid inclusion counts, and
+artifact bytes. These counters support comparison, diagnosis, and aggregate
+checks for an aid that is never selected. They are not model token counts or
+proof that a host received every planned page. Record exact input or output
+tokens only when the active host supplies them.
 
 Reject an analysis before rendering when it exceeds the bounded authoring
 budget: 128 KiB for both the analysis file and canonical JSON, 48 KiB of
@@ -458,6 +466,40 @@ original v1 analysis limits, until that run expires.
 Use a visual, interactive model, or quiz only when it makes a relationship
 materially easier to understand. Each aid needs a distinct teaching job.
 
+Every analysis records one decision for the visual, microworld, and quiz. Use
+`included` when the analysis contains the aid, `omitted` when the aid was
+considered but prose or another aid already performs its teaching job, and
+`not-applicable` when the change has no matching relationship or prediction.
+Record a short reason for every decision. An included aid also records its
+distinct teaching job. The validator requires each decision to match the
+corresponding analysis payload.
+
+The artifact always shows all three decisions in **Teaching aid choices**. It
+shows the reason for each decision and the distinct teaching job for each
+included aid. Keep this section when every aid is omitted so the person can
+distinguish an intentional omission from a missing evaluation. A legacy
+analysis that did not record these fields shows only whether each aid is
+present. It does not describe absence as an intentional omission or invent a
+reason or teaching job.
+
+Choose the primary aid in this order:
+
+1. Use a microworld for a small bounded input, condition, or state whose
+   changes help the reader predict different outcomes.
+2. Use a visual for a static flow, branch, interaction, or component
+   relationship that prose alone makes hard to follow.
+3. Use a quiz for one or more non-trivial predictions, preserved conditions,
+   or failure cases that do not need an interactive model.
+
+Several aids may appear only when each has a separate teaching job. Do not add
+another aid to repeat the same relationship.
+
+The runtime contract includes representative evaluation cases for bounded
+state, a static relationship, a prediction without interaction, and
+prose-sufficient behavior. Generated plugin and harness preparation expose the
+same cases. Aggregate the per-aid inclusion counters across evaluation runs so
+an aid that is never selected is visible.
+
 Use a flow for a sequence, a decision table for meaningful branches, a
 sequence view for ordered interaction, and a component map for structure. A
 visual clarifies prose; it does not decorate the page.
@@ -470,10 +512,21 @@ predict the result. State what evidence grounds it, what the model simplifies,
 and what it leaves out. The self-contained HTML uses a safe explanation model.
 It does not execute repository code or present its output as a test result.
 
+Use declarative explanation text only. Do not put repository code, commands,
+expressions, URLs, or scripts in a microworld. Never claim that a microworld
+ran repository code or produced a test result. The shared teaching-aid
+contract carries these authoring rules to every supported host.
+
+The model uses one to three controls and at most twelve complete control
+combinations. Before authoring scenario prose, give the controls to the shared
+runtime's microworld-skeleton command. It validates the controls and returns
+one stable scenario ID and condition list for every combination. The analysis
+adds the title, before and after traces, outcome, and lesson to that skeleton.
+
 An experiment that executes real code belongs to the harness, not this offline
 artifact. It needs its own isolated execution boundary.
 
-Use one optional quiz with three to five evidence-backed questions only when
+Use one optional quiz with one to five evidence-backed questions only when
 prediction adds value. Give each answer a self-check explanation and evidence
 link. Keep the reader's optional response separate from the answer. Reveal the
 answer only through its own disclosure. Do not add an aggregate score, pass
@@ -557,7 +610,7 @@ evidence, uncertainty, exact-source, and locale rules are more specific. They
 take priority when simpler wording would change the meaning.
 
 Generated explanations render as plain text. Hope does not parse Markdown or
-HTML. The analysis must not add formatting. Version 1 validation rejects
+HTML. The analysis must not add formatting. Analysis validation rejects
 backticks to prevent visible inline-code markers. When exact syntax needs a
 backtick, show it in an evidence excerpt instead of generated prose.
 
@@ -607,6 +660,11 @@ Validate drafted analysis before finalization. This preflight is read-only: it
 does not render or publish an artifact. It also does not change the run phase,
 consume a repair attempt, or delete the run. Correct clear contract errors and
 repeat the preflight without collecting the pull request again.
+
+New runs use analysis contract version 2 and require teaching-aid decisions.
+An older private run keeps its original version 1 analysis contract so a
+provider-access retry does not require recollection, reinspection, or a rewritten
+analysis.
 
 Finalization validates the analysis again. A failed final validation may keep
 the private run for one explicit repair attempt. The next final validation

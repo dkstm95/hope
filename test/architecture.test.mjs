@@ -72,6 +72,21 @@ test("Align leaves normative rules in its runtime brief", async () => {
   assert.doesNotMatch(align, /Medium- and high-risk tasks activate/u);
 });
 
+test("Diff leaves teaching-aid decisions in its runtime contract", async () => {
+  const [diff, teachingAids] = await Promise.all([
+    readFile(resolve(skillsRoot, "diff", "SKILL.md"), "utf8"),
+    readFile(resolve(root, "features", "diff", "teaching-aids.mjs"), "utf8"),
+  ]);
+  assert.match(diff, /`teachingAids`/u);
+  assert.match(diff, /microworld-skeleton/u);
+  assert.doesNotMatch(diff, /Add at most one `behavior\.microworld`/u);
+  assert.doesNotMatch(diff, /three to five evidence-backed questions/u);
+  assert.match(teachingAids, /selectionOrder/u);
+  assert.match(teachingAids, /TEACHING_AID_DECISIONS/u);
+  assert.match(teachingAids, /authoring/u);
+  assert.match(teachingAids, /Never claim.*ran repository code.*test result/u);
+});
+
 test("project work requires Hope Write wherever clearer language helps", async () => {
   const [claudeInstructions, instructions] = await Promise.all([
     readFile(resolve(root, "CLAUDE.md"), "utf8"),

@@ -1,0 +1,571 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/diff-analysis-v2.json",
+  "title": "Hope diff analysis v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "snapshotDigest",
+    "locale",
+    "purpose",
+    "coreChange",
+    "contextChecks",
+    "codeSteps",
+    "reviewItems",
+    "fileDispositions",
+    "limitImpacts",
+    "teachingAids"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "runId": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "snapshotDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "locale": { "enum": ["en-US", "ko-KR"] },
+    "purpose": { "$ref": "#/$defs/claim" },
+    "coreChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["before", "after", "why", "details"],
+      "properties": {
+        "before": { "$ref": "#/$defs/claim" },
+        "after": { "$ref": "#/$defs/claim" },
+        "why": { "$ref": "#/$defs/claim" },
+        "details": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "description": "The main behavior-first explanation. Cover the purpose, previous and new behavior, affected people or systems, and important result before implementation details.",
+          "items": { "$ref": "#/$defs/claim" }
+        }
+      }
+    },
+    "contextChecks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subject",
+          "status",
+          "basis",
+          "explanation",
+          "evidence",
+          "limitIds"
+        ],
+        "properties": {
+          "subject": { "$ref": "#/$defs/text" },
+          "status": {
+            "enum": ["checked", "not-applicable", "limited"]
+          },
+          "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+          "explanation": { "$ref": "#/$defs/text" },
+          "evidence": {
+            "type": "array",
+            "maxItems": 12,
+            "items": { "$ref": "#/$defs/evidence" }
+          },
+          "limitIds": {
+            "type": "array",
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^limit-[0-9]+$" }
+          }
+        }
+      }
+    },
+    "background": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/titledClaim" }
+    },
+    "behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "steps"],
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/claim",
+          "description": "Explain the behavior, condition, or state transition that the reader should be able to predict."
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "description": "Behavior or state steps, not a list of files, functions, types, or inheritance relationships.",
+          "items": { "$ref": "#/$defs/claim" }
+        },
+        "visual": { "$ref": "#/$defs/visual" },
+        "microworld": { "$ref": "#/$defs/microworld" }
+      }
+    },
+    "codeSteps": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "text", "basis", "evidence", "fileIds"],
+        "properties": {
+          "title": { "$ref": "#/$defs/text" },
+          "text": { "$ref": "#/$defs/text" },
+          "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+          "evidence": {
+            "type": "array",
+            "maxItems": 12,
+            "items": { "$ref": "#/$defs/evidence" }
+          },
+          "fileIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^file-[0-9]+$" }
+          }
+        }
+      }
+    },
+    "reviewItems": {
+      "type": "array",
+      "maxItems": 80,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "importance",
+          "basis",
+          "title",
+          "explanation",
+          "effect",
+          "nextStep",
+          "doneWhen",
+          "evidence"
+        ],
+        "properties": {
+          "kind": { "enum": ["resolve", "decide", "verify"] },
+          "importance": { "enum": ["high", "medium", "low"] },
+          "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+          "title": { "$ref": "#/$defs/text" },
+          "explanation": { "$ref": "#/$defs/text" },
+          "effect": { "$ref": "#/$defs/text" },
+          "nextStep": { "$ref": "#/$defs/text" },
+          "doneWhen": {
+            "$ref": "#/$defs/text",
+            "description": "The exact observation or decision that closes this item's uncertainty. Do not claim a narrower test proves a broader runtime result."
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "items": { "$ref": "#/$defs/evidence" }
+          },
+          "limitIds": {
+            "type": "array",
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^limit-[0-9]+$" }
+          }
+        }
+      }
+    },
+    "fileDispositions": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fileId", "disposition"],
+        "properties": {
+          "fileId": { "type": "string", "pattern": "^file-[0-9]+$" },
+          "disposition": {
+            "enum": ["explained", "supporting", "mechanical"]
+          }
+        }
+      }
+    },
+    "limitImpacts": {
+      "type": "array",
+      "maxItems": 214,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["limitId", "material", "impact"],
+        "properties": {
+          "limitId": { "type": "string", "pattern": "^limit-[0-9]+$" },
+          "material": { "type": "boolean" },
+          "impact": {
+            "$ref": "#/$defs/text",
+            "description": "Name the concrete explanation or judgment limited by this omission. Do not use repository-wide or ecosystem-wide uncertainty."
+          }
+        }
+      }
+    },
+    "teachingAids": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visual", "microworld", "quiz"],
+      "properties": {
+        "visual": { "$ref": "#/$defs/teachingAidDecision" },
+        "microworld": { "$ref": "#/$defs/teachingAidDecision" },
+        "quiz": { "$ref": "#/$defs/teachingAidDecision" }
+      }
+    },
+    "quiz": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "answer", "evidence"],
+        "properties": {
+          "question": { "$ref": "#/$defs/text" },
+          "answer": { "$ref": "#/$defs/text" },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": { "$ref": "#/$defs/evidence" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "description": "User-facing prose rendered as plain text. Follow writingStandard.text returned by prepare. Markdown and HTML are not parsed. Analysis validation rejects backticks; keep exact syntax that needs them in evidence excerpts.",
+      "minLength": 1,
+      "maxLength": 32768
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceId", "startLine", "endLine"],
+      "properties": {
+        "sourceId": { "type": "string", "pattern": "^source-[0-9]+$" },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "basis", "evidence"],
+      "properties": {
+        "text": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+        "evidence": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "titledClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "text", "basis", "evidence"],
+      "properties": {
+        "title": { "$ref": "#/$defs/text" },
+        "text": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+        "evidence": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "teachingAidDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "reason"],
+      "properties": {
+        "decision": {
+          "enum": ["included", "omitted", "not-applicable"]
+        },
+        "reason": { "$ref": "#/$defs/text" },
+        "teachingJob": { "$ref": "#/$defs/text" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "decision": { "const": "included" } },
+            "required": ["decision"]
+          },
+          "then": { "required": ["teachingJob"] },
+          "else": { "not": { "required": ["teachingJob"] } }
+        }
+      ]
+    },
+    "aidEvidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "flowVisual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "caption", "basis", "evidence", "items"],
+      "properties": {
+        "kind": { "const": "flow" },
+        "title": { "$ref": "#/$defs/text" },
+        "caption": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "detail"],
+            "properties": {
+              "label": { "$ref": "#/$defs/text" },
+              "detail": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "decisionTableVisual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "caption", "basis", "evidence", "columns", "rows"],
+      "properties": {
+        "kind": { "const": "decision-table" },
+        "title": { "$ref": "#/$defs/text" },
+        "caption": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["case", "cells"],
+            "properties": {
+              "case": { "$ref": "#/$defs/text" },
+              "cells": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 6,
+                "items": { "$ref": "#/$defs/text" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sequenceVisual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "caption", "basis", "evidence", "participants", "messages"],
+      "properties": {
+        "kind": { "const": "sequence" },
+        "title": { "$ref": "#/$defs/text" },
+        "caption": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "participants": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "label": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "messages": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to", "label"],
+            "properties": {
+              "from": { "$ref": "#/$defs/id" },
+              "to": { "$ref": "#/$defs/id" },
+              "label": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "componentMapVisual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "caption", "basis", "evidence", "components", "connections"],
+      "properties": {
+        "kind": { "const": "component-map" },
+        "title": { "$ref": "#/$defs/text" },
+        "caption": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "components": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "detail"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "label": { "$ref": "#/$defs/text" },
+              "detail": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "connections": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to", "label"],
+            "properties": {
+              "from": { "$ref": "#/$defs/id" },
+              "to": { "$ref": "#/$defs/id" },
+              "label": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "visual": {
+      "oneOf": [
+        { "$ref": "#/$defs/flowVisual" },
+        { "$ref": "#/$defs/decisionTableVisual" },
+        { "$ref": "#/$defs/sequenceVisual" },
+        { "$ref": "#/$defs/componentMapVisual" }
+      ]
+    },
+    "microworldOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "#/$defs/text" }
+      }
+    },
+    "microworldTrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps", "outcome"],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "outcome": { "$ref": "#/$defs/text" }
+      }
+    },
+    "microworld": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "instructions",
+        "simplifies",
+        "omits",
+        "basis",
+        "evidence",
+        "controls",
+        "scenarios"
+      ],
+      "properties": {
+        "title": { "$ref": "#/$defs/text" },
+        "instructions": { "$ref": "#/$defs/text" },
+        "simplifies": { "$ref": "#/$defs/text" },
+        "omits": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "controls": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "description": "The complete Cartesian product of all control options must contain no more than 12 combinations. Use the runtime skeleton command to enumerate it.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "label", "defaultOptionId", "options"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "kind": { "enum": ["input", "condition", "state"] },
+              "label": { "$ref": "#/$defs/text" },
+              "defaultOptionId": { "$ref": "#/$defs/id" },
+              "options": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 4,
+                "items": { "$ref": "#/$defs/microworldOption" }
+              }
+            }
+          }
+        },
+        "scenarios": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "description": "Provide exactly one scenario for every control-option combination returned by the runtime skeleton command.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "title", "when", "before", "after", "lesson"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "title": { "$ref": "#/$defs/text" },
+              "when": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["controlId", "optionId"],
+                  "properties": {
+                    "controlId": { "$ref": "#/$defs/id" },
+                    "optionId": { "$ref": "#/$defs/id" }
+                  }
+                }
+              },
+              "before": { "$ref": "#/$defs/microworldTrace" },
+              "after": { "$ref": "#/$defs/microworldTrace" },
+              "lesson": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

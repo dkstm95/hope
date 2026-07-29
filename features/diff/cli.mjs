@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   addDiffContext,
+  buildMicroworldSkeleton,
   cancelDiff,
   DIFF_MODEL_ADAPTER_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
@@ -26,6 +27,7 @@ function usage() {
     "  hope diff prepare [GitHub PR URL] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
     "  hope diff inspect --run <private-run-path> --page <number>",
     "  hope diff context --run <private-run-path> --head-file <path> [--merge-base-file <path>]",
+    "  hope diff microworld-skeleton --input <private-controls.json>",
     "  hope diff validate --run <private-run-path>",
     "  hope diff finish --run <private-run-path>",
     "  hope diff cancel --run <private-run-path>",
@@ -51,6 +53,7 @@ function takeOptions(values) {
       "page",
       "head-file",
       "merge-base-file",
+      "input",
     ].includes(key)) {
       throw new TypeError(`Unknown Hope diff option: ${value}`);
     }
@@ -79,7 +82,15 @@ export function parseDiffArguments(argv) {
     return { command: "help" };
   }
   const [command, ...rest] = argv;
-  if (!["prepare", "inspect", "context", "validate", "finish", "cancel"].includes(command)) {
+  if (![
+    "prepare",
+    "inspect",
+    "context",
+    "microworld-skeleton",
+    "validate",
+    "finish",
+    "cancel",
+  ].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
   const { options, positionals } = takeOptions(rest);
@@ -90,6 +101,7 @@ export function parseDiffArguments(argv) {
       || options.page
       || options["head-file"]
       || options["merge-base-file"]
+      || options.input
     ) {
       throw new TypeError(usage());
     }
@@ -102,10 +114,28 @@ export function parseDiffArguments(argv) {
       url: positionals[0],
     };
   }
+  if (command === "microworld-skeleton") {
+    if (
+      positionals.length > 0
+      || !options.input
+      || options.run
+      || options.page
+      || options.locale
+      || options.theme
+      || options.output
+      || options["host-locale"]
+      || options["head-file"]
+      || options["merge-base-file"]
+    ) {
+      throw new TypeError(usage());
+    }
+    return { command, inputPath: options.input };
+  }
   if (positionals.length > 0 || !options.run) throw new TypeError(usage());
   if (command === "context") {
     if (
       options.page
+      || options.input
       || options.locale
       || options.theme
       || options.output
@@ -125,7 +155,8 @@ export function parseDiffArguments(argv) {
   }
   if (options["head-file"] || options["merge-base-file"]) throw new TypeError(usage());
   if (
-    options.locale
+    options.input
+    || options.locale
     || options.theme
     || options.output
     || options["host-locale"]
@@ -171,6 +202,10 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       options.requests,
       dependencies,
     );
+  } else if (options.command === "microworld-skeleton") {
+    result = await (
+      dependencies.buildMicroworldSkeleton ?? buildMicroworldSkeleton
+    )(options.inputPath, dependencies);
   } else if (options.command === "validate") {
     result = await (dependencies.validateDiff ?? validateDiff)(
       options.runPath,
