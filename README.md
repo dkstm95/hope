@@ -65,6 +65,13 @@ Claude Code
 /hope:align Help us align on this feature before implementation.
 ```
 
+Each round starts with a short teach-back of the goal, scope, expected behavior,
+and material assumptions. Align reads available repository evidence instead of
+asking the person to repeat facts, and it keeps open questions and assumptions
+visible. It proposes readiness when scope, success conditions, scenarios, and
+verifiable pieces of work are settled, but the person still approves the next
+step.
+
 Align can create a self-contained HTML snapshot of the current shared
 understanding. The snapshot shows scope, examples, assumptions, open questions,
 design perspectives, and verifiable pieces of work.
@@ -83,6 +90,12 @@ $hope:toxic-review Challenge this plan before we commit to it.
 Claude Code
 /hope:toxic-review Challenge this plan before we commit to it.
 ```
+
+Each finding identifies the issue, practical impact, proposed action,
+confidence, and supporting evidence. The main reviewer accepts, partially
+accepts, rejects, defers, or marks every finding as a duplicate before
+presenting one prioritized result. Deferred risks remain visible as unresolved
+work.
 
 Finding no material issue in the checked scope is a valid result. Toxic Review
 does not manufacture criticism to fill a quota.
