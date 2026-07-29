@@ -189,6 +189,7 @@ function claimBlock(
   review,
   codeHighlighter,
   className = "",
+  evidenceContext = claim.text,
 ) {
   return `<div class="claim ${html(className)}">
     <p>${userText(claim.text)}</p>
@@ -199,7 +200,7 @@ function claimBlock(
         dictionary,
         review,
         codeHighlighter,
-        { context: claim.text },
+        { context: evidenceContext },
       )}
     </div>
   </div>`;
@@ -213,7 +214,14 @@ function titledClaim(
 ) {
   return `<article class="explanation-step">
     <h3>${userText(item.title)}</h3>
-    ${claimBlock(item, dictionary, review, codeHighlighter)}
+    ${claimBlock(
+      item,
+      dictionary,
+      review,
+      codeHighlighter,
+      "",
+      `${item.title}: ${item.text}`,
+    )}
   </article>`;
 }
 
@@ -446,9 +454,9 @@ function reviewItem(item, dictionary, review, codeHighlighter, { compact = false
         }).join(" · ")}
       </p>`}
       <dl class="item-actions">
-        <div><dt>${html(label(dictionary, "item.effect"))}</dt><dd>${userText(item.effect)}</dd></div>
-        <div><dt>${html(label(dictionary, "item.nextStep"))}</dt><dd>${userText(item.nextStep)}</dd></div>
-        <div><dt>${html(label(dictionary, "item.doneWhen"))}</dt><dd>${userText(item.doneWhen)}</dd></div>
+        <div class="item-effect"><dt>${html(label(dictionary, "item.effect"))}</dt><dd>${userText(item.effect)}</dd></div>
+        <div class="item-next"><dt>${html(label(dictionary, "item.nextStep"))}</dt><dd>${userText(item.nextStep)}</dd></div>
+        <div class="item-done"><dt>${html(label(dictionary, "item.doneWhen"))}</dt><dd>${userText(item.doneWhen)}</dd></div>
       </dl>
       ${evidenceBlock(item.evidence, dictionary, review, codeHighlighter, {
         context: item.title,
@@ -608,7 +616,7 @@ function synopsis(review, dictionary, codeHighlighter, { title }) {
     </header>
     <h2 class="sr-only" id="synopsis-title">${html(label(dictionary, "section.synopsis"))}</h2>
     <div class="synopsis-grid">
-      <div class="synopsis-row">
+      <div class="synopsis-row synopsis-goal">
         <h3>${html(label(dictionary, "synopsis.purpose"))}</h3>
         <div class="synopsis-value">${claimBlock(
           review.purpose,
@@ -617,8 +625,10 @@ function synopsis(review, dictionary, codeHighlighter, { title }) {
           codeHighlighter,
         )}</div>
       </div>
-      <div class="before-after">
-        <div class="synopsis-row">
+      <div class="before-after change-shift" role="group" aria-label="${html(
+        `${label(dictionary, "synopsis.before")} → ${label(dictionary, "synopsis.now")}`,
+      )}">
+        <div class="synopsis-row shift-card shift-before">
           <h3>${html(label(dictionary, "synopsis.before"))}</h3>
           <div class="synopsis-value">${claimBlock(
             review.coreChange.before,
@@ -627,7 +637,8 @@ function synopsis(review, dictionary, codeHighlighter, { title }) {
             codeHighlighter,
           )}</div>
         </div>
-        <div class="synopsis-row">
+        <span class="shift-arrow" aria-hidden="true">→</span>
+        <div class="synopsis-row shift-card shift-now">
           <h3>${html(label(dictionary, "synopsis.now"))}</h3>
           <div class="synopsis-value">${claimBlock(
             review.coreChange.after,
@@ -637,7 +648,7 @@ function synopsis(review, dictionary, codeHighlighter, { title }) {
           )}</div>
         </div>
       </div>
-      <div class="synopsis-row">
+      <div class="synopsis-row synopsis-impact">
         <h3>${html(label(dictionary, "synopsis.why"))}</h3>
         <div class="synopsis-value">${claimBlock(
           review.coreChange.why,
@@ -942,13 +953,36 @@ function buildSections(review, dictionary, codeHighlighter) {
   const coreDetails = review.coreChange.details.map(
     (item) => claimBlock(item, dictionary, review, codeHighlighter, "core-detail"),
   );
+  const coreNarrative = [
+    {
+      ...review.purpose,
+      title: label(dictionary, "synopsis.purpose"),
+    },
+    {
+      ...review.coreChange.before,
+      title: label(dictionary, "synopsis.before"),
+    },
+    {
+      ...review.coreChange.after,
+      title: label(dictionary, "synopsis.now"),
+    },
+    {
+      ...review.coreChange.why,
+      title: label(dictionary, "synopsis.why"),
+    },
+  ].map(
+    (item) => `<li>${titledClaim(item, dictionary, review, codeHighlighter)}</li>`,
+  ).join("");
   sections.push({
     html: section({
-      content: coreDetails.length > 1
-        ? `<ul class="claim-list core-detail-list">${coreDetails.map(
-          (detail) => `<li>${detail}</li>`,
-        ).join("")}</ul>`
-        : coreDetails.join(""),
+      content: `<ol class="core-narrative">${coreNarrative}</ol>
+        ${coreDetails.length === 0 ? "" : `<div class="core-details">${
+          coreDetails.length > 1
+            ? `<ul class="claim-list core-detail-list">${coreDetails.map(
+              (detail) => `<li>${detail}</li>`,
+            ).join("")}</ul>`
+            : coreDetails.join("")
+        }</div>`}`,
       id: "core-change",
       title: label(dictionary, "section.core"),
     }),
@@ -1191,7 +1225,7 @@ a {
   color: var(--accent);
   text-underline-offset: .2em;
 }
-[id]:target { scroll-margin-top: ${space5}px; }
+[id]:target { scroll-margin-top: 76px; }
 .evidence-item:target,
 .scope-limit:target,
 .scope-limit-item:target {
@@ -1207,7 +1241,7 @@ select { color: inherit; }
 
 .skip {
   position: fixed;
-  z-index: 20;
+  z-index: 40;
   top: ${space2}px;
   left: ${space2}px;
   transform: translateY(-160%);
@@ -1227,8 +1261,12 @@ select { color: inherit; }
   white-space: nowrap;
   border: 0;
 }
+bdi[dir="auto"] { overflow-wrap: anywhere; }
 
 .topbar {
+  position: sticky;
+  z-index: 30;
+  top: 0;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
 }
@@ -1318,7 +1356,7 @@ select { color: inherit; }
 }
 .toc-desktop {
   position: sticky;
-  top: ${space5}px;
+  top: 76px;
   align-self: start;
   padding-left: ${space4}px;
   border-left: 1px solid var(--border);
@@ -1334,13 +1372,49 @@ select { color: inherit; }
 .toc-synopsis {
   margin-top: ${space3}px;
 }
-.toc-desktop ol { padding-left: ${space5}px; }
-.toc-desktop li { margin: ${space2}px 0; }
+.toc-desktop ol {
+  margin: ${space3}px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: toc-section;
+}
+.toc-desktop li {
+  position: relative;
+  margin: 0;
+  counter-increment: toc-section;
+}
+.toc-desktop li + li { margin-top: ${space1}px; }
+.toc-desktop li > a {
+  display: grid;
+  min-height: 32px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: ${space2}px;
+  align-items: center;
+}
+.toc-desktop li > a::before {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--muted);
+  content: counter(toc-section);
+  font: 400 ${TYPE.micro.fontSize}px/1 "Hope Code", ui-monospace, monospace;
+}
 .toc-desktop .toc-synopsis a,
 .toc-desktop a {
   color: var(--muted);
   text-decoration: none;
   font-weight: 500;
+}
+.toc-desktop a[aria-current="location"] {
+  color: var(--text);
+}
+.toc-desktop li > a[aria-current="location"]::before {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--panel);
 }
 .toc-desktop .toc-synopsis a:hover,
 .toc-desktop .toc-synopsis a:focus,
@@ -1352,6 +1426,7 @@ select { color: inherit; }
   margin-bottom: ${space5}px;
   padding: ${space4}px;
   border: 1px solid var(--border);
+  border-top: 4px solid var(--accent);
   background: var(--panel);
 }
 .synopsis-head {
@@ -1430,11 +1505,42 @@ select { color: inherit; }
 .synopsis-grid {
   display: grid;
   padding-top: ${space4}px;
-  gap: ${space3}px;
+  gap: ${space4}px;
 }
 .before-after {
   display: grid;
-  gap: ${space3}px;
+  gap: 0;
+}
+.change-shift {
+  grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr);
+  align-items: stretch;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.shift-card {
+  display: block;
+  padding: ${space3}px ${space4}px;
+}
+.shift-card > h3 { margin-bottom: ${space2}px; }
+.shift-before { color: var(--muted); }
+.shift-now {
+  position: relative;
+}
+.shift-now::before {
+  position: absolute;
+  top: ${space3}px;
+  bottom: ${space3}px;
+  left: 0;
+  width: 3px;
+  background: var(--accent);
+  content: "";
+}
+.shift-arrow {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font: 700 18px/1 "Hope Code", ui-monospace, monospace;
 }
 .synopsis-row {
   display: grid;
@@ -1443,6 +1549,19 @@ select { color: inherit; }
   align-items: start;
 }
 .synopsis-row > h3 { padding-top: 2px; }
+.synopsis-goal .claim p {
+  font-size: 1.08em;
+  line-height: 1.5;
+}
+.synopsis-impact {
+  padding-left: ${space3}px;
+  border-left: 3px solid var(--accent);
+}
+.synopsis-review,
+.synopsis-grid > .synopsis-row:last-child {
+  padding-top: ${space3}px;
+  border-top: 1px solid var(--border);
+}
 .synopsis-value {
   min-width: 0;
 }
@@ -1629,6 +1748,51 @@ select { color: inherit; }
   font-weight: 400;
 }
 .explanation-step + .explanation-step { margin-top: ${space4}px; }
+.core-narrative {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: core-claim;
+}
+.core-narrative > li {
+  display: grid;
+  position: relative;
+  min-width: 0;
+  padding: 0 0 ${space4}px 44px;
+  grid-template-columns: minmax(0, 1fr);
+  counter-increment: core-claim;
+}
+.core-narrative > li:not(:last-child)::after {
+  position: absolute;
+  top: 28px;
+  bottom: 0;
+  left: 14px;
+  border-left: 1px solid var(--border);
+  content: "";
+}
+.core-narrative > li::before {
+  display: inline-grid;
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid var(--component-border);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--accent);
+  content: counter(core-claim, decimal-leading-zero);
+  font: 400 ${TYPE.micro.fontSize}px/1 "Hope Code", ui-monospace, monospace;
+}
+.core-narrative > li:last-child { padding-bottom: 0; }
+.core-narrative .explanation-step + .explanation-step { margin-top: 0; }
+.core-details {
+  margin-top: ${space4}px;
+  padding-top: ${space3}px;
+  border-top: 1px solid var(--border);
+}
 .claim-list,
 .code-step-list,
 .titled-claim-list,
@@ -2107,14 +2271,29 @@ select { color: inherit; }
 .item-actions {
   display: grid;
   margin: ${space3}px 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${space2}px;
 }
-.item-actions > div,
+.item-actions > div {
+  display: grid;
+  min-width: 0;
+  padding: ${space3}px;
+  gap: ${space1}px;
+  border-top: 3px solid var(--border);
+  background: var(--bg);
+}
+.item-actions > .item-next { border-top-color: var(--accent); }
+.item-actions > .item-done { border-top-color: var(--component-border); }
 .scope-limit dl > div,
 .artifact-details dl > div {
   display: grid;
   grid-template-columns: 110px 1fr;
   gap: ${space3}px;
+}
+.item-actions > div,
+.scope-limit dl > div,
+.artifact-details dl > div {
+  overflow-wrap: anywhere;
 }
 .item-actions dt,
 .scope-limit dt,
@@ -2371,6 +2550,8 @@ td:first-child {
     top: calc(100% + ${space2}px);
     right: 0;
     width: min(420px, calc(100vw - ${space5}px));
+    max-height: calc(100vh - 76px);
+    overflow: auto;
     padding: ${space3}px;
     border: 1px solid var(--component-border);
     background: var(--panel);
@@ -2387,9 +2568,19 @@ td:first-child {
     border-top: 1px solid var(--border);
   }
   .toc-mobile a {
+    display: flex;
+    min-height: 44px;
+    padding: ${space2}px ${space3}px;
+    align-items: center;
+    border-left: 3px solid transparent;
     color: var(--muted);
     font-weight: 500;
     text-decoration: none;
+  }
+  .toc-mobile a[aria-current="location"] {
+    border-left-color: var(--accent);
+    color: var(--text);
+    font-weight: 700;
   }
   .toc-mobile a:hover,
   .toc-mobile a:focus-visible { color: var(--text); }
@@ -2458,6 +2649,24 @@ td:first-child {
   .artifact-details dl > div {
     grid-template-columns: 1fr;
     gap: ${space1}px;
+  }
+  .item-actions {
+    grid-template-columns: 1fr;
+  }
+  .change-shift {
+    grid-template-columns: 1fr;
+  }
+  .shift-arrow {
+    min-height: 36px;
+    transform: rotate(90deg);
+  }
+  .shift-now::before {
+    top: 0;
+    right: ${space3}px;
+    bottom: auto;
+    left: ${space3}px;
+    width: auto;
+    height: 3px;
   }
   .flow-short {
     display: grid;
@@ -2595,7 +2804,31 @@ function clientScript(dictionary) {
     microworldNoScenario: label(dictionary, "microworld.noScenario"),
     microworldSelection: label(dictionary, "microworld.selection"),
   });
-  return `(()=>{"use strict";const labels=${labels};const root=document.documentElement;const theme=document.getElementById("theme-toggle");const toc=document.querySelector(".toc-mobile");const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};syncTheme();theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});toc?.addEventListener("click",event=>{if(event.target.closest("a"))toc.open=false;});matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);for(const world of document.querySelectorAll("[data-microworld]")){const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const updateWorld=()=>{const key=controls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=controls.map(control=>control.dataset.controlLabel+": "+control.options[control.selectedIndex].textContent).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+active.dataset.status;};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;requestAnimationFrame(()=>target.scrollIntoView({block:"start"}));};addEventListener("hashchange",openTarget);addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});openTarget();})();`;
+  return `(()=>{"use strict";
+const labels=${labels};
+const root=document.documentElement;
+const theme=document.getElementById("theme-toggle");
+const toc=document.querySelector(".toc-mobile");
+const navLinks=[...document.querySelectorAll('nav a[href^="#"]')];
+const sections=[...document.querySelectorAll(".main > [id]")];
+let currentFrame=0;
+const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
+const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
+const revealTarget=target=>{if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;};
+const focusTarget=target=>{const hadTabindex=target.hasAttribute("tabindex");if(!hadTabindex)target.setAttribute("tabindex","-1");target.focus({preventScroll:true});if(!hadTabindex)target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});};
+const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}for(const link of navLinks){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
+syncTheme();
+theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
+toc?.addEventListener("click",event=>{const link=event.target.closest("a");if(!link)return;toc.open=false;const target=document.getElementById(link.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({block:"start"});});});
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);
+for(const world of document.querySelectorAll("[data-microworld]")){const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const updateWorld=()=>{const key=controls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=controls.map(control=>control.dataset.controlLabel+": "+control.options[control.selectedIndex].textContent).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+active.dataset.status;};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}
+const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({block:"start"});});};
+addEventListener("hashchange",openTarget);
+addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});
+addEventListener("scroll",()=>{if(currentFrame)return;currentFrame=requestAnimationFrame(()=>{currentFrame=0;syncCurrent();});},{passive:true});
+openTarget();
+syncCurrent();
+})();`;
 }
 
 export async function renderReview(review, { fonts } = {}) {

@@ -126,6 +126,13 @@ The first screen is a short synopsis. Do not show a separate visible
 of contents label and as an accessible section name. The main explanation
 lives in **Core change**. Group long lists and link to their full explanation.
 
+Make the change itself easy to compare. On a wide screen, place **AS-IS** and
+**TO-BE** beside each other with one directional cue between them. On a narrow
+screen, stack the same content in the same order and turn the cue downward.
+The cue is visual help only; the headings and document order must carry the
+same meaning without it. Give **Goal** and **Impact** distinct visual weight
+without adding another status, count, or dashboard layer.
+
 Show repository and pull request identity once in the product bar. Do not
 repeat it under the artifact title. Each review-item preview already names its
 kind and importance, so do not add a representative status, total, or kind
@@ -164,6 +171,12 @@ help this change.
 | 6 | Review items | At least one actionable review item exists. |
 | 7 | Check understanding | Prediction questions add learning value. |
 | 8 | Evidence and scope | Always. |
+
+On a long review, the product bar and wide-screen contents may stay visible
+while the document scrolls. Mark the section currently being read in the
+contents. This marker is navigation state, not review status. A contents link
+must reveal a collapsed target when needed and move keyboard focus to that
+target.
 
 ### Background
 

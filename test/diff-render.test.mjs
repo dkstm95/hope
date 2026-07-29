@@ -93,7 +93,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 3);
+  assert.equal(first.rendererVersion, 4);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -162,11 +162,28 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<details class="toc-mobile">/u,
   );
   assert.match(html, /\.toc-mobile-panel \{[\s\S]*?position: absolute;/u);
-  assert.match(html, /if\(event\.target\.closest\("a"\)\)toc\.open=false/u);
+  assert.match(html, /toc\.open=false/u);
+  assert.match(html, /link\.setAttribute\("aria-current","location"\)/u);
+  assert.match(html, /focusTarget\(target\)/u);
   assert.match(html, /<section class="synopsis" id="synopsis"/u);
+  assert.match(
+    html,
+    /<div class="before-after change-shift" role="group" aria-label="AS-IS → TO-BE">/u,
+  );
+  assert.match(html, /<span class="shift-arrow" aria-hidden="true">→<\/span>/u);
+  assert.match(html, /\.change-shift \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 40px minmax\(0, 1fr\);/u);
+  assert.match(html, /\.synopsis-impact \{[\s\S]*?border-left: 3px solid var\(--accent\);/u);
+  assert.match(html, /\.topbar \{[\s\S]*?position: sticky;/u);
   assert.match(html, /class="toc-synopsis"><a href="#synopsis"/u);
   assert.match(html, /\.section-heading h2::before/u);
   assert.match(html, /content: counter\(review-section\)/u);
+  assert.match(html, /bdi\[dir="auto"\] \{ overflow-wrap: anywhere; \}/u);
+  assert.match(html, /\.toc-mobile-panel \{[\s\S]*?max-height: calc\(100vh - 76px\);[\s\S]*?overflow: auto;/u);
+  assert.match(html, /\.toc-mobile a \{[\s\S]*?min-height: 44px;/u);
+  assert.match(
+    html,
+    /\.toc-mobile a\[aria-current="location"\] \{[\s\S]*?border-left-color: var\(--accent\);/u,
+  );
   assert.doesNotMatch(html, /<details class="evidence" open>/u);
   assert.match(html, /<pre class="syntax-code"><code aria-label=/u);
   assert.match(html, /class="syntax-token-[a-f0-9]{16}"/u);
@@ -211,6 +228,15 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     html,
     /<div class="synopsis-row synopsis-review">\s*<h3>Review result<\/h3>\s*<div class="synopsis-value synopsis-review-value">/u,
   );
+  const coreChange = html.match(
+    /<section class="review-section" id="core-change">[\s\S]*?<\/section>/u,
+  )?.[0] ?? "";
+  assert.equal((coreChange.match(/<ol class="core-narrative">/gu) ?? []).length, 1);
+  assert.equal((coreChange.match(/<li><article class="explanation-step">/gu) ?? []).length, 4);
+  assert.ok(coreChange.indexOf(">Goal</bdi>") < coreChange.indexOf(">AS-IS</bdi>"));
+  assert.ok(coreChange.indexOf(">AS-IS</bdi>") < coreChange.indexOf(">TO-BE</bdi>"));
+  assert.ok(coreChange.indexOf(">TO-BE</bdi>") < coreChange.indexOf(">Impact</bdi>"));
+  assert.match(coreChange, /class="core-details"/u);
   assert.match(html, /<ul class="claim-list core-detail-list">/u);
   assert.match(html, /<ul class="titled-claim-list"><li><article/u);
   assert.match(html, /<ol class="code-step-list">/u);
@@ -218,6 +244,12 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /counter\(code-step, decimal-leading-zero\)/u);
   assert.equal((html.match(/id="review-item-1"/gu) ?? []).length, 1);
   assert.match(html, /class="item-basis"/u);
+  assert.match(html, /class="item-next"/u);
+  assert.match(
+    html,
+    /\.item-actions \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/u,
+  );
+  assert.match(html, /\.item-actions > \.item-next \{ border-top-color: var\(--accent\); \}/u);
   assert.match(html, /class="related-limits"/u);
   assert.match(html, /href="#scope-limit-1"/u);
   assert.match(html, /<details class="scope-limit" id="scope-limit-1">/u);
@@ -276,6 +308,44 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /\.syntax-line \{[\s\S]*?display: inline;/u);
   assert.match(html, /<\/span>\n<span class="syntax-line/u);
   assert.match(html, /\.syntax-line-patch \{[\s\S]*?display: inline;/u);
+});
+
+test("repository evidence stays inert in supported and fallback languages", async () => {
+  for (const extension of ["js", "odd"]) {
+    const original = makeSnapshot();
+    const { digest: _digest, ...value } = original;
+    const path = `src/<img onerror=alert(path)>.${extension}`;
+    value.files = original.files.map((file) => ({
+      ...file,
+      path,
+    }));
+    value.sources = original.sources.map((source) => (
+      source.id === "source-3"
+        ? {
+          ...source,
+          path,
+          text: "@@ -1 +1,2 @@\n"
+            + "-// old\n"
+            + "+// </code><a href=\"https://evil.example\">fake</a>"
+            + "<img src=x onerror=alert(repo)>\u202e\n"
+            + "+const safe = true",
+        }
+        : source
+    ));
+    const snapshot = Object.freeze({
+      ...value,
+      digest: digestJson(value),
+    });
+    const review = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
+    const html = (await renderReview(review)).bytes.toString("utf8");
+
+    assert.doesNotMatch(html, /<a href="https:\/\/evil\.example"/u);
+    assert.doesNotMatch(html, /<img[^>]*onerror=alert\(repo\)/u);
+    assert.doesNotMatch(html, /\u202e/u);
+    assert.match(html, /\\u202E/u);
+    assert.match(html, /src\/&lt;img onerror=alert\(path\)&gt;/u);
+    assert.match(html, /&lt;\/code&gt;/u);
+  }
 });
 
 test("Korean and dark theme are reflected without a header language badge", async () => {
