@@ -1,7 +1,7 @@
 {
   "name": "hope",
-  "version": "0.4.1-alpha",
-  "description": "Understand pull requests, write clear prose, and save shared Hope preferences. Requires Node.js 20 or newer.",
+  "version": "0.5.0-alpha",
+  "description": "Challenge work with evidence, understand pull requests, improve writing, and save shared preferences. Requires Node.js 20 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -9,18 +9,19 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["harness", "diff", "pull-request", "writing", "documentation"],
+  "keywords": ["harness", "review", "diff", "pull-request", "writing"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
     "shortDescription": "Practical ways for people and AI to work better together",
-    "longDescription": "Diff explains code changes with evidence for your decision. Write helps you draft, edit, or review clear prose without losing its meaning. Settings saves the language and theme Hope should use.",
+    "longDescription": "Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can decide. Write improves language without changing its meaning. Settings saves Hope preferences.",
     "developerName": "SeungIl",
     "category": "Engineering",
     "capabilities": ["Read", "Write", "Interactive"],
     "defaultPrompt": [
+      "Use $hope:toxic-review to challenge this plan.",
       "Use $hope:diff to explain the current pull request.",
-      "Use $hope:write to make this text clear and direct."
+      "Use $hope:write wherever clearer language would improve this task."
     ],
     "brandColor": "#087EA4",
     "composerIcon": "./assets/hope-protected-light-128.png",

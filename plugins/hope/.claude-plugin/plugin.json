@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "hope",
-  "version": "0.4.1-alpha",
-  "description": "Adds evidence-linked pull-request reviews, clear writing, and shared Hope settings to Claude Code. Requires Node.js 20 or newer.",
+  "version": "0.5.0-alpha",
+  "description": "Adds evidence-based work review, PR explanations, clear writing, and shared settings. Requires Node.js 20 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -10,6 +10,6 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["harness", "diff", "pull-request", "writing", "documentation"],
+  "keywords": ["harness", "review", "diff", "pull-request", "writing"],
   "skills": "./skills/"
 }

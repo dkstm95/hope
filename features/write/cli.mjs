@@ -14,7 +14,7 @@ function usage() {
   return [
     "Use the Hope write feature.",
     "",
-    "Automatic writing currently runs through the Hope Claude or Codex skill.",
+    "Automatic writing currently runs through the Hope Write Skill for Claude or Codex.",
     "",
     "Usage:",
     "  hope write",
@@ -49,7 +49,10 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     return;
   }
   if (options.command === "automatic") {
-    return await (dependencies.runWrite ?? runWrite)(options.arguments);
+    return await (dependencies.runWrite ?? runWrite)(
+      options.arguments,
+      dependencies,
+    );
   }
   const brief = await (
     dependencies.createWritingBrief ?? createWritingBrief

@@ -51,6 +51,24 @@ Start a new Codex or Claude Code session after installation.
 
 ## Features
 
+### Toxic Review
+
+Toxic Review challenges an idea, requirement, UI, plan, implementation, PR, or
+other work product without attacking people. It selects only the review roles
+that match the current risk, adjudicates their findings, and presents one
+result ordered by priority.
+
+```text
+Codex
+$hope:toxic-review Challenge this plan before we commit to it.
+
+Claude Code
+/hope:toxic-review Challenge this plan before we commit to it.
+```
+
+Finding no material issue in the checked scope is a valid result. Toxic Review
+does not manufacture criticism to fill a quota.
+
 ### Diff
 
 Diff explains code changes with evidence, helping you make your own decisions
@@ -93,9 +111,11 @@ It does not run tests, build or lint commands, or other repository code.
 
 ### Write
 
-Write follows George Orwell's writing principles to help you draft, edit, or
-review prose. It favors familiar words, direct sentences, and visible
-conclusions while preserving meaning, facts, uncertainty, citations, and voice.
+Write applies George Orwell's writing principles wherever clearer language
+would improve the work. It can help with prompts, documentation, responses,
+interface text, errors, comments, names, and other text inside an
+implementation. It uses familiar words and direct sentences while preserving
+meaning, facts, uncertainty, citations, and voice.
 
 ```text
 Codex
@@ -106,8 +126,8 @@ Claude Code
 ```
 
 Write follows the current language and any more specific project rules. It can
-draft new text, change a requested file, or give concrete revisions when you
-ask only for a review.
+draft, edit, or review language as its own task or as a writing pass inside
+other work.
 
 ### Settings
 
