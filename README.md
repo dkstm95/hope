@@ -65,6 +65,13 @@ Claude Code
 /hope:align Help us align on this feature before implementation.
 ```
 
+Each round starts by briefly restating the goal, scope, expected behavior, and
+material assumptions. Align reads available repository evidence instead of
+asking the person to repeat facts, and it keeps open questions and assumptions
+visible. It proposes readiness only after scope, success conditions, scenarios,
+and verifiable pieces of work are settled and no material question or
+assumption remains open.
+
 Align can create a self-contained HTML snapshot of the current shared
 understanding. The snapshot shows scope, examples, assumptions, open questions,
 design perspectives, and verifiable pieces of work.
@@ -83,6 +90,11 @@ $hope:toxic-review Challenge this plan before we commit to it.
 Claude Code
 /hope:toxic-review Challenge this plan before we commit to it.
 ```
+
+Each finding identifies the issue, practical impact, proposed action,
+confidence, and supporting evidence. The main reviewer classifies every finding
+as accepted, partially accepted, rejected, deferred, or duplicate. Deferred
+risks remain visible as unresolved work.
 
 Finding no material issue in the checked scope is a valid result. Toxic Review
 does not manufacture criticism to fill a quota.
@@ -144,8 +156,12 @@ Claude Code
 ```
 
 Write follows the current language and any more specific project rules. It can
-draft, edit, or review language as its own task or as a writing pass inside
-other work.
+run as its own task or as a writing pass inside other work:
+
+- `draft` creates new prose from the request and available context.
+- `edit` changes the requested prose or files.
+- `review` reports material clarity, meaning, or flow problems without changing
+  files.
 
 ### Settings
 
