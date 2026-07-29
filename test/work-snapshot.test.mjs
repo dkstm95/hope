@@ -84,3 +84,14 @@ test("bounded structured input rejects excessive nesting", async () => {
     /exceeds 128 nesting levels/u,
   );
 });
+
+test("bounded structured input returns the exact file digest", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hope-work-digest-"));
+  const inputPath = join(root, "input.json");
+  await writeFile(inputPath, "{}\n");
+  const input = await readBoundedJson(inputPath);
+  assert.equal(
+    input.digest,
+    "sha256:ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+  );
+});

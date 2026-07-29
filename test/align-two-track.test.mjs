@@ -10,9 +10,13 @@ import {
   ALIGN_MODEL_ADAPTER_MESSAGE,
   createAlignBrief,
 } from "../features/align/index.mjs";
-import { validateAlignState } from "../features/align/validate.mjs";
+import {
+  alignCandidateDigest,
+  validateAlignState,
+} from "../features/align/validate.mjs";
 import { main, parseArguments } from "../harness/hope.mjs";
 import { makeAlignState } from "../test-support/align-fixture.mjs";
+import { makePolishRun } from "../test-support/polish-fixture.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -118,4 +122,65 @@ test("exact harness and generated Align commands stay equivalent", async () => {
     ["validate", "--input", input],
   );
   assert.deepEqual(pluginResult, harnessResult);
+
+  const harnessCandidate = runJson(
+    "harness/hope.mjs",
+    ["align", "polish-candidate", "--input", input],
+  );
+  const pluginCandidate = runJson(
+    "plugins/hope/runtime/features/align/cli.mjs",
+    ["polish-candidate", "--input", input],
+  );
+  assert.deepEqual(pluginCandidate, harnessCandidate);
+  assert.match(harnessCandidate.source.digest, /^sha256:[a-f0-9]{64}$/u);
+
+  const polishInput = join(temporaryRoot, "polish.json");
+  const polish = makePolishRun();
+  const candidateDigest = alignCandidateDigest(
+    validateAlignState(makeAlignState()),
+  );
+  const candidateSource = {
+    id: "align-candidate",
+    kind: "artifact",
+    label: "Align approval candidate",
+    locator: input,
+    digest: candidateDigest,
+  };
+  polish.snapshot.sources = [candidateSource];
+  polish.target.sourceIds = ["align-candidate"];
+  polish.preservation[0].sourceIds = ["align-candidate"];
+  polish.plan = [];
+  polish.outcome = {
+    status: "no-change",
+    outputSnapshot: {
+      capturedAt: "2026-07-29T00:05:00.000Z",
+      sources: [{ ...candidateSource }],
+    },
+    changes: [],
+    unresolved: [],
+  };
+  polish.verification[0].sourceIds = ["align-candidate"];
+  polish.application = {
+    status: "not-needed",
+    authoritySourceIds: [],
+    beforeIdentityChecked: false,
+    finalIdentityChecked: false,
+  };
+  await writeFile(polishInput, JSON.stringify(polish), { mode: 0o600 });
+  const completeArguments = [
+    "complete-polish",
+    "--before",
+    input,
+    "--polish",
+    polishInput,
+  ];
+  const harnessCompleted = runJson(
+    "harness/hope.mjs",
+    ["align", ...completeArguments],
+  );
+  const pluginCompleted = runJson(
+    "plugins/hope/runtime/features/align/cli.mjs",
+    completeArguments,
+  );
+  assert.deepEqual(pluginCompleted, harnessCompleted);
 });

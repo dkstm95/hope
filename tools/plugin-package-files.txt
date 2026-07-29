@@ -7,6 +7,7 @@ assets/hope-protected-light.png
 docs/align.md
 docs/design.md
 docs/diff.md
+docs/polish.md
 docs/toxic-review.md
 docs/write.md
 runtime/design/fonts/HopeCode.woff2
@@ -42,6 +43,11 @@ runtime/features/diff/target.mjs
 runtime/features/diff/teaching-aids.mjs
 runtime/features/diff/text.mjs
 runtime/features/diff/validate.mjs
+runtime/features/polish/cli.mjs
+runtime/features/polish/constants.mjs
+runtime/features/polish/index.mjs
+runtime/features/polish/run-v1.schema.json
+runtime/features/polish/validate.mjs
 runtime/features/toxic-review/cli.mjs
 runtime/features/toxic-review/constants.mjs
 runtime/features/toxic-review/index.mjs
@@ -65,6 +71,8 @@ skills/align/agents/openai.yaml
 skills/diff/SKILL.md
 skills/diff/agents/openai.yaml
 skills/diff/assets/hope-protected-light.png
+skills/polish/SKILL.md
+skills/polish/agents/openai.yaml
 skills/settings/SKILL.md
 skills/settings/agents/openai.yaml
 skills/settings/assets/hope-protected-light.png

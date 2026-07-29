@@ -66,8 +66,9 @@ test("Align leaves normative rules in its runtime brief", async () => {
     resolve(skillsRoot, "align", "SKILL.md"),
     "utf8",
   );
-  assert.match(align, /`snapshot`.*`interview`.*`state`/su);
+  assert.match(align, /`snapshot`.*`interview`.*`state`.*`polishing`/su);
   assert.match(align, /`approval`.*`lifecycle`/su);
+  assert.match(align, /runtime\/features\/polish\/cli\.mjs/u);
   assert.doesNotMatch(align, /Do not repeat a closed question/u);
   assert.doesNotMatch(align, /Medium- and high-risk tasks activate/u);
 });

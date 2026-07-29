@@ -54,3 +54,27 @@ expose a result from a reclaimed run.
 Optional command execution needs an enforced isolated environment or explicit
 approval of the concrete exposure and effects. Authentication remains owned by
 the provider tool or host; Hope must not read or store credentials.
+
+## Current structured AI feature boundary
+
+Align, Polish, and Toxic Review bind model-authored records to captured source
+identities and validate bounded, versioned JSON before using a result. Their
+private state belongs in a restricted temporary file outside the repository
+and is removed after completion or cancellation.
+
+Align derives readiness but cannot author its own approval. A trusted host
+approval must point to a captured conversation source. Its pre-approval Polish
+transition consumes one exact candidate digest, revalidates the resulting
+state, and records a digest-bound receipt so the same candidate is not polished
+again.
+
+Polish requires an output snapshot to keep the target source IDs, kinds, and
+locators. Digest-backed targets must remain digest-backed. An applied revision
+also records conversation-backed authority, a before-and-after comparison, and
+identity checks before and after the write. These records make the host's
+actions auditable; they are not cryptographic proof that semantic preservation
+or a filesystem write occurred.
+
+Toxic Review treats reviewer output as untrusted findings. The main reviewer
+must adjudicate every finding against the captured evidence. A finding or
+suggested action does not execute code or authorize a change by itself.

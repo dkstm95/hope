@@ -45,6 +45,12 @@ Project instructions may require Write as a cross-cutting pass in another
 feature or implementation task. That use does not move the other feature's
 behavior into Write. Write owns only the writing standard and mode contract.
 
+A standalone language-only drafting, editing, or review request belongs to
+Write. A request to make one bounded revision of a named completed work
+product—including structural cleanup, refactoring, consolidation, or supported
+removal—belongs to Polish. Polish consumes this standard for language-bearing
+changes; it does not run Write as a second feature pass.
+
 Hope diff also loads this standard from the write core. It returns the standard
 with each prepared review so the active host can apply it to every generated
 sentence. Diff adds its own evidence and uncertainty rules without copying the

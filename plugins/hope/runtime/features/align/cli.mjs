@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 
 import {
   ALIGN_MODEL_ADAPTER_CODE,
+  completeAlignPolish,
   createAlignBrief,
+  prepareAlignPolishCandidate,
   renderAlignFile,
   runAlign,
   validateAlignFile,
@@ -21,6 +23,8 @@ function usage() {
     "Internal Skill protocol:",
     "  hope align brief [--risk <low|medium|high>] [--ui <yes|no>] [--host-locale <locale>] [--locale <locale>] [--theme <theme>]",
     "  hope align validate --input <state.json>",
+    "  hope align polish-candidate --input <state.json>",
+    "  hope align complete-polish --before <state.json> --polish <run.json> [--after <state.json>]",
     "  hope align render --input <state.json> [--output <new-path>]",
   ].join("\n");
 }
@@ -35,7 +39,18 @@ function takeOptions(values) {
       continue;
     }
     const key = value.slice(2);
-    if (!["host-locale", "input", "locale", "output", "risk", "theme", "ui"].includes(key)) {
+    if (![
+      "after",
+      "before",
+      "host-locale",
+      "input",
+      "locale",
+      "output",
+      "polish",
+      "risk",
+      "theme",
+      "ui",
+    ].includes(key)) {
       throw new TypeError(`Unknown Hope align option: ${value}`);
     }
     const next = values[index + 1];
@@ -56,13 +71,25 @@ export function parseAlignArguments(argv) {
     return { command: "help" };
   }
   const [command, ...rest] = argv;
-  if (!["brief", "render", "validate"].includes(command)) {
+  if (![
+    "brief",
+    "complete-polish",
+    "polish-candidate",
+    "render",
+    "validate",
+  ].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
   const { options, positionals } = takeOptions(rest);
   if (positionals.length > 0) throw new TypeError(usage());
   if (command === "brief") {
-    if (options.input || options.output) throw new TypeError(usage());
+    if (
+      options.after
+      || options.before
+      || options.input
+      || options.output
+      || options.polish
+    ) throw new TypeError(usage());
     if (options.ui !== undefined && !["yes", "no"].includes(options.ui)) {
       throw new TypeError(usage());
     }
@@ -75,14 +102,38 @@ export function parseAlignArguments(argv) {
       ui: options.ui === "yes",
     };
   }
+  if (command === "complete-polish") {
+    if (
+      !options.before
+      || !options.polish
+      || options["host-locale"]
+      || options.input
+      || options.locale
+      || options.output
+      || options.risk
+      || options.theme
+      || options.ui
+    ) {
+      throw new TypeError(usage());
+    }
+    return {
+      command,
+      beforePath: options.before,
+      polishPath: options.polish,
+      ...(options.after ? { afterPath: options.after } : {}),
+    };
+  }
   if (
     !options.input
+    || options.after
+    || options.before
     || options["host-locale"]
     || options.locale
     || options.risk
     || options.theme
     || options.ui
-    || (command === "validate" && options.output)
+    || options.polish
+    || (["polish-candidate", "validate"].includes(command) && options.output)
   ) {
     throw new TypeError(usage());
   }
@@ -117,6 +168,14 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       options.inputPath,
       dependencies,
     );
+  } else if (options.command === "polish-candidate") {
+    result = await (
+      dependencies.prepareAlignPolishCandidate ?? prepareAlignPolishCandidate
+    )(options.inputPath, dependencies);
+  } else if (options.command === "complete-polish") {
+    result = await (
+      dependencies.completeAlignPolish ?? completeAlignPolish
+    )(options, dependencies);
   } else {
     result = await (dependencies.renderAlignFile ?? renderAlignFile)(
       options,

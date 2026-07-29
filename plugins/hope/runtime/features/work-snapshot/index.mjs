@@ -1,4 +1,5 @@
 // Generated from features/work-snapshot/index.mjs. Do not edit.
+import { createHash } from "node:crypto";
 import { lstat, open } from "node:fs/promises";
 
 export const WORK_SOURCE_KINDS = Object.freeze([
@@ -259,6 +260,7 @@ export async function readBoundedJson(path, {
       const value = JSON.parse(bytes.toString("utf8"));
       inspectStructuredValue(value);
       return Object.freeze({
+        digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
         fileBytes: bytes.length,
         value,
       });

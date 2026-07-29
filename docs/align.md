@@ -21,6 +21,14 @@ files, or claim that a prototype proves production behavior.
 Align and Diff are independent. A later Diff may use an Align artifact as
 captured context, but neither feature requires the other.
 
+Align composes with Polish at one narrow point. After the runtime reports a
+contract-ready approval candidate, the host prepares an exact candidate digest
+and invokes Polish once before asking for approval. Polish must preserve every
+fact, source, decision, uncertainty, and meaning in the Align state. If it
+revises the candidate, Align increments its revision, records the change, and
+validates readiness again. If Polish finds a material ambiguity, Align resumes
+the interview. Polish never invokes Align.
+
 ## Adaptive interview
 
 Each round starts with a short teach-back of the current goal, scope, expected
@@ -98,6 +106,20 @@ question, no open assumption, and at least one verifiable slice. Medium- and
 high-risk work also needs active product-requirement and vertical-slice
 perspectives. These checks find contradictions in the record. They do not
 prove complete understanding.
+
+Before showing a contract-ready candidate for approval, the host runs
+`polish-candidate` on the private state. The command rejects an interviewing or
+blocked state and returns an artifact source bound to the canonical candidate
+digest. The digest excludes derived metrics and the prior Polish receipt.
+
+After Polish returns, the host runs `complete-polish`. The shared transition
+checks that the run targeted the prepared digest, revalidates the resulting
+Align state, records the outcome and verification status, and binds a receipt
+to the resulting candidate. A revised state must increment its revision,
+remain contract-ready, and record the cleanup. `needs-alignment` must increment
+the revision and return to interviewing with a recorded blocker. A completed
+receipt prevents another pass over the same candidate. A user change removes
+the stale receipt, creates a new digest, and may receive one new pass.
 
 Model-authored state cannot approve itself. The `approved` phase requires a
 trusted approval record from the host, supplied outside the structured state.
@@ -193,11 +215,12 @@ the evidence, decisions, and questions that can change the work.
 
 The Claude and Codex Skills use the active host session for repository
 inspection and the interview. It asks the generated runtime for the complete
-host workflow, validates one structured state, and asks the runtime to render
-HTML. Normative interview, state, readiness, and lifecycle rules live in that
-runtime brief rather than in the Skill.
+host workflow, validates one structured state, prepares one exact Polish
+candidate when ready, and asks the runtime to render HTML. Normative interview,
+state, Polish composition, readiness, and lifecycle rules live in that runtime
+brief rather than in the Skill.
 
 The independent harness exposes the same feature as `hope align`. Its internal
-`brief`, `validate`, and `render` commands reach the shared core. Automatic
-interviewing reports that the harness model adapter is unavailable until one
-exists.
+`brief`, `validate`, `polish-candidate`, `complete-polish`, and `render`
+commands reach the shared core. Automatic interviewing reports that the
+harness model adapter is unavailable until one exists.

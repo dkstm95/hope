@@ -1,0 +1,99 @@
+// Generated from features/polish/index.mjs. Do not edit.
+import { fileURLToPath } from "node:url";
+
+import {
+  loadWritingStandard,
+  WRITE_BRIEF_VERSION,
+} from "../write/index.mjs";
+import { readBoundedJson } from "../work-snapshot/index.mjs";
+import {
+  POLISH_CONTRACT_VERSION,
+  POLISH_LIMITS,
+  POLISH_RISKS,
+} from "./constants.mjs";
+import { validatePolishRun } from "./validate.mjs";
+
+export const POLISH_MODEL_ADAPTER_CODE = "HOPE_POLISH_MODEL_ADAPTER_REQUIRED";
+export const POLISH_MODEL_ADAPTER_MESSAGE =
+  "Automatic Hope polishing currently runs through the Claude or Codex Skill.";
+
+export async function createPolishBrief({
+  risk = "medium",
+} = {}, dependencies = {}) {
+  if (!POLISH_RISKS.includes(risk)) {
+    throw new TypeError(`Unknown Hope polish risk: ${risk}`);
+  }
+  const writingStandard = await (
+    dependencies.loadWritingStandard ?? loadWritingStandard
+  )();
+  return Object.freeze({
+    feature: "polish",
+    version: POLISH_CONTRACT_VERSION,
+    risk,
+    schemaPath: fileURLToPath(
+      new URL("./run-v1.schema.json", import.meta.url),
+    ),
+    snapshot: Object.freeze([
+      "Capture the exact target and only the authority sources needed to judge this run.",
+      "Use a full Git object ID or a `sha256:` content digest for Git. Use a `sha256:` content digest for every other source.",
+      "Recheck the target identity before changing it. A changed target starts a new run.",
+    ]),
+    contract: Object.freeze([
+      "Name the target purpose, bounded in-scope and out-of-scope areas, preservation conditions, and change budget before editing.",
+      "Do not intentionally change observable behavior, a public contract, core meaning, facts, uncertainty, citations, or voice unless the person explicitly changes the task.",
+      "Do not hide a bug fix, new requirement, or product decision inside polishing. Return needs-alignment when a material choice is unresolved.",
+      "A no-change result is valid.",
+    ]),
+    planning: Object.freeze([
+      "Create one run-specific plan from the target purpose, the person's intent, authoritative project rules, and available verification.",
+      "Do not use a fixed target checklist. Treat familiar cleanup ideas as non-binding examples, not work that must be found.",
+      "For every planned change, record the target, action, reason, evidence sources, preservation conditions, risk, and verification.",
+      "Remove or merge content only when the run records evidence that it is unnecessary or duplicative. Otherwise keep it or return needs-alignment.",
+    ]),
+    editing: Object.freeze([
+      "Perform at most one bounded modification round and stay within maximumChanges.",
+      "Produce a new revision and change summary before any application step.",
+      "Use the returned writing standard for language-bearing changes.",
+      "Do not clean unrelated surrounding work, replace a formatter or linter, or commit, push, open a pull request, or merge unless the person separately asks.",
+    ]),
+    verification: Object.freeze([
+      "Verify every preservation condition and change in the smallest relevant scope.",
+      "Record passed, failed, inconclusive, and not-run checks honestly. Verified means only verified-in-checked-scope.",
+      "Do not claim full semantic preservation from tests or inspection. Keep missing coverage and uncertainty visible.",
+    ]),
+    resultPreparation: Object.freeze([
+      "Write one version 1 run that follows schemaPath to a private temporary JSON file outside the repository with restricted permissions.",
+      "The output snapshot must identify every target source in the new revision. For no-change, it must match the input identity exactly.",
+      "Validate the run, fix only clear contract errors, and remove the private JSON after validation or cancellation.",
+      "Record whether the revision is proposed, applied, or not needed. Applied work needs conversation-backed authority, a before-and-after comparison, and successful identity checks before and after application.",
+      "Apply a revision only with explicit authority. Stop on an identity mismatch.",
+    ]),
+    stopping: Object.freeze([
+      "Version 1 performs one plan and one modification round per exact target snapshot.",
+      "Stop when the budget is used, the remaining candidate is a matter of taste, evidence is insufficient, or the next change is outside scope.",
+      "Changed evidence or a changed target requires a new run.",
+    ]),
+    limits: POLISH_LIMITS,
+    writingStandard: Object.freeze({
+      text: writingStandard,
+      version: WRITE_BRIEF_VERSION,
+    }),
+  });
+}
+
+export async function validatePolishFile(inputPath, dependencies = {}) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope polish run",
+    maximumBytes: POLISH_LIMITS.inputBytes,
+  });
+  return (dependencies.validate ?? validatePolishRun)(input.value, {
+    inputFileBytes: input.fileBytes,
+    observedMetrics: dependencies.observedMetrics,
+  });
+}
+
+export function runPolish() {
+  const error = new Error(POLISH_MODEL_ADAPTER_MESSAGE);
+  error.code = POLISH_MODEL_ADAPTER_CODE;
+  throw error;
+}

@@ -10,7 +10,7 @@
 
 <p align="center">
   <strong>
-    Hope looks for practical ways for human and AI to work better together.
+    Hope looks for practical ways for people and AI to work better together.
   </strong>
 </p>
 
@@ -76,6 +76,9 @@ Align can create a self-contained HTML snapshot of the current shared
 understanding. The snapshot shows scope, examples, assumptions, open questions,
 design perspectives, and verifiable pieces of work.
 
+Before asking for approval, Align runs one bounded Polish pass over the exact
+candidate and validates the result again.
+
 ### Toxic Review
 
 Toxic Review challenges an idea, requirement, UI, plan, implementation, PR, or
@@ -98,6 +101,27 @@ risks remain visible as unresolved work.
 
 Finding no material issue in the checked scope is a valid result. Toxic Review
 does not manufacture criticism to fill a quota.
+
+### Polish
+
+Polish makes one bounded cleanup pass over a named completed work product. It
+can simplify or refactor code, tests, documentation, comments, examples, and
+errors. It can also merge duplicates or remove content when the captured
+evidence shows that the content is unnecessary.
+
+```text
+Codex
+$hope:polish Clean up this implementation without changing its behavior.
+
+Claude Code
+/hope:polish Clean up this implementation without changing its behavior.
+```
+
+Polish creates a plan for the exact target instead of applying a fixed
+checklist. It preserves public contracts, behavior, meaning, facts,
+uncertainty, citations, and voice. If a cleanup would require a product
+decision, it stops and asks for alignment. Finding no supported change is a
+valid result.
 
 ### Diff
 
@@ -162,6 +186,9 @@ run as its own task or as a writing pass inside other work:
 - `edit` changes the requested prose or files.
 - `review` reports material clarity, meaning, or flow problems without changing
   files.
+
+Use Write for a language-only task. Use Polish for a bounded revision of a
+completed work product that may also change its structure.
 
 ### Settings
 
