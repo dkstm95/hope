@@ -46,3 +46,32 @@ test("every public Skill reaches shared runtime", async () => {
     );
   }
 });
+
+test("Toxic Review leaves normative rules in its runtime brief", async () => {
+  const toxicReview = await readFile(
+    resolve(skillsRoot, "toxic-review", "SKILL.md"),
+    "utf8",
+  );
+  assert.match(
+    toxicReview,
+    /`roleSelection`.*`adjudication`.*`resultPreparation`/su,
+  );
+  assert.match(toxicReview, /`stopping`.*`finalVoice`/su);
+  assert.doesNotMatch(toxicReview, /one to six roles/u);
+  assert.doesNotMatch(toxicReview, /partially-accepted/u);
+});
+
+test("project work requires Hope Write wherever clearer language helps", async () => {
+  const [claudeInstructions, instructions] = await Promise.all([
+    readFile(resolve(root, "CLAUDE.md"), "utf8"),
+    readFile(resolve(root, "AGENTS.md"), "utf8"),
+  ]);
+  assert.match(claudeInstructions, /^# Claude Code instructions\r?\n/u);
+  assert.match(claudeInstructions, /@AGENTS\.md/u);
+  assert.match(instructions, /Use the Hope Write Skill whenever/u);
+  assert.match(instructions, /the person's input prompt/u);
+  assert.match(instructions, /intermediate updates, and final responses/u);
+  assert.match(instructions, /implementation code when Write can improve/u);
+  assert.match(instructions, /again before sending any response/u);
+  assert.match(instructions, /If the Skill is unavailable/u);
+});

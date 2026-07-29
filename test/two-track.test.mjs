@@ -195,8 +195,15 @@ test("the independent harness reports each missing AI adapter", () => {
 
 test("the harness delegates every entry to its shared command", async () => {
   const received = [];
+  const writingPass = {
+    input: { mode: "edit" },
+    response: { mode: "draft" },
+  };
   await main(["diff"], {
-    runDiffCommand: async (arguments_) => received.push(["diff", arguments_]),
+    createTaskWritingPass: async () => writingPass,
+    runDiffCommand: async (arguments_, context) => (
+      received.push(["diff", arguments_, context.writingPass])
+    ),
   });
   await main(["settings", "show"], {
     runSettingsCommand: async (arguments_) => received.push(["settings", arguments_]),
@@ -205,7 +212,7 @@ test("the harness delegates every entry to its shared command", async () => {
     runWriteCommand: async (arguments_) => received.push(["write", arguments_]),
   });
   assert.deepEqual(received, [
-    ["diff", ["automatic"]],
+    ["diff", ["automatic"], writingPass],
     ["settings", ["show"]],
     ["write", []],
   ]);

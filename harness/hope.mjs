@@ -6,6 +6,13 @@ import { fileURLToPath } from "node:url";
 
 import { main as runDiffCommand } from "../features/diff/cli.mjs";
 import {
+  TOXIC_REVIEW_MODEL_ADAPTER_CODE,
+} from "../features/toxic-review/index.mjs";
+import {
+  main as runToxicReviewCommand,
+} from "../features/toxic-review/cli.mjs";
+import {
+  createTaskWritingPass,
   WRITE_MODEL_ADAPTER_CODE,
 } from "../features/write/index.mjs";
 import { main as runWriteCommand } from "../features/write/cli.mjs";
@@ -21,10 +28,11 @@ function usage() {
     "  hope --help",
     "  hope --version",
     "  hope diff",
+    "  hope toxic-review",
     "  hope write",
     "  hope settings <show|set|reset>",
     "",
-    "Automatic diff analysis and writing currently run through the Hope Claude or Codex skill.",
+    "Automatic AI work currently runs through the Hope Skill for Claude or Codex.",
   ].join("\n");
 }
 
@@ -36,10 +44,17 @@ export function parseArguments(argv) {
     return { command: "version" };
   }
   const [command, ...rest] = argv;
-  if (!["diff", "settings", "write"].includes(command)) {
+  if (!["diff", "settings", "toxic-review", "write"].includes(command)) {
     throw new TypeError(`Unknown Hope command: ${command}`);
   }
   return { arguments: rest, command };
+}
+
+async function withWritingPass(dependencies, stdout) {
+  const writingPass = await (
+    dependencies.createTaskWritingPass ?? createTaskWritingPass
+  )(dependencies.writingDependencies);
+  return { ...dependencies, stdout, writingPass };
 }
 
 export async function main(argv = process.argv.slice(2), dependencies = {}) {
@@ -65,9 +80,18 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       { ...dependencies, stdout },
     );
   }
+  const taskDependencies = await withWritingPass(dependencies, stdout);
+  if (options.command === "toxic-review") {
+    return await (
+      dependencies.runToxicReviewCommand ?? runToxicReviewCommand
+    )(
+      options.arguments.length === 0 ? ["automatic"] : options.arguments,
+      taskDependencies,
+    );
+  }
   return await (dependencies.runDiffCommand ?? runDiffCommand)(
     options.arguments.length === 0 ? ["automatic"] : options.arguments,
-    { ...dependencies, stdout },
+    taskDependencies,
   );
 }
 
@@ -85,6 +109,7 @@ if (isEntrypoint) {
     process.stderr.write(`hope: ${error.message}\n`);
     process.exitCode = [
       "HOPE_DIFF_MODEL_ADAPTER_REQUIRED",
+      TOXIC_REVIEW_MODEL_ADAPTER_CODE,
       WRITE_MODEL_ADAPTER_CODE,
     ].includes(error.code)
       ? 2

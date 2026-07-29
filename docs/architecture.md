@@ -1,12 +1,13 @@
 # Hope architecture
 
 Hope has two entry paths into the same feature code: an independent harness and
-host plugins or skills. The shared Claude and Codex skill provides the first
+host plugins or Skills. The shared Claude and Codex Skills provide the first
 complete diff path. The harness already owns the same non-model boundaries, but
 reports that its AI adapter is not available yet.
 
 [PRINCIPLES.md](../PRINCIPLES.md) defines the project direction.
 [diff.md](diff.md) defines Hope diff.
+[toxic-review.md](toxic-review.md) defines Hope toxic review.
 [write.md](write.md) defines Hope write.
 [design.md](design.md) defines the shared visual language.
 
@@ -27,7 +28,7 @@ flowchart LR
   D -.defines.-> S
 ```
 
-The harness runs without a plugin or AI host. A skill is a thin host adapter.
+The harness runs without a plugin or AI host. A Skill is a thin host adapter.
 It may add instructions for an AI, but it does not own feature behavior.
 
 The dependency direction is:
@@ -36,7 +37,7 @@ The dependency direction is:
 harness -> features <- host adapters
 ```
 
-Feature code never imports a skill, plugin manifest, or host adapter.
+Feature code never imports a Skill, plugin manifest, or host adapter.
 
 ## Folders
 
@@ -87,13 +88,14 @@ plugins/hope/
 ├── .claude-plugin/plugin.json
 ├── skills/diff/SKILL.md
 ├── skills/settings/SKILL.md
+├── skills/toxic-review/SKILL.md
 ├── skills/write/SKILL.md
 ├── docs/                  generated product definitions
 └── runtime/               generated feature code
 ```
 
 The manifests are host adapters. They do not define feature behavior. The
-shared skill may explain how each host locates the package, but it must reach
+shared Skill may explain how each host locates the package, but it must reach
 the same generated command.
 
 ## Current diff boundary
@@ -103,25 +105,44 @@ exact GitHub pull-request snapshot, exposes bounded inspection pages, validates
 one structured analysis, rechecks the snapshot, and publishes one private
 self-contained HTML file without replacing an existing file.
 
-After the first inspection, the skill can ask the shared runtime for a limited
+After the first inspection, the Skill can ask the shared runtime for a limited
 set of grounded files at the captured head or merge-base revision. The runtime
 adds those context sources through an atomic replacement inspection plan. This
 prevents the analysis from mixing page generations.
 
-The Claude and Codex skill is the first complete AI analysis path. It can use
-the active host session to produce a structured analysis. The harness shares
-settings, collection, validation, rendering, and lifecycle code. It must not
-claim automatic AI analysis until it has a real model adapter of its own. These
-are two honest entry boundaries to one feature implementation, not separate
-diff implementations.
+The Claude and Codex Skills provide the first complete AI analysis path. They
+can use the active host session to produce a structured analysis. The harness
+shares settings, collection, validation, rendering, and lifecycle code. It
+must not claim automatic AI analysis until it has a real model adapter of its
+own. These are two honest entry boundaries to one feature implementation, not
+separate diff implementations.
 
 The shared diff runtime loads the writing standard from the write core and
-returns it with each prepared run. The skill combines that standard with its
+returns it with each prepared run. The Skill combines that standard with its
 compact diff authoring rules and the generated analysis schema. It does not
 carry another copy of the writing rules or load the full human-facing product
 and design documents for every review. Those documents remain the source of
 truth for implementation and maintenance. The runtime validator and renderer
 own their fixed behavior.
+
+## Current toxic-review boundary
+
+The current toxic-review implementation starts from
+[toxic-review.md](toxic-review.md). The active host chooses a small set of
+target-specific review roles and may run them as independent subagents. The
+shared core owns the bounded role and finding contract, source binding, final
+adjudicated result, priority ordering, and deterministic resource metrics.
+
+The harness exposes the same brief and validator. It does not claim automatic
+multi-agent review without a model adapter. The Skill coordinates host agents
+but does not own review status or metric derivation.
+
+## Shared work snapshots
+
+Toxic Review uses `features/work-snapshot/` to bind a work product to captured
+conversation, Git, file, URL, or artifact sources. This boundary validates full
+Git object IDs, content digests, structured-input depth, and resource bounds.
+It does not own review behavior.
 
 ## Current write boundary
 
@@ -129,13 +150,24 @@ The write implementation starts from [write.md](write.md). The editable writing
 standard lives only in `features/write/standard.md`. The feature core returns
 the standard with a `draft`, `edit`, or `review` response contract.
 
-The Claude and Codex Skill chooses a mode and asks the generated runtime for the
-same brief. It does not carry another copy of the writing rules. The independent
-harness routes `hope write` to the same feature. Automatic writing reports that
-its model adapter is unavailable until the harness has one.
+The Claude and Codex Skills choose a mode and ask the generated runtime for the
+same brief. They do not carry another copy of the writing rules. The
+independent harness routes `hope write` to the same feature. Automatic writing
+reports that its model adapter is unavailable until the harness has one.
 
 Diff uses the same core standard for its generated review prose. Its
 feature-specific authoring contract adds evidence and uncertainty rules.
+
+Project work also uses Write as a required cross-cutting pass whenever clearer
+language would improve an input, implementation, prompt, update, or final
+response. The active host asks the Write runtime for the current brief and
+applies it without moving another feature's behavior into Write.
+
+Claude Code loads the same project instructions through `CLAUDE.md`, which
+imports `AGENTS.md` instead of copying its rules. Before the independent
+harness delegates an AI feature, it attaches a Write pass for the input and
+response. A future harness model adapter must use that pass. Fixed protocol
+output remains deterministic and is edited at its source.
 
 ## Add a feature
 

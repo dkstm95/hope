@@ -39,6 +39,11 @@ export const generatedPluginFiles = Object.freeze([
     "<!-- Generated from docs/diff.md. Do not edit. -->\n\n",
   ),
   generatedText(
+    "docs/toxic-review.md",
+    "plugins/hope/docs/toxic-review.md",
+    "<!-- Generated from docs/toxic-review.md. Do not edit. -->\n\n",
+  ),
+  generatedText(
     "docs/write.md",
     "plugins/hope/docs/write.md",
     "<!-- Generated from docs/write.md. Do not edit. -->\n\n",
@@ -111,6 +116,24 @@ export const generatedPluginFiles = Object.freeze([
       ? `// Generated from features/write/${name}. Do not edit.\n`
       : "",
   )),
+  ...[
+    "cli.mjs",
+    "constants.mjs",
+    "index.mjs",
+    "review-v1.schema.json",
+    "validate.mjs",
+  ].map((name) => generatedText(
+    `features/toxic-review/${name}`,
+    `plugins/hope/runtime/features/toxic-review/${name}`,
+    name.endsWith(".mjs")
+      ? `// Generated from features/toxic-review/${name}. Do not edit.\n`
+      : "",
+  )),
+  generatedText(
+    "features/work-snapshot/index.mjs",
+    "plugins/hope/runtime/features/work-snapshot/index.mjs",
+    "// Generated from features/work-snapshot/index.mjs. Do not edit.\n",
+  ),
   generatedText(
     "locales/index.mjs",
     "plugins/hope/runtime/locales/index.mjs",
@@ -145,6 +168,8 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/settings/SKILL.md",
   "plugins/hope/skills/settings/agents/openai.yaml",
   "plugins/hope/skills/settings/assets/hope-protected-light.png",
+  "plugins/hope/skills/toxic-review/SKILL.md",
+  "plugins/hope/skills/toxic-review/agents/openai.yaml",
   "plugins/hope/skills/write/SKILL.md",
   "plugins/hope/skills/write/agents/openai.yaml",
   "plugins/hope/skills/write/assets/hope-protected-light.png",

@@ -1,11 +1,11 @@
 ---
 name: write
-description: Write, rewrite, edit, or review clear human-facing prose without losing its meaning, facts, or intended voice. Use when someone invokes $hope:write in Codex or /hope:write in Claude Code, asks Hope to draft or improve text, or works on documentation, a wiki, a README, product copy, an explanation, or another prose-heavy file.
+description: Draft, edit, or review clear language without losing meaning, facts, uncertainty, or voice. Use when someone invokes $hope:write in Codex or /hope:write in Claude Code, works on documentation or other prose, or would benefit from clearer prompts, instructions, responses, interface text, errors, comments, or names inside implementation work.
 ---
 
 # Hope write
 
-Use the active Claude or Codex session only to produce the prose. Let the Hope
+Use the active Claude or Codex session to apply the writing pass. Let the Hope
 runtime provide the current writing standard and mode contract.
 
 ## Choose the command
@@ -45,4 +45,6 @@ mode-specific `response`. Also follow the person's request and any more
 specific project rule.
 
 Write in the current language unless the person or project asks for another
-one. Do not copy the brief or its checklist into the result.
+one. Preserve exact text when the brief requires it. When clarifying an input
+prompt, do not silently change its scope or resolve a material ambiguity. Do
+not copy the brief or its checklist into the result.

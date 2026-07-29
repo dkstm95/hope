@@ -23,9 +23,11 @@ const requiredFiles = [
   ".agents/plugins/marketplace.json",
   ".claude-plugin/marketplace.json",
   "AGENTS.md",
+  "CLAUDE.md",
   "docs/architecture.md",
   "docs/design.md",
   "docs/diff.md",
+  "docs/toxic-review.md",
   "docs/write.md",
   "design/fonts/HopeCode.woff2",
   "design/fonts/HopeSansBold.woff2",
@@ -38,6 +40,10 @@ const requiredFiles = [
   "features/diff/analysis-v1.schema.json",
   "features/diff/cli.mjs",
   "features/diff/index.mjs",
+  "features/toxic-review/cli.mjs",
+  "features/toxic-review/index.mjs",
+  "features/toxic-review/review-v1.schema.json",
+  "features/work-snapshot/index.mjs",
   "features/write/cli.mjs",
   "features/write/index.mjs",
   "features/write/standard.md",
@@ -105,15 +111,19 @@ const [
   claudeMarketplace,
   skill,
   settingsSkill,
+  toxicReviewSkill,
   writeSkill,
   writingStandard,
   architecture,
   diff,
+  toxicReview,
   write,
   release,
   verify,
   readme,
   readmeKo,
+  agentInstructions,
+  claudeInstructions,
 ] =
   await Promise.all([
     readJson("plugins/hope/.codex-plugin/plugin.json"),
@@ -122,15 +132,19 @@ const [
     readJson(".claude-plugin/marketplace.json"),
     read("plugins/hope/skills/diff/SKILL.md"),
     read("plugins/hope/skills/settings/SKILL.md"),
+    read("plugins/hope/skills/toxic-review/SKILL.md"),
     read("plugins/hope/skills/write/SKILL.md"),
     read("features/write/standard.md"),
     read("docs/architecture.md"),
     read("docs/diff.md"),
+    read("docs/toxic-review.md"),
     read("docs/write.md"),
     read(".github/workflows/release.yml"),
     read(".github/workflows/verify.yml"),
     read("README.md"),
     read("README.ko.md"),
+    read("AGENTS.md"),
+    read("CLAUDE.md"),
   ]);
 
 assert.equal(packageJson.version, currentVersion);
@@ -177,9 +191,23 @@ assert.match(skill, /writingStandard\.text/u);
 assert.doesNotMatch(skill, /Prefer a short, familiar word/u);
 assert.match(settingsSkill, /^---\r?\nname: settings\r?\ndescription: /u);
 assert.match(settingsSkill, /runtime\/settings\/cli\.mjs/u);
+assert.match(
+  toxicReviewSkill,
+  /^---\r?\nname: toxic-review\r?\ndescription: /u,
+);
+assert.match(
+  toxicReviewSkill,
+  /runtime\/features\/toxic-review\/cli\.mjs/u,
+);
+assert.match(
+  toxicReviewSkill,
+  /`roleSelection`.*`resultPreparation`.*`finalVoice`/su,
+);
+assert.doesNotMatch(toxicReviewSkill, /partially-accepted/u);
 assert.match(writeSkill, /^---\r?\nname: write\r?\ndescription: /u);
 assert.match(writeSkill, /runtime\/features\/write\/cli\.mjs/u);
 assert.doesNotMatch(writeSkill, /Prefer a short, familiar word/u);
+assert.match(writeSkill, /clearer prompts, instructions, responses/u);
 assert.match(writingStandard, /^# Plain writing standard\r?\n/u);
 assert.match(writingStandard, /Politics and the English Language/u);
 assert.match(architecture, /harness -> features <- host adapters/u);
@@ -188,9 +216,16 @@ assert.match(architecture, /\.claude-plugin\/plugin\.json/u);
 assert.match(diff, /^# Hope diff\r?\n/u);
 assert.match(diff, /ko-KR/u);
 assert.match(diff, /en-US/u);
+assert.match(toxicReview, /^# Hope toxic review\r?\n/u);
+assert.match(toxicReview, /hope toxic-review/u);
 assert.match(write, /^# Hope write\r?\n/u);
 assert.match(write, /features\/write\/standard\.md/u);
 assert.match(write, /hope write/u);
+assert.match(write, /input prompts and task restatements/u);
+assert.match(write, /implementation code when Write can improve/u);
+assert.match(agentInstructions, /Use the Hope Write Skill whenever/u);
+assert.match(agentInstructions, /again before sending any response/u);
+assert.match(claudeInstructions, /@AGENTS\.md/u);
 assert.match(release, /npm run build:plugin/u);
 assert.match(release, /npx playwright install --with-deps chromium/u);
 assert.match(release, /npm run test:browser/u);

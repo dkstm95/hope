@@ -152,7 +152,10 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     return;
   }
   if (options.command === "automatic") {
-    return await (dependencies.runDiff ?? runDiff)(options.arguments);
+    return await (dependencies.runDiff ?? runDiff)(
+      options.arguments,
+      dependencies,
+    );
   }
   if (options.command === "prepare") {
     result = await (dependencies.prepareDiff ?? prepareDiff)(options, dependencies);

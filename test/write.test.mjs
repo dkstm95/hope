@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createTaskWritingPass,
   createWritingBrief,
   loadWritingStandard,
   runWrite,
@@ -41,6 +42,21 @@ test("a writing brief binds the shared standard to one mode", async () => {
     createWritingBrief({ mode: "polish" }),
     /Unknown Hope write mode/u,
   );
+});
+
+test("a task writing pass covers input and response language", async () => {
+  const modes = [];
+  const pass = await createTaskWritingPass({
+    createBrief: async ({ mode }) => {
+      modes.push(mode);
+      return { mode };
+    },
+  });
+  assert.deepEqual(modes.sort(), ["draft", "edit"]);
+  assert.deepEqual(pass, {
+    input: { mode: "edit" },
+    response: { mode: "draft" },
+  });
 });
 
 test("the write command returns the core brief", async () => {

@@ -43,6 +43,19 @@ export async function createWritingBrief({ mode }, {
   });
 }
 
+export async function createTaskWritingPass({
+  createBrief = createWritingBrief,
+} = {}) {
+  const [input, response] = await Promise.all([
+    createBrief({ mode: "edit" }),
+    createBrief({ mode: "draft" }),
+  ]);
+  return Object.freeze({
+    input,
+    response,
+  });
+}
+
 export function runWrite() {
   const error = new Error(WRITE_MODEL_ADAPTER_MESSAGE);
   error.code = WRITE_MODEL_ADAPTER_CODE;

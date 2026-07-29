@@ -3,10 +3,16 @@
 Read [PRINCIPLES.md](PRINCIPLES.md) before making a project-wide decision. Read
 [docs/architecture.md](docs/architecture.md) before changing the main folders.
 Read [docs/diff.md](docs/diff.md) before implementing Hope diff.
+Read [docs/toxic-review.md](docs/toxic-review.md) before implementing Hope
+toxic review.
 Read [docs/write.md](docs/write.md) before implementing Hope write.
 
 ## Main rules
 
+- Use the Hope Write Skill whenever clearer writing would improve the task.
+  Apply it to input prompts, implementation code and text, intermediate
+  updates, and final responses in any format. If the Skill is unavailable, use
+  the shared Write runtime brief and state that fallback.
 - Use short sentences and familiar names.
 - Keep `harness -> features <- host adapters` as the dependency direction.
 - Do not maintain feature code or product definitions in two places.

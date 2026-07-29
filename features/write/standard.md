@@ -30,6 +30,8 @@ These principles adapt George Orwell's six rules in
 ## Boundaries
 
 - Preserve meaning, facts, uncertainty, citations, numbers, and voice.
+- When clarifying an input prompt, do not silently narrow, expand, or resolve
+  the person's request.
 - Keep exact code, commands, identifiers, interface text, and quotations exact.
 - Keep a technical term when it is more precise than an everyday substitute.
 - Follow the grammar and natural rhythm of the language being used.

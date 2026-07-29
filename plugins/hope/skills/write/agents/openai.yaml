@@ -1,7 +1,7 @@
 interface:
   display_name: "Hope Write"
-  short_description: "Write clear prose without losing meaning"
+  short_description: "Make prompts, prose, and implementation text clear"
   icon_small: "./assets/hope-protected-light.png"
   icon_large: "./assets/hope-protected-light.png"
   brand_color: "#087EA4"
-  default_prompt: "Use $hope:write to rewrite this text in clear, direct language."
+  default_prompt: "Use $hope:write wherever clearer language would improve this task."
