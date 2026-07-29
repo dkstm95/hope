@@ -19,7 +19,10 @@ import {
   LIMITS,
 } from "../features/diff/constants.mjs";
 import { digestJson } from "../features/diff/hash.mjs";
+import { revalidateGitHubSnapshot } from "../features/diff/github.mjs";
 import {
+  DIFF_REVALIDATION_RETRYABLE_CODE,
+  DIFF_REVALIDATION_RETRYABLE_MESSAGE,
   finishDiff,
   prepareDiff,
   validateDiff,
@@ -164,6 +167,94 @@ test("snapshot revalidation starts only after rendering completes", async () => 
     },
     temporaryRoot,
   });
+});
+
+test("a revalidation access failure keeps the exact run for a later finish", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-revalidation-retry-"));
+  const outputPath = join(temporaryRoot, "review.html");
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { outputPath, temporaryRoot });
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  const analysis = `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`;
+  await writeFile(
+    created.analysisPath,
+    analysis,
+    { flag: "wx", mode: 0o600 },
+  );
+
+  await assert.rejects(
+    finishDiff(created.path, {
+      render: async () => ({ bytes: Buffer.from("review"), digest: "d".repeat(64) }),
+      revalidate: async (current) => await revalidateGitHubSnapshot(current, {
+        gh: async () => {
+          const error = new Error("network access denied");
+          error.code = 1;
+          throw error;
+        },
+      }),
+      temporaryRoot,
+    }),
+    (error) => {
+      assert.equal(error.code, DIFF_REVALIDATION_RETRYABLE_CODE);
+      assert.equal(error.canRetry, true);
+      assert.equal(error.message, DIFF_REVALIDATION_RETRYABLE_MESSAGE);
+      assert.equal(error.command, "finish");
+      assert.equal(error.runPath, created.path);
+      assert.equal(error.cause?.cause?.message, "network access denied");
+      return true;
+    },
+  );
+  await assert.rejects(access(outputPath), /ENOENT/u);
+  const retained = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(retained.manifest.phase, "inspected");
+  assert.equal(retained.manifest.analysisAttempts, 0);
+  assert.equal(await readFile(created.analysisPath, "utf8"), analysis);
+
+  const result = await finishDiff(created.path, {
+    render: async () => ({ bytes: Buffer.from("review"), digest: "d".repeat(64) }),
+    revalidate: async () => ({
+      matches: true,
+      revalidatedAt: "2026-07-23T00:01:00.000Z",
+    }),
+    temporaryRoot,
+  });
+  assert.equal(await readFile(result.outputPath, "utf8"), "review");
+  assert.equal(await readFile(outputPath, "utf8"), "review");
+  await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
+});
+
+test("an unclassified revalidation failure is terminal", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-revalidation-terminal-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+
+  await assert.rejects(
+    finishDiff(created.path, {
+      render: async () => ({ bytes: Buffer.from("review"), digest: "d".repeat(64) }),
+      revalidate: async () => {
+        throw new Error("invalid provider response");
+      },
+      temporaryRoot,
+    }),
+    (error) => {
+      assert.equal(error.message, "invalid provider response");
+      assert.equal(error.code, undefined);
+      assert.equal(error.canRetry, undefined);
+      assert.equal(error.cleanupPending, undefined);
+      return true;
+    },
+  );
+  await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
 });
 
 test("an in-flight v1 run can resume with the original analysis contract", async () => {
@@ -767,6 +858,160 @@ test("an expired finalization lease prevents publication", async (context) => {
   assert.equal(published, false);
 });
 
+test("a stale finalizer cannot remove a run claimed by a newer retry", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-finalizer-fence-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(makeAnalysis(snapshot, created.runId), null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+
+  let now = new Date();
+  const claimFinalization = async (run) => await claimDiffRunFinalization(run, {
+    clearHeartbeat: () => {},
+    clock: () => now,
+    scheduleHeartbeat: () => ({ unref() {} }),
+  });
+  let continueFirst;
+  let firstRendering;
+  const firstStarted = new Promise((resolve) => {
+    firstRendering = resolve;
+  });
+  const firstBlocked = new Promise((resolve) => {
+    continueFirst = resolve;
+  });
+  let continueSecond;
+  let secondRendering;
+  const secondStarted = new Promise((resolve) => {
+    secondRendering = resolve;
+  });
+  const secondBlocked = new Promise((resolve) => {
+    continueSecond = resolve;
+  });
+  const shared = {
+    claimFinalization,
+    finalize: async () => ({ outputPath: join(temporaryRoot, "review.html") }),
+    revalidate: async () => ({
+      matches: true,
+      revalidatedAt: "2026-07-23T00:01:00.000Z",
+    }),
+    temporaryRoot,
+  };
+
+  const first = finishDiff(created.path, {
+    ...shared,
+    render: async () => {
+      firstRendering();
+      await firstBlocked;
+      return { bytes: Buffer.from("first"), digest: "1".repeat(64) };
+    },
+  });
+  await firstStarted;
+
+  now = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const second = finishDiff(created.path, {
+    ...shared,
+    render: async () => {
+      secondRendering();
+      await secondBlocked;
+      return { bytes: Buffer.from("second"), digest: "2".repeat(64) };
+    },
+  });
+  await secondStarted;
+  now = new Date();
+
+  continueFirst();
+  await assert.rejects(first, /finalization lease was lost/u);
+  await loadDiffRun(created.path, { temporaryRoot });
+
+  continueSecond();
+  const result = await second;
+  assert.equal(result.outputPath, join(temporaryRoot, "review.html"));
+  await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
+});
+
+test("a stale finalizer cannot record failure against a newer retry", async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-analysis-fence-"));
+  const snapshot = makeSnapshot();
+  const created = await createDiffRun(snapshot, { temporaryRoot });
+  for (let page = 1; page <= created.pageCount; page += 1) {
+    await inspectDiffRun(created.path, page, { temporaryRoot });
+  }
+  const invalid = makeAnalysis(snapshot, created.runId);
+  invalid.snapshotDigest = "0".repeat(64);
+  await writeFile(
+    created.analysisPath,
+    `${JSON.stringify(invalid, null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+  await assert.rejects(
+    finishDiff(created.path, { temporaryRoot }),
+    (error) => error.code === "HOPE_ANALYSIS_INVALID" && error.canRetry === true,
+  );
+
+  let now = new Date();
+  const claimFinalization = async (run) => await claimDiffRunFinalization(run, {
+    clearHeartbeat: () => {},
+    clock: () => now,
+    scheduleHeartbeat: () => ({ unref() {} }),
+  });
+  let rejectFirst;
+  let firstValidation;
+  const firstStarted = new Promise((resolve) => {
+    firstValidation = resolve;
+  });
+  const firstBlocked = new Promise((_, reject) => {
+    rejectFirst = reject;
+  });
+  let rejectSecond;
+  let secondValidation;
+  const secondStarted = new Promise((resolve) => {
+    secondValidation = resolve;
+  });
+  const secondBlocked = new Promise((_, reject) => {
+    rejectSecond = reject;
+  });
+
+  const first = finishDiff(created.path, {
+    claimFinalization,
+    temporaryRoot,
+    validate: async () => {
+      firstValidation();
+      return await firstBlocked;
+    },
+  });
+  await firstStarted;
+
+  now = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const second = finishDiff(created.path, {
+    claimFinalization,
+    temporaryRoot,
+    validate: async () => {
+      secondValidation();
+      return await secondBlocked;
+    },
+  });
+  await secondStarted;
+  now = new Date();
+
+  rejectFirst(new Error("first analysis invalid"));
+  await assert.rejects(first, /finalization lease was lost/u);
+  const retained = await loadDiffRun(created.path, { temporaryRoot });
+  assert.equal(retained.manifest.analysisAttempts, 1);
+
+  rejectSecond(new Error("second analysis invalid"));
+  await assert.rejects(
+    second,
+    (error) => error.code === "HOPE_ANALYSIS_INVALID" && error.canRetry === false,
+  );
+  await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
+});
+
 test("expiry cleanup leaves an actively finalized old run in place", async () => {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-active-expiry-"));
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -1180,6 +1425,7 @@ test("a lease release failure preserves the primary and cleanup diagnostics", as
   await assert.rejects(
     finishDiff(created.path, {
       claimFinalization: async () => ({
+        renew: async () => {},
         release: async () => {
           throw new Error("lease release failed");
         },
