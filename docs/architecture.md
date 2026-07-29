@@ -7,6 +7,7 @@ reports that its AI adapter is not available yet.
 
 [PRINCIPLES.md](../PRINCIPLES.md) defines the project direction.
 [diff.md](diff.md) defines Hope diff.
+[align.md](align.md) defines Hope align.
 [toxic-review.md](toxic-review.md) defines Hope toxic review.
 [write.md](write.md) defines Hope write.
 [design.md](design.md) defines the shared visual language.
@@ -86,6 +87,7 @@ The package has two host manifests:
 plugins/hope/
 ├── .codex-plugin/plugin.json
 ├── .claude-plugin/plugin.json
+├── skills/align/SKILL.md
 ├── skills/diff/SKILL.md
 ├── skills/settings/SKILL.md
 ├── skills/toxic-review/SKILL.md
@@ -125,6 +127,21 @@ and design documents for every review. Those documents remain the source of
 truth for implementation and maintenance. The runtime validator and renderer
 own their fixed behavior.
 
+## Current align boundary
+
+The current align implementation starts from [align.md](align.md). The active
+Claude or Codex host inspects available evidence and conducts the adaptive
+interview. The shared core owns the brief, structured-state validation,
+readiness derivation, resource preflight, and deterministic HTML rendering.
+
+The HTML is a snapshot of the current shared understanding. Repository facts,
+user decisions, AI proposals, and open items stay distinct. The runtime escapes
+all authored text and never replaces an existing artifact.
+
+The independent harness exposes the same brief, validator, and renderer. It
+reports that automatic interviewing is unavailable until it has a model
+adapter. The Skill is an adapter to the generated copy of that core.
+
 ## Current toxic-review boundary
 
 The current toxic-review implementation starts from
@@ -139,10 +156,11 @@ but does not own review status or metric derivation.
 
 ## Shared work snapshots
 
-Toxic Review uses `features/work-snapshot/` to bind a work product to captured
-conversation, Git, file, URL, or artifact sources. This boundary validates full
-Git object IDs, content digests, structured-input depth, and resource bounds.
-It does not own review behavior.
+Align and Toxic Review use `features/work-snapshot/` to bind a work product to
+captured conversation, Git, file, URL, or artifact sources. This shared
+boundary validates full Git object IDs, content digests, structured-input
+depth, and resource bounds. It does not own either feature's interview or
+review behavior.
 
 ## Current write boundary
 

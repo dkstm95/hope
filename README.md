@@ -51,6 +51,24 @@ Start a new Codex or Claude Code session after installation.
 
 ## Features
 
+### Align
+
+Align finds important misunderstandings before implementation. It adapts its
+questions to the task's risk, separates user decisions from repository facts
+and AI proposals, and waits for explicit approval before the next step.
+
+```text
+Codex
+$hope:align Help us align on this feature before implementation.
+
+Claude Code
+/hope:align Help us align on this feature before implementation.
+```
+
+Align can create a self-contained HTML snapshot of the current shared
+understanding. The snapshot shows scope, examples, assumptions, open questions,
+design perspectives, and verifiable pieces of work.
+
 ### Toxic Review
 
 Toxic Review challenges an idea, requirement, UI, plan, implementation, PR, or

@@ -5,6 +5,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import {
+  ALIGN_MODEL_ADAPTER_CODE,
+} from "../features/align/index.mjs";
+import { main as runAlignCommand } from "../features/align/cli.mjs";
+import {
   diffErrorReport,
   main as runDiffCommand,
 } from "../features/diff/cli.mjs";
@@ -30,6 +34,7 @@ function usage() {
     "Usage:",
     "  hope --help",
     "  hope --version",
+    "  hope align",
     "  hope diff",
     "  hope toxic-review",
     "  hope write",
@@ -47,7 +52,7 @@ export function parseArguments(argv) {
     return { command: "version" };
   }
   const [command, ...rest] = argv;
-  if (!["diff", "settings", "toxic-review", "write"].includes(command)) {
+  if (!["align", "diff", "settings", "toxic-review", "write"].includes(command)) {
     throw new TypeError(`Unknown Hope command: ${command}`);
   }
   return { arguments: rest, command };
@@ -84,6 +89,12 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     );
   }
   const taskDependencies = await withWritingPass(dependencies, stdout);
+  if (options.command === "align") {
+    return await (dependencies.runAlignCommand ?? runAlignCommand)(
+      options.arguments.length === 0 ? ["automatic"] : options.arguments,
+      taskDependencies,
+    );
+  }
   if (options.command === "toxic-review") {
     return await (
       dependencies.runToxicReviewCommand ?? runToxicReviewCommand
@@ -109,6 +120,7 @@ const isEntrypoint = (() => {
 
 export function harnessErrorReport(error) {
   if ([
+    ALIGN_MODEL_ADAPTER_CODE,
     TOXIC_REVIEW_MODEL_ADAPTER_CODE,
     WRITE_MODEL_ADAPTER_CODE,
   ].includes(error?.code)) {

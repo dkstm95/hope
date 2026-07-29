@@ -29,6 +29,11 @@ export const generatedPluginFiles = Object.freeze([
     "plugins/hope/THIRD_PARTY_NOTICES.md",
   ),
   generatedText(
+    "docs/align.md",
+    "plugins/hope/docs/align.md",
+    "<!-- Generated from docs/align.md. Do not edit. -->\n\n",
+  ),
+  generatedText(
     "docs/design.md",
     "plugins/hope/docs/design.md",
     "<!-- Generated from docs/design.md. Do not edit. -->\n\n",
@@ -81,6 +86,25 @@ export const generatedPluginFiles = Object.freeze([
     "plugins/hope/runtime/design/tokens.mjs",
     "// Generated from design/tokens.mjs. Do not edit.\n",
   ),
+  generatedText(
+    "features/artifact/index.mjs",
+    "plugins/hope/runtime/features/artifact/index.mjs",
+    "// Generated from features/artifact/index.mjs. Do not edit.\n",
+  ),
+  ...[
+    "cli.mjs",
+    "constants.mjs",
+    "index.mjs",
+    "render.mjs",
+    "session-v1.schema.json",
+    "validate.mjs",
+  ].map((name) => generatedText(
+    `features/align/${name}`,
+    `plugins/hope/runtime/features/align/${name}`,
+    name.endsWith(".mjs")
+      ? `// Generated from features/align/${name}. Do not edit.\n`
+      : "",
+  )),
   generatedBundle(
     "features/diff/highlight.mjs",
     "plugins/hope/runtime/features/diff/highlight.mjs",
@@ -139,7 +163,7 @@ export const generatedPluginFiles = Object.freeze([
     "plugins/hope/runtime/locales/index.mjs",
     "// Generated from locales/index.mjs. Do not edit.\n",
   ),
-  ...["en-US", "ko-KR"].flatMap((locale) => ["common", "diff"].map(
+  ...["en-US", "ko-KR"].flatMap((locale) => ["align", "common", "diff"].map(
     (name) => generatedText(
       `locales/${locale}/${name}.json`,
       `plugins/hope/runtime/locales/${locale}/${name}.json`,
@@ -162,6 +186,8 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/.codex-plugin/plugin.json",
   "plugins/hope/assets/hope-protected-light-128.png",
   "plugins/hope/assets/hope-protected-light.png",
+  "plugins/hope/skills/align/SKILL.md",
+  "plugins/hope/skills/align/agents/openai.yaml",
   "plugins/hope/skills/diff/SKILL.md",
   "plugins/hope/skills/diff/agents/openai.yaml",
   "plugins/hope/skills/diff/assets/hope-protected-light.png",

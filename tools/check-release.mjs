@@ -24,6 +24,7 @@ const requiredFiles = [
   ".claude-plugin/marketplace.json",
   "AGENTS.md",
   "CLAUDE.md",
+  "docs/align.md",
   "docs/architecture.md",
   "docs/design.md",
   "docs/diff.md",
@@ -37,6 +38,10 @@ const requiredFiles = [
   "design/fonts/OFL-Gmarket.txt",
   "design/fonts/SOURCE.md",
   "design/tokens.mjs",
+  "features/align/cli.mjs",
+  "features/align/index.mjs",
+  "features/align/session-v1.schema.json",
+  "features/artifact/index.mjs",
   "features/diff/analysis-v1.schema.json",
   "features/diff/cli.mjs",
   "features/diff/index.mjs",
@@ -109,12 +114,14 @@ const [
   claudePlugin,
   codexMarketplace,
   claudeMarketplace,
+  alignSkill,
   skill,
   settingsSkill,
   toxicReviewSkill,
   writeSkill,
   writingStandard,
   architecture,
+  align,
   diff,
   toxicReview,
   write,
@@ -130,12 +137,14 @@ const [
     readJson("plugins/hope/.claude-plugin/plugin.json"),
     readJson(".agents/plugins/marketplace.json"),
     readJson(".claude-plugin/marketplace.json"),
+    read("plugins/hope/skills/align/SKILL.md"),
     read("plugins/hope/skills/diff/SKILL.md"),
     read("plugins/hope/skills/settings/SKILL.md"),
     read("plugins/hope/skills/toxic-review/SKILL.md"),
     read("plugins/hope/skills/write/SKILL.md"),
     read("features/write/standard.md"),
     read("docs/architecture.md"),
+    read("docs/align.md"),
     read("docs/diff.md"),
     read("docs/toxic-review.md"),
     read("docs/write.md"),
@@ -184,6 +193,10 @@ const claudeMarketplaceEntry = claudeMarketplace.plugins.find(
 assert.equal(claudeMarketplaceEntry.source, "./plugins/hope");
 assert.equal(claudeMarketplaceEntry.version, undefined);
 assert.doesNotMatch(claudeMarketplaceEntry.description, /rebuild status/u);
+assert.match(alignSkill, /^---\r?\nname: align\r?\ndescription: /u);
+assert.match(alignSkill, /runtime\/features\/align\/cli\.mjs/u);
+assert.match(alignSkill, /`snapshot`.*`approval`.*`lifecycle`/su);
+assert.doesNotMatch(alignSkill, /Do not repeat a closed question/u);
 assert.match(skill, /^---\r?\nname: diff\r?\ndescription: /u);
 assert.match(skill, /runtime\/features\/diff\/cli\.mjs/u);
 assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/runtime\/features\/diff\/cli\.mjs/u);
@@ -213,6 +226,8 @@ assert.match(writingStandard, /Politics and the English Language/u);
 assert.match(architecture, /harness -> features <- host adapters/u);
 assert.match(architecture, /\.codex-plugin\/plugin\.json/u);
 assert.match(architecture, /\.claude-plugin\/plugin\.json/u);
+assert.match(align, /^# Hope align\r?\n/u);
+assert.match(align, /hope align/u);
 assert.match(diff, /^# Hope diff\r?\n/u);
 assert.match(diff, /ko-KR/u);
 assert.match(diff, /en-US/u);

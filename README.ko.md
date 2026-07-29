@@ -52,6 +52,24 @@ claude plugin install hope@hope
 
 ## 기능
 
+### Align
+
+Align은 구현 전에 중요한 오해를 찾습니다. 작업 위험에 맞게 질문을
+조절하고, 사용자 결정과 저장소 사실, AI 제안을 구분하며, 다음 단계로
+가기 전에 명시적인 승인을 기다립니다.
+
+```text
+Codex
+$hope:align 이 기능을 구현하기 전에 이해를 맞춰 주세요.
+
+Claude Code
+/hope:align 이 기능을 구현하기 전에 이해를 맞춰 주세요.
+```
+
+Align은 현재 공유된 이해를 자체 포함 HTML로 만들 수 있습니다. HTML에는
+범위, 사례, 가정, 남은 질문, 설계 관점과 검증 가능한 작업 단위가
+표시됩니다.
+
 ### Toxic Review
 
 Toxic Review는 사람을 공격하지 않으면서 아이디어, 요구사항, UI, 계획,
