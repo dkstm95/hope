@@ -583,10 +583,23 @@ The user-visible guarantees are:
 Revalidate a current target immediately before a completed local artifact
 becomes visible and again before a later external publish action. If the check
 fails, do not expose a new final artifact or change the external destination.
+Finalization needs the same authenticated provider access used for collection.
+An entry adapter whose host grants network access per command must obtain that
+access before its first finalization attempt.
 
-Remove private collection and model files after normal success, failure, or
-cooperative cancellation. A process crash or forced termination can prevent
-immediate cleanup. Each run therefore needs an ownership record and restrictive
+If provider access fails during this pre-publication revalidation, keep the
+exact private run and create no artifact. After access is restored, finalization
+may retry from the same bound snapshot and analysis. It must not recollect the
+pull request, repeat inspection, or ask for a rewritten analysis. A confirmed
+snapshot change or invalid provider response remains terminal and removes the
+run. The retry error identifies the retained run and exact next operation so a
+later session does not depend on conversation history.
+
+Remove private collection and model files after normal success, terminal
+failure, or cooperative cancellation. A recoverable revalidation failure keeps
+the run only until finalization succeeds, the person cancels, or expiry cleanup
+removes it. A process crash or forced termination can prevent immediate
+cleanup. Each run therefore needs an ownership record and restrictive
 permissions. A later Hope invocation safely cleans up expired runs. Never infer
 ownership from a directory name alone.
 
