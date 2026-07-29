@@ -12,6 +12,8 @@ test("the supported locale dictionaries have identical keys", async () => {
   const keys = await checkLocaleParity();
   assert.ok(keys.includes("section.core"));
   assert.ok(keys.includes("settings.locale"));
+  const alignKeys = await checkLocaleParity(["common", "align"]);
+  assert.ok(alignKeys.includes("align.sharedState"));
 });
 
 test("locale normalization is narrow and labels fail closed", async () => {

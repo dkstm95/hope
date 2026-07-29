@@ -61,6 +61,17 @@ test("Toxic Review leaves normative rules in its runtime brief", async () => {
   assert.doesNotMatch(toxicReview, /partially-accepted/u);
 });
 
+test("Align leaves normative rules in its runtime brief", async () => {
+  const align = await readFile(
+    resolve(skillsRoot, "align", "SKILL.md"),
+    "utf8",
+  );
+  assert.match(align, /`snapshot`.*`interview`.*`state`/su);
+  assert.match(align, /`approval`.*`lifecycle`/su);
+  assert.doesNotMatch(align, /Do not repeat a closed question/u);
+  assert.doesNotMatch(align, /Medium- and high-risk tasks activate/u);
+});
+
 test("project work requires Hope Write wherever clearer language helps", async () => {
   const [claudeInstructions, instructions] = await Promise.all([
     readFile(resolve(root, "CLAUDE.md"), "utf8"),

@@ -138,7 +138,7 @@ test("review finalization rejects a replaced publication identity", async () => 
       runId: "1".repeat(32),
       snapshotDigest: "b".repeat(64),
     }),
-    /publication identity changed/u,
+    /artifact changed during publication/u,
   );
   assert.equal(await readFile(outputPath, "utf8"), "replacement");
   const info = await lstat(outputPath);

@@ -53,6 +53,7 @@ are complete.
 
 - Repository and release workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
 - System structure: [docs/architecture.md](docs/architecture.md)
+- Align behavior: [docs/align.md](docs/align.md)
 - Diff behavior: [docs/diff.md](docs/diff.md)
 - Toxic Review behavior: [docs/toxic-review.md](docs/toxic-review.md)
 - Write behavior: [docs/write.md](docs/write.md)

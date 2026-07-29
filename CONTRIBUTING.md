@@ -2,6 +2,7 @@
 
 Read [PRINCIPLES.md](PRINCIPLES.md) before making a project-wide decision. Read
 [docs/architecture.md](docs/architecture.md) before changing the main folders.
+Read [docs/align.md](docs/align.md) before implementing Hope align.
 Read [docs/diff.md](docs/diff.md) before implementing Hope diff.
 Read [docs/toxic-review.md](docs/toxic-review.md) before implementing Hope
 toxic review.
