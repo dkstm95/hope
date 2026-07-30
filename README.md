@@ -10,11 +10,28 @@
 
 <p align="center">
   <strong>
-    Hope looks for practical ways for people and AI to work better together.
+    Hope helps people work with AI while staying able to see, understand, and
+    control the work.
   </strong>
 </p>
 
 <p align="center"><a href="README.ko.md">한국어</a></p>
+
+AI can finish a task quickly without making its decisions, evidence, or
+remaining uncertainty clear to the person responsible for it. Hope provides
+focused tools for those moments: align on a task before implementation,
+challenge a work product, understand a code change, refine completed work, and
+make language clear without losing its meaning.
+
+## Start with your problem
+
+| If this sounds familiar… | Use | Hope helps you… |
+| --- | --- | --- |
+| “The AI and I may not understand this task the same way.” | **Align** | Find material misunderstandings and make the current shared understanding visible before implementation |
+| “This looks convincing, but I may be missing an important problem.” | **Toxic Review** | Challenge the work with relevant perspectives and return one evidence-based result |
+| “AI changed the code, but I cannot explain what changed or judge it yet.” | **Diff** | Understand one exact change, make an informed judgment, and carry that understanding into later work |
+| “The work is complete, but it needs refinement without changing settled behavior or meaning.” | **Polish** | Refine it once within explicit preservation conditions and a stated verification scope |
+| “This language needs to be clearer without losing meaning, facts, uncertainty, citations, or voice.” | **Write** | Draft, edit, or review prose with one shared writing standard |
 
 ## Install
 
@@ -49,23 +66,20 @@ claude plugin install hope@hope
 
 Start a new Codex or Claude Code session after installation.
 
-## Choose a feature
-
-| When you need to… | Use | What you get |
-| --- | --- | --- |
-| Settle a task before implementation | **Align** | A visible shared understanding and approval boundary |
-| Critically assess work | **Toxic Review** | One evidence-based result ordered by priority |
-| Understand changes and use that understanding in decisions or later work | **Diff** | One local HTML review with evidence and next checks |
-| Refine a work product | **Polish** | One bounded cleanup pass with a stated verification scope |
-| Draft, edit, or review language | **Write** | A clear draft, edit, or review that preserves meaning |
-| Keep language and theme preferences | **Settings** | Defaults shared by supported Hope artifacts |
-
 ## Features
 
 ### Align
 
-Align finds important misunderstandings before implementation begins.
-It reads available evidence, adapts its questions to risk, and keeps unresolved choices visible.
+> “The AI and I may not understand this task the same way.”
+
+Misunderstandings about a task's goal, scope, behavior, or important choices
+can survive until implementation. Align reads available evidence, asks
+risk-adaptive questions, and keeps facts, decisions, proposals, assumptions,
+and open questions distinct.
+
+It renders the current shared understanding as one self-contained HTML
+artifact with the scope, success conditions, scenarios, and verifiable work.
+Align waits for explicit approval and never implements the task.
 
 > Example: “Help us settle the upload recovery behavior before implementation.”
 
@@ -79,39 +93,40 @@ It reads available evidence, adapts its questions to risk, and keeps unresolved 
 | Shared understanding and next decision | Verifiable work |
 | [![The open question, choices, recommendation, and settled decision in an Align artifact](assets/readme/hope-align-understanding-en.png)](assets/readme/hope-align-understanding-en.png) | [![The user change, scope, verification, and failure recovery in an Align artifact](assets/readme/hope-align-work-en.png)](assets/readme/hope-align-work-en.png) |
 
-Align separates repository facts, user decisions, AI proposals, assumptions, and open questions.
-It records scope, success conditions, representative scenarios, and verifiable pieces of work.
-When the candidate is ready, Align invokes Polish once and checks the result again.
-Align waits for explicit approval and never implements the task itself.
-
-The current shared understanding can be rendered as one self-contained HTML file.
-The artifact remains useful during the interview instead of acting only as a final report.
-
 ---
 
 ### Toxic Review
 
-Toxic Review challenges a named work product without attacking the people who made it.
-It selects only the perspectives that match the target, stage, evidence, and risk.
+> “This looks convincing, but I may be missing an important problem.”
+
+Convincing work can still hide material problems, unsupported claims, or
+needless complexity. Toxic Review selects only the perspectives that fit the
+target and risk.
+
+It turns evidence-linked findings into one prioritized review rather than a
+collection of reviewer voices. It is hard on the work, respectful toward
+people, and does not invent criticism. Finding no material issue is valid.
 
 > Example: “Find the material risks in this migration plan.”
-
-> **Output:** Returns one adjudicated review in the current conversation instead of creating a separate HTML file.
-
-Each finding names the issue, practical impact, proposed action, confidence, and evidence.
-The main reviewer accepts, partially accepts, rejects, defers, or deduplicates every finding.
-The final result contains one adjudicated voice instead of pasted reviewer opinions.
-Finding no material issue in the checked scope is a valid result.
-
-Toxic Review does not automatically invoke Align or Diff.
-It can use their exact artifacts as evidence when you provide them.
 
 ---
 
 ### Diff
 
-Diff explains a GitHub pull request with evidence from one exact snapshot.
-It helps you understand the change before you decide what to do with it.
+> “AI changed the code, but I cannot explain what changed or judge it yet.”
+
+A code change can be complete while its owner still cannot predict, explain, or
+judge it. That gap is cognitive debt. Diff binds its explanation to one exact
+GitHub pull request snapshot, explains behavior before code, and links
+important claims to evidence.
+
+When active exploration would help, the review can use visuals, a microworld,
+or an evidence-backed quiz. The resulting local HTML file helps the reader
+understand the change, judge it, and carry that understanding into follow-up
+decisions and work.
+
+Diff does not recommend approval or rejection, change the pull request, inspect
+discussions or CI results, or run repository code.
 
 ![Hope Diff result for nanoid pull request 601 showing the goal, before and after behavior, impact, and verification item](assets/readme/hope-diff-en.png)
 
@@ -125,75 +140,57 @@ It helps you understand the change before you decide what to do with it.
 | Next check for an informed judgment | Evidence and checked scope |
 | [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
 
-Diff reads the pull request text, commit titles, changed text files, and a bounded set of grounded context paths.
-It produces one self-contained local HTML file with light and dark themes.
-The artifact can include a behavior model or understanding check when either helps explain the change.
-
-With no URL, Diff selects the current branch's pull request or your latest open pull request in the repository.
-Run Diff again when the pull request changes.
-
-<details>
-<summary><strong>What Diff deliberately does not inspect or run</strong></summary>
-
-- It does not search unrelated repository files.
-- It does not inspect pull request discussions, review comments, or CI results.
-- It does not run tests, builds, linters, or other repository code.
-- It does not approve, reject, merge, comment on, or change the pull request.
-
-</details>
+With no URL, Diff selects the current branch's pull request or your latest open
+pull request in the repository. Run Diff again when the pull request changes.
 
 ---
 
 ### Polish
 
-Polish makes one bounded cleanup pass over a named completed work product.
-It protects settled behavior and meaning while improving the result.
+> “The work is complete, but I want to refine it without changing what we already settled.”
+
+Refinement can quietly become a behavior change, a new requirement, or a
+matter of taste. Polish defines what must stay unchanged and refines the work
+once within a clear scope.
+
+It preserves settled behavior and meaning, reports what changed and what was
+checked, and stops when the work needs a material decision.
 
 > Example: “Shorten this completed guideline without changing its requirement.”
-
-> **Output:** Leaves the revised work product and verification result in the current workflow instead of creating a separate HTML file.
-
-Polish creates a plan for the exact target instead of applying a fixed checklist.
-It may simplify, refactor, consolidate, or remove content when captured evidence supports the change.
-It preserves public contracts, behavior, meaning, facts, uncertainty, citations, and voice.
-A no-change result is valid.
-
-Polish returns `needs-alignment` when cleanup requires a material product decision.
-It does not invoke Align automatically.
-For language-bearing changes, Polish uses the shared Write standard directly.
 
 ---
 
 ### Write
 
-Write drafts, edits, or reviews language without losing meaning, facts, uncertainty, citations, or voice.
-Its standard also keeps language consistent across other Hope features.
+> “Make this clearer without changing what it means or inventing what we do not know.”
+
+A smoother sentence is still wrong if it loses a fact, removes uncertainty,
+changes a citation, or replaces the person's voice. Write's shared standard
+adapts George Orwell's six rules in
+[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/):
+avoid stale metaphors and stock phrases; prefer short, familiar words; remove
+words that add no meaning; use active voice when it makes the actor and action
+clearer; replace jargon with everyday language when possible; and break any
+rule that would make the writing inaccurate, unclear, unnatural, or needlessly
+harsh.
+
+Hope adds rules to lead with the result, keep one main idea per sentence, and
+preserve meaning, facts, uncertainty, citations, numbers, and voice. Each
+language must read like original prose rather than copying another language's
+word order and idiom. Write can draft, edit, or review language; use Polish
+when a completed work product also needs structural refinement.
 
 > Example: “Make this save error clear without inventing a cause.”
-
-> **Output:** Applies the draft, edit, or review to the current conversation or target file instead of creating a separate HTML file.
-
-| Mode | Use it to |
-| --- | --- |
-| `draft` | Create new prose from the request and available context. |
-| `edit` | Change the requested prose or files. |
-| `review` | Report material clarity, meaning, or flow problems without changing files. |
-
-Use Write for a language-only task.
-Use Polish for a bounded revision of a completed work product that may also change its structure.
 
 ---
 
 ### Settings
 
-Settings stores the language and initial theme used by supported Hope artifacts.
-The same preferences are available through the harness and installed plugin.
+> “I do not want to choose the same language and theme for every result.”
 
-> **Output:** Saves a global configuration file instead of creating a visual artifact.
-
-Without a saved language, Hope follows the host, operating system, and default fallback in that order.
-Without a saved theme, Hope uses the system theme.
-Changing Settings affects new artifacts and does not rewrite an existing offline file.
+Settings stores a supported locale and initial `system`, `light`, or `dark`
+theme as shared defaults for the harness and installed plugin. Changes affect
+new artifacts only.
 
 ## License
 

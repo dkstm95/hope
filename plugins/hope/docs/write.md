@@ -37,6 +37,15 @@ action is already clear.
 standard. It adapts George Orwell's six writing rules and adds the structural
 and preservation rules needed for current Hope work.
 
+Naturalness is part of correctness. The active host writes each language as
+original prose instead of copying another language's word order, idioms, or
+sentence shape. For translated or parallel text, it reads each version on its
+own and replaces literal translations or word combinations that are
+grammatical but unnatural together. Its final check uses two passes: first read
+the target version on its own for naturalness, then compare the versions for
+meaning drift. Meaning must stay aligned across versions; their sentence
+structure does not need to match.
+
 The feature returns that standard with the selected mode and the matching
 response contract. A host adapter must use the returned brief instead of
 carrying another copy of the rules.

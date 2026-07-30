@@ -34,12 +34,19 @@ These principles adapt George Orwell's six rules in
   the person's request.
 - Keep exact code, commands, identifiers, interface text, and quotations exact.
 - Keep a technical term when it is more precise than an everyday substitute.
-- Follow the grammar and natural rhythm of the language being used.
+- Write each language as original prose. Preserve meaning without copying
+  another language's word order, idioms, or sentence shape.
+- For translated or parallel text, read each version on its own. Replace
+  literal translations and word combinations that are correct in isolation
+  but unnatural together.
 - Treat sentence length as a signal, not a fixed limit.
 - Follow a project-specific rule when it is stricter or serves a clear local
   need.
 
 ## Final check
+
+For translated or parallel text, use two passes: read the target version on its
+own for naturalness, then compare the versions for meaning drift.
 
 Before returning the text, ask:
 
@@ -50,3 +57,4 @@ Before returning the text, ask:
 - Does each sentence carry one main idea?
 - Did the revision change a fact, level of certainty, or intended tone?
 - Does the result sound natural when read once?
+- Does any phrase sound translated even though each word is correct?
