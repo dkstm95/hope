@@ -183,6 +183,18 @@ language must read like original prose rather than copying another language's
 word order and idiom. Write can draft, edit, or review language; use Polish
 when a completed work product also needs structural refinement.
 
+Hope prefers one sentence per prose paragraph when it improves meaning,
+readability, or rhythm.
+
+In Markdown and plain text, one blank line separates paragraphs, while other
+formats use their native paragraph structure.
+
+Write chooses semantic structure, and the renderer controls visible spacing,
+typography, and styling.
+
+Related sentences stay together when splitting them would harm meaning, flow,
+or voice, or conflict with the target format.
+
 > Example: “Make this save error clear without inventing a cause.”
 
 ---

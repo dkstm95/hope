@@ -37,6 +37,23 @@ action is already clear.
 standard. It adapts George Orwell's six writing rules and adds the structural
 and preservation rules needed for current Hope work.
 
+Write prefers one sentence per prose paragraph when it improves meaning,
+readability, or rhythm.
+
+It keeps related sentences together when splitting them would harm meaning,
+flow, or voice, or conflict with the target format.
+
+In Markdown and plain text, one blank line separates consecutive prose
+paragraphs.
+
+Other formats use their native paragraph structure instead of a literal blank
+line.
+
+Write chooses target-supported headings, lists, dividers, and paragraph
+boundaries to express semantic structure.
+
+The renderer controls visible spacing, typography, and styling.
+
 Naturalness is part of correctness. The active host writes each language as
 original prose instead of copying another language's word order, idioms, or
 sentence shape. For translated or parallel text, it reads each version on its

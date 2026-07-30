@@ -7,9 +7,9 @@ export const WRITE_MODEL_ADAPTER_MESSAGE =
 export const WRITE_MODES = Object.freeze(["draft", "edit", "review"]);
 
 const RESPONSE_BY_MODE = Object.freeze({
-  draft: "Return the finished prose. Mention a factual gap or deliberate exception only when it helps the person judge the result.",
-  edit: "Change the requested target and lead with the completed result. Preserve a material ambiguity instead of silently choosing a new meaning.",
-  review: "Do not change files. Report only material clarity, meaning, or flow problems, and pair each problem with a concrete revision.",
+  draft: "Return the finished prose.\n\nMention a factual gap or deliberate exception only when it helps the person judge the result.",
+  edit: "Change the requested target and lead with the completed result.\n\nPreserve a material ambiguity instead of silently choosing a new meaning.",
+  review: "Do not change files.\n\nReport only material clarity, meaning, or flow problems, and pair each problem with a concrete revision.",
 });
 
 function assertMode(mode) {

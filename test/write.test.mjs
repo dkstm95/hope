@@ -37,6 +37,42 @@ test("the writing standard rejects prose shaped by another language", async () =
   assert.equal(brief.standard, standard);
 });
 
+test("the writing standard prefers one sentence per prose paragraph", async () => {
+  const standard = await loadWritingStandard();
+  assert.match(
+    standard,
+    /Prefer one sentence per prose paragraph when it improves meaning, readability,[\s\S]+or rhythm/u,
+  );
+  assert.match(
+    standard,
+    /Keep related sentences together when splitting them would harm meaning, flow,[\s\S]+or voice, or conflict with the target format/u,
+  );
+  assert.match(
+    standard,
+    /In Markdown and plain text, separate consecutive prose paragraphs with one[\s\S]+blank line/u,
+  );
+  assert.match(
+    standard,
+    /In other formats, use the format's native paragraph structure/u,
+  );
+  assert.match(
+    standard,
+    /Choose target-supported headings, lists, dividers, and paragraph boundaries[\s\S]+to express semantic structure/u,
+  );
+  assert.match(
+    standard,
+    /Leave visible spacing, typography, and styling to the renderer/u,
+  );
+  assert.match(
+    standard,
+    /Does the target need a heading, list, or divider for stronger semantic[\s\S]+separation/u,
+  );
+  assert.doesNotMatch(
+    standard,
+    /Use one sentence per prose paragraph unless preserving exact text or format/u,
+  );
+});
+
 test("a writing brief binds the shared standard to one mode", async () => {
   const brief = await createWritingBrief(
     { mode: "edit" },
@@ -45,7 +81,7 @@ test("a writing brief binds the shared standard to one mode", async () => {
   assert.deepEqual(brief, {
     feature: "write",
     mode: "edit",
-    response: "Change the requested target and lead with the completed result. Preserve a material ambiguity instead of silently choosing a new meaning.",
+    response: "Change the requested target and lead with the completed result.\n\nPreserve a material ambiguity instead of silently choosing a new meaning.",
     standard: "shared standard\n",
     version: WRITE_BRIEF_VERSION,
   });

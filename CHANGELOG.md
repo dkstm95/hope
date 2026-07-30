@@ -14,6 +14,9 @@
   revalidate the state and record a digest-bound receipt.
 - Remove the unused Diff analysis v1 schema and legacy private-run paths.
   Current runs use one analysis contract, resource policy, and rendering path.
+- Prefer one sentence per prose paragraph when it improves meaning, readability,
+  or rhythm; use blank lines for Markdown and plain text, preserve native
+  paragraph structures elsewhere, and leave visual styling to the renderer.
 
 ## 0.4.1-alpha - 2026-07-27
 
