@@ -14,9 +14,9 @@ import { join } from "node:path";
 import test, { after } from "node:test";
 
 import {
-  CONTEXT_RUN_VERSION,
-  LEGACY_RUN_VERSION,
+  ANALYSIS_VERSION,
   LIMITS,
+  RUN_VERSION,
 } from "../features/diff/constants.mjs";
 import { digestJson } from "../features/diff/hash.mjs";
 import { revalidateGitHubSnapshot } from "../features/diff/github.mjs";
@@ -262,105 +262,6 @@ test("an unclassified revalidation failure is terminal", async () => {
   await assert.rejects(loadDiffRun(created.path, { temporaryRoot }), /ENOENT/u);
 });
 
-test("an in-flight v1 run can resume with the original analysis contract", async () => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-run-v1-");
-  const snapshot = makeSnapshot();
-  const created = await createDiffRun(snapshot, { temporaryRoot });
-  const manifestPath = join(created.path, "run.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  manifest.runVersion = LEGACY_RUN_VERSION;
-  delete manifest.analysisVersion;
-  delete manifest.resources;
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-
-  for (let page = 1; page <= created.pageCount; page += 1) {
-    await inspectDiffRun(created.path, page, { temporaryRoot });
-  }
-  const analysis = makeAnalysis(snapshot, created.runId);
-  analysis.schemaVersion = 1;
-  delete analysis.teachingAids;
-  analysis.reviewItems = Array.from({ length: 80 }, (_, index) => ({
-    ...analysis.reviewItems[0],
-    explanation: `Legacy explanation ${index + 1} ${"x".repeat(1_800)}`,
-    title: `Legacy review item ${index + 1}`,
-  }));
-  const serialized = `${JSON.stringify(analysis, null, 2)}\n`;
-  assert.ok(Buffer.byteLength(serialized) > LIMITS.modelBytes);
-  assert.ok(Buffer.byteLength(serialized) <= LIMITS.legacyModelBytes);
-  await writeFile(created.analysisPath, serialized, { flag: "wx", mode: 0o600 });
-
-  let validatedReview;
-  const result = await finishDiff(created.path, {
-    finalize: async () => ({ outputPath: join(temporaryRoot, "review.html") }),
-    render: async (review) => {
-      validatedReview = review;
-      return { bytes: Buffer.from("review"), digest: "d".repeat(64) };
-    },
-    revalidate: async () => ({
-      matches: true,
-      revalidatedAt: "2026-07-23T00:01:00.000Z",
-    }),
-    temporaryRoot,
-  });
-
-  assert.equal(validatedReview.reviewItems.length, 80);
-  assert.equal(validatedReview.resources.analysisFileBytes, Buffer.byteLength(serialized));
-  assert.equal(result.resources.analysisFileBytes, Buffer.byteLength(serialized));
-});
-
-test("v1 and v2 runs keep the legacy three-question quiz minimum", async (context) => {
-  for (const runVersion of [LEGACY_RUN_VERSION, CONTEXT_RUN_VERSION]) {
-    await context.test(`run version ${runVersion}`, async (subtest) => {
-      const temporaryRoot = await createTestTemporaryDirectory(`hope-run-v${runVersion}-quiz-`);
-      const snapshot = makeSnapshot();
-      const created = await createDiffRun(snapshot, { temporaryRoot });
-      subtest.after(async () => await rm(temporaryRoot, {
-        force: true,
-        recursive: true,
-      }));
-      const manifestPath = join(created.path, "run.json");
-      const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-      manifest.runVersion = runVersion;
-      delete manifest.analysisVersion;
-      if (runVersion === LEGACY_RUN_VERSION) delete manifest.resources;
-      await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-
-      for (let page = 1; page <= created.pageCount; page += 1) {
-        await inspectDiffRun(created.path, page, { temporaryRoot });
-      }
-      const analysis = makeAnalysis(snapshot, created.runId);
-      analysis.schemaVersion = 1;
-      delete analysis.teachingAids;
-      analysis.quiz = [{
-        answer: "The saved final failure reaches the caller.",
-        evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
-        question: "Which failure reaches the caller after the final retry?",
-      }];
-      await writeFile(
-        created.analysisPath,
-        `${JSON.stringify(analysis, null, 2)}\n`,
-        { flag: "wx", mode: 0o600 },
-      );
-      await assert.rejects(
-        validateDiff(created.path, { temporaryRoot }),
-        /quiz needs at least 3 questions/u,
-      );
-
-      analysis.quiz = Array.from({ length: 3 }, (_, index) => ({
-        ...analysis.quiz[0],
-        question: `${analysis.quiz[0].question} ${index + 1}`,
-      }));
-      await writeFile(
-        created.analysisPath,
-        `${JSON.stringify(analysis, null, 2)}\n`,
-        { mode: 0o600 },
-      );
-      const validated = await validateDiff(created.path, { temporaryRoot });
-      assert.equal(validated.valid, true);
-    });
-  }
-});
-
 test("an inspected current run atomically adopts a new inspection plan", async (context) => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-replace-");
   const snapshot = makeSnapshot();
@@ -588,33 +489,8 @@ test("a stale analysis or finalization claim blocks inspection-plan replacement"
   }
 });
 
-test("a legacy run cannot adopt a generation-based inspection plan", async (context) => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-legacy-");
-  const snapshot = makeSnapshot();
-  const created = await createDiffRun(snapshot, { temporaryRoot });
-  context.after(async () => await removeDiffRun(
-    created.path,
-    { temporaryRoot },
-  ).catch(() => {}));
-  const manifestPath = join(created.path, "run.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  manifest.runVersion = LEGACY_RUN_VERSION;
-  delete manifest.analysisVersion;
-  delete manifest.resources;
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-
-  await assert.rejects(
-    replaceDiffRunPlan(
-      created.path,
-      revisedSnapshot(snapshot, "Legacy run."),
-      { temporaryRoot },
-    ),
-    /cannot replace its inspection plan/u,
-  );
-});
-
-test("a v2 run cannot drop its resource policy", async (context) => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-run-v2-policy-");
+test("a current run cannot drop its resource policy", async (context) => {
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-policy-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   const manifestPath = join(created.path, "run.json");
   const original = await readFile(manifestPath, "utf8");
@@ -623,8 +499,6 @@ test("a v2 run cannot drop its resource policy", async (context) => {
     await removeDiffRun(created.path, { temporaryRoot }).catch(() => {});
   });
   const manifest = JSON.parse(original);
-  manifest.runVersion = CONTEXT_RUN_VERSION;
-  delete manifest.analysisVersion;
   delete manifest.resources;
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
@@ -1106,14 +980,14 @@ test("expiry cleanup leaves unknown run and analysis version pairs in place", as
     { analysisVersion: undefined, label: "current run without analysis version" },
     { analysisVersion: 1, label: "current run with legacy analysis version" },
     {
-      analysisVersion: 2,
-      label: "legacy run with analysis version",
-      runVersion: LEGACY_RUN_VERSION,
+      analysisVersion: ANALYSIS_VERSION,
+      label: "older run with current analysis version",
+      runVersion: RUN_VERSION - 1,
     },
     {
-      analysisVersion: 2,
-      label: "context run with analysis version",
-      runVersion: CONTEXT_RUN_VERSION,
+      analysisVersion: ANALYSIS_VERSION,
+      label: "newer run with current analysis version",
+      runVersion: RUN_VERSION + 1,
     },
   ];
   const paths = [];

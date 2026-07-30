@@ -25,12 +25,6 @@ export const POLISH_VERIFICATION_STATUSES = Object.freeze([
   "inconclusive",
   "not-run",
 ]);
-export const POLISH_VERIFICATION_RESULTS = Object.freeze([
-  "verified-in-checked-scope",
-  "incomplete",
-  "failed",
-  "not-completed",
-]);
 export const POLISH_APPLICATION_STATUSES = Object.freeze([
   "proposed",
   "applied",

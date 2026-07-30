@@ -496,60 +496,6 @@ test("the artifact preserves mixed and all-included teaching-aid states", async 
   }
 });
 
-test("legacy artifacts show presence without inventing decisions", async () => {
-  const cases = [
-    {
-      currentDecision: /Included|Omitted|Not applicable/u,
-      job: "This older analysis did not record a distinct teaching job.",
-      labels: ["Present", "Not present", "Not present"],
-      locale: "en-US",
-      reason: "This older analysis did not record a reason.",
-      summary:
-        "This older analysis did not record teaching-aid choices. Hope can show only whether each aid appears.",
-      title: "Teaching aid choices",
-    },
-    {
-      currentDecision: /포함|생략|해당 없음/u,
-      job: "이전 분석에는 별도의 설명 역할이 기록되지 않았습니다.",
-      labels: ["있음", "없음", "없음"],
-      locale: "ko-KR",
-      reason: "이전 분석에는 이유가 기록되지 않았습니다.",
-      summary:
-        "이전 분석에는 교육 보조 자료 선택이 기록되지 않았습니다. Hope는 각 자료가 있는지만 표시할 수 있습니다.",
-      title: "교육 보조 자료 선택",
-    },
-  ];
-
-  for (const expected of cases) {
-    const snapshot = makeSnapshot({ locale: expected.locale });
-    const analysis = makeAnalysis(snapshot, runId);
-    analysis.behavior = makeTeachingBehavior({ includeMicroworld: false });
-    analysis.schemaVersion = 1;
-    delete analysis.teachingAids;
-    const review = validateAnalysis(analysis, snapshot, {
-      analysisVersion: 1,
-      runId,
-    });
-    const html = (await renderReview(review)).bytes.toString("utf8");
-    const { cards, section } = teachingAidCards(html);
-
-    assert.match(section, new RegExp(`<h2>${expected.title}</h2>`, "u"));
-    assert.match(section, new RegExp(expected.summary.replaceAll(".", "\\."), "u"));
-    assert.deepEqual(cards.map((card) => card.label), expected.labels);
-    assert.equal(
-      (section.match(new RegExp(expected.reason.replaceAll(".", "\\."), "gu")) ?? [])
-        .length,
-      3,
-    );
-    assert.equal(
-      (section.match(new RegExp(expected.job.replaceAll(".", "\\."), "gu")) ?? [])
-        .length,
-      1,
-    );
-    assert.doesNotMatch(section, expected.currentDecision);
-  }
-});
-
 test("the artifact visibly warns about an English or Korean locale fallback", async () => {
   const cases = [
     {

@@ -9,8 +9,6 @@ import {
 import { readBoundedJson } from "../work-snapshot/index.mjs";
 import {
   ANALYSIS_VERSION,
-  CONTEXT_RUN_VERSION,
-  LEGACY_ANALYSIS_VERSION,
   LIMITS,
 } from "./constants.mjs";
 import { collectGitHubContext } from "./context.mjs";
@@ -163,21 +161,14 @@ function snapshotWithContext(snapshot, candidates) {
 }
 
 async function validateRunAnalysis(run, dependencies = {}) {
-  const enforceResourceLimits = (
-    run.manifest.runVersion >= CONTEXT_RUN_VERSION
-  );
   const analysis = await readAnalysis(run.analysisPath, {
-    maximumBytes: enforceResourceLimits
-      ? LIMITS.modelBytes
-      : LIMITS.legacyModelBytes,
+    maximumBytes: LIMITS.modelBytes,
   });
   return (dependencies.validate ?? validateAnalysis)(
     analysis.value,
     run.snapshot,
     {
-      analysisVersion: run.manifest.analysisVersion ?? LEGACY_ANALYSIS_VERSION,
       analysisFileBytes: analysis.fileBytes,
-      enforceResourceLimits,
       runId: run.manifest.runId,
     },
   );

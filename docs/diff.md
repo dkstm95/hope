@@ -472,9 +472,7 @@ occurrences across the distinct ranges rendered. These are upper safety
 limits, not targets. A useful review should stay substantially smaller and
 omit optional sections that do not improve understanding.
 
-New runs use inspection protocol v2 and require this resource policy. The
-runtime can still resume a private v1 run created before an upgrade, using the
-original v1 analysis limits, until that run expires.
+Every run requires this resource policy.
 
 ## Teaching aids
 
@@ -492,10 +490,7 @@ corresponding analysis payload.
 The artifact always shows all three decisions in **Teaching aid choices**. It
 shows the reason for each decision and the distinct teaching job for each
 included aid. Keep this section when every aid is omitted so the person can
-distinguish an intentional omission from a missing evaluation. A legacy
-analysis that did not record these fields shows only whether each aid is
-present. It does not describe absence as an intentional omission or invent a
-reason or teaching job.
+distinguish an intentional omission from a missing evaluation.
 
 Choose the primary aid in this order:
 
@@ -676,10 +671,7 @@ does not render or publish an artifact. It also does not change the run phase,
 consume a repair attempt, or delete the run. Correct clear contract errors and
 repeat the preflight without collecting the pull request again.
 
-New runs use analysis contract version 2 and require teaching-aid decisions.
-An older private run keeps its original version 1 analysis contract so a
-provider-access retry does not require recollection, reinspection, or a rewritten
-analysis.
+Every run uses analysis contract version 2 and requires teaching-aid decisions.
 
 Finalization validates the analysis again. A failed final validation may keep
 the private run for one explicit repair attempt. The next final validation

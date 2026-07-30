@@ -154,6 +154,13 @@ test("analysis fails closed on unsupported schemas and model-owned URLs", () => 
     /Unsupported Hope snapshot schema/u,
   );
 
+  const retiredAnalysis = makeAnalysis(snapshot, runId);
+  retiredAnalysis.schemaVersion = 1;
+  assert.throws(
+    () => validateAnalysis(retiredAnalysis, snapshot, { runId }),
+    /Unsupported Hope analysis schema/u,
+  );
+
   const modelUrl = makeAnalysis(snapshot, runId);
   modelUrl.url = "https://evil.example/review";
   assert.throws(

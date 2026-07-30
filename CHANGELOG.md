@@ -12,6 +12,8 @@
   proposed and applied revisions separately, and stops on material ambiguity.
 - Run Polish once on each contract-ready Align candidate before approval, then
   revalidate the state and record a digest-bound receipt.
+- Remove the unused Diff analysis v1 schema and legacy private-run paths.
+  Current runs use one analysis contract, resource policy, and rendering path.
 
 ## 0.4.1-alpha - 2026-07-27
 

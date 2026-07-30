@@ -1,10 +1,7 @@
 // Generated from features/diff/constants.mjs. Do not edit.
 export const CONTRACT_VERSION = 1;
-export const LEGACY_ANALYSIS_VERSION = 1;
 export const ANALYSIS_VERSION = 2;
 export const RENDERER_VERSION = 5;
-export const LEGACY_RUN_VERSION = 1;
-export const CONTEXT_RUN_VERSION = 2;
 export const RUN_VERSION = 3;
 export const TEACHING_AID_CONTRACT_VERSION = 2;
 
@@ -25,7 +22,6 @@ export const LIMITS = Object.freeze({
   highlightedLines: 600,
   inspectionPageBytes: 16 * 1024,
   inspectionTotalBytes: 1024 * 1024,
-  legacyModelBytes: 512 * 1024,
   modelBytes: 128 * 1024,
   modelString: 32 * 1024,
   pullRequestBodyBytes: 32 * 1024,

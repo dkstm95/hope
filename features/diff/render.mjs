@@ -11,7 +11,6 @@ import {
 } from "../../design/tokens.mjs";
 import { label, loadLocale } from "../../locales/index.mjs";
 import {
-  LEGACY_ANALYSIS_VERSION,
   LIMITS,
   RENDERER_VERSION,
 } from "./constants.mjs";
@@ -484,26 +483,15 @@ function collapsibleSection({ id, title, content, initiallyOpen = false }) {
 }
 
 function teachingAidChoices(review, dictionary) {
-  const legacy = review.analysisSchemaVersion === LEGACY_ANALYSIS_VERSION;
   const choices = TEACHING_AID_NAMES.map((name) => {
     const choice = review.teachingAids[name];
-    const reason = legacy
-      ? label(dictionary, "teachingAid.legacyReason")
-      : choice.reason;
-    let teachingJob;
-    if (choice.decision === "included") {
-      teachingJob = legacy
-        ? label(dictionary, "teachingAid.legacyTeachingJob")
-        : choice.teachingJob;
-    }
-    const decisionLabel = legacy
-      ? label(
-          dictionary,
-          choice.decision === "included"
-            ? "teachingAid.legacyPresence.present"
-            : "teachingAid.legacyPresence.notPresent",
-        )
-      : label(dictionary, `teachingAid.decision.${choice.decision}`);
+    const teachingJob = choice.decision === "included"
+      ? choice.teachingJob
+      : undefined;
+    const decisionLabel = label(
+      dictionary,
+      `teachingAid.decision.${choice.decision}`,
+    );
     return `<li>
       <article class="teaching-aid-choice decision-${html(choice.decision)}">
         <header>
@@ -513,7 +501,7 @@ function teachingAidChoices(review, dictionary) {
         <dl>
           <div>
             <dt>${html(label(dictionary, "teachingAid.reason"))}</dt>
-            <dd>${userText(reason)}</dd>
+            <dd>${userText(choice.reason)}</dd>
           </div>
           ${teachingJob === undefined ? "" : `<div>
             <dt>${html(label(dictionary, "teachingAid.teachingJob"))}</dt>
@@ -526,7 +514,7 @@ function teachingAidChoices(review, dictionary) {
   return section({
     content: `<p class="teaching-aid-summary">${html(label(
       dictionary,
-      legacy ? "teachingAid.legacySummary" : "teachingAid.summary",
+      "teachingAid.summary",
     ))}</p>
       <ul class="teaching-aid-choices">${choices}</ul>`,
     id: "teaching-aids",
