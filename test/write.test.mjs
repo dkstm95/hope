@@ -26,6 +26,17 @@ test("the writing standard has one normalized core source", async () => {
   );
 });
 
+test("the writing standard rejects prose shaped by another language", async () => {
+  const standard = await loadWritingStandard();
+  assert.match(standard, /Write each language as original prose/u);
+  assert.match(standard, /without copying[\s\S]+word order, idioms, or sentence shape/u);
+  assert.match(standard, /use two passes[\s\S]+meaning drift/u);
+  assert.match(standard, /Does any phrase sound translated/u);
+
+  const brief = await createWritingBrief({ mode: "edit" });
+  assert.equal(brief.standard, standard);
+});
+
 test("a writing brief binds the shared standard to one mode", async () => {
   const brief = await createWritingBrief(
     { mode: "edit" },
