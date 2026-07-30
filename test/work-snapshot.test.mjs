@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdtemp, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import {
   readBoundedJson,
@@ -11,6 +10,11 @@ import {
 import {
   makeWorkSnapshot,
 } from "../test-support/work-snapshot-fixture.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 test("work snapshots bind sources to stable identities", () => {
   const snapshot = validateWorkSnapshot(makeWorkSnapshot());
@@ -59,7 +63,7 @@ test("work snapshots bind sources to stable identities", () => {
 });
 
 test("bounded structured input rejects symlinks and oversized files", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-work-input-"));
+  const root = await createTestTemporaryDirectory("hope-work-input-");
   const target = join(root, "target.json");
   const link = join(root, "link.json");
   await writeFile(target, "{}\n");
@@ -75,7 +79,7 @@ test("bounded structured input rejects symlinks and oversized files", async () =
 });
 
 test("bounded structured input rejects excessive nesting", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-work-depth-"));
+  const root = await createTestTemporaryDirectory("hope-work-depth-");
   const inputPath = join(root, "deep.json");
   const nested = `${'{"next":'.repeat(160)}null${"}".repeat(160)}`;
   await writeFile(inputPath, nested);
@@ -86,7 +90,7 @@ test("bounded structured input rejects excessive nesting", async () => {
 });
 
 test("bounded structured input returns the exact file digest", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-work-digest-"));
+  const root = await createTestTemporaryDirectory("hope-work-digest-");
   const inputPath = join(root, "input.json");
   await writeFile(inputPath, "{}\n");
   const input = await readBoundedJson(inputPath);

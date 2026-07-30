@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import { buildMicroworldSkeleton } from "../features/diff/index.mjs";
 import {
@@ -16,6 +15,11 @@ import {
   makeTeachingAidDecisions,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 const runId = "7".repeat(32);
 
@@ -114,9 +118,8 @@ test("the runtime creates an exhaustive bounded microworld skeleton", () => {
   );
 });
 
-test("the shared Diff boundary reads a private controls file for the skeleton", async (context) => {
-  const root = await mkdtemp(join(tmpdir(), "hope-microworld-controls-"));
-  context.after(async () => await rm(root, { force: true, recursive: true }));
+test("the shared Diff boundary reads a private controls file for the skeleton", async () => {
+  const root = await createTestTemporaryDirectory("hope-microworld-controls-");
   const inputPath = join(root, "controls.json");
   await writeFile(
     inputPath,

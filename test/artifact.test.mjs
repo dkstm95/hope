@@ -2,19 +2,22 @@ import assert from "node:assert/strict";
 import {
   access,
   mkdir,
-  mkdtemp,
   readFile,
   rename,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import { publishArtifact } from "../features/artifact/index.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 test("artifact failure cleanup never removes a replaced directory", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-artifact-cleanup-"));
+  const root = await createTestTemporaryDirectory("hope-artifact-cleanup-");
   let replacementDirectory;
   let ownedDirectory;
   await assert.rejects(

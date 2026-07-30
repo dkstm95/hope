@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { chmod, lstat, mkdtemp, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { chmod, lstat, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import {
   readSettings,
@@ -12,9 +11,14 @@ import {
   updateSettings,
 } from "../settings/index.mjs";
 import { main as runSettings } from "../settings/cli.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 test("settings resolve explicit, saved, host, and fallback values in order", async (context) => {
-  const root = await mkdtemp(join(tmpdir(), "hope-settings-test-"));
+  const root = await createTestTemporaryDirectory("hope-settings-test-");
   const io = { env: { HOPE_CONFIG_HOME: root } };
   context.after(async () => await resetSettings(io));
 
@@ -39,7 +43,7 @@ test("settings resolve explicit, saved, host, and fallback values in order", asy
 });
 
 test("settings writes a private regular file and rejects a symlink", async (context) => {
-  const root = await mkdtemp(join(tmpdir(), "hope-settings-link-"));
+  const root = await createTestTemporaryDirectory("hope-settings-link-");
   const io = { env: { HOPE_CONFIG_HOME: root } };
   const path = settingsPath(io);
   context.after(async () => await resetSettings(io).catch(() => {}));
@@ -57,7 +61,7 @@ test("settings writes a private regular file and rejects a symlink", async (cont
 });
 
 test("changing only the theme does not freeze the current system language", async (context) => {
-  const root = await mkdtemp(join(tmpdir(), "hope-settings-theme-"));
+  const root = await createTestTemporaryDirectory("hope-settings-theme-");
   const io = { env: { HOPE_CONFIG_HOME: root } };
   context.after(async () => await resetSettings(io));
 
@@ -73,7 +77,7 @@ test("changing only the theme does not freeze the current system language", asyn
 });
 
 test("the settings command can save a theme before a locale is chosen", async (context) => {
-  const root = await mkdtemp(join(tmpdir(), "hope-settings-theme-cli-"));
+  const root = await createTestTemporaryDirectory("hope-settings-theme-cli-");
   const io = {
     env: { HOPE_CONFIG_HOME: root },
     hostLocale: "en-US",
@@ -97,7 +101,7 @@ test("the settings command can save a theme before a locale is chosen", async (c
 });
 
 test("settings rejects malformed, unknown, and overly open files", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-settings-invalid-"));
+  const root = await createTestTemporaryDirectory("hope-settings-invalid-");
   const io = { env: { HOPE_CONFIG_HOME: root } };
   const path = settingsPath(io);
   await writeFile(path, '{"schemaVersion":1,"locale":"en-US","theme":"system","extra":1}\n', {
@@ -112,7 +116,7 @@ test("settings rejects malformed, unknown, and overly open files", async () => {
 });
 
 test("the settings command can reset a malformed file", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-settings-reset-"));
+  const root = await createTestTemporaryDirectory("hope-settings-reset-");
   const io = { env: { HOPE_CONFIG_HOME: root } };
   const path = settingsPath(io);
   await writeFile(path, "{broken", { mode: 0o600 });

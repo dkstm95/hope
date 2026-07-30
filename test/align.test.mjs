@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdtemp, realpath, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import {
   completeAlignPolish,
@@ -26,6 +25,11 @@ import {
   makeAlignState,
 } from "../test-support/align-fixture.mjs";
 import { makePolishRun } from "../test-support/polish-fixture.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 function makeAlignPolishRun({
   beforePath,
@@ -419,7 +423,7 @@ test("align renders a dense valid state within the artifact ceiling", async () =
 });
 
 test("align publishes a new artifact without replacing an existing path", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-align-test-"));
+  const root = await createTestTemporaryDirectory("hope-align-test-");
   const inputPath = join(root, "align.json");
   const outputPath = join(root, "alignment.html");
   await writeFile(inputPath, `${JSON.stringify(makeAlignState(), null, 2)}\n`);
@@ -507,7 +511,7 @@ test("align prepares one exact contract-ready target for Polish", async () => {
 });
 
 test("align consumes one revised Polish result and rejects a repeat", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-align-polish-"));
+  const root = await createTestTemporaryDirectory("hope-align-polish-");
   const beforePath = join(root, "before.json");
   const afterPath = join(root, "after.json");
   const polishPath = join(root, "polish.json");
@@ -568,7 +572,7 @@ test("align consumes one revised Polish result and rejects a repeat", async () =
 });
 
 test("align consumes no-change and needs-alignment Polish results", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-align-polish-outcomes-"));
+  const root = await createTestTemporaryDirectory("hope-align-polish-outcomes-");
   const beforePath = join(root, "before.json");
   const noChangePath = join(root, "no-change.json");
   const needsPath = join(root, "needs-alignment.json");

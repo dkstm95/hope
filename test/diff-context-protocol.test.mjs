@@ -1,8 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import { addDiffContext } from "../features/diff/index.mjs";
 import {
@@ -12,6 +9,11 @@ import {
   removeDiffRun,
 } from "../features/diff/run.mjs";
 import { makeSnapshot } from "../test-support/diff-fixture.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 async function inspectAll(run, temporaryRoot) {
   for (let page = 1; page <= run.pageCount; page += 1) {
@@ -20,7 +22,7 @@ async function inspectAll(run, temporaryRoot) {
 }
 
 test("context collection atomically refreshes the snapshot and inspection plan", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-context-protocol-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-context-protocol-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   context.after(async () => await removeDiffRun(
     created.path,
@@ -95,7 +97,7 @@ test("context collection atomically refreshes the snapshot and inspection plan",
 });
 
 test("context collection records an unavailable exact path as a visible limit", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-context-limit-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-context-limit-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   context.after(async () => await removeDiffRun(
     created.path,
@@ -134,7 +136,7 @@ test("context collection records an unavailable exact path as a visible limit", 
 });
 
 test("context collection requires the current plan to be fully inspected", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-context-order-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-context-order-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   context.after(async () => await removeDiffRun(
     created.path,
@@ -160,7 +162,7 @@ test("context collection requires the current plan to be fully inspected", async
 });
 
 test("context plan replacement is bound to the inspected snapshot digest", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-context-race-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-context-race-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   await inspectAll(created, temporaryRoot);
   let replacementOptions;
