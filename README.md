@@ -18,8 +18,11 @@
 <p align="center"><a href="README.ko.md">한국어</a></p>
 
 AI can finish a task quickly without making its decisions, evidence, or
-remaining uncertainty clear to the person responsible for it. Hope provides
-focused tools for those moments: align on a task before implementation,
+remaining uncertainty clear to the person responsible for it.
+
+Hope provides focused tools for those moments:
+
+align on a task before implementation,
 challenge a work product, understand a code change, refine completed work, and
 make language clear without losing its meaning.
 
