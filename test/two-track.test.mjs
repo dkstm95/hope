@@ -343,8 +343,8 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.doesNotMatch(diff, /Prefer a short, familiar word/u);
   assert.match(diff, /validate --run <run-path>/u);
   assert.match(diff, /HOPE_DIFF_REVALIDATION_RETRYABLE/u);
-  assert.match(diff, /structured error's `command` and\s+`runPath` fields/u);
-  assert.match(diff, /before the first `finish` attempt/u);
+  assert.match(diff, /structured error's\s+`command` and\s+`runPath` fields/u);
+  assert.match(diff, /before the\s+first `finish` attempt/u);
   assert.match(settings, /runtime\/settings\/cli\.mjs/u);
   assert.match(write, /runtime\/features\/write\/cli\.mjs/u);
   assert.match(write, /brief --mode <draft\|edit\|review>/u);
