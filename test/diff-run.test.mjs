@@ -3,7 +3,6 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import {
   access,
-  mkdtemp,
   readFile,
   rm,
   symlink,
@@ -11,9 +10,8 @@ import {
   utimes,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import {
   CONTEXT_RUN_VERSION,
@@ -41,6 +39,11 @@ import {
   serializeInspectionPage,
 } from "../features/diff/run.mjs";
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 function revisedSnapshot(snapshot, marker) {
   const value = JSON.parse(JSON.stringify(snapshot));
@@ -111,7 +114,7 @@ test("a missing writing standard fails before GitHub collection", async () => {
 });
 
 test("a DiffRun requires every page and publishes one review", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-test-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-test-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
 
@@ -140,7 +143,7 @@ test("a DiffRun requires every page and publishes one review", async () => {
 });
 
 test("snapshot revalidation starts only after rendering completes", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-order-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-order-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   for (let page = 1; page <= created.pageCount; page += 1) {
@@ -172,7 +175,7 @@ test("snapshot revalidation starts only after rendering completes", async () => 
 });
 
 test("a revalidation access failure keeps the exact run for a later finish", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-revalidation-retry-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-revalidation-retry-");
   const outputPath = join(temporaryRoot, "review.html");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { outputPath, temporaryRoot });
@@ -228,7 +231,7 @@ test("a revalidation access failure keeps the exact run for a later finish", asy
 });
 
 test("an unclassified revalidation failure is terminal", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-revalidation-terminal-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-revalidation-terminal-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   for (let page = 1; page <= created.pageCount; page += 1) {
@@ -260,7 +263,7 @@ test("an unclassified revalidation failure is terminal", async () => {
 });
 
 test("an in-flight v1 run can resume with the original analysis contract", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-v1-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-v1-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   const manifestPath = join(created.path, "run.json");
@@ -308,7 +311,7 @@ test("an in-flight v1 run can resume with the original analysis contract", async
 test("v1 and v2 runs keep the legacy three-question quiz minimum", async (context) => {
   for (const runVersion of [LEGACY_RUN_VERSION, CONTEXT_RUN_VERSION]) {
     await context.test(`run version ${runVersion}`, async (subtest) => {
-      const temporaryRoot = await mkdtemp(join(tmpdir(), `hope-run-v${runVersion}-quiz-`));
+      const temporaryRoot = await createTestTemporaryDirectory(`hope-run-v${runVersion}-quiz-`);
       const snapshot = makeSnapshot();
       const created = await createDiffRun(snapshot, { temporaryRoot });
       subtest.after(async () => await rm(temporaryRoot, {
@@ -359,7 +362,7 @@ test("v1 and v2 runs keep the legacy three-question quiz minimum", async (contex
 });
 
 test("an inspected current run atomically adopts a new inspection plan", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-replace-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-replace-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(
@@ -395,7 +398,7 @@ test("an inspected current run atomically adopts a new inspection plan", async (
 });
 
 test("inspection-plan pointers reject traversal and symlinked generation files", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-pointer-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-pointer-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   const revised = revisedSnapshot(snapshot, "Pointer validation.");
@@ -434,7 +437,7 @@ test("inspection-plan pointers reject traversal and symlinked generation files",
 });
 
 test("a failed inspection-plan write leaves the previous manifest authoritative", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-write-failure-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-write-failure-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(
@@ -467,7 +470,7 @@ test("a failed inspection-plan write leaves the previous manifest authoritative"
 });
 
 test("forced termination during inspection-plan generation preserves the previous plan", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-forced-stop-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-forced-stop-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(
@@ -548,7 +551,7 @@ test("forced termination during inspection-plan generation preserves the previou
 });
 
 test("a stale analysis or finalization claim blocks inspection-plan replacement", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-state-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-state-");
   const snapshot = makeSnapshot();
   const withAnalysis = await createDiffRun(snapshot, { temporaryRoot });
   const finalizing = await createDiffRun(snapshot, { temporaryRoot });
@@ -586,7 +589,7 @@ test("a stale analysis or finalization claim blocks inspection-plan replacement"
 });
 
 test("a legacy run cannot adopt a generation-based inspection plan", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-plan-legacy-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-legacy-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(
@@ -611,7 +614,7 @@ test("a legacy run cannot adopt a generation-based inspection plan", async (cont
 });
 
 test("a v2 run cannot drop its resource policy", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-v2-policy-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-v2-policy-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   const manifestPath = join(created.path, "run.json");
   const original = await readFile(manifestPath, "utf8");
@@ -632,7 +635,7 @@ test("a v2 run cannot drop its resource policy", async (context) => {
 });
 
 test("analysis preflight preserves the run and final repair attempt", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-validate-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-validate-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(
@@ -710,7 +713,7 @@ test("analysis preflight preserves the run and final repair attempt", async (con
 });
 
 test("one invalid analysis can be repaired without rereading inspection pages", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-retry-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-retry-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   for (let page = 1; page <= created.pageCount; page += 1) {
@@ -775,7 +778,7 @@ test("one invalid analysis can be repaired without rereading inspection pages", 
 });
 
 test("a second final analysis failure removes the private run", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-final-invalid-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-final-invalid-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   for (let page = 1; page <= created.pageCount; page += 1) {
@@ -801,7 +804,7 @@ test("a second final analysis failure removes the private run", async () => {
 });
 
 test("only one finalization can claim a run", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-concurrent-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-concurrent-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   for (let page = 1; page <= created.pageCount; page += 1) {
@@ -847,7 +850,7 @@ test("only one finalization can claim a run", async () => {
 });
 
 test("a lost finalization lease prevents publication", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-lost-lease-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-lost-lease-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(created.path, { temporaryRoot }).catch(() => {}));
@@ -883,7 +886,7 @@ test("a lost finalization lease prevents publication", async (context) => {
 });
 
 test("an expired finalization lease prevents publication", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-expired-lease-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-expired-lease-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(created.path, { temporaryRoot }).catch(() => {}));
@@ -920,7 +923,7 @@ test("an expired finalization lease prevents publication", async (context) => {
 });
 
 test("a stale finalizer cannot remove a run claimed by a newer retry", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-finalizer-fence-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-finalizer-fence-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   for (let page = 1; page <= created.pageCount; page += 1) {
@@ -997,7 +1000,7 @@ test("a stale finalizer cannot remove a run claimed by a newer retry", async () 
 });
 
 test("a stale finalizer cannot record failure against a newer retry", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-analysis-fence-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-analysis-fence-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   for (let page = 1; page <= created.pageCount; page += 1) {
@@ -1074,7 +1077,7 @@ test("a stale finalizer cannot record failure against a newer retry", async () =
 });
 
 test("expiry cleanup leaves an actively finalized old run in place", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-active-expiry-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-active-expiry-");
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const created = await createDiffRun(makeSnapshot(), {
     clock: () => old,
@@ -1093,7 +1096,7 @@ test("expiry cleanup leaves an actively finalized old run in place", async () =>
 });
 
 test("expiry cleanup leaves unknown run and analysis version pairs in place", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-version-cleanup-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-version-cleanup-");
   context.after(async () => await rm(temporaryRoot, {
     force: true,
     recursive: true,
@@ -1142,7 +1145,7 @@ test("expiry cleanup leaves unknown run and analysis version pairs in place", as
 });
 
 test("a newer lease generation fences a suspended expiry cleanup", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-cleanup-fence-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-cleanup-fence-");
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const created = await createDiffRun(makeSnapshot(), {
     clock: () => old,
@@ -1181,7 +1184,7 @@ test("a newer lease generation fences a suspended expiry cleanup", async () => {
 });
 
 test("expiry cleanup reclaims a run terminated between private source writes", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-forced-stop-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-forced-stop-");
   const runModule = new URL("../features/diff/run.mjs", import.meta.url).href;
   const fixtureModule = new URL("../test-support/diff-fixture.mjs", import.meta.url).href;
   const childScript = [
@@ -1250,7 +1253,7 @@ test("expiry cleanup reclaims a run terminated between private source writes", a
 });
 
 test("a heartbeat keeps a long finalization lease active", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-stale-expiry-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-stale-expiry-");
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const created = await createDiffRun(makeSnapshot(), {
     clock: () => old,
@@ -1270,7 +1273,7 @@ test("a heartbeat keeps a long finalization lease active", async () => {
 });
 
 test("expiry cleanup reclaims a stale lease even when its PID is reused", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-reused-pid-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-reused-pid-");
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const created = await createDiffRun(makeSnapshot(), {
     clock: () => old,
@@ -1291,7 +1294,7 @@ test("expiry cleanup reclaims a stale lease even when its PID is reused", async 
 });
 
 test("concurrent stale-lease recovery elects only one new owner", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-stale-race-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-stale-race-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   const run = await loadDiffRun(created.path, { temporaryRoot });
   const original = await claimDiffRunFinalization(run, {
@@ -1318,7 +1321,7 @@ test("concurrent stale-lease recovery elects only one new owner", async () => {
 });
 
 test("expiry cleanup reclaims an old incomplete finalization claim", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-incomplete-claim-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-incomplete-claim-");
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const created = await createDiffRun(makeSnapshot(), {
     clock: () => old,
@@ -1335,7 +1338,7 @@ test("expiry cleanup reclaims an old incomplete finalization claim", async () =>
 });
 
 test("a fresh run recovers an abandoned next-generation lease after expiry", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-lease-generation-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-lease-generation-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   const run = await loadDiffRun(created.path, { temporaryRoot });
   await claimDiffRunFinalization(run, {
@@ -1360,7 +1363,7 @@ test("a fresh run recovers an abandoned next-generation lease after expiry", asy
 });
 
 test("expiry cleanup reclaims an old run with an abandoned lease generation", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-lease-cleanup-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-lease-cleanup-");
   const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
   const created = await createDiffRun(makeSnapshot(), {
     clock: () => old,
@@ -1380,7 +1383,7 @@ test("expiry cleanup reclaims an old run with an abandoned lease generation", as
 });
 
 test("a failed finalization claim initialization removes its lock", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-claim-failure-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-claim-failure-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   const run = await loadDiffRun(created.path, { temporaryRoot });
   let removedPath;
@@ -1405,7 +1408,7 @@ test("a failed finalization claim initialization removes its lock", async () => 
 });
 
 test("a run is cleaned before its review becomes visible", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-cleanup-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-cleanup-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(created.path, { temporaryRoot }).catch(() => {}));
@@ -1442,7 +1445,7 @@ test("a run is cleaned before its review becomes visible", async (context) => {
 });
 
 test("a publication failure after successful run removal is not a cleanup failure", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-publication-failure-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-publication-failure-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   for (let page = 1; page <= created.pageCount; page += 1) {
@@ -1476,7 +1479,7 @@ test("a publication failure after successful run removal is not a cleanup failur
 });
 
 test("a normal failure reports when its private run cleanup also fails", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-cleanup-diagnostic-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-cleanup-diagnostic-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(
@@ -1516,7 +1519,7 @@ test("a normal failure reports when its private run cleanup also fails", async (
 });
 
 test("a lease release failure preserves the primary and cleanup diagnostics", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-release-diagnostic-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-release-diagnostic-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   context.after(async () => await removeDiffRun(
@@ -1563,7 +1566,7 @@ test("a lease release failure preserves the primary and cleanup diagnostics", as
 });
 
 test("inspection pages must be read in order and the last handoff is replayable", async (context) => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-order-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-order-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   context.after(async () => await removeDiffRun(
     created.path,
@@ -1581,8 +1584,9 @@ test("inspection pages must be read in order and the last handoff is replayable"
 });
 
 test("a canonical temporary-root alias can resume a DiffRun", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-canonical-"));
-  const alias = `${temporaryRoot}-alias`;
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-canonical-");
+  const aliasRoot = await createTestTemporaryDirectory("hope-run-canonical-alias-");
+  const alias = join(aliasRoot, "alias");
   await symlink(temporaryRoot, alias, "dir");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   const aliasPath = created.path.replace(temporaryRoot, alias);
@@ -1691,7 +1695,7 @@ test("short source bodies share bounded inspection pages", () => {
 });
 
 test("a prepared run reports exact content-free resource counters", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-resources-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-resources-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
   const pages = JSON.parse(await readFile(join(created.path, "pages.json"), "utf8"));
@@ -1737,7 +1741,7 @@ test("large file maps stay within the inspection page limit", () => {
 });
 
 test("tampered inspection pages fail closed", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-tamper-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-tamper-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   const pagesPath = join(created.path, "pages.json");
   const pages = JSON.parse(await readFile(pagesPath, "utf8"));
@@ -1750,7 +1754,7 @@ test("tampered inspection pages fail closed", async () => {
 });
 
 test("inspection validates the requested page without rehashing future pages", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-target-page-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-target-page-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   const pagesPath = join(created.path, "pages.json");
   const pages = JSON.parse(await readFile(pagesPath, "utf8"));
@@ -1771,7 +1775,7 @@ test("inspection validates the requested page without rehashing future pages", a
 });
 
 test("a stale snapshot creates no review artifact", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-run-stale-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-stale-");
   const outputPath = join(temporaryRoot, "stale.html");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { outputPath, temporaryRoot });

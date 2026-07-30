@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -17,6 +16,11 @@ import { main, parseArguments } from "../harness/hope.mjs";
 import {
   makeToxicReview,
 } from "../test-support/toxic-review-fixture.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -111,7 +115,7 @@ test("harness and generated Toxic Review report the same missing AI boundary", (
 });
 
 test("exact harness and generated Toxic Review commands stay equivalent", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-toxic-two-track-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-toxic-two-track-");
   const input = join(temporaryRoot, "toxic-review.json");
   await writeFile(input, JSON.stringify(makeToxicReview()), { mode: 0o600 });
   const brief = [

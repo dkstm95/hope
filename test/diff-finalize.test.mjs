@@ -4,21 +4,24 @@ import {
   link,
   lstat,
   mkdir,
-  mkdtemp,
   readFile,
   realpath,
   symlink,
   unlink,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 import { finalizeReview } from "../features/diff/finalize.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 test("review finalization never replaces an existing output", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-finalize-test-"));
+  const root = await createTestTemporaryDirectory("hope-finalize-test-");
   const outputPath = join(root, "review.html");
   await writeFile(outputPath, "keep me", "utf8");
   await assert.rejects(
@@ -39,7 +42,7 @@ test("review finalization never replaces an existing output", async () => {
 });
 
 test("review finalization does not follow an output symlink", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-finalize-link-"));
+  const root = await createTestTemporaryDirectory("hope-finalize-link-");
   const target = join(root, "target.html");
   const outputPath = join(root, "review.html");
   await writeFile(target, "keep target", "utf8");
@@ -62,7 +65,7 @@ test("review finalization does not follow an output symlink", async () => {
 });
 
 test("review finalization resolves a symlinked ancestor before publication", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-finalize-parent-"));
+  const root = await createTestTemporaryDirectory("hope-finalize-parent-");
   const realDirectory = join(root, "real");
   const alias = join(root, "alias");
   await mkdir(realDirectory);
@@ -81,7 +84,7 @@ test("review finalization resolves a symlinked ancestor before publication", asy
 });
 
 test("review finalization has no cross-filesystem copy fallback", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-finalize-cross-"));
+  const root = await createTestTemporaryDirectory("hope-finalize-cross-");
   const outputPath = join(root, "review.html");
   const crossFilesystem = Object.assign(
     new Error("cross-filesystem link"),
@@ -104,7 +107,7 @@ test("review finalization has no cross-filesystem copy fallback", async () => {
 });
 
 test("a publication race explains how to choose a new output", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-finalize-existing-race-"));
+  const root = await createTestTemporaryDirectory("hope-finalize-existing-race-");
   const outputPath = join(root, "review.html");
   await assert.rejects(
     finalizeReview(Buffer.from("review"), {
@@ -123,7 +126,7 @@ test("a publication race explains how to choose a new output", async () => {
 });
 
 test("review finalization rejects a replaced publication identity", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hope-finalize-race-"));
+  const root = await createTestTemporaryDirectory("hope-finalize-race-");
   const outputPath = join(root, "review.html");
   await assert.rejects(
     finalizeReview(Buffer.from("review"), {

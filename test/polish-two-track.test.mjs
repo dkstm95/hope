@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -13,6 +12,11 @@ import {
 import { validatePolishRun } from "../features/polish/validate.mjs";
 import { main, parseArguments } from "../harness/hope.mjs";
 import { makePolishRun } from "../test-support/polish-fixture.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -93,7 +97,7 @@ test("harness and generated Polish report the same missing AI boundary", () => {
 });
 
 test("exact harness and generated Polish commands stay equivalent", async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-polish-two-track-"));
+  const temporaryRoot = await createTestTemporaryDirectory("hope-polish-two-track-");
   const input = join(temporaryRoot, "polish.json");
   await writeFile(input, JSON.stringify(makePolishRun()), { mode: 0o600 });
   const brief = ["brief", "--risk", "high"];

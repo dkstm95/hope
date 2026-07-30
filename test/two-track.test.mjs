@@ -3,13 +3,12 @@ import { spawnSync } from "node:child_process";
 import {
   access,
   chmod,
-  mkdtemp,
   readFile,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -47,7 +46,12 @@ import {
   removeDiffRun,
 } from "../features/diff/run.mjs";
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
+import {
+  registerTestTemporaryDirectoryCleanup,
+} from "../test-support/temporary-directory.mjs";
 import { normalizeLineEndings } from "../tools/build-plugin.mjs";
+
+const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
@@ -437,7 +441,7 @@ test("the harness and generated runtime report the same missing AI boundary", ()
 test("the harness and generated runtime expose the same context-free Diff retry", {
   skip: process.platform === "win32",
 }, async (context) => {
-  const fakeBin = await mkdtemp(join(tmpdir(), "hope-fake-gh-"));
+  const fakeBin = await createTestTemporaryDirectory("hope-fake-gh-");
   const fakeGh = join(fakeBin, "gh");
   await writeFile(
     fakeGh,
@@ -493,7 +497,7 @@ test("the harness and generated runtime expose the same context-free Diff retry"
 });
 
 test("the harness and plugin share one global settings file", async () => {
-  const configHome = await mkdtemp(join(tmpdir(), "hope-two-track-settings-"));
+  const configHome = await createTestTemporaryDirectory("hope-two-track-settings-");
   const environment = { ...process.env, HOPE_CONFIG_HOME: configHome };
   const saved = spawnSync(
     process.execPath,
