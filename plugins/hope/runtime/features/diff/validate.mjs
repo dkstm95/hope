@@ -5,7 +5,6 @@ import {
   CONTRACT_VERSION,
   FILE_DISPOSITIONS,
   IMPORTANCE,
-  LEGACY_ANALYSIS_VERSION,
   LIMITS,
   REVIEW_KINDS,
 } from "./constants.mjs";
@@ -610,35 +609,10 @@ function validateTeachingAidDecision(value, name) {
   return Object.freeze({ decision, reason });
 }
 
-function legacyTeachingAidDecisions(behavior, quiz) {
-  const included = {
-    microworld: Boolean(behavior?.microworld),
-    quiz: quiz.length > 0,
-    visual: Boolean(behavior?.visual),
-  };
-  return Object.freeze(Object.fromEntries(TEACHING_AID_NAMES.map((name) => [
-    name,
-    Object.freeze({
-      decision: included[name] ? "included" : "omitted",
-      reason: "Legacy analysis did not record a teaching-aid decision.",
-      ...(included[name]
-        ? { teachingJob: "Legacy analysis included this teaching aid." }
-        : {}),
-    }),
-  ])));
-}
-
 function validateTeachingAidDecisions(value, {
-  analysisVersion,
   behavior,
   quiz,
 }) {
-  if (analysisVersion === LEGACY_ANALYSIS_VERSION) {
-    if (value !== undefined) {
-      throw new Error("Legacy Hope analysis cannot include teachingAids");
-    }
-    return legacyTeachingAidDecisions(behavior, quiz);
-  }
   object(value, "teachingAids", TEACHING_AID_NAMES);
   const decisions = Object.freeze(Object.fromEntries(
     TEACHING_AID_NAMES.map((name) => [
@@ -930,7 +904,6 @@ function validateCodeSteps(values, sourceMap, fileMap) {
 }
 
 export function validateAnalysis(analysis, snapshot, {
-  analysisVersion = ANALYSIS_VERSION,
   analysisFileBytes,
   enforceResourceLimits = true,
   runId,
@@ -955,10 +928,7 @@ export function validateAnalysis(analysis, snapshot, {
     "quiz",
     "teachingAids",
   ]);
-  if (
-    ![LEGACY_ANALYSIS_VERSION, ANALYSIS_VERSION].includes(analysisVersion)
-    || analysis.schemaVersion !== analysisVersion
-  ) {
+  if (analysis.schemaVersion !== ANALYSIS_VERSION) {
     throw new RangeError("Unsupported Hope analysis schema");
   }
   if (analysis.runId !== runId) throw new Error("Analysis runId does not match");
@@ -1042,9 +1012,8 @@ export function validateAnalysis(analysis, snapshot, {
   let quiz = [];
   if (analysis.quiz !== undefined) {
     const values = array(analysis.quiz, "quiz", 5);
-    const minimumQuestions = analysisVersion === LEGACY_ANALYSIS_VERSION ? 3 : 1;
-    if (values.length < minimumQuestions) {
-      throw new Error(`quiz needs at least ${minimumQuestions} questions`);
+    if (values.length < 1) {
+      throw new Error("quiz needs at least 1 question");
     }
     quiz = values.map((value, index) => {
       const name = `quiz[${index}]`;
@@ -1060,7 +1029,6 @@ export function validateAnalysis(analysis, snapshot, {
     });
   }
   const teachingAids = validateTeachingAidDecisions(analysis.teachingAids, {
-    analysisVersion,
     behavior,
     quiz,
   });
@@ -1120,9 +1088,7 @@ export function validateAnalysis(analysis, snapshot, {
   const decisionValues = Object.values(teachingAids);
   const resources = Object.freeze({
     ...analysisResourceValues,
-    teachingAidDecisions: analysisVersion === ANALYSIS_VERSION
-      ? decisionValues.length
-      : 0,
+    teachingAidDecisions: decisionValues.length,
     teachingAidMicroworldIncluded: teachingAids.microworld.decision === "included"
       ? 1
       : 0,
@@ -1140,7 +1106,7 @@ export function validateAnalysis(analysis, snapshot, {
   });
 
   return Object.freeze({
-    analysisSchemaVersion: analysisVersion,
+    analysisSchemaVersion: ANALYSIS_VERSION,
     background: Object.freeze(background),
     behavior,
     codeSteps: Object.freeze(codeSteps),

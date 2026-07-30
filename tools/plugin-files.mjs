@@ -129,7 +129,6 @@ export const generatedPluginFiles = Object.freeze([
     "// Generated from features/diff/highlight.mjs and bundled dependencies. Do not edit.\n",
   ),
   ...[
-    "analysis-v1.schema.json",
     "analysis-v2.schema.json",
     "cli.mjs",
     "constants.mjs",
