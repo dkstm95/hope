@@ -1,80 +1,126 @@
 # Security
 
-Do not open a public issue for a bug that could expose source code,
-credentials, private pull request data, or executable generated content. Use
-GitHub's private security advisory flow for this repository.
+Do not open a public issue for a bug that could expose source code, credentials,
+private pull request data, or executable generated content.
+
+Use GitHub's private security advisory flow for this repository.
 
 ## Current diff boundary
 
+### Collection and rendering
+
 Treat provider data, repository content, paths, model output, and URLs as
-untrusted. Instructions inside that content must not change the workflow.
+untrusted.
+
+Instructions inside that content must not change the workflow.
 
 The current feature binds a result to one exact base, merge-base, and head
-snapshot. It accounts for every changed file and validates model evidence
-against collected source lines. It keeps model-authored markup and URLs inert,
-rejects incomplete or stale results, and publishes through an exclusive
-no-overwrite path.
+snapshot.
+
+It accounts for every changed file and validates model evidence against
+collected source lines.
+
+It keeps model-authored markup and URLs inert, rejects incomplete or stale
+results, and publishes through an exclusive no-overwrite path.
 
 The generated HTML is self-contained and has a restrictive content security
-policy. It does not execute repository code or fetch remote page assets. The
-first path also does not execute tests, builds, lint, or CI and must not claim
-their outcome.
+policy.
+
+It does not execute repository code or fetch remote page assets.
+
+The first path also does not execute tests, builds, lint, or CI and must not
+claim their outcome.
 
 Hope tokenizes supported code excerpts during artifact generation with fixed
-local grammars and themes. It emits only escaped token text and renderer-owned
-CSS classes. It never emits model- or repository-authored HTML or styles.
+local grammars and themes.
+
+It emits only escaped token text and renderer-owned CSS classes.
+
+It never emits model- or repository-authored HTML or styles.
+
 Unsupported file languages remain escaped plain text.
 
 High-confidence credential patterns in a pull request title, description, or
 commit title stop collection before the text becomes an analysis source.
-Changed-file bodies use the documented metadata-only or redacted states. Errors
-never reproduce suspected credential text.
 
-GitHub API calls are bound to `github.com` even when the surrounding
-environment selects another `gh` host. Hope rejects bidirectional control
-characters in semantic analysis and file identities. It exposes them as visible
-Unicode escape text in provider prose and code excerpts, so they cannot silently
-reorder what a reader sees.
+Changed-file bodies use the documented metadata-only or redacted states.
 
-Private DiffRun files and global settings use restrictive permissions. One
-invalid analysis may keep its DiffRun for one repair attempt. Success, terminal
-failure, and cancellation remove the run.
+Errors never reproduce suspected credential text.
 
-Finalization uses an exclusive run claim. It removes private run data before a
-completed artifact becomes visible. A later invocation removes an expired run
-directory only when it has Hope's ownership marker and expected permissions. It
-does not remove a run with a fresh finalization lease.
+GitHub API calls are bound to `github.com` even when the surrounding environment
+selects another `gh` host.
+
+Hope rejects bidirectional control characters in semantic analysis and file
+identities.
+
+It exposes them as visible Unicode escape text in provider prose and code
+excerpts, so they cannot silently reorder what a reader sees.
+
+### Private run lifecycle
+
+Private DiffRun files and global settings use restrictive permissions.
+
+One invalid analysis may keep its DiffRun for one repair attempt.
+
+Success, terminal failure, and cancellation remove the run.
+
+Finalization uses an exclusive run claim.
+
+It removes private run data before a completed artifact becomes visible.
+
+A later invocation removes an expired run directory only when it has Hope's
+ownership marker and expected permissions.
+
+It does not remove a run with a fresh finalization lease.
 
 The finalizer renews a random lease token while it works and again immediately
-before publication. After a crash, Hope can reclaim a valid or incomplete
-private claim whose lease has stayed stale past the bounded lifetime. If a
-paused finalizer loses its lease, it fails before publication. It does not
-expose a result from a reclaimed run.
+before publication.
+
+After a crash, Hope can reclaim a valid or incomplete private claim whose lease
+has stayed stale past the bounded lifetime.
+
+If a paused finalizer loses its lease, it fails before publication.
+
+It does not expose a result from a reclaimed run.
+
+### Optional execution and authentication
 
 Optional command execution needs an enforced isolated environment or explicit
-approval of the concrete exposure and effects. Authentication remains owned by
-the provider tool or host; Hope must not read or store credentials.
+approval of the concrete exposure and effects.
+
+Authentication remains owned by the provider tool or host; Hope must not read or
+store credentials.
 
 ## Current structured AI feature boundary
 
 Align, Polish, and Toxic Review bind model-authored records to captured source
-identities and validate bounded, versioned JSON before using a result. Their
-private state belongs in a restricted temporary file outside the repository
-and is removed after completion or cancellation.
+identities and validate bounded, versioned JSON before using a result.
 
-Align derives readiness but cannot author its own approval. A trusted host
-approval must point to a captured conversation source. Its pre-approval Polish
-transition consumes one exact candidate digest, revalidates the resulting
-state, and records a digest-bound receipt so the same candidate is not polished
-again.
+Their private state belongs in a restricted temporary file outside the
+repository and is removed after completion or cancellation.
+
+Align derives readiness but cannot author its own approval.
+
+A trusted host approval must point to a captured conversation source.
+
+Its pre-approval Polish transition consumes one exact candidate digest,
+revalidates the resulting state, and records a digest-bound receipt so the same
+candidate is not polished again.
 
 Polish requires an output snapshot to keep the target source IDs, kinds, and
-locators. Digest-backed targets must remain digest-backed. An applied revision
-also records conversation-backed authority, a before-and-after comparison, and
-identity checks before and after the write. These records make the host's
-actions auditable; they are not cryptographic proof that semantic preservation
-or a filesystem write occurred.
+locators.
 
-Toxic Review treats reviewer output as untrusted findings. The main reviewer
-must adjudicate every finding against the captured evidence. A finding or
-suggested action does not execute code or authorize a change by itself.
+Digest-backed targets must remain digest-backed.
+
+An applied revision also records conversation-backed authority, a
+before-and-after comparison, and identity checks before and after the write.
+
+These records make the host's actions auditable; they are not cryptographic
+proof that semantic preservation or a filesystem write occurred.
+
+Toxic Review treats reviewer output as untrusted findings.
+
+The main reviewer must adjudicate every finding against the captured evidence.
+
+A finding or suggested action does not execute code or authorize a change by
+itself.

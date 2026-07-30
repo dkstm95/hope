@@ -343,13 +343,63 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.doesNotMatch(diff, /Prefer a short, familiar word/u);
   assert.match(diff, /validate --run <run-path>/u);
   assert.match(diff, /HOPE_DIFF_REVALIDATION_RETRYABLE/u);
-  assert.match(diff, /structured error's `command` and\s+`runPath` fields/u);
-  assert.match(diff, /before the first `finish` attempt/u);
+  assert.match(diff, /structured error's\s+`command` and\s+`runPath` fields/u);
+  assert.match(diff, /before the\s+first `finish` attempt/u);
   assert.match(settings, /runtime\/settings\/cli\.mjs/u);
   assert.match(write, /runtime\/features\/write\/cli\.mjs/u);
   assert.match(write, /brief --mode <draft\|edit\|review>/u);
   assert.doesNotMatch(write, /Prefer a short, familiar word/u);
   assert.equal(pluginWritingStandard, coreWritingStandard);
+});
+
+test("every Write entry path returns the same brief", async () => {
+  const expectedStandard = await loadWritingStandard();
+  const entries = [
+    {
+      name: "core",
+      path: resolve(root, "features/write/cli.mjs"),
+      prefixArguments: [],
+    },
+    {
+      name: "harness",
+      path: resolve(root, "harness/hope.mjs"),
+      prefixArguments: ["write"],
+    },
+    {
+      name: "generated plugin",
+      path: resolve(root, "plugins/hope/runtime/features/write/cli.mjs"),
+      prefixArguments: [],
+    },
+  ];
+
+  for (const mode of ["draft", "edit", "review"]) {
+    const briefs = entries.map((entry) => {
+      const result = spawnSync(
+        process.execPath,
+        [
+          entry.path,
+          ...entry.prefixArguments,
+          "brief",
+          "--mode",
+          mode,
+        ],
+        { encoding: "utf8" },
+      );
+      assert.equal(
+        result.status,
+        0,
+        `${entry.name} Write brief failed: ${result.stderr}`,
+      );
+      return JSON.parse(result.stdout);
+    });
+
+    for (const brief of briefs) {
+      assert.equal(brief.mode, mode);
+      assert.equal(brief.standard, expectedStandard);
+    }
+    assert.deepEqual(briefs[1], briefs[0]);
+    assert.deepEqual(briefs[2], briefs[0]);
+  }
 });
 
 test("core and generated Diff preparation return one writing standard", async () => {

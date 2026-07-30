@@ -20,11 +20,10 @@
 AI can finish a task quickly without making its decisions, evidence, or
 remaining uncertainty clear to the person responsible for it.
 
-Hope provides focused tools for those moments:
+Hope provides a focused tool for each of those moments.
 
-align on a task before implementation,
-challenge a work product, understand a code change, refine completed work, and
-make language clear without losing its meaning.
+Use Hope to align before implementation, challenge a work product, understand a
+code change, refine completed work, or clarify language without losing meaning.
 
 ## Start with your problem
 
@@ -75,13 +74,15 @@ Start a new Codex or Claude Code session after installation.
 
 > “The AI and I may not understand this task the same way.”
 
-Misunderstandings about a task's goal, scope, behavior, or important choices
-can survive until implementation. Align reads available evidence, asks
-risk-adaptive questions, and keeps facts, decisions, proposals, assumptions,
-and open questions distinct.
+Misunderstandings about a task's goal, scope, behavior, or important choices can
+survive until implementation.
 
-It renders the current shared understanding as one self-contained HTML
-artifact with the scope, success conditions, scenarios, and verifiable work.
+Align reads available evidence, asks risk-adaptive questions, and keeps facts,
+decisions, proposals, assumptions, and open questions distinct.
+
+It renders the current shared understanding as one self-contained HTML artifact
+with the scope, success conditions, scenarios, and verifiable work.
+
 Align waits for explicit approval and never implements the task.
 
 > Example: “Help us settle the upload recovery behavior before implementation.”
@@ -103,12 +104,16 @@ Align waits for explicit approval and never implements the task.
 > “This looks convincing, but I may be missing an important problem.”
 
 Convincing work can still hide material problems, unsupported claims, or
-needless complexity. Toxic Review selects only the perspectives that fit the
-target and risk.
+needless complexity.
+
+Toxic Review selects only the perspectives that fit the target and risk.
 
 It turns evidence-linked findings into one prioritized review rather than a
-collection of reviewer voices. It is hard on the work, respectful toward
-people, and does not invent criticism. Finding no material issue is valid.
+collection of reviewer voices.
+
+It is hard on the work, respectful toward people, and does not invent criticism.
+
+Finding no material issue is valid.
 
 > Example: “Find the material risks in this migration plan.”
 
@@ -119,14 +124,18 @@ people, and does not invent criticism. Finding no material issue is valid.
 > “AI changed the code, but I cannot explain what changed or judge it yet.”
 
 A code change can be complete while its owner still cannot predict, explain, or
-judge it. That gap is cognitive debt. Diff binds its explanation to one exact
-GitHub pull request snapshot, explains behavior before code, and links
-important claims to evidence.
+judge it.
 
-When active exploration would help, the review can use visuals, a microworld,
-or an evidence-backed quiz. The resulting local HTML file helps the reader
-understand the change, judge it, and carry that understanding into follow-up
-decisions and work.
+That gap is cognitive debt.
+
+Diff binds its explanation to one exact GitHub pull request snapshot, explains
+behavior before code, and links important claims to evidence.
+
+When active exploration would help, the review can use visuals, a microworld, or
+an evidence-backed quiz.
+
+The resulting local HTML file helps the reader understand the change, judge it,
+and carry that understanding into follow-up decisions and work.
 
 Diff does not recommend approval or rejection, change the pull request, inspect
 discussions or CI results, or run repository code.
@@ -144,7 +153,9 @@ discussions or CI results, or run repository code.
 | [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
 
 With no URL, Diff selects the current branch's pull request or your latest open
-pull request in the repository. Run Diff again when the pull request changes.
+pull request in the repository.
+
+Run Diff again when the pull request changes.
 
 ---
 
@@ -152,9 +163,11 @@ pull request in the repository. Run Diff again when the pull request changes.
 
 > “The work is complete, but I want to refine it without changing what we already settled.”
 
-Refinement can quietly become a behavior change, a new requirement, or a
-matter of taste. Polish defines what must stay unchanged and refines the work
-once within a clear scope.
+Refinement can quietly become a behavior change, a new requirement, or a matter
+of taste.
+
+Polish defines what must stay unchanged and refines the work once within a clear
+scope.
 
 It preserves settled behavior and meaning, reports what changed and what was
 checked, and stops when the work needs a material decision.
@@ -168,20 +181,40 @@ checked, and stops when the work needs a material decision.
 > “Make this clearer without changing what it means or inventing what we do not know.”
 
 A smoother sentence is still wrong if it loses a fact, removes uncertainty,
-changes a citation, or replaces the person's voice. Write's shared standard
-adapts George Orwell's six rules in
-[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/):
-avoid stale metaphors and stock phrases; prefer short, familiar words; remove
-words that add no meaning; use active voice when it makes the actor and action
-clearer; replace jargon with everyday language when possible; and break any
-rule that would make the writing inaccurate, unclear, unnatural, or needlessly
-harsh.
+changes a citation, or replaces the person's voice.
 
-Hope adds rules to lead with the result, keep one main idea per sentence, and
-preserve meaning, facts, uncertainty, citations, numbers, and voice. Each
-language must read like original prose rather than copying another language's
-word order and idiom. Write can draft, edit, or review language; use Polish
-when a completed work product also needs structural refinement.
+Write's shared standard adapts George Orwell's six rules in
+[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/):
+
+- avoid stale metaphors and stock phrases;
+- prefer short, familiar words;
+- remove words that add no meaning;
+- use active voice when it makes the actor and action clearer;
+- replace jargon with everyday language when possible; and
+- break any rule that would make the writing inaccurate, unclear, unnatural, or
+  needlessly harsh.
+
+Hope also leads with the result, keeps one main idea in each sentence, and
+preserves meaning, facts, uncertainty, citations, numbers, and voice.
+
+Hope prefers one sentence per prose paragraph when it improves meaning,
+readability, or rhythm.
+
+In Markdown and plain text, one blank line separates paragraphs, while other
+formats use their native paragraph structure.
+
+Write chooses semantic structure, and the renderer controls visible spacing,
+typography, and styling.
+
+Related sentences stay together when splitting them would harm meaning, flow,
+or voice, or conflict with the target format.
+
+Each language must read like original prose rather than copying another
+language's word order and idiom.
+
+Write can draft, edit, or review language.
+
+Use Polish when a completed work product also needs structural refinement.
 
 > Example: “Make this save error clear without inventing a cause.”
 
@@ -192,8 +225,9 @@ when a completed work product also needs structural refinement.
 > “I do not want to choose the same language and theme for every result.”
 
 Settings stores a supported locale and initial `system`, `light`, or `dark`
-theme as shared defaults for the harness and installed plugin. Changes affect
-new artifacts only.
+theme as shared defaults for the harness and installed plugin.
+
+Changes affect new artifacts only.
 
 ## License
 

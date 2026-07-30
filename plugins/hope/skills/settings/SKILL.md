@@ -34,9 +34,12 @@ set theme dark
 reset
 ```
 
-Use `show` when the request is ambiguous. Do not edit the settings file
-directly, inspect unrelated environment values, or store a preference inferred
-only from the current conversation language.
+Use `show` when the request is ambiguous.
 
-Report the command result plainly. A new review uses the changed default; an
-existing offline review does not change.
+Do not edit the settings file directly, inspect unrelated environment values, or
+store a preference inferred only from the current conversation language.
+
+Report the command result plainly.
+
+A new review uses the changed default; an existing offline review does not
+change.

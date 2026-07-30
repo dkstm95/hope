@@ -1,6 +1,7 @@
 # Hope font sources
 
 Hope embeds fixed WOFF2 files so every offline artifact has the same type.
+
 Unsupported characters still fall back to the local sans-serif or monospace
 font.
 
@@ -64,6 +65,9 @@ fonttools ttLib.woff2 compress D2Coding-Ver1.3.2-20180524.ttf
   -o HopeCode.woff2
 ```
 
-The WOFF2 files are modified versions. Hope presents them as `Hope Sans` and
-`Hope Code`, not under the reserved Gmarket Sans or D2Coding names. See
-`OFL-Gmarket.txt` and `OFL-D2Coding.txt`.
+The WOFF2 files are modified versions.
+
+Hope presents them as `Hope Sans` and `Hope Code`, not under the reserved
+Gmarket Sans or D2Coding names.
+
+See `OFL-Gmarket.txt` and `OFL-D2Coding.txt`.
