@@ -26,6 +26,8 @@ runtime/features/align/session-v1.schema.json
 runtime/features/align/validate.mjs
 runtime/features/artifact/index.mjs
 runtime/features/diff/analysis-v2.schema.json
+runtime/features/diff/checkpoint-v1.schema.json
+runtime/features/diff/checkpoint.mjs
 runtime/features/diff/cli.mjs
 runtime/features/diff/constants.mjs
 runtime/features/diff/context.mjs

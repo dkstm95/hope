@@ -40,6 +40,7 @@ import {
   parseArguments,
 } from "../harness/hope.mjs";
 import {
+  checkpointDiffRun,
   createDiffRun,
   inspectDiffRun,
   loadDiffRun,
@@ -102,16 +103,24 @@ test("the harness parses every independent feature entry", () => {
     "context",
     "--run",
     "/tmp/hope-run",
-    "--head-file",
-    "src/caller.js",
-    "--merge-base-file",
-    "src/caller.js",
+    "--request",
+    "context-request-1",
+    "--request",
+    "context-request-2",
   ]), {
     command: "context",
-    requests: [
-      { path: "src/caller.js", revision: "head" },
-      { path: "src/caller.js", revision: "merge-base" },
-    ],
+    requestIds: ["context-request-1", "context-request-2"],
+    runPath: "/tmp/hope-run",
+  });
+  assert.deepEqual(parseDiffArguments([
+    "ledger",
+    "--run",
+    "/tmp/hope-run",
+    "--page",
+    "2",
+  ]), {
+    command: "ledger",
+    page: 2,
     runPath: "/tmp/hope-run",
   });
   assert.deepEqual(parseDiffArguments([
@@ -170,13 +179,13 @@ test("the diff command delegates microworld skeleton generation", async () => {
 test("the diff command delegates bounded exact-revision context collection", async () => {
   let received;
   let output = "";
-  const requests = [{ path: "src/caller.js", revision: "head" }];
+  const requestIds = ["context-request-1"];
   await runDiffCommand([
     "context",
     "--run",
     "/tmp/hope-run",
-    "--head-file",
-    "src/caller.js",
+    "--request",
+    "context-request-1",
   ], {
     addDiffContext: async (runPath, contextRequests) => {
       received = { contextRequests, runPath };
@@ -189,7 +198,7 @@ test("the diff command delegates bounded exact-revision context collection", asy
     },
   });
   assert.deepEqual(received, {
-    contextRequests: requests,
+    contextRequests: requestIds,
     runPath: "/tmp/hope-run",
   });
   assert.equal(output, `${JSON.stringify({ collected: 1, pageCount: 4 }, null, 2)}\n`);
@@ -509,6 +518,15 @@ test("the harness and generated runtime expose the same context-free Diff retry"
   context.after(async () => await removeDiffRun(created.path).catch(() => {}));
   for (let page = 1; page <= created.pageCount; page += 1) {
     await inspectDiffRun(created.path, page);
+    const run = await loadDiffRun(created.path);
+    await checkpointDiffRun(created.path, page, {
+      generation: run.manifest.generation,
+      observations: [],
+      page,
+      runId: run.manifest.runId,
+      schemaVersion: 1,
+      snapshotDigest: run.snapshot.digest,
+    });
   }
   await writeFile(
     created.analysisPath,

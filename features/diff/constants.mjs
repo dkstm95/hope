@@ -1,7 +1,8 @@
 export const CONTRACT_VERSION = 1;
 export const ANALYSIS_VERSION = 2;
 export const RENDERER_VERSION = 5;
-export const RUN_VERSION = 3;
+export const RUN_VERSION = 5;
+export const CHECKPOINT_VERSION = 1;
 export const TEACHING_AID_CONTRACT_VERSION = 2;
 
 export const LIMITS = Object.freeze({
@@ -9,6 +10,17 @@ export const LIMITS = Object.freeze({
   artifactBytes: 6 * 1024 * 1024,
   changedFiles: 200,
   changedLines: 20_000,
+  checkpointBytes: 32 * 1024,
+  checkpointEvidence: 8,
+  checkpointEvidenceExcerptBytes: 8 * 1024,
+  checkpointEvidenceLines: 24,
+  checkpointEvidenceTotalBytes: 96 * 1024,
+  checkpointEvidenceTotalLines: 1_200,
+  checkpointObservations: 8,
+  checkpointTextBytes: 4 * 1024,
+  checkpointTextTotalBytes: 96 * 1024,
+  checkpointTotalObservations: 256,
+  checkpointTotalRequests: 12,
   commits: 250,
   contextBodyTotalBytes: 256 * 1024,
   contextFiles: 12,
@@ -21,12 +33,17 @@ export const LIMITS = Object.freeze({
   highlightedLines: 600,
   inspectionPageBytes: 16 * 1024,
   inspectionTotalBytes: 1024 * 1024,
+  ledgerBytes: 256 * 1024,
+  ledgerPageBytes: 48 * 1024,
+  ledgerStateBytes: 64 * 1024,
+  manifestBytes: 128 * 1024,
   modelBytes: 128 * 1024,
   modelString: 32 * 1024,
   pullRequestBodyBytes: 32 * 1024,
   reviewItems: 80,
   safeBodyBytes: 256 * 1024,
   safeBodyTotalBytes: 768 * 1024,
+  snapshotBytes: 8 * 1024 * 1024,
   uniqueEvidenceRanges: 96,
 });
 

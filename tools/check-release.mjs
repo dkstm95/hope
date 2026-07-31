@@ -84,6 +84,7 @@ const requiredFiles = [
   "tools/plugin-package-files.txt",
   "tools/check-plugin-version.mjs",
   "tools/install-plugin-dev.mjs",
+  "tools/next-release-version.mjs",
   "tools/prepare-release.mjs",
   "tools/render-readme-assets.mjs",
   "tools/stage-plugin.mjs",
@@ -154,6 +155,7 @@ const [
   write,
   release,
   verify,
+  packageLock,
   readme,
   readmeKo,
   agentInstructions,
@@ -177,6 +179,7 @@ const [
     read("docs/write.md"),
     read(".github/workflows/release.yml"),
     read(".github/workflows/verify.yml"),
+    readJson("package-lock.json"),
     read("README.md"),
     read("README.ko.md"),
     read("AGENTS.md"),
@@ -184,6 +187,8 @@ const [
   ]);
 
 assert.equal(packageJson.version, currentVersion);
+assert.equal(packageLock.version, currentVersion);
+assert.equal(packageLock.packages[""].version, currentVersion);
 assert.equal(packageJson.bin.hope, "./harness/hope.mjs");
 assert.equal(codexPlugin.name, "hope");
 assert.equal(codexPlugin.version, currentVersion);
@@ -273,10 +278,17 @@ assert.match(agentInstructions, /Use the Hope Write Skill whenever/u);
 assert.match(agentInstructions, /again before sending any response/u);
 assert.match(claudeInstructions, /@AGENTS\.md/u);
 assert.match(release, /npm run build:plugin/u);
+assert.match(release, /workflow_dispatch/u);
+assert.match(release, /node tools\/next-release-version\.mjs/u);
+assert.match(release, /gh release view/u);
+assert.match(release, /git checkout --detach/u);
+assert.match(release, /already exists unexpectedly/u);
+assert.match(release, /git push origin HEAD:main/u);
+assert.doesNotMatch(release, /--prerelease/u);
 assert.match(release, /npx playwright install --with-deps chromium/u);
 assert.match(release, /npm run test:browser/u);
 assert.match(release, /fetch-depth: 0/u);
-assert.match(release, /git merge-base --is-ancestor "\$\{GITHUB_SHA\}" refs\/remotes\/origin\/main/u);
+assert.match(release, /test "\$\{GITHUB_REF\}" = "refs\/heads\/main"/u);
 assert.match(release, /node tools\/stage-plugin\.mjs/u);
 assert.match(release, /diff -u tools\/plugin-package-files\.txt/u);
 assert.match(release, /unzip -p [^\n]* \.claude-plugin\/plugin\.json/u);
@@ -301,8 +313,14 @@ for (const [file, text] of [
 ]) {
   const locale = file === "README.md" ? "en" : "ko";
   assert.match(text, /https:\/\/github\.com\/dkstm95\/hope/u);
+  assert.match(text, /img\.shields\.io\/badge\/Codex-supported-/u);
+  assert.match(text, /img\.shields\.io\/badge\/Claude_Code-supported-/u);
+  assert.match(text, /logo=claudecode/u);
   assert.match(text, /codex plugin marketplace add dkstm95\/hope/u);
+  assert.match(text, /codex plugin marketplace upgrade hope/u);
+  assert.match(text, /codex plugin add hope@hope/u);
   assert.match(text, /claude plugin marketplace add dkstm95\/hope/u);
+  assert.match(text, /\/reload-plugins/u);
   assert.doesNotMatch(text, /\$hope:|```mermaid/iu);
   for (const asset of [
     "align",

@@ -130,6 +130,8 @@ export const generatedPluginFiles = Object.freeze([
   ),
   ...[
     "analysis-v2.schema.json",
+    "checkpoint-v1.schema.json",
+    "checkpoint.mjs",
     "cli.mjs",
     "constants.mjs",
     "context.mjs",

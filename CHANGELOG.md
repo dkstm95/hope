@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0 - 2026-07-31
+
+- Release Hope as a stable AI work harness and plugin for Codex and Claude Code.
+- Add durable, bounded Diff checkpoints so a review does not depend on the
+  active model retaining every inspection page in its context.
+- Make Diff page and context transitions read bounded state, replay safely after
+  interrupted output, and avoid fetching the same context twice.
+- Reduce Diff runtime on three representative pull requests while keeping
+  memory bounded and preserving crash recovery and snapshot integrity.
+- Publish releases through one manual GitHub workflow.
+  It reuses an unreleased repository version, increases an already released
+  version by the selected patch, minor, or major increment, and safely resumes
+  a tag whose GitHub Release was interrupted.
+
 ## 0.5.0-alpha - 2026-07-29
 
 - Add Hope Align as an adaptive, evidence-backed pre-implementation interview

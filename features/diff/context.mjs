@@ -51,7 +51,7 @@ function validateRevision(snapshot, kind) {
   return revision;
 }
 
-function validatePath(value) {
+export function validateContextPath(value) {
   if (
     typeof value !== "string"
     || value.length === 0
@@ -92,7 +92,7 @@ function validateRequests(snapshot, requests) {
     ) {
       throw new Error("Hope context received an invalid request");
     }
-    const path = validatePath(request.path);
+    const path = validateContextPath(request.path);
     if (!revisionKinds.has(request.revision)) {
       throw new Error("Hope context revision must be head or merge-base");
     }
@@ -145,7 +145,17 @@ function contentUnavailable(path, revision, content) {
   );
 }
 
-export async function collectGitHubContext(snapshot, requests, { gh } = {}) {
+export async function collectGitHubContext(snapshot, requests, {
+  existingBytes = 0,
+  gh,
+} = {}) {
+  if (
+    !Number.isSafeInteger(existingBytes)
+    || existingBytes < 0
+    || existingBytes > LIMITS.contextBodyTotalBytes
+  ) {
+    throw new Error("Hope context has an invalid existing byte count");
+  }
   const repository = validateRepository(snapshot);
   const values = validateRequests(snapshot, requests);
   const options = gh ? { exec: gh } : {};
@@ -206,7 +216,7 @@ export async function collectGitHubContext(snapshot, requests, { gh } = {}) {
     return included(path, revision, content.text);
   }));
 
-  let total = 0;
+  let total = existingBytes;
   return Object.freeze(collected.map((candidate) => {
     if (candidate.kind !== "context-file") return candidate;
     const bytes = Buffer.byteLength(candidate.text, "utf8");

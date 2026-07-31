@@ -329,4 +329,15 @@ test("context sources enforce the total text boundary without aborting", async (
   )), true);
   assert.equal(overLimit[4].kind, "context-unavailable");
   assert.equal(overLimit[4].reasonKind, "safe-total-limit");
+
+  const laterRound = await collectGitHubContext(
+    snapshot(),
+    [{ path: "src/five.js", revision: "head" }],
+    {
+      existingBytes: LIMITS.contextBodyTotalBytes,
+      gh: github.gh,
+    },
+  );
+  assert.equal(laterRound[0].kind, "context-unavailable");
+  assert.equal(laterRound[0].reasonKind, "safe-total-limit");
 });

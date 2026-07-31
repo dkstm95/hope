@@ -12,6 +12,7 @@ const fromRoot = (path) => new URL(path, root);
 
 export const versionFiles = Object.freeze([
   "package.json",
+  "package-lock.json",
   "plugins/hope/.codex-plugin/plugin.json",
   "plugins/hope/.claude-plugin/plugin.json",
 ]);
@@ -45,10 +46,48 @@ export function replaceVersion(content, version) {
   return content.replace(versionLine, `$1"${version}"`);
 }
 
+export function withPackageLockVersion(document, version) {
+  if (!isSemanticVersion(version)) {
+    throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
+  }
+  if (
+    !document
+    || typeof document !== "object"
+    || Array.isArray(document)
+    || !document.packages
+    || typeof document.packages !== "object"
+    || Array.isArray(document.packages)
+    || !document.packages[""]
+    || typeof document.packages[""] !== "object"
+    || Array.isArray(document.packages[""])
+  ) {
+    throw new Error("Package lock does not declare the root package");
+  }
+  return {
+    ...document,
+    version,
+    packages: {
+      ...document.packages,
+      "": {
+        ...document.packages[""],
+        version,
+      },
+    },
+  };
+}
+
 async function writeVersion(path, version) {
   const url = fromRoot(path);
   const content = await readFile(url, "utf8");
-  JSON.parse(content);
+  const document = JSON.parse(content);
+  if (path === "package-lock.json") {
+    await writeFile(
+      url,
+      `${JSON.stringify(withPackageLockVersion(document, version), null, 2)}\n`,
+      "utf8",
+    );
+    return;
+  }
   await writeFile(url, replaceVersion(content, version), "utf8");
 }
 
