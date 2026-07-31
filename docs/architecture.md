@@ -139,13 +139,48 @@ It collects an exact GitHub pull-request snapshot, exposes bounded inspection
 pages, validates one structured analysis, rechecks the snapshot, and publishes
 one private self-contained HTML file without replacing an existing file.
 
-After the first inspection, the Skill can ask the shared runtime for a limited
-set of grounded files at the captured head or merge-base revision.
+After each inspection page, the Skill writes a bounded, page-local checkpoint.
 
-The runtime adds those context sources through an atomic replacement inspection
-plan.
+The shared runtime validates its citations and stores each checkpoint as one
+immutable, digest-chained record.
 
-This prevents the analysis from mixing page generations.
+A checkpoint transition reads the manifest, one inspection page, and one
+bounded state summary.
+
+It returns the next inspection page in the same process.
+
+The explicit inspection command remains the replay path after lost or truncated
+output.
+
+When the Skill later reads the bounded ledger pages, the runtime adds exact
+excerpts from the bound snapshot to the model-authored notes.
+
+This gives every supported host durable review memory without assuming that its
+model will retain every earlier page.
+
+Only a checkpointed question can create a context request.
+
+The Skill can ask the shared runtime to collect selected request IDs at the
+captured head or merge-base revision.
+
+The runtime preserves earlier evidence and appends an inspection generation
+containing only the new context sources or limits.
+
+The context transition returns that generation's first page in the same
+process.
+
+Its committed operation receipt lets the same request IDs replay that result
+without another provider fetch.
+
+The Skill reads and checkpoints only that generation.
+
+The runtime does not keep a daemon alive between commands.
+
+Each command uses a shared fenced mutation lease, makes one bounded,
+recoverable transition, and then exits.
+
+Generation receipts keep analysis from mixing uninspected context with earlier
+evidence.
 
 The Claude and Codex Skills provide the first complete AI analysis path.
 

@@ -33,16 +33,31 @@ Read [docs/write.md](docs/write.md) before implementing Hope write.
 
 ## Prepare a release
 
-Use one command to keep every public version and generated package copy in
-sync:
+Run the `Release` workflow on `main` to publish Hope.
+
+The workflow releases the version already recorded in the repository when that
+version has no GitHub Release.
+
+After that version is released, the next run increases it automatically.
+
+Choose a patch, minor, or major increase when starting the workflow.
+
+Patch is the default.
+
+The workflow updates every public version, commits the change, verifies the
+package, creates the matching tag, and publishes the release assets.
+
+If a run creates the tag but fails before publishing the GitHub Release, rerun
+it.
+
+The rerun resumes the same version instead of increasing it again.
+
+Use the preparation command locally when reviewing a specific version before
+release:
 
 ```bash
-npm run release:prepare -- 0.4.1-alpha
+npm run release:prepare -- 1.0.0
 ```
-
-Review and commit all changed files.
-
-Merge that commit into `main` before creating the matching `v0.4.1-alpha` tag.
 
 Do not add files to a release by changing the zip command.
 

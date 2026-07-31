@@ -78,6 +78,18 @@ under the person's host and account policy.
 
 Hope must not imply that private source stays on the local machine.
 
+Private run storage protects against other local users, accidental corruption,
+partial writes, and stale Hope processes.
+
+Every state change uses one fenced lease.
+
+Checkpoint records are immutable and joined by a digest chain.
+
+This boundary trusts the local Hope process and operating-system account.
+
+It does not claim to stop malicious code that already controls that same
+account from rewriting both a record and its trusted state.
+
 ## Snapshot integrity
 
 An exact code snapshot includes:
@@ -372,18 +384,67 @@ Inspect only the relevant pull request text, commit titles, code versions, call
 sites, types, settings, tests, examples, and exact-revision CI needed to answer
 those questions.
 
-The first inspection plan contains the change sources.
+The first inspection generation contains the change sources.
 
-After reading it, the active host may request at most twelve concrete
-repository-relative context files whose paths are grounded in those sources.
+After each page, the active host must submit a bounded checkpoint before it can
+read the next page.
 
-Hope collects each file from the captured head or merge-base revision and keeps
-it in the private snapshot as context evidence.
+A successful checkpoint transition returns the next inspection page in the
+same runtime invocation.
 
-It atomically replaces the inspection plan before analysis, and the host reads
-the new plan from the beginning.
+The host uses that returned page for normal advancement instead of starting a
+separate inspection invocation.
 
-This bounded path does not search the repository or guess an ungrounded path.
+The explicit inspection command remains available to replay the expected page
+after lost or truncated output.
+
+Repeating a committed checkpoint returns the same transition and replays its
+next page.
+
+A checkpoint may record page-local facts, risks, and questions.
+
+Every observation cites lines delivered on that page.
+
+Hope validates those references and stores the checkpoint as one private,
+immutable, digest-chained record.
+
+The observation text is model-authored and remains untrusted.
+
+Hope extracts the cited text from the bound snapshot when it presents the
+ledger, so later analysis does not depend only on the host retaining every old
+page in model context.
+
+Only a checkpoint question may propose a repository-relative context path.
+
+The path must appear in that question's cited source excerpt.
+
+The runtime assigns that proposal a context request ID.
+
+The active host can collect at most twelve such requests across the run.
+
+Hope collects each selected file from the captured head or merge-base revision
+and keeps it in the private snapshot as context evidence.
+
+It preserves the existing snapshot prefix and ledger, then appends a new
+inspection generation that contains only the new context sources and limits.
+
+The context transition returns the first page of that generation in the same
+runtime invocation.
+
+The host reads and checkpoints only those new pages.
+
+The runtime does not keep a long-lived process between host commands.
+
+Each checkpoint transition reads the manifest, the current page, and one
+bounded state summary.
+
+It adds one immutable checkpoint record, hands off the next page, and exits.
+
+It may repeat this question, request, and append cycle while the shared file and
+byte limits permit it.
+
+This bounded path does not search the repository or accept a path that is not
+grounded in a checkpointed question.
 
 Context that Hope still cannot collect remains an explicit scope limit.
 
@@ -632,10 +693,25 @@ envelope.
 
 Source IDs and line ranges remain distinct.
 
+Before analysis, every delivered page must have one durable checkpoint.
+
+The active host reads every bounded ledger page, including Hope-extracted
+evidence excerpts, and checks its model-authored notes against those excerpts.
+
+Context generations never remove earlier checkpoints or require earlier pages
+to be read again.
+
+Checkpoint and context transitions hand off their next page without a separate
+inspection process.
+
+This reduces process startup and repeated run loading while preserving explicit
+page order, replay, and crash recovery.
+
 Hope reports these content-free processing details:
 
 - planned inspection pages and serialized bytes;
 - source bytes;
+- durable checkpoint, observation, and context-request bounds;
 - actual analysis-file and canonical JSON bytes;
 - evidence counts;
 - the teaching-aid decision and per-aid inclusion counts; and
@@ -648,6 +724,16 @@ They are not model token counts or proof that a host received every planned
 page.
 
 Record exact input or output tokens only when the active host supplies them.
+
+Durable review memory is also bounded:
+
+- 32 KiB for one checkpoint submission;
+- 8 observations per checkpoint and 256 across the run;
+- 96 KiB of model-authored checkpoint notes;
+- 96 KiB and 1,200 lines of cited checkpoint excerpts;
+- 12 context requests;
+- 256 KiB for the reconstructed ledger; and
+- 48 KiB for one ledger page.
 
 Reject an analysis before rendering when it exceeds any authoring limit:
 

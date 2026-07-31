@@ -26,8 +26,10 @@ import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 import {
   isSemanticVersion,
   replaceVersion,
+  withPackageLockVersion,
   withVersion,
 } from "../tools/prepare-release.mjs";
+import { nextReleaseVersion } from "../tools/next-release-version.mjs";
 import {
   parsePackageFileList,
   readPackageFileList,
@@ -69,6 +71,39 @@ test("release versions use one supported form", () => {
     '{\n  "version": "1.0.0",\n  "items": ["one", "two"]\n}\n',
   );
   assert.throws(() => replaceVersion('{"name":"hope"}', "1.0.0"), /does not declare/u);
+  assert.deepEqual(
+    withPackageLockVersion({
+      name: "hope",
+      version: "0.5.0-alpha",
+      packages: {
+        "": { name: "hope", version: "0.5.0-alpha" },
+        "node_modules/example": { version: "2.0.0" },
+      },
+    }, "1.0.0"),
+    {
+      name: "hope",
+      version: "1.0.0",
+      packages: {
+        "": { name: "hope", version: "1.0.0" },
+        "node_modules/example": { version: "2.0.0" },
+      },
+    },
+  );
+  assert.throws(
+    () => withPackageLockVersion({ packages: {} }, "1.0.0"),
+    /root package/u,
+  );
+});
+
+test("release increments preserve semantic version meaning", () => {
+  assert.equal(nextReleaseVersion("1.2.3", "patch"), "1.2.4");
+  assert.equal(nextReleaseVersion("1.2.3", "minor"), "1.3.0");
+  assert.equal(nextReleaseVersion("1.2.3", "major"), "2.0.0");
+  assert.throws(
+    () => nextReleaseVersion("1.2.3-alpha", "patch"),
+    /stable semantic version/u,
+  );
+  assert.throws(() => nextReleaseVersion("1.2.3", "next"), /patch, minor, major/u);
 });
 
 test("development installation verifies the selected plugin and cache", async (context) => {
@@ -168,6 +203,14 @@ test("CI installs locked dependencies before running checks or builds", async ()
   assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
   assert.match(release, /npx playwright install --with-deps chromium/u);
   assert.match(release, /npm run test:browser/u);
+  assert.match(release, /workflow_dispatch/u);
+  assert.match(release, /node tools\/next-release-version\.mjs/u);
+  assert.match(release, /gh release view/u);
+  assert.match(release, /git checkout --detach/u);
+  assert.match(release, /already exists unexpectedly/u);
+  assert.match(release, /git push origin HEAD:main/u);
+  assert.match(release, /gh release create/u);
+  assert.doesNotMatch(release, /--prerelease/u);
   assert.ok(
     release.indexOf("npm run test:browser") < release.indexOf("npm run build:plugin"),
   );

@@ -8,11 +8,13 @@ import {
   addDiffContext,
   buildMicroworldSkeleton,
   cancelDiff,
+  checkpointDiffPage,
   DIFF_MODEL_ADAPTER_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
   finishDiff,
   prepareDiff,
   readDiffPage,
+  readDiffLedger,
   runDiff,
   validateDiff,
 } from "./index.mjs";
@@ -27,7 +29,9 @@ function usage() {
     "Internal skill protocol:",
     "  hope diff prepare [GitHub PR URL] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
     "  hope diff inspect --run <private-run-path> --page <number>",
-    "  hope diff context --run <private-run-path> --head-file <path> [--merge-base-file <path>]",
+    "  hope diff checkpoint --run <private-run-path> --page <number>",
+    "  hope diff ledger --run <private-run-path> --page <number>",
+    "  hope diff context --run <private-run-path> --request <context-request-id>",
     "  hope diff microworld-skeleton --input <private-controls.json>",
     "  hope diff validate --run <private-run-path>",
     "  hope diff finish --run <private-run-path>",
@@ -52,8 +56,7 @@ function takeOptions(values) {
       "output",
       "run",
       "page",
-      "head-file",
-      "merge-base-file",
+      "request",
       "input",
     ].includes(key)) {
       throw new TypeError(`Unknown Hope diff option: ${value}`);
@@ -62,7 +65,7 @@ function takeOptions(values) {
     if (next === undefined || next.startsWith("--")) {
       throw new TypeError(`Hope diff option ${value} needs a value`);
     }
-    if (["head-file", "merge-base-file"].includes(key)) {
+    if (key === "request") {
       const entries = options[key] ?? [];
       entries.push(next);
       options[key] = entries;
@@ -86,6 +89,8 @@ export function parseDiffArguments(argv) {
   if (![
     "prepare",
     "inspect",
+    "checkpoint",
+    "ledger",
     "context",
     "microworld-skeleton",
     "validate",
@@ -100,8 +105,7 @@ export function parseDiffArguments(argv) {
       positionals.length > 1
       || options.run
       || options.page
-      || options["head-file"]
-      || options["merge-base-file"]
+      || options.request
       || options.input
     ) {
       throw new TypeError(usage());
@@ -125,8 +129,7 @@ export function parseDiffArguments(argv) {
       || options.theme
       || options.output
       || options["host-locale"]
-      || options["head-file"]
-      || options["merge-base-file"]
+      || options.request
     ) {
       throw new TypeError(usage());
     }
@@ -144,17 +147,11 @@ export function parseDiffArguments(argv) {
     ) {
       throw new TypeError(usage());
     }
-    const requests = [
-      ...(options["head-file"] ?? []).map((path) => ({ path, revision: "head" })),
-      ...(options["merge-base-file"] ?? []).map((path) => ({
-        path,
-        revision: "merge-base",
-      })),
-    ];
-    if (requests.length === 0) throw new TypeError(usage());
-    return { command, requests, runPath: options.run };
+    const requestIds = options.request ?? [];
+    if (requestIds.length === 0) throw new TypeError(usage());
+    return { command, requestIds, runPath: options.run };
   }
-  if (options["head-file"] || options["merge-base-file"]) throw new TypeError(usage());
+  if (options.request) throw new TypeError(usage());
   if (
     options.input
     || options.locale
@@ -164,7 +161,11 @@ export function parseDiffArguments(argv) {
   ) {
     throw new TypeError(usage());
   }
-  if (command === "inspect") {
+  if (
+    command === "inspect"
+    || command === "checkpoint"
+    || command === "ledger"
+  ) {
     const page = Number.parseInt(options.page, 10);
     if (!options.page || !Number.isSafeInteger(page) || String(page) !== options.page) {
       throw new TypeError(usage());
@@ -197,10 +198,22 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       options.page,
       dependencies,
     );
+  } else if (options.command === "checkpoint") {
+    result = await (dependencies.checkpointDiffPage ?? checkpointDiffPage)(
+      options.runPath,
+      options.page,
+      dependencies,
+    );
+  } else if (options.command === "ledger") {
+    result = await (dependencies.readDiffLedger ?? readDiffLedger)(
+      options.runPath,
+      options.page,
+      dependencies,
+    );
   } else if (options.command === "context") {
     result = await (dependencies.addDiffContext ?? addDiffContext)(
       options.runPath,
-      options.requests,
+      options.requestIds,
       dependencies,
     );
   } else if (options.command === "microworld-skeleton") {

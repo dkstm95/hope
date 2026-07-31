@@ -1,4 +1,4 @@
-import { lstat, open } from "node:fs/promises";
+import { lstat, open, unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { resolveSettings } from "../../settings/index.mjs";
@@ -11,6 +11,11 @@ import {
   ANALYSIS_VERSION,
   LIMITS,
 } from "./constants.mjs";
+import {
+  checkpointCount,
+  diffLedgerView,
+  resolveContextRequestIds,
+} from "./checkpoint.mjs";
 import { collectGitHubContext } from "./context.mjs";
 import { finalizeReview, preflightReviewOutput } from "./finalize.mjs";
 import {
@@ -21,13 +26,16 @@ import {
 } from "./github.mjs";
 import { digestJson } from "./hash.mjs";
 import {
+  appendDiffRunPlan,
+  checkpointDiffRun,
   claimDiffRunFinalization,
   createDiffRun,
   inspectDiffRun,
+  inspectionPageView,
   loadDiffRun,
+  readDiffGenerationPage,
   recordAnalysisFailure,
   removeDiffRun,
-  replaceDiffRunPlan,
 } from "./run.mjs";
 import { discoverGitHubPullRequest } from "./target.mjs";
 import {
@@ -46,15 +54,16 @@ export const DIFF_REVALIDATION_RETRYABLE_MESSAGE =
   + "The private review run was kept. Restore GitHub access, then retry finish "
   + "with the same run.";
 
-async function readAnalysis(path, {
+async function readPrivateJson(path, {
+  label,
   maximumBytes = LIMITS.modelBytes,
 } = {}) {
   const info = await lstat(path);
   if (!info.isFile() || info.isSymbolicLink()) {
-    throw new Error("Hope analysis is not a regular file");
+    throw new Error(`Hope ${label} is not a regular file`);
   }
   if (info.size > maximumBytes) {
-    throw new Error(`Hope analysis exceeds ${maximumBytes} bytes`);
+    throw new Error(`Hope ${label} exceeds ${maximumBytes} bytes`);
   }
   const handle = await open(path, "r");
   try {
@@ -65,7 +74,7 @@ async function readAnalysis(path, {
       || opened.ino !== info.ino
       || opened.size !== info.size
     ) {
-      throw new Error("Hope analysis changed while being opened");
+      throw new Error(`Hope ${label} changed while being opened`);
     }
     const bytes = await handle.readFile();
     const completed = await handle.stat();
@@ -78,10 +87,10 @@ async function readAnalysis(path, {
       || completed.ctimeMs !== opened.ctimeMs
       || bytes.length !== completed.size
     ) {
-      throw new Error("Hope analysis changed while being read");
+      throw new Error(`Hope ${label} changed while being read`);
     }
     if (bytes.length > maximumBytes) {
-      throw new Error(`Hope analysis exceeds ${maximumBytes} bytes`);
+      throw new Error(`Hope ${label} exceeds ${maximumBytes} bytes`);
     }
     return Object.freeze({
       fileBytes: bytes.length,
@@ -89,12 +98,16 @@ async function readAnalysis(path, {
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error("Hope analysis is not valid JSON", { cause: error });
+      throw new Error(`Hope ${label} is not valid JSON`, { cause: error });
     }
     throw error;
   } finally {
     await handle.close();
   }
+}
+
+async function readAnalysis(path, options = {}) {
+  return await readPrivateJson(path, { ...options, label: "analysis" });
 }
 
 function assertAnalysisReady(run) {
@@ -105,9 +118,13 @@ function assertAnalysisReady(run) {
     );
   if (
     !analysisReady
-    || run.manifest.deliveredPages.length !== run.manifest.pageCount
+    || run.manifest.deliveredPage !== run.manifest.pageCount
+    || checkpointCount(run.ledger, run.manifest.generation)
+      !== run.manifest.pageCount
   ) {
-    throw new Error("Read every Hope inspection page before submitting analysis");
+    throw new Error(
+      "Read and checkpoint every Hope inspection page before submitting analysis",
+    );
   }
 }
 
@@ -319,28 +336,123 @@ export async function readDiffPage(runPath, page, dependencies = {}) {
   });
 }
 
-export async function addDiffContext(runPath, requests, dependencies = {}) {
+export async function checkpointDiffPage(runPath, page, dependencies = {}) {
+  const result = await (
+    dependencies.checkpointRun ?? checkpointDiffRun
+  )(
+    runPath,
+    page,
+    async (checkpointPath) => {
+      const input = await (
+        dependencies.readCheckpoint ?? readPrivateJson
+      )(checkpointPath, {
+      label: "checkpoint",
+      maximumBytes: LIMITS.checkpointBytes,
+      });
+      return input.value;
+    },
+    { temporaryRoot: dependencies.temporaryRoot },
+  );
+  if (result.consumedInput) {
+    await (dependencies.removeCheckpoint ?? unlink)(result.checkpointPath)
+      .catch((error) => {
+        if (error?.code !== "ENOENT") throw error;
+      });
+  }
+  const pending = result.ledgerState.requests
+    .filter((request) => !request.collected)
+    .map(({ collected: _collected, ...request }) => Object.freeze(request));
+  const checkpointed = result.ledgerState.currentPage;
+  const checkpointReceipt = Object.freeze({
+    generation: result.checkpoint.generation,
+    observationIds: result.checkpoint.observations.map(
+      (observation) => observation.id,
+    ),
+    page: result.checkpoint.page,
+    pageDigest: result.checkpoint.pageDigest,
+    requestIds: result.checkpoint.observations.flatMap(
+      (observation) => observation.contextRequests.map((request) => request.id),
+    ),
+    snapshotDigest: result.checkpoint.snapshotDigest,
+  });
+  return Object.freeze({
+    checkpoint: checkpointReceipt,
+    checkpointCount: checkpointed,
+    nextPage: result.nextPage
+      ? inspectionPageView(result.nextPage)
+      : undefined,
+    pendingContextRequests: Object.freeze(pending),
+    replayed: result.replayed,
+  });
+}
+
+export async function readDiffLedger(runPath, page = 1, dependencies = {}) {
+  if (page && typeof page === "object") {
+    dependencies = page;
+    page = 1;
+  }
   const run = await (dependencies.loadRun ?? loadDiffRun)(runPath, {
     temporaryRoot: dependencies.temporaryRoot,
   });
+  return diffLedgerView(run.ledger, run.snapshot, { page });
+}
+
+export async function addDiffContext(runPath, requestIds, dependencies = {}) {
+  const run = await (dependencies.loadRun ?? loadDiffRun)(runPath, {
+    temporaryRoot: dependencies.temporaryRoot,
+  });
+  const operationKey = JSON.stringify([...requestIds].sort());
+  const priorOperation = run.manifest.contextOperations.find(
+    (operation) => JSON.stringify([...operation.requestIds].sort())
+      === operationKey,
+  );
+  if (priorOperation) {
+    let firstPage;
+    if (
+      priorOperation.generation === run.manifest.generation
+      && run.manifest.deliveredPage <= 1
+    ) {
+      firstPage = await (
+        dependencies.inspectRun ?? inspectDiffRun
+      )(run.path, 1, { temporaryRoot: dependencies.temporaryRoot });
+    } else {
+      firstPage = await (
+        dependencies.readGenerationPage ?? readDiffGenerationPage
+      )(run.path, {
+        ...priorOperation,
+        page: 1,
+        temporaryRoot: dependencies.temporaryRoot,
+      });
+    }
+    return Object.freeze({
+      ...priorOperation,
+      firstPage: inspectionPageView(firstPage),
+      path: run.path,
+      replayed: true,
+      runId: run.manifest.runId,
+    });
+  }
   if (
     run.manifest.phase !== "inspected"
-    || run.manifest.deliveredPages.length !== run.manifest.pageCount
+    || run.manifest.deliveredPage !== run.manifest.pageCount
+    || checkpointCount(run.ledger, run.manifest.generation)
+      !== run.manifest.pageCount
   ) {
-    throw new Error("Read every current Hope inspection page before requesting context");
+    throw new Error(
+      "Read and checkpoint every current Hope inspection page before requesting context",
+    );
   }
-  if (!Array.isArray(requests) || requests.length === 0) {
-    throw new Error("Hope diff context needs at least one exact repository path");
-  }
+  const requests = resolveContextRequestIds(
+    run.ledger,
+    run.snapshot,
+    requestIds,
+  );
   const contextSources = run.snapshot.sources.filter(
     (source) => source.kind === "context-file",
   );
   const contextLimits = run.snapshot.limits.filter(
     (limit) => limit.kind === "context-unavailable",
   );
-  if (contextSources.length + contextLimits.length > 0) {
-    throw new Error("Hope diff context can be collected only once per run");
-  }
   if (contextSources.length + contextLimits.length + requests.length > LIMITS.contextFiles) {
     throw new Error(`Hope diff supports ${LIMITS.contextFiles} context file requests per run`);
   }
@@ -361,17 +473,39 @@ export async function addDiffContext(runPath, requests, dependencies = {}) {
   const candidates = await (
     dependencies.collectContext ?? collectGitHubContext
   )(run.snapshot, requests, {
+    existingBytes: contextSources.reduce(
+      (sum, source) => sum + Buffer.byteLength(source.text, "utf8"),
+      0,
+    ),
     gh: dependencies.gh,
   });
+  const previousLimitCount = run.snapshot.limits.length;
+  const previousSourceCount = run.snapshot.sources.length;
   const snapshot = snapshotWithContext(run.snapshot, candidates);
   const updated = await (
-    dependencies.replaceRunPlan ?? replaceDiffRunPlan
+    dependencies.appendRunPlan ?? appendDiffRunPlan
   )(run.path, snapshot, {
+    contextOperation: {
+      collected: candidates.filter(
+        (candidate) => candidate.kind === "context-file",
+      ).length,
+      limitsAdded: candidates.filter(
+        (candidate) => candidate.kind === "context-unavailable",
+      ).length,
+      requestIds: [...requestIds],
+    },
     expectedSnapshotDigest: run.snapshot.digest,
+    previousLimitCount,
+    previousSourceCount,
     temporaryRoot: dependencies.temporaryRoot,
   });
+  const firstPage = await (
+    dependencies.inspectRun ?? inspectDiffRun
+  )(updated.path, 1, { temporaryRoot: dependencies.temporaryRoot });
   return Object.freeze({
     collected: candidates.filter((candidate) => candidate.kind === "context-file").length,
+    firstPage: inspectionPageView(firstPage),
+    generation: updated.manifest.generation,
     limitsAdded: candidates.filter(
       (candidate) => candidate.kind === "context-unavailable"
     ).length,
@@ -380,6 +514,8 @@ export async function addDiffContext(runPath, requests, dependencies = {}) {
     resources: updated.resources,
     runId: updated.manifest.runId,
     snapshotDigest: updated.snapshot.digest,
+    retainedCheckpoints: updated.ledger.checkpoints.length,
+    replayed: false,
   });
 }
 
