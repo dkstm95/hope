@@ -15,6 +15,11 @@
   </strong>
 </p>
 
+<p align="center">
+  <a href="#install"><img alt="Codex supported" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white"></a>
+  <a href="#install"><img alt="Claude Code supported" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=anthropic&logoColor=white"></a>
+</p>
+
 <p align="center"><a href="README.ko.md">한국어</a></p>
 
 AI can finish a task quickly without making its decisions, evidence, or
@@ -67,6 +72,13 @@ claude plugin install hope@hope
 ```
 
 Start a new Codex or Claude Code session after installation.
+
+### Keep Hope current
+
+- **Claude Code:** enable auto-update for the Hope marketplace under `/plugin`
+  → **Marketplaces**. Run `/reload-plugins` when Claude Code reports an update.
+- **Codex:** run `codex plugin marketplace upgrade hope`, then
+  `codex plugin add hope@hope`, and start a new session.
 
 ## Features
 

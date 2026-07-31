@@ -313,8 +313,13 @@ for (const [file, text] of [
 ]) {
   const locale = file === "README.md" ? "en" : "ko";
   assert.match(text, /https:\/\/github\.com\/dkstm95\/hope/u);
+  assert.match(text, /img\.shields\.io\/badge\/Codex-supported-/u);
+  assert.match(text, /img\.shields\.io\/badge\/Claude_Code-supported-/u);
   assert.match(text, /codex plugin marketplace add dkstm95\/hope/u);
+  assert.match(text, /codex plugin marketplace upgrade hope/u);
+  assert.match(text, /codex plugin add hope@hope/u);
   assert.match(text, /claude plugin marketplace add dkstm95\/hope/u);
+  assert.match(text, /\/reload-plugins/u);
   assert.doesNotMatch(text, /\$hope:|```mermaid/iu);
   for (const asset of [
     "align",

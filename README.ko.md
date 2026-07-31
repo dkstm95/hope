@@ -15,6 +15,11 @@
   </strong>
 </p>
 
+<p align="center">
+  <a href="#설치"><img alt="Codex 지원" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white"></a>
+  <a href="#설치"><img alt="Claude Code 지원" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=anthropic&logoColor=white"></a>
+</p>
+
 <p align="center"><a href="README.md">English</a></p>
 
 AI가 작업을 빠르게 끝내더라도 무엇이 결정되었는지, 어떤 근거가 있는지,
@@ -69,6 +74,13 @@ claude plugin install hope@hope
 ```
 
 설치한 뒤 새 Codex 또는 Claude Code 세션을 시작하세요.
+
+### Hope 업데이트
+
+- **Claude Code:** `/plugin` → **Marketplaces**에서 Hope 마켓플레이스의 자동
+  업데이트를 켜세요. 업데이트 알림이 나타나면 `/reload-plugins`를 실행하세요.
+- **Codex:** `codex plugin marketplace upgrade hope`를 실행한 다음
+  `codex plugin add hope@hope`를 실행하고 새 세션을 시작하세요.
 
 ## 기능
 
