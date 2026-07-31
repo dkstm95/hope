@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="#설치"><img alt="Codex 지원" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white"></a>
-  <a href="#설치"><img alt="Claude Code 지원" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=anthropic&logoColor=white"></a>
+  <a href="#설치"><img alt="Claude Code 지원" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white"></a>
 </p>
 
 <p align="center"><a href="README.md">English</a></p>

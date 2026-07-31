@@ -315,6 +315,7 @@ for (const [file, text] of [
   assert.match(text, /https:\/\/github\.com\/dkstm95\/hope/u);
   assert.match(text, /img\.shields\.io\/badge\/Codex-supported-/u);
   assert.match(text, /img\.shields\.io\/badge\/Claude_Code-supported-/u);
+  assert.match(text, /logo=claudecode/u);
   assert.match(text, /codex plugin marketplace add dkstm95\/hope/u);
   assert.match(text, /codex plugin marketplace upgrade hope/u);
   assert.match(text, /codex plugin add hope@hope/u);
