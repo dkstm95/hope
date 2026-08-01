@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { createResultValidation } from "../result-validation/index.mjs";
 import {
   serializedJsonBytes,
   stringBytes,
@@ -13,7 +14,6 @@ import {
   ALIGN_RISKS,
 } from "./constants.mjs";
 
-const idPattern = /^[a-z][a-z0-9-]{0,63}$/u;
 const scenarioKinds = Object.freeze([
   "representative",
   "edge",
@@ -39,97 +39,22 @@ const polishVerificationStatuses = Object.freeze([
 ]);
 const digestPattern = /^sha256:[a-f0-9]{64}$/u;
 
-function plainObject(value) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function addUnknownKeys(value, allowed, path, errors) {
-  if (!plainObject(value)) return;
-  for (const key of Object.keys(value)) {
-    if (!allowed.includes(key)) errors.push(`${path}.${key} is not allowed`);
-  }
-}
-
-function text(value, path, errors, { optional = false } = {}) {
-  if (value === undefined && optional) return undefined;
-  if (
-    typeof value !== "string"
-    || value.trim().length === 0
-    || [...value].length > ALIGN_LIMITS.stringCharacters
-  ) {
-    errors.push(
-      `${path} must be a non-empty string within ${ALIGN_LIMITS.stringCharacters} characters`,
-    );
-    return "";
-  }
-  return value;
-}
-
-function integer(value, path, errors, { minimum = 0, optional = false } = {}) {
-  if (value === undefined && optional) return undefined;
-  if (!Number.isSafeInteger(value) || value < minimum) {
-    errors.push(`${path} must be an integer of at least ${minimum}`);
-    return minimum;
-  }
-  return value;
-}
-
-function choice(value, allowed, path, errors) {
-  if (!allowed.includes(value)) {
-    errors.push(`${path} must be one of ${allowed.join(", ")}`);
-  }
-  return value;
-}
-
-function object(value, path, errors) {
-  if (!plainObject(value)) {
-    errors.push(`${path} must be an object`);
-    return {};
-  }
-  return value;
-}
-
-function array(value, path, errors, maximum = ALIGN_LIMITS.groupItems) {
-  if (!Array.isArray(value)) {
-    errors.push(`${path} must be an array`);
-    return [];
-  }
-  if (value.length > maximum) {
-    errors.push(`${path} must have at most ${maximum} items`);
-  }
-  return value.slice(0, maximum);
-}
-
-function identifier(value, path, errors, ids) {
-  const result = text(value, path, errors);
-  if (result && !idPattern.test(result)) errors.push(`${path} is invalid`);
-  if (result && ids.has(result)) errors.push(`${path} repeats ID ${result}`);
-  if (result) ids.add(result);
-  return result;
-}
-
-function stringList(value, path, errors, { minimum = 0 } = {}) {
-  const items = array(value, path, errors);
-  if (items.length < minimum) {
-    errors.push(
-      `${path} must contain at least ${minimum} item${minimum === 1 ? "" : "s"}`,
-    );
-  }
-  return items.map((item, index) => text(item, `${path}[${index}]`, errors));
-}
-
-function sourceIds(value, path, errors, knownSources, { minimum = 0 } = {}) {
-  const items = stringList(value, path, errors, { minimum });
-  const seen = new Set();
-  for (const item of items) {
-    if (seen.has(item)) errors.push(`${path} repeats source ID ${item}`);
-    seen.add(item);
-    if (!knownSources.has(item)) {
-      errors.push(`${path} references unknown source ID ${item}`);
-    }
-  }
-  return items;
-}
+const {
+  array,
+  choice,
+  identifier,
+  integer,
+  object,
+  plainObject,
+  references: sourceIds,
+  stringList,
+  text,
+  unknownKeys: addUnknownKeys,
+} = createResultValidation({
+  groupItems: ALIGN_LIMITS.groupItems,
+  referenceNoun: "source ID",
+  stringCharacters: ALIGN_LIMITS.stringCharacters,
+});
 
 function validateUnderstanding(value, errors, ids) {
   const input = object(value, "understanding", errors);

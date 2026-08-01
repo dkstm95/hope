@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { realpathSync } from "node:fs";
 import { lstat, readFile, readdir } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isEntrypoint } from "../entrypoint/index.mjs";
 import { buildPlugin } from "./build-plugin.mjs";
 import { readPackageFileList } from "./stage-plugin.mjs";
 
@@ -127,16 +127,7 @@ export async function installDevPlugin({ codexCommand = "codex" } = {}) {
   return result;
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   if (process.argv.length !== 2) {
     process.stderr.write("Usage: npm run plugin:dev:install\n");
     process.exitCode = 1;

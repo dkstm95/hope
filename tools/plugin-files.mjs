@@ -92,6 +92,16 @@ export const generatedPluginFiles = Object.freeze([
     "// Generated from design/tokens.mjs. Do not edit.\n",
   ),
   generatedText(
+    "entrypoint/index.mjs",
+    "plugins/hope/runtime/entrypoint/index.mjs",
+    "// Generated from entrypoint/index.mjs. Do not edit.\n",
+  ),
+  generatedText(
+    "features/command-options/index.mjs",
+    "plugins/hope/runtime/features/command-options/index.mjs",
+    "// Generated from features/command-options/index.mjs. Do not edit.\n",
+  ),
+  generatedText(
     "features/artifact/index.mjs",
     "plugins/hope/runtime/features/artifact/index.mjs",
     "// Generated from features/artifact/index.mjs. Do not edit.\n",
@@ -174,6 +184,11 @@ export const generatedPluginFiles = Object.freeze([
       ? `// Generated from features/toxic-review/${name}. Do not edit.\n`
       : "",
   )),
+  generatedText(
+    "features/result-validation/index.mjs",
+    "plugins/hope/runtime/features/result-validation/index.mjs",
+    "// Generated from features/result-validation/index.mjs. Do not edit.\n",
+  ),
   generatedText(
     "features/work-snapshot/index.mjs",
     "plugins/hope/runtime/features/work-snapshot/index.mjs",

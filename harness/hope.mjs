@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
+
+import { isEntrypoint } from "../entrypoint/index.mjs";
 
 import {
   ALIGN_MODEL_ADAPTER_CODE,
@@ -129,15 +129,6 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   );
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
 export function harnessErrorReport(error) {
   if ([
     ALIGN_MODEL_ADAPTER_CODE,
@@ -153,7 +144,7 @@ export function harnessErrorReport(error) {
   return diffErrorReport(error, { prefix: "hope" });
 }
 
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   main().catch((error) => {
     const report = harnessErrorReport(error);
     process.stderr.write(report.message);

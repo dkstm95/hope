@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // Generated from features/align/cli.mjs. Do not edit.
 
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
+import { takeOptions } from "../command-options/index.mjs";
+import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
   ALIGN_MODEL_ADAPTER_CODE,
   completeAlignPolish,
@@ -29,43 +28,6 @@ function usage() {
   ].join("\n");
 }
 
-function takeOptions(values) {
-  const options = {};
-  const positionals = [];
-  for (let index = 0; index < values.length; index += 1) {
-    const value = values[index];
-    if (!value.startsWith("--")) {
-      positionals.push(value);
-      continue;
-    }
-    const key = value.slice(2);
-    if (![
-      "after",
-      "before",
-      "host-locale",
-      "input",
-      "locale",
-      "output",
-      "polish",
-      "risk",
-      "theme",
-      "ui",
-    ].includes(key)) {
-      throw new TypeError(`Unknown Hope align option: ${value}`);
-    }
-    const next = values[index + 1];
-    if (next === undefined || next.startsWith("--")) {
-      throw new TypeError(`Hope align option ${value} needs a value`);
-    }
-    if (options[key] !== undefined) {
-      throw new TypeError(`Hope align option ${value} was repeated`);
-    }
-    options[key] = next;
-    index += 1;
-  }
-  return { options, positionals };
-}
-
 export function parseAlignArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
@@ -80,7 +42,21 @@ export function parseAlignArguments(argv) {
   ].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
-  const { options, positionals } = takeOptions(rest);
+  const { options, positionals } = takeOptions(rest, {
+    allowed: [
+      "after",
+      "before",
+      "host-locale",
+      "input",
+      "locale",
+      "output",
+      "polish",
+      "risk",
+      "theme",
+      "ui",
+    ],
+    prefix: "Hope align",
+  });
   if (positionals.length > 0) throw new TypeError(usage());
   if (command === "brief") {
     if (
@@ -186,16 +162,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   return result;
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   main().catch((error) => {
     process.stderr.write(`hope align: ${error.message}\n`);
     process.exitCode = error.code === ALIGN_MODEL_ADAPTER_CODE ? 2 : 1;

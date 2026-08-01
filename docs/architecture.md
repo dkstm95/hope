@@ -56,6 +56,7 @@ hope/
 ├── .claude-plugin/     Claude Code marketplace catalog
 ├── design/             Shared visual tokens and fixed assets
 ├── docs/               Shared product definitions
+├── entrypoint/         Shared direct-command detection
 ├── features/           Feature code used by every entry path
 ├── harness/            Independent Hope commands
 ├── locales/            Shared fixed interface text
@@ -65,8 +66,8 @@ hope/
 └── tools/              Project checks
 ```
 
-Root `docs/`, `features/`, `settings/`, `locales/`, and `design/` are editable
-sources.
+Root `docs/`, `entrypoint/`, `features/`, `settings/`, `locales/`, and `design/`
+are editable sources.
 
 Both hosts install `plugins/hope/` as one package directory, so the plugin
 contains generated copies of those sources.
@@ -302,6 +303,41 @@ This shared boundary validates full Git object IDs, content digests,
 structured-input depth, and resource bounds.
 
 It does not own either feature's interview or review behavior.
+
+## Shared result validation
+
+Align, Polish, and Toxic Review use `features/result-validation/` for the
+accumulator-style mechanics shared by their structured-result validators.
+
+The helper owns plain-object, text, choice, list, identifier, and reference
+validation.
+
+Each feature still owns its schema, limits, reference vocabulary, cross-field
+rules, normalized result, and resource metrics.
+
+Diff and work-snapshot validation keep their separate fail-fast boundaries.
+
+## Shared command options
+
+Align, Diff, Polish, and Toxic Review use `features/command-options/` to
+tokenize their shared command-line option form.
+
+Each feature still owns its allowed options, repeatable options, command
+semantics, usage text, and error vocabulary.
+
+The harness, settings, and release tools keep their own parsers because their
+commands have different forms and boundaries.
+
+## Shared command entrypoint detection
+
+Command modules and project scripts use `entrypoint/` to determine whether
+Node invoked their module directly.
+
+It resolves symlinked paths and returns false when the entry path is absent or
+cannot be resolved.
+
+It only controls direct command execution; each caller keeps its command
+parsing and error behavior.
 
 ## Current write boundary
 

@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
+import { isEntrypoint } from "../entrypoint/index.mjs";
 import { isSemanticVersion } from "./prepare-release.mjs";
 
 export const releaseIncrements = Object.freeze(["patch", "minor", "major"]);
@@ -20,16 +18,7 @@ export function nextReleaseVersion(version, increment) {
   return `${major}.${minor}.${patch + 1}`;
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   const [version, increment, ...extraArguments] = process.argv.slice(2);
   if (!version || !increment || extraArguments.length > 0) {
     process.stderr.write(

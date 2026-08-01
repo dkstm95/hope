@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+
+import { isEntrypoint } from "../entrypoint/index.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 
@@ -60,16 +61,7 @@ export async function checkPluginVersion() {
   );
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   checkPluginVersion().catch((error) => {
     process.stderr.write(`check-plugin-version: ${error.message}\n`);
     process.exitCode = 1;

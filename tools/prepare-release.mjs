@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
+import { isEntrypoint } from "../entrypoint/index.mjs";
 import { buildPlugin } from "./build-plugin.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -115,16 +114,7 @@ export async function prepareRelease(version) {
   process.stdout.write(`Hope ${version} is ready to review and commit.\n`);
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   const [version, ...extraArguments] = process.argv.slice(2);
   if (!version || extraArguments.length > 0) {
     process.stderr.write("Usage: npm run release:prepare -- <version>\n");

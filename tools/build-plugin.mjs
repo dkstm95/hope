@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
 import {
   chmod,
   mkdir,
@@ -10,9 +9,9 @@ import {
 } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-
 import { build as esbuild } from "esbuild";
 
+import { isEntrypoint } from "../entrypoint/index.mjs";
 import {
   generatedPluginFiles,
   pluginPackageFiles,
@@ -80,16 +79,7 @@ export async function buildPlugin() {
   );
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   buildPlugin().catch((error) => {
     process.stderr.write(`build-plugin: ${error.message}\n`);
     process.exitCode = 1;
