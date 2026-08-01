@@ -95,7 +95,8 @@ decisions, proposals, assumptions, and open questions distinct.
 It renders the current shared understanding as one self-contained HTML artifact
 with the scope, success conditions, scenarios, and verifiable work.
 
-Align waits for explicit approval and never implements the task.
+> [!NOTE]
+> Align waits for explicit approval and never implements the task.
 
 > Example: “I want to build an upload feature. Help me clarify the requirements
 > before implementation.”
@@ -112,37 +113,14 @@ Align waits for explicit approval and never implements the task.
 
 ---
 
-### Toxic Review
-
-> “This looks convincing, but I may be missing an important problem.”
-
-Convincing work can still hide material problems, unsupported claims, or
-needless complexity.
-
-Toxic Review selects only the perspectives that fit the target and risk.
-
-It turns evidence-linked findings into one prioritized review rather than a
-collection of reviewer voices.
-
-It is hard on the work, respectful toward people, and does not invent criticism.
-
-Finding no material issue is valid.
-
-> Example: “Review this database migration plan.”
-
----
-
 ### Diff
 
 > “AI changed the code, but I cannot explain what changed or judge it yet.”
 
 A code change can be complete while its owner still cannot predict, explain, or
-judge it.
+judge it, and that gap is cognitive debt.
 
-That gap is cognitive debt.
-
-Diff binds its explanation to one exact GitHub pull request snapshot, explains
-behavior before code, and links important claims to evidence.
+Diff explains behavior before code and links important claims to evidence.
 
 When active exploration would help, the review can use visuals, a microworld, or
 an evidence-backed quiz.
@@ -150,8 +128,10 @@ an evidence-backed quiz.
 The resulting local HTML file helps the reader understand the change, judge it,
 and carry that understanding into follow-up decisions and work.
 
-Diff does not recommend approval or rejection, change the pull request, inspect
-discussions or CI results, or run repository code.
+> [!NOTE]
+> Diff does not recommend approval or rejection or change the pull request.
+> It does not inspect discussions or CI results or run tests, builds, linters,
+> or repository code.
 
 ![Hope Diff result for nanoid pull request 601 showing the goal, before and after behavior, impact, and verification item](assets/readme/hope-diff-en.png)
 
@@ -165,19 +145,28 @@ discussions or CI results, or run repository code.
 | Next check for an informed judgment | Evidence and checked scope |
 | [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
 
-With no URL, Diff selects the current branch's pull request or your latest open
-pull request in the repository.
+> [!NOTE]
+> With no URL, Diff first looks for the current branch's pull request.
+> If none exists, it selects your latest open pull request in the repository.
+> Run Diff again when the pull request changes.
 
-Run Diff again when the pull request changes.
+---
+
+### Toxic Review
+
+> “This looks convincing, but I may be missing an important problem.”
+
+Toxic Review turns evidence-linked findings into one prioritized review.
+
+It is hard on the work, respectful toward people, and does not invent criticism.
+
+> Example: “Review this database migration plan.”
 
 ---
 
 ### Polish
 
 > “The work is complete, but I want to refine it without changing what we already settled.”
-
-Refinement can quietly become a behavior change, a new requirement, or a matter
-of taste.
 
 Polish defines what must stay unchanged and refines the work once within a clear
 scope.
@@ -196,11 +185,8 @@ checked, and stops when the work needs a material decision.
 Write drafts, edits, or reviews language without losing meaning, facts,
 uncertainty, citations, or the person's voice.
 
-In review mode, it reports material problems with clarity, meaning, or flow
-without changing files.
-
-Hope also applies Write to prompts, documentation, responses, interface text,
-errors, comments, and names in other tasks.
+Hope also applies Write in other tasks, including prompts, documentation,
+responses, interface text, errors, comments, and names.
 
 Write's shared standard adapts George Orwell's six rules in
 [Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).
@@ -211,12 +197,11 @@ Write's shared standard adapts George Orwell's six rules in
 
 ### Settings
 
-> “I do not want to choose the same language and theme for every result.”
-
 Settings stores a supported locale and initial `system`, `light`, or `dark`
-theme as shared defaults for the harness and installed plugin.
+theme as shared defaults.
 
-Changes affect new artifacts only.
+The harness and installed plugin share these settings, and changes affect new
+artifacts only.
 
 ## License
 
