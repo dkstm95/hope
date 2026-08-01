@@ -97,7 +97,8 @@ with the scope, success conditions, scenarios, and verifiable work.
 
 Align waits for explicit approval and never implements the task.
 
-> Example: “Help us settle the upload recovery behavior before implementation.”
+> Example: “I want to build an upload feature. Help me clarify the requirements
+> before implementation.”
 
 ![Hope Align example showing a failed-upload recovery decision, current blockers, scope, and success conditions](assets/readme/hope-align-en.png)
 
@@ -127,7 +128,7 @@ It is hard on the work, respectful toward people, and does not invent criticism.
 
 Finding no material issue is valid.
 
-> Example: “Find the material risks in this migration plan.”
+> Example: “Review this database migration plan.”
 
 ---
 
@@ -184,7 +185,7 @@ scope.
 It preserves settled behavior and meaning, reports what changed and what was
 checked, and stops when the work needs a material decision.
 
-> Example: “Shorten this completed guideline without changing its requirement.”
+> Example: “Refine the current work product.”
 
 ---
 
@@ -192,43 +193,19 @@ checked, and stops when the work needs a material decision.
 
 > “Make this clearer without changing what it means or inventing what we do not know.”
 
-A smoother sentence is still wrong if it loses a fact, removes uncertainty,
-changes a citation, or replaces the person's voice.
+Write drafts, edits, or reviews language without losing meaning, facts,
+uncertainty, citations, or the person's voice.
+
+In review mode, it reports material problems with clarity, meaning, or flow
+without changing files.
+
+Hope also applies Write to prompts, documentation, responses, interface text,
+errors, comments, and names in other tasks.
 
 Write's shared standard adapts George Orwell's six rules in
-[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/):
+[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).
 
-- avoid stale metaphors and stock phrases;
-- prefer short, familiar words;
-- remove words that add no meaning;
-- use active voice when it makes the actor and action clearer;
-- replace jargon with everyday language when possible; and
-- break any rule that would make the writing inaccurate, unclear, unnatural, or
-  needlessly harsh.
-
-Hope also leads with the result, keeps one main idea in each sentence, and
-preserves meaning, facts, uncertainty, citations, numbers, and voice.
-
-Hope prefers one sentence per prose paragraph when it improves meaning,
-readability, or rhythm.
-
-In Markdown and plain text, one blank line separates paragraphs, while other
-formats use their native paragraph structure.
-
-Write chooses semantic structure, and the renderer controls visible spacing,
-typography, and styling.
-
-Related sentences stay together when splitting them would harm meaning, flow,
-or voice, or conflict with the target format.
-
-Each language must read like original prose rather than copying another
-language's word order and idiom.
-
-Write can draft, edit, or review language.
-
-Use Polish when a completed work product also needs structural refinement.
-
-> Example: “Make this save error clear without inventing a cause.”
+> Example: “Make this incident update easier to understand.”
 
 ---
 
