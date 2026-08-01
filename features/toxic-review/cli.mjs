@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
+import { takeOptions } from "../command-options/index.mjs";
+import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
   createToxicReviewBrief,
   runToxicReview,
@@ -22,32 +21,6 @@ function usage() {
   ].join("\n");
 }
 
-function takeOptions(values) {
-  const options = {};
-  const positionals = [];
-  for (let index = 0; index < values.length; index += 1) {
-    const value = values[index];
-    if (!value.startsWith("--")) {
-      positionals.push(value);
-      continue;
-    }
-    const key = value.slice(2);
-    if (!["input", "risk", "stage", "target"].includes(key)) {
-      throw new TypeError(`Unknown Hope toxic review option: ${value}`);
-    }
-    const next = values[index + 1];
-    if (next === undefined || next.startsWith("--")) {
-      throw new TypeError(`Hope toxic review option ${value} needs a value`);
-    }
-    if (options[key] !== undefined) {
-      throw new TypeError(`Hope toxic review option ${value} was repeated`);
-    }
-    options[key] = next;
-    index += 1;
-  }
-  return { options, positionals };
-}
-
 export function parseToxicReviewArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
@@ -56,7 +29,10 @@ export function parseToxicReviewArguments(argv) {
   if (!["brief", "validate"].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
-  const { options, positionals } = takeOptions(rest);
+  const { options, positionals } = takeOptions(rest, {
+    allowed: ["input", "risk", "stage", "target"],
+    prefix: "Hope toxic review",
+  });
   if (positionals.length > 0) throw new TypeError(usage());
   if (command === "brief") {
     if (options.input) throw new TypeError(usage());
@@ -100,16 +76,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   return result;
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   main().catch((error) => {
     process.stderr.write(`hope toxic-review: ${error.message}\n`);
     process.exitCode = error.code === TOXIC_REVIEW_MODEL_ADAPTER_CODE ? 2 : 1;

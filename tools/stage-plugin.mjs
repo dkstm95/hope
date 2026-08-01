@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
 import {
   access,
   chmod,
@@ -12,6 +11,7 @@ import {
 import { dirname, isAbsolute, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isEntrypoint } from "../entrypoint/index.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const pluginRoot = resolve(root, "plugins/hope");
 const packageFileList = new URL("./plugin-package-files.txt", import.meta.url);
@@ -85,16 +85,7 @@ export async function stagePlugin(destination) {
   return entries;
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   const [destination, ...extraArguments] = process.argv.slice(2);
   if (!destination || extraArguments.length > 0) {
     process.stderr.write("Usage: node tools/stage-plugin.mjs <empty-directory>\n");

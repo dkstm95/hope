@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // Generated from features/write/cli.mjs. Do not edit.
 
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { isEntrypoint } from "../../entrypoint/index.mjs";
 
 import {
   createWritingBrief,
@@ -62,16 +61,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   return brief;
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   main().catch((error) => {
     process.stderr.write(`hope write: ${error.message}\n`);
     process.exitCode = error.code === WRITE_MODEL_ADAPTER_CODE ? 2 : 1;

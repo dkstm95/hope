@@ -18,6 +18,7 @@ runtime/design/fonts/OFL-D2Coding.txt
 runtime/design/fonts/OFL-Gmarket.txt
 runtime/design/fonts/SOURCE.md
 runtime/design/tokens.mjs
+runtime/entrypoint/index.mjs
 runtime/features/align/cli.mjs
 runtime/features/align/constants.mjs
 runtime/features/align/index.mjs
@@ -25,6 +26,7 @@ runtime/features/align/render.mjs
 runtime/features/align/session-v1.schema.json
 runtime/features/align/validate.mjs
 runtime/features/artifact/index.mjs
+runtime/features/command-options/index.mjs
 runtime/features/diff/analysis-v2.schema.json
 runtime/features/diff/checkpoint-v1.schema.json
 runtime/features/diff/checkpoint.mjs
@@ -49,6 +51,7 @@ runtime/features/polish/constants.mjs
 runtime/features/polish/index.mjs
 runtime/features/polish/run-v1.schema.json
 runtime/features/polish/validate.mjs
+runtime/features/result-validation/index.mjs
 runtime/features/toxic-review/cli.mjs
 runtime/features/toxic-review/constants.mjs
 runtime/features/toxic-review/index.mjs

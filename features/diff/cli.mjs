@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
+import { takeOptions } from "../command-options/index.mjs";
+import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
   addDiffContext,
   buildMicroworldSkeleton,
@@ -38,48 +37,6 @@ function usage() {
   ].join("\n");
 }
 
-function takeOptions(values) {
-  const options = {};
-  const positionals = [];
-  for (let index = 0; index < values.length; index += 1) {
-    const value = values[index];
-    if (!value.startsWith("--")) {
-      positionals.push(value);
-      continue;
-    }
-    const key = value.slice(2);
-    if (![
-      "host-locale",
-      "locale",
-      "theme",
-      "output",
-      "run",
-      "page",
-      "request",
-      "input",
-    ].includes(key)) {
-      throw new TypeError(`Unknown Hope diff option: ${value}`);
-    }
-    const next = values[index + 1];
-    if (next === undefined || next.startsWith("--")) {
-      throw new TypeError(`Hope diff option ${value} needs a value`);
-    }
-    if (key === "request") {
-      const entries = options[key] ?? [];
-      entries.push(next);
-      options[key] = entries;
-      index += 1;
-      continue;
-    }
-    if (options[key] !== undefined) {
-      throw new TypeError(`Hope diff option ${value} was repeated`);
-    }
-    options[key] = next;
-    index += 1;
-  }
-  return { options, positionals };
-}
-
 export function parseDiffArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
@@ -98,7 +55,20 @@ export function parseDiffArguments(argv) {
   ].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
-  const { options, positionals } = takeOptions(rest);
+  const { options, positionals } = takeOptions(rest, {
+    allowed: [
+      "host-locale",
+      "locale",
+      "theme",
+      "output",
+      "run",
+      "page",
+      "request",
+      "input",
+    ],
+    prefix: "Hope diff",
+    repeatable: ["request"],
+  });
   if (command === "prepare") {
     if (
       positionals.length > 1
@@ -267,16 +237,7 @@ export function diffErrorReport(error, { prefix = "hope diff" } = {}) {
   });
 }
 
-const isEntrypoint = (() => {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return false;
-  }
-})();
-
-if (isEntrypoint) {
+if (isEntrypoint(import.meta.url)) {
   main().catch((error) => {
     const report = diffErrorReport(error);
     process.stderr.write(report.message);
