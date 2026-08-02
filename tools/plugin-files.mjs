@@ -172,6 +172,7 @@ export const generatedPluginFiles = Object.freeze([
       : "",
   )),
   ...[
+    "causal-evaluation.mjs",
     "cli.mjs",
     "constants.mjs",
     "index.mjs",

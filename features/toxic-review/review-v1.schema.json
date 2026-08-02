@@ -69,6 +69,7 @@
         "properties": {
           "id": { "$ref": "#/$defs/id" },
           "name": { "$ref": "#/$defs/text" },
+          "method": { "enum": ["causal-completeness"] },
           "target": { "$ref": "#/$defs/text" },
           "focusRisks": {
             "allOf": [
@@ -93,6 +94,7 @@
         }
       }
     },
+    "causalAnalysis": { "$ref": "#/$defs/causalAnalysis" },
     "findings": {
       "type": "array",
       "maxItems": 96,
@@ -245,6 +247,135 @@
       "maxItems": 128,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/id" }
+    },
+    "causalAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roleId",
+        "outcome",
+        "baseline",
+        "claimAssessment",
+        "causeLevel",
+        "candidateCount",
+        "flow",
+        "candidates",
+        "nextCheck"
+      ],
+      "properties": {
+        "roleId": { "$ref": "#/$defs/id" },
+        "outcome": { "$ref": "#/$defs/text" },
+        "baseline": { "$ref": "#/$defs/text" },
+        "claimAssessment": {
+          "enum": ["supported", "unsupported", "honest-uncertainty"]
+        },
+        "causeLevel": {
+          "enum": ["structural", "local", "mixed", "inconclusive"]
+        },
+        "candidateCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "flow": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/causalFlowItem" }
+        },
+        "candidates": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/causalCandidate" }
+        },
+        "nextCheck": { "$ref": "#/$defs/causalNextCheck" }
+      }
+    },
+    "causalFlowItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "phase",
+        "observation",
+        "sourceIds",
+        "candidateIds"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "phase": { "$ref": "#/$defs/text" },
+        "observation": { "$ref": "#/$defs/text" },
+        "sourceIds": {
+          "allOf": [
+            { "$ref": "#/$defs/idList" },
+            { "minItems": 1 }
+          ]
+        },
+        "candidateIds": { "$ref": "#/$defs/idList" },
+        "exclusion": { "$ref": "#/$defs/text" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "candidateIds": { "maxItems": 0 } },
+            "required": ["candidateIds"]
+          },
+          "then": { "required": ["exclusion"] },
+          "else": { "not": { "required": ["exclusion"] } }
+        }
+      ]
+    },
+    "causalCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "level",
+        "location",
+        "statement",
+        "evidence",
+        "assumptions",
+        "disconfirmingPrediction",
+        "sourceIds"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "level": { "enum": ["structural", "local", "mixed"] },
+        "location": { "$ref": "#/$defs/text" },
+        "statement": { "$ref": "#/$defs/text" },
+        "evidence": { "$ref": "#/$defs/text" },
+        "assumptions": {
+          "allOf": [
+            { "$ref": "#/$defs/textList" },
+            { "minItems": 1 }
+          ]
+        },
+        "disconfirmingPrediction": { "$ref": "#/$defs/text" },
+        "sourceIds": {
+          "allOf": [
+            { "$ref": "#/$defs/idList" },
+            { "minItems": 1 }
+          ]
+        }
+      }
+    },
+    "causalNextCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "action", "rationale", "candidateIds"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "form-candidate",
+            "disconfirm",
+            "discriminate",
+            "no-safe-check"
+          ]
+        },
+        "action": { "$ref": "#/$defs/text" },
+        "rationale": { "$ref": "#/$defs/text" },
+        "candidateIds": { "$ref": "#/$defs/idList" }
+      }
     },
     "snapshot": {
       "type": "object",

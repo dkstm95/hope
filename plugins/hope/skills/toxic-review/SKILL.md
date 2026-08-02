@@ -47,15 +47,48 @@ brief --target <kind> --stage <stage> --risk <low|medium|high>
 The returned JSON is the complete review workflow.
 
 Follow its `snapshot`, `roleSelection`, `findings`, `adjudication`,
-`resultPreparation`, `stopping`, `finalVoice`, `writingStandard`, `schemaPath`,
-and `limits` fields.
+`resultPreparation`, `causalCompleteness`, `stopping`, `finalVoice`,
+`writingStandard`, `schemaPath`, and `limits` fields.
 
 Use `writingStandard.text` for user-facing language and use
 `writingStandard.decisionExamples` only when a situation matches.
 
+Follow `causalCompleteness.activation` before selecting that perspective, and
+use its `decisionExamples` only when a situation matches.
+
 The examples guide decisions; they are not evaluation results.
 
 Do not replace those rules with another static review contract in this Skill.
+
+## Evaluate causal-completeness behavior
+
+Use this workflow only when the person explicitly asks to evaluate a change to
+the causal-completeness method or to produce release evidence for it.
+
+Run `evaluation-plan` through the same runtime command.
+
+For every listed run, call `evaluation-prepare` with its case, variant, and run
+number.
+
+Give an independent reviewing host only the returned `brief` and `hostInput`.
+
+Do not read the oracle before that host returns its result.
+
+Then call `evaluation-oracle` for the case and evaluate every rubric criterion.
+
+Call `evaluation-receipt` with the validated review and host-owned model,
+effort, and invocation identity.
+
+Complete only the returned assessment, rubric, evaluator, and evaluation-time
+fields; keep its prepared input, brief, invocation, and output bindings.
+
+Validate each receipt with `evaluation-validate` and the complete array with
+`evaluation-validate-set`.
+
+Keep failed runs in the set and report run success separately from rubric
+totals.
+
+Do not describe deterministic contract tests as model behavior evidence.
 
 ## Run the host workflow
 

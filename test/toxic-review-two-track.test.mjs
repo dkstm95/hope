@@ -140,6 +140,63 @@ test("exact harness and generated Toxic Review commands stay equivalent", async 
     withoutSchemaPath(harnessBrief),
   );
 
+  const harnessEvaluationPlan = runJson(
+    "harness/hope.mjs",
+    ["toxic-review", "evaluation-plan"],
+  );
+  const pluginEvaluationPlan = runJson(
+    "plugins/hope/runtime/features/toxic-review/cli.mjs",
+    ["evaluation-plan"],
+  );
+  assert.deepEqual(pluginEvaluationPlan, harnessEvaluationPlan);
+
+  const evaluationRun = harnessEvaluationPlan.runs.find(
+    (run) => run.caseId === "critical-path-ablation"
+      && run.variant === "rules-only"
+      && run.run === 1,
+  );
+  const evaluationArguments = [
+    "evaluation-prepare",
+    "--case",
+    evaluationRun.caseId,
+    "--variant",
+    evaluationRun.variant,
+    "--run",
+    String(evaluationRun.run),
+  ];
+  const harnessEvaluation = runJson(
+    "harness/hope.mjs",
+    ["toxic-review", ...evaluationArguments],
+  );
+  const pluginEvaluation = runJson(
+    "plugins/hope/runtime/features/toxic-review/cli.mjs",
+    evaluationArguments,
+  );
+  assert.deepEqual(
+    withoutSchemaPath(pluginEvaluation.brief),
+    withoutSchemaPath(harnessEvaluation.brief),
+  );
+  assert.deepEqual(
+    { ...pluginEvaluation, brief: undefined },
+    { ...harnessEvaluation, brief: undefined },
+  );
+
+  const oracleArguments = [
+    "evaluation-oracle",
+    "--case",
+    evaluationRun.caseId,
+  ];
+  assert.deepEqual(
+    runJson(
+      "plugins/hope/runtime/features/toxic-review/cli.mjs",
+      oracleArguments,
+    ),
+    runJson(
+      "harness/hope.mjs",
+      ["toxic-review", ...oracleArguments],
+    ),
+  );
+
   const harnessResult = runJson(
     "harness/hope.mjs",
     ["toxic-review", "validate", "--input", input],

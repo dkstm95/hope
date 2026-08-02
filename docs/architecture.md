@@ -287,7 +287,33 @@ them as independent subagents.
 The shared core owns the bounded role and finding contract, source binding,
 final adjudicated result, priority ordering, and deterministic resource metrics.
 
+Its brief also offers one optional causal-completeness perspective when a named
+work product makes or relies on a material causal claim.
+
+That perspective reviews the captured claim and relevant flow; it does not
+diagnose a raw symptom, execute a new experiment, or make every review role
+repeat the same causal sequence.
+
+When selected, the role marks its method and writes one structured causal
+analysis into the shared result.
+
+The shared validator binds that record to the selected role and sources, then
+checks flow dispositions, candidate links, candidate count, cause level, and
+the next-check shape.
+
+The Skill does not own or duplicate this record contract.
+
 The harness exposes the same brief and validator.
+
+The same core owns blinded causal-evaluation cases, brief variants, exact case
+and invocation bindings, and deterministic receipt validation.
+
+The harness and generated plugin runtime expose identical evaluation-prepare,
+single-receipt validation, and receipt-set validation commands.
+
+The active Skill supplies the model execution and evaluator judgment.
+
+The deterministic tests do not claim that they ran a host model.
 
 It does not claim automatic multi-agent review without a model adapter.
 
