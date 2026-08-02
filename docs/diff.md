@@ -17,6 +17,7 @@ lifecycle code.
 It stops honestly before AI analysis until a harness model adapter is added.
 
 - [Purpose](#purpose)
+- [Invocation and execution](#invocation-and-execution)
 - [Product boundary](#product-boundary)
 - [Snapshot integrity](#snapshot-integrity)
 - [One review artifact](#one-review-artifact)
@@ -49,6 +50,138 @@ judgment.
 Understanding belongs to the person.
 
 The review is not hidden, long-term AI memory.
+
+## Invocation and execution
+
+Loading the Hope Diff Skill does not by itself authorize a review.
+
+The active host first reads the versioned invocation contract from the shared
+Diff runtime.
+
+That contract separates four outcomes:
+
+- `answer` responds to a question or narrow request without starting a review;
+- `confirm` asks one short question about a plausible but ambiguous full review;
+- `execute` starts the complete Hope Diff workflow; and
+- `cancel` clears a pending confirmation without starting a review.
+
+The host decides from the meaning of the whole request and relevant
+conversation state instead of matching one keyword, command mention, or
+question mark.
+
+The Claude and Codex plugins use the active host model for this decision.
+
+They do not make a separate classifier call.
+
+A harness natural-language entry may use a replaceable model adapter after the
+harness has one.
+
+It may use a different model from a plugin, but it must return the same decision
+shape and pass the same evaluations.
+
+A frontier model is not required for every classification.
+
+Use a frontier-quality result as the initial baseline, then use the least costly
+model that preserves the required multilingual and conversational behavior.
+
+When the meaning remains uncertain, the classifier chooses `confirm` for a
+plausible full review and otherwise chooses `answer` or `cancel`.
+
+It does not guess `execute`.
+
+Invocation classification needs the request, relevant conversation state,
+pending confirmation state, and target metadata.
+
+It does not need pull-request code.
+
+A direct `$hope:diff` or `/hope:diff` invocation, a clear Hope Diff delegation,
+or a clear request to review the whole pull request authorizes execution.
+
+A pull-request number or URL identifies a target but does not by itself
+authorize execution.
+
+An explicit number resolves inside the current GitHub repository.
+
+A feature question, capability question, quotation, documentation example,
+narrow request, or explicit instruction not to run does not authorize a full
+review.
+
+Question grammar alone does not settle the result.
+
+For example, a polite request to review a pull request can authorize execution,
+while a question about whether Hope Diff supports that pull request does not.
+
+A generic request to review a pull request first resolves one exact target with
+the read-only `resolve-target` operation.
+
+Target resolution does not collect the review snapshot or start Hope Diff.
+
+The confirmation binds Hope Diff, that canonical pull-request target, a digest
+of the source request, a digest of the target URL, and the confirmation count.
+
+The Skill gives the exact source request and canonical target to the shared
+`confirmation-create` command through one restricted private JSON input.
+
+The command returns the pending state.
+
+The Skill keeps that exact result and the source request in the current
+conversation state instead of recreating the pending record.
+
+After the person replies, the Skill gives the pending record, original source
+request, classified decision, and any authorized new target to the shared
+`confirmation-transition` command through a new restricted private input.
+
+The transition re-hashes the original request and rejects pending state from a
+different request.
+
+The shared core therefore owns the pending-state shape and its deterministic
+transitions on every supported entry path.
+
+Every reply transition clears the pending state.
+
+It then asks one question that names Hope Diff and the exact repository and pull
+request number.
+
+If the target cannot be resolved, Hope does not ask the execution confirmation
+or start Diff.
+
+It asks the person to make a new explicit request with a pull-request URL or
+number.
+
+A clear affirmative reply executes that pending review.
+
+A rejection, unclear reply, topic change, or selection of another feature
+cancels it without repeating the same confirmation.
+
+A clear new Hope Diff delegation for another pull request clears the pending
+confirmation and executes only the newly authorized target.
+
+When that delegation supplies only a pull-request number, Hope keeps the
+repository from the pending target and replaces only its number.
+
+It passes one resulting canonical URL to `prepare`.
+
+A failed `prepare` is reported without retrying another selector or repository.
+
+A target-only reply clears the pending confirmation without execution or a
+second confirmation.
+
+After an affirmative reply, `prepare` receives the canonical URL stored in the
+pending confirmation.
+
+It must not run automatic target discovery and substitute another pull request.
+
+The Skill must not call `prepare` or a snapshot, inspection, analysis, or
+publication command before the decision is `execute`.
+
+Each structured `hope diff` command explicitly selects its documented
+operation and does not need natural-language classification.
+
+The current independent harness reports that automatic natural-language work
+is unavailable because it has no model adapter yet.
+
+When that adapter is added, its natural-language entry must use this same
+contract instead of adding a harness-specific policy.
 
 ## Product boundary
 

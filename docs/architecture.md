@@ -199,6 +199,47 @@ separate diff implementations.
 The shared diff runtime loads the writing standard from the write core and
 returns it with each prepared run.
 
+The shared Diff core also exposes a versioned invocation contract before a host
+starts `prepare`.
+
+The contract owns the possible invocation decisions, confirmation lifecycle,
+target-binding rules, model policy, and representative cases.
+
+The active Claude or Codex host interprets natural language against that
+contract, while the Skill remains a thin adapter and does not call another
+classifier model.
+
+The independent harness keeps its structured commands as explicit operation
+selection.
+
+A future harness natural-language entry may use a replaceable model adapter.
+
+The adapter may choose a different model from the plugin host, but it uses the
+same decision shape, confirmation state, failure policy, and evaluations.
+
+The harness must keep reporting the missing model boundary until that adapter
+exists.
+
+The shared core exposes a read-only target-resolution operation for ambiguous
+review requests.
+
+The host resolves and binds an exact pull request before confirmation, then
+passes that canonical URL to `prepare` after authorization.
+
+Automatic target discovery cannot replace a target that the person already
+confirmed.
+
+The shared `confirmation-create` command creates the digest-bound pending state.
+
+The shared `confirmation-transition` command re-hashes the original request and
+applies the deterministic reply transition after a host classifies the reply.
+
+The root command, independent harness, and generated plugin expose both
+operations through the same core boundary.
+
+A number-only authorized retarget inherits the pending repository, and the host
+passes one canonical URL to `prepare` without selector fallback.
+
 The runtime also returns the versioned teaching-aid decision, selection, and
 authoring-safety contract with representative evaluation cases, and can generate
 the complete condition skeleton for a bounded microworld.

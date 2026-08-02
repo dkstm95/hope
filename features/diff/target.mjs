@@ -6,6 +6,22 @@ import { parseGitHubPullRequestUrl } from "./github.mjs";
 const execFile = promisify(execFileCallback);
 const GITHUB_COMMAND_TIMEOUT_MS = 30_000;
 
+export function parsePullRequestTargetArgument(value) {
+  if (value === undefined) return Object.freeze({ url: undefined });
+  const numberMatch = value.match(/^#?([1-9][0-9]*)$/u);
+  if (numberMatch) {
+    const pullRequestNumber = Number.parseInt(numberMatch[1], 10);
+    if (!Number.isSafeInteger(pullRequestNumber)) {
+      throw new TypeError("Hope diff needs a safe positive pull request number");
+    }
+    return Object.freeze({ pullRequestNumber, url: undefined });
+  }
+  if (value.startsWith("#") || /^[-+]?[0-9]/u.test(value)) {
+    throw new TypeError("Hope diff needs a positive pull request number or canonical GitHub pull request URL");
+  }
+  return Object.freeze({ url: parseGitHubPullRequestUrl(value).url });
+}
+
 async function runJson(command, arguments_, { exec = execFile } = {}) {
   try {
     const { stdout } = await exec(command, arguments_, {
@@ -39,7 +55,7 @@ async function currentBranch(options) {
   }
 }
 
-export async function discoverGitHubPullRequest(options = {}) {
+async function currentRepository(options) {
   const repository = await runJson(
     "gh",
     ["repo", "view", "--json", "nameWithOwner"],
@@ -48,13 +64,31 @@ export async function discoverGitHubPullRequest(options = {}) {
   if (typeof repository.nameWithOwner !== "string") {
     throw new Error("GitHub did not identify the current repository");
   }
+  return repository.nameWithOwner;
+}
+
+export async function resolveGitHubPullRequestNumber(number, options = {}) {
+  if (!Number.isSafeInteger(number) || number < 1) {
+    throw new TypeError("Hope diff needs a positive pull request number");
+  }
+  const repository = await currentRepository(options);
+  return Object.freeze({
+    ...parseGitHubPullRequestUrl(
+      `https://github.com/${repository}/pull/${number}`,
+    ),
+    selection: "explicit-number",
+  });
+}
+
+export async function discoverGitHubPullRequest(options = {}) {
+  const repository = await currentRepository(options);
   const pullRequests = await runJson(
     "gh",
     [
       "pr",
       "list",
       "--repo",
-      repository.nameWithOwner,
+      repository,
       "--state",
       "open",
       "--author",
