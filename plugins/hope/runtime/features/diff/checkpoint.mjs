@@ -627,12 +627,40 @@ export function resolveContextRequestIds(ledger, snapshot, requestIds) {
   }));
 }
 
+function ledgerCoverage(ledger) {
+  const generations = [];
+  let emptyCheckpoints = 0;
+  for (const checkpoint of ledger.checkpoints) {
+    if (checkpoint.observations.length === 0) emptyCheckpoints += 1;
+    let generation = generations.at(-1);
+    if (!generation || generation.generation !== checkpoint.generation) {
+      generation = {
+        firstPage: checkpoint.page,
+        generation: checkpoint.generation,
+        lastPage: checkpoint.page,
+        pageCount: 0,
+        snapshotDigest: checkpoint.snapshotDigest,
+      };
+      generations.push(generation);
+    }
+    generation.lastPage = checkpoint.page;
+    generation.pageCount += 1;
+  }
+  return Object.freeze({
+    checkpointCount: ledger.checkpoints.length,
+    emptyCheckpointCount: emptyCheckpoints,
+    generations: Object.freeze(generations.map((value) => Object.freeze(value))),
+    observationCheckpointCount: ledger.checkpoints.length - emptyCheckpoints,
+  });
+}
+
 function ledgerPageEnvelope(ledger, snapshot, page, totalPages, entries) {
   return {
     checkpoints: entries
       .filter((entry) => entry.kind === "checkpoint")
       .map((entry) => entry.value),
     contentIsUntrusted: true,
+    coverage: ledgerCoverage(ledger),
     evidenceExcerpts: entries
       .filter((entry) => entry.kind === "evidence-excerpt")
       .map((entry) => entry.value),
@@ -679,43 +707,55 @@ function paginateLedgerEntries(ledger, snapshot, entries) {
 export function diffLedgerView(ledger, snapshot, { page = 1 } = {}) {
   const pending = pendingContextRequests(ledger, snapshot);
   const sources = sourceMap(snapshot);
-  const evidenceExcerpts = [];
   const seen = new Set();
+  const entries = [];
   for (const checkpoint of ledger.checkpoints) {
+    if (checkpoint.observations.length === 0) continue;
+    entries.push({ kind: "checkpoint", value: checkpoint });
     for (const observation of checkpoint.observations) {
       for (const evidence of observation.evidence) {
         const key = evidenceKey(evidence);
         if (seen.has(key)) continue;
         seen.add(key);
         const source = sources.get(evidence.sourceId);
-        evidenceExcerpts.push(Object.freeze({
-          ...evidence,
-          fileId: source.fileId,
-          key,
-          path: source.path,
-          revision: source.revision,
-          sourceKind: source.kind,
-          text: evidenceExcerpt(source, evidence),
-        }));
+        entries.push({
+          kind: "evidence-excerpt",
+          value: Object.freeze({
+            ...evidence,
+            fileId: source.fileId,
+            key,
+            path: source.path,
+            revision: source.revision,
+            sourceKind: source.kind,
+            text: evidenceExcerpt(source, evidence),
+          }),
+        });
       }
     }
   }
-  const entries = [
-    ...ledger.checkpoints.map((value) => ({ kind: "checkpoint", value })),
-    ...evidenceExcerpts.map((value) => ({
-      kind: "evidence-excerpt",
-      value,
-    })),
-    ...pending.map((value) => ({
+  entries.push(...pending.map((value) => ({
       kind: "pending-context-request",
       value,
-    })),
-  ];
+    })));
   const serializedBytes = Buffer.byteLength(JSON.stringify(entries), "utf8");
   if (serializedBytes > LIMITS.ledgerBytes) {
     throw new Error("Hope diff ledger exceeds its total output limit");
   }
   const pages = paginateLedgerEntries(ledger, snapshot, entries);
+  const outputBytes = pages.reduce((sum, values, index) => (
+    sum + Buffer.byteLength(JSON.stringify(
+      ledgerPageEnvelope(
+        ledger,
+        snapshot,
+        index + 1,
+        pages.length,
+        values,
+      ),
+    ), "utf8")
+  ), 0);
+  if (outputBytes > LIMITS.ledgerBytes) {
+    throw new Error("Hope diff ledger exceeds its total output limit");
+  }
   if (!Number.isSafeInteger(page) || page < 1 || page > pages.length) {
     throw new RangeError(`Ledger page must be from 1 to ${pages.length}`);
   }

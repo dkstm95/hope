@@ -35,9 +35,11 @@ import {
 import {
   appendDiffRunPlan,
   checkpointDiffRun,
+  checkpointDiffRunWindow,
   claimDiffRunFinalization,
   createDiffRun,
   inspectDiffRun,
+  inspectDiffRunWindow,
   inspectionPageView,
   loadDiffRun,
   readDiffGenerationPage,
@@ -390,6 +392,14 @@ export async function readDiffPage(runPath, page, dependencies = {}) {
   });
 }
 
+export async function readDiffWindow(runPath, startPage, dependencies = {}) {
+  return await (
+    dependencies.inspectRunWindow ?? inspectDiffRunWindow
+  )(runPath, startPage, {
+    temporaryRoot: dependencies.temporaryRoot,
+  });
+}
+
 export async function checkpointDiffPage(runPath, page, dependencies = {}) {
   const result = await (
     dependencies.checkpointRun ?? checkpointDiffRun
@@ -440,6 +450,62 @@ export async function checkpointDiffPage(runPath, page, dependencies = {}) {
   });
 }
 
+function checkpointReceipt(checkpoint) {
+  return Object.freeze({
+    generation: checkpoint.generation,
+    observationIds: checkpoint.observations.map(
+      (observation) => observation.id,
+    ),
+    page: checkpoint.page,
+    pageDigest: checkpoint.pageDigest,
+    requestIds: checkpoint.observations.flatMap(
+      (observation) => observation.contextRequests.map((request) => request.id),
+    ),
+    snapshotDigest: checkpoint.snapshotDigest,
+  });
+}
+
+export async function checkpointDiffWindow(
+  runPath,
+  startPage,
+  dependencies = {},
+) {
+  const result = await (
+    dependencies.checkpointRunWindow ?? checkpointDiffRunWindow
+  )(
+    runPath,
+    startPage,
+    async (checkpointPath) => {
+      const input = await (
+        dependencies.readCheckpointWindow ?? readPrivateJson
+      )(checkpointPath, {
+        label: "checkpoint window",
+        maximumBytes: LIMITS.checkpointWindowBytes,
+      });
+      return input.value;
+    },
+    { temporaryRoot: dependencies.temporaryRoot },
+  );
+  if (result.consumedInput) {
+    await (
+      dependencies.removeCheckpointWindow ?? unlink
+    )(result.checkpointPath).catch((error) => {
+      if (error?.code !== "ENOENT") throw error;
+    });
+  }
+  const pending = result.ledgerState.requests
+    .filter((request) => !request.collected)
+    .map(({ collected: _collected, ...request }) => Object.freeze(request));
+  return Object.freeze({
+    checkpointCount: result.ledgerState.currentPage,
+    checkpoints: Object.freeze(result.checkpoints.map(checkpointReceipt)),
+    committedThrough: result.ledgerState.currentPage,
+    nextWindow: result.nextWindow,
+    pendingContextRequests: Object.freeze(pending),
+    replayed: result.replayed,
+  });
+}
+
 export async function readDiffLedger(runPath, page = 1, dependencies = {}) {
   if (page && typeof page === "object") {
     dependencies = page;
@@ -462,13 +528,14 @@ export async function addDiffContext(runPath, requestIds, dependencies = {}) {
   );
   if (priorOperation) {
     let firstPage;
+    let firstWindow;
     if (
       priorOperation.generation === run.manifest.generation
-      && run.manifest.deliveredPage <= 1
     ) {
-      firstPage = await (
-        dependencies.inspectRun ?? inspectDiffRun
+      firstWindow = await (
+        dependencies.inspectRunWindow ?? inspectDiffRunWindow
       )(run.path, 1, { temporaryRoot: dependencies.temporaryRoot });
+      firstPage = firstWindow.pages[0];
     } else {
       firstPage = await (
         dependencies.readGenerationPage ?? readDiffGenerationPage
@@ -481,6 +548,7 @@ export async function addDiffContext(runPath, requestIds, dependencies = {}) {
     return Object.freeze({
       ...priorOperation,
       firstPage: inspectionPageView(firstPage),
+      ...(firstWindow ? { firstWindow } : {}),
       path: run.path,
       replayed: true,
       runId: run.manifest.runId,
@@ -553,12 +621,13 @@ export async function addDiffContext(runPath, requestIds, dependencies = {}) {
     previousSourceCount,
     temporaryRoot: dependencies.temporaryRoot,
   });
-  const firstPage = await (
-    dependencies.inspectRun ?? inspectDiffRun
+  const firstWindow = await (
+    dependencies.inspectRunWindow ?? inspectDiffRunWindow
   )(updated.path, 1, { temporaryRoot: dependencies.temporaryRoot });
   return Object.freeze({
     collected: candidates.filter((candidate) => candidate.kind === "context-file").length,
-    firstPage: inspectionPageView(firstPage),
+    firstPage: firstWindow.pages[0],
+    firstWindow,
     generation: updated.manifest.generation,
     limitsAdded: candidates.filter(
       (candidate) => candidate.kind === "context-unavailable"

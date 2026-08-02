@@ -159,6 +159,28 @@ test("the harness parses every independent feature entry", () => {
     runPath: "/tmp/hope-run",
   });
   assert.deepEqual(parseDiffArguments([
+    "inspect-window",
+    "--run",
+    "/tmp/hope-run",
+    "--page",
+    "5",
+  ]), {
+    command: "inspect-window",
+    page: 5,
+    runPath: "/tmp/hope-run",
+  });
+  assert.deepEqual(parseDiffArguments([
+    "checkpoint-window",
+    "--run",
+    "/tmp/hope-run",
+    "--page",
+    "5",
+  ]), {
+    command: "checkpoint-window",
+    page: 5,
+    runPath: "/tmp/hope-run",
+  });
+  assert.deepEqual(parseDiffArguments([
     "microworld-skeleton",
     "--input",
     "/tmp/hope-controls.json",
@@ -261,6 +283,23 @@ test("the diff command identifies a retryable revalidation failure", () => {
   );
 });
 
+test("analysis failures expose all structured repair issues", () => {
+  const error = new Error("Analysis needs repair");
+  error.code = "HOPE_ANALYSIS_INVALID";
+  error.canRetry = true;
+  error.issues = [{
+    code: "CHANGE_GROUNDING",
+    message: "coreChange.before must be grounded in collected code",
+    path: "coreChange.before",
+  }];
+
+  assert.deepEqual(JSON.parse(diffErrorDetails(error).trim()), {
+    canRetry: true,
+    code: "HOPE_ANALYSIS_INVALID",
+    issues: error.issues,
+  });
+});
+
 test("the internal inspect protocol emits compact model input without its private digest", async () => {
   let output = "";
   const page = {
@@ -294,6 +333,35 @@ test("the internal inspect protocol emits compact model input without its privat
     totalPages: page.totalPages,
     value: page.value,
   });
+});
+
+test("the inspection-window protocol emits one compact bounded handoff", async () => {
+  let output = "";
+  const window = {
+    checkpointPath: "/tmp/checkpoint-window.json",
+    endPage: 2,
+    generation: 1,
+    pages: [{ kind: "summary", page: 1 }, { kind: "sources", page: 2 }],
+    runId: "1".repeat(32),
+    snapshotDigest: "2".repeat(64),
+    startPage: 1,
+    totalPages: 2,
+  };
+  const result = await runDiffCommand(
+    ["inspect-window", "--run", "/tmp/hope-run", "--page", "1"],
+    {
+      readDiffWindow: async () => window,
+      stdout: {
+        write(value) {
+          output += value;
+        },
+      },
+    },
+  );
+
+  assert.equal(result, window);
+  assert.equal(output.includes("\n  "), false);
+  assert.deepEqual(JSON.parse(output), window);
 });
 
 test("the harness reports the package version", async () => {

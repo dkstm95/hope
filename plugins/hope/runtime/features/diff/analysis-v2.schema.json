@@ -108,7 +108,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["title", "text", "basis", "evidence", "fileIds"],
+        "required": ["title", "text", "basis", "evidence"],
         "properties": {
           "title": { "$ref": "#/$defs/text" },
           "text": { "$ref": "#/$defs/text" },
@@ -119,6 +119,7 @@
             "items": { "$ref": "#/$defs/evidence" }
           },
           "fileIds": {
+            "description": "Optional compatibility field. Hope derives the exact file IDs from code evidence when omitted.",
             "type": "array",
             "minItems": 1,
             "maxItems": 20,

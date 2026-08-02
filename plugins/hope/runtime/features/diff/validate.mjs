@@ -55,6 +55,23 @@ const proseFields = new Set([
   "text",
   "title",
 ]);
+const analysisFields = Object.freeze([
+  "schemaVersion",
+  "runId",
+  "snapshotDigest",
+  "locale",
+  "purpose",
+  "coreChange",
+  "contextChecks",
+  "background",
+  "behavior",
+  "codeSteps",
+  "reviewItems",
+  "fileDispositions",
+  "limitImpacts",
+  "quiz",
+  "teachingAids",
+]);
 
 function object(value, name, keys) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -879,7 +896,15 @@ function validateCodeSteps(values, sourceMap, fileMap) {
       text: value.text,
       title: value.title,
     }, name, sourceMap, { title: true });
-    const fileIds = array(value.fileIds, `${name}.fileIds`, 20);
+    const evidenceFiles = new Set(
+      validatedClaim.evidence.map((item) => item.fileId).filter(Boolean),
+    );
+    if (evidenceFiles.size === 0) {
+      throw new Error(`${name} needs code evidence`);
+    }
+    const fileIds = value.fileIds === undefined
+      ? [...evidenceFiles]
+      : array(value.fileIds, `${name}.fileIds`, 20);
     if (fileIds.length === 0) throw new Error(`${name} needs at least one file`);
     if (new Set(fileIds).size !== fileIds.length) {
       throw new Error(`${name}.fileIds contains a duplicate`);
@@ -887,47 +912,21 @@ function validateCodeSteps(values, sourceMap, fileMap) {
     for (const fileId of fileIds) {
       if (!fileMap.has(fileId)) throw new Error(`${name} refers to an unknown file`);
     }
-    const evidenceFiles = new Set(
-      validatedClaim.evidence.map((item) => item.fileId).filter(Boolean),
-    );
-    if (evidenceFiles.size === 0) {
-      throw new Error(`${name} needs code evidence`);
-    }
-    if (
+    if (value.fileIds !== undefined && (
       [...evidenceFiles].some((id) => !fileIds.includes(id))
       || fileIds.some((id) => !evidenceFiles.has(id))
-    ) {
+    )) {
       throw new Error(`${name} evidence does not match its files`);
     }
     return Object.freeze({ ...validatedClaim, fileIds: Object.freeze([...fileIds]) });
   });
 }
 
-export function validateAnalysis(analysis, snapshot, {
-  analysisFileBytes,
-  enforceResourceLimits = true,
-  runId,
-} = {}) {
+function validateAnalysisIdentity(analysis, snapshot, runId) {
   if (snapshot?.schemaVersion !== CONTRACT_VERSION) {
     throw new RangeError("Unsupported Hope snapshot schema");
   }
-  object(analysis, "analysis", [
-    "schemaVersion",
-    "runId",
-    "snapshotDigest",
-    "locale",
-    "purpose",
-    "coreChange",
-    "contextChecks",
-    "background",
-    "behavior",
-    "codeSteps",
-    "reviewItems",
-    "fileDispositions",
-    "limitImpacts",
-    "quiz",
-    "teachingAids",
-  ]);
+  object(analysis, "analysis", analysisFields);
   if (analysis.schemaVersion !== ANALYSIS_VERSION) {
     throw new RangeError("Unsupported Hope analysis schema");
   }
@@ -938,6 +937,14 @@ export function validateAnalysis(analysis, snapshot, {
   if (analysis.locale !== snapshot.settings.locale) {
     throw new Error("Analysis locale does not match the prepared review");
   }
+}
+
+function validateAnalysisValue(analysis, snapshot, {
+  analysisFileBytes,
+  enforceResourceLimits = true,
+  runId,
+} = {}) {
+  validateAnalysisIdentity(analysis, snapshot, runId);
 
   const sourceMap = new Map(snapshot.sources.map((source) => {
     if (typeof source.text !== "string") {
@@ -1131,4 +1138,219 @@ export function validateAnalysis(analysis, snapshot, {
     }),
     teachingAids,
   });
+}
+
+function analysisIssue(error, path) {
+  const message = error instanceof Error ? error.message : String(error);
+  const inferredPath = message.match(
+    /^(?:analysis|background|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|teachingAids)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
+  )?.[0] ?? "analysis";
+  let code = "ANALYSIS_CONTRACT";
+  if (message.includes("evidence limit")) code = "EVIDENCE_RANGE_LIMIT";
+  else if (message.includes("unknown source")) code = "EVIDENCE_SOURCE_UNKNOWN";
+  else if (message.includes("invalid line range")) code = "EVIDENCE_RANGE_INVALID";
+  else if (message.includes("evidence does not match its files")) {
+    code = "CODE_STEP_FILE_MISMATCH";
+  } else if (message.includes("highlighted code lines")) {
+    code = "RESOURCE_HIGHLIGHTED_LINES";
+  } else if (message.includes("evidence references")) {
+    code = "RESOURCE_EVIDENCE_REFERENCES";
+  } else if (message.includes("unique evidence ranges")) {
+    code = "RESOURCE_EVIDENCE_RANGES";
+  } else if (message.includes("evidence exceeds")) {
+    code = "RESOURCE_EVIDENCE";
+  } else if (message.includes("must be grounded")) {
+    code = "CHANGE_GROUNDING";
+  }
+  return Object.freeze({ code, message, path: path ?? inferredPath });
+}
+
+function collectAnalysisIssues(analysis, snapshot, options, firstError) {
+  const issues = [];
+  const seen = new Set();
+  const add = (error, path) => {
+    const issue = analysisIssue(error, path);
+    const key = `${issue.code}\u0000${issue.path}\u0000${issue.message}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      issues.push(issue);
+    }
+  };
+  const capture = (path, operation) => {
+    try {
+      return operation();
+    } catch (error) {
+      add(error, path);
+      return undefined;
+    }
+  };
+
+  try {
+    validateAnalysisIdentity(analysis, snapshot, options.runId);
+  } catch (error) {
+    add(error, "analysis");
+    return issues;
+  }
+
+  const sourceMap = new Map(snapshot.sources.map((source) => {
+    const lines = typeof source.text === "string"
+      ? Object.freeze(source.text.split("\n"))
+      : Object.freeze([]);
+    return [source.id, { ...source, lines, referenceCache: new Map() }];
+  }));
+  const fileMap = new Map(snapshot.files.map((file) => [file.id, file]));
+  const limitMap = new Map(snapshot.limits.map((limit) => [limit.id, limit]));
+
+  capture("purpose", () => claim(analysis.purpose, "purpose", sourceMap));
+  if (analysis.coreChange && typeof analysis.coreChange === "object") {
+    for (const name of ["before", "after", "why"]) {
+      const validated = capture(`coreChange.${name}`, () => claim(
+        analysis.coreChange[name],
+        `coreChange.${name}`,
+        sourceMap,
+      ));
+      if (
+        validated
+        && ["before", "after"].includes(name)
+        && (
+          validated.basis === "unknown"
+          || !validated.evidence.some((item) => changeSources.has(item.sourceKind))
+        )
+      ) {
+        add(
+          new Error(`coreChange.${name} must be grounded in collected code`),
+          `coreChange.${name}`,
+        );
+      }
+    }
+    if (Array.isArray(analysis.coreChange.details)) {
+      analysis.coreChange.details.forEach((value, index) => capture(
+        `coreChange.details[${index}]`,
+        () => claim(value, `coreChange.details[${index}]`, sourceMap),
+      ));
+    }
+  } else {
+    capture("coreChange", () => object(
+      analysis.coreChange,
+      "coreChange",
+      ["before", "after", "why", "details"],
+    ));
+  }
+
+  if (analysis.background !== undefined) {
+    const values = capture("background", () => array(analysis.background, "background", 8));
+    values?.forEach((value, index) => capture(
+      `background[${index}]`,
+      () => claim(value, `background[${index}]`, sourceMap, { title: true }),
+    ));
+  }
+  capture("behavior", () => {
+    if (analysis.behavior === undefined) return undefined;
+    object(analysis.behavior, "behavior", ["summary", "steps", "visual", "microworld"]);
+    const steps = boundedArray(analysis.behavior.steps, "behavior.steps", 2, 12);
+    claim(analysis.behavior.summary, "behavior.summary", sourceMap);
+    steps.forEach((value, index) => claim(
+      value,
+      `behavior.steps[${index}]`,
+      sourceMap,
+    ));
+    if (analysis.behavior.visual !== undefined) {
+      validateVisual(analysis.behavior.visual, sourceMap);
+    }
+    if (analysis.behavior.microworld !== undefined) {
+      validateMicroworld(analysis.behavior.microworld, sourceMap);
+    }
+    return true;
+  });
+
+  const codeSteps = capture("codeSteps", () => array(analysis.codeSteps, "codeSteps", 20));
+  codeSteps?.forEach((value, index) => capture(
+    `codeSteps[${index}]`,
+    () => validateCodeSteps([value], sourceMap, fileMap),
+  ));
+  const reviewItems = capture(
+    "reviewItems",
+    () => array(analysis.reviewItems, "reviewItems", LIMITS.reviewItems),
+  );
+  reviewItems?.forEach((value, index) => capture(
+    `reviewItems[${index}]`,
+    () => reviewItem(value, index, sourceMap, limitMap),
+  ));
+  capture("fileDispositions", () => validateFileDispositions(
+    analysis.fileDispositions,
+    snapshot,
+  ));
+  capture("limitImpacts", () => validateLimitImpacts(
+    analysis.limitImpacts,
+    snapshot,
+  ));
+  capture("contextChecks", () => validateContextChecks(
+    analysis.contextChecks,
+    sourceMap,
+    limitMap,
+  ));
+
+  const quiz = analysis.quiz === undefined
+    ? []
+    : capture("quiz", () => array(analysis.quiz, "quiz", 5));
+  quiz?.forEach((value, index) => capture(`quiz[${index}]`, () => {
+    const name = `quiz[${index}]`;
+    object(value, name, ["question", "answer", "evidence"]);
+    text(value.question, `${name}.question`);
+    text(value.answer, `${name}.answer`);
+    evidenceList(value.evidence, `${name}.evidence`, sourceMap, { maximum: 8 });
+  }));
+
+  const validatedReferences = [];
+  const visitEvidence = (value, path = "analysis") => {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => visitEvidence(item, `${path}[${index}]`));
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    if (
+      Object.hasOwn(value, "sourceId")
+      && Object.hasOwn(value, "startLine")
+      && Object.hasOwn(value, "endLine")
+    ) {
+      const validated = capture(path, () => evidenceReference(value, path, sourceMap));
+      if (validated) validatedReferences.push(validated);
+      return;
+    }
+    for (const [key, item] of Object.entries(value)) {
+      visitEvidence(item, `${path}.${key}`);
+    }
+  };
+  for (const [key, value] of Object.entries(analysis)) {
+    visitEvidence(value, key);
+  }
+  capture("analysis.resources", () => analysisResources(
+    analysis,
+    validatedReferences,
+    {
+      analysisFileBytes: options.analysisFileBytes,
+      enforceLimits: options.enforceResourceLimits !== false,
+    },
+  ));
+
+  if (issues.length === 0) add(firstError);
+  return issues;
+}
+
+export function validateAnalysis(analysis, snapshot, options = {}) {
+  try {
+    return validateAnalysisValue(analysis, snapshot, options);
+  } catch (error) {
+    const issues = collectAnalysisIssues(analysis, snapshot, options, error);
+    if (issues.length <= 1) {
+      error.issues = Object.freeze(issues);
+      throw error;
+    }
+    const combined = new Error(
+      `${error.message} (${issues.length - 1} additional independent contract issue${issues.length === 2 ? "" : "s"}; fix them together)`,
+      { cause: error },
+    );
+    combined.issues = Object.freeze(issues);
+    throw combined;
+  }
 }

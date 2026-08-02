@@ -140,21 +140,29 @@ It collects an exact GitHub pull-request snapshot, exposes bounded inspection
 pages, validates one structured analysis, rechecks the snapshot, and publishes
 one private self-contained HTML file without replacing an existing file.
 
-After each inspection page, the Skill writes a bounded, page-local checkpoint.
+The Skill receives a bounded window of inspection pages and writes one ordered
+checkpoint entry for every page in that window.
 
-The shared runtime validates its citations and stores each checkpoint as one
-immutable, digest-chained record.
+The shared runtime validates the whole submitted window before changing state.
 
-A checkpoint transition reads the manifest, one inspection page, and one
-bounded state summary.
+It then stores each page checkpoint as its own immutable, digest-chained record.
 
-It returns the next inspection page in the same process.
+This keeps page-local citations and prefix-safe crash recovery while reducing
+host-model round trips.
+
+A checkpoint transition reads the manifest, one bounded inspection window, and
+one bounded state summary.
+
+It returns the next inspection window in the same process.
 
 The explicit inspection command remains the replay path after lost or truncated
 output.
 
-When the Skill later reads the bounded ledger pages, the runtime adds exact
-excerpts from the bound snapshot to the model-authored notes.
+The durable ledger retains every page checkpoint, including empty records.
+
+When the Skill later reads the bounded analysis view, the runtime omits empty
+checkpoint bodies and places exact excerpts from the bound snapshot beside the
+model-authored notes they support.
 
 This gives every supported host durable review memory without assuming that its
 model will retain every earlier page.
@@ -382,7 +390,16 @@ validation.
 Each feature still owns its schema, limits, reference vocabulary, cross-field
 rules, normalized result, and resource metrics.
 
-Diff and work-snapshot validation keep their separate fail-fast boundaries.
+Work-snapshot validation keeps its separate fail-fast boundary.
+
+Diff fails fast on snapshot and run identity because later checks cannot be
+trusted without them.
+
+After identity succeeds, Diff collects independent analysis contract errors
+and returns them together with stable codes and JSON paths.
+
+The runtime derives code-step file IDs from validated evidence when the model
+omits that compatibility field.
 
 ## Shared command options
 

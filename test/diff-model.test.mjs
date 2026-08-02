@@ -143,6 +143,35 @@ test("every code step is backed by code evidence for its listed files", () => {
   );
 });
 
+test("code step file IDs are derived from evidence when omitted", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  const expected = [...analysis.codeSteps[0].fileIds];
+  delete analysis.codeSteps[0].fileIds;
+
+  const validated = validateAnalysis(analysis, snapshot, { runId });
+  assert.deepEqual(validated.codeSteps[0].fileIds, expected);
+});
+
+test("analysis validation reports independent repair issues together", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.coreChange.before.basis = "unknown";
+  analysis.coreChange.before.evidence = [];
+  analysis.codeSteps[0].fileIds = ["file-99"];
+
+  assert.throws(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+    (error) => {
+      assert.ok(Array.isArray(error.issues));
+      assert.ok(error.issues.length >= 2);
+      assert.ok(error.issues.some((issue) => issue.code === "CHANGE_GROUNDING"));
+      assert.ok(error.issues.some((issue) => issue.path === "codeSteps[0]"));
+      return true;
+    },
+  );
+});
+
 test("analysis fails closed on unsupported schemas and model-owned URLs", () => {
   const snapshot = makeSnapshot();
   assert.throws(
