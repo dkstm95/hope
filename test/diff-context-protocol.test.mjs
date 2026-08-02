@@ -4,8 +4,9 @@ import test, { after } from "node:test";
 import { addDiffContext } from "../features/diff/index.mjs";
 import {
   checkpointDiffRun,
+  checkpointDiffRunWindow,
   createDiffRun,
-  inspectDiffRun,
+  inspectDiffRunWindow,
   loadDiffRun,
   removeDiffRun,
 } from "../features/diff/run.mjs";
@@ -24,46 +25,51 @@ function makeGroundedSnapshot() {
 
 async function inspectAll(run, temporaryRoot, request) {
   let requested = false;
-  for (let page = 1; page <= run.pageCount; page += 1) {
-    const inspected = await inspectDiffRun(run.path, page, { temporaryRoot });
+  let window = await inspectDiffRunWindow(run.path, 1, { temporaryRoot });
+  while (window) {
     const current = await loadDiffRun(run.path, { temporaryRoot });
-    const source = inspected.kind === "sources"
-      ? inspected.value.sources.find((value) => (
-        request ? value.text.includes(request.path) : true
-      ))
-      : undefined;
-    const requestLineOffset = source && request
-      ? source.text.split("\n").findIndex((line) => line.includes(request.path))
-      : -1;
-    const requestLine = requestLineOffset >= 0
-      ? source.startLine + requestLineOffset
-      : undefined;
-    const observations = request && !requested && source
-      && requestLine !== undefined
-      ? [{
-          basis: "inferred",
-          contextRequests: [{
-            path: request.path,
-            revision: request.revision,
-          }],
-          evidence: [{
-            endLine: requestLine,
-            sourceId: source.sourceId,
-            startLine: requestLine,
-          }],
-          kind: "question",
-          text: request.question ?? `Inspect ${request.path} to resolve this call path.`,
-        }]
-      : [];
-    if (observations.length > 0) requested = true;
-    await checkpointDiffRun(run.path, page, {
+    const checkpoints = window.pages.map((inspected) => {
+      const source = inspected.kind === "sources"
+        ? inspected.value.sources.find((value) => (
+          request ? value.text.includes(request.path) : true
+        ))
+        : undefined;
+      const requestLineOffset = source && request
+        ? source.text.split("\n").findIndex((line) => line.includes(request.path))
+        : -1;
+      const requestLine = requestLineOffset >= 0
+        ? source.startLine + requestLineOffset
+        : undefined;
+      const observations = request && !requested && source
+        && requestLine !== undefined
+        ? [{
+            basis: "inferred",
+            contextRequests: [{
+              path: request.path,
+              revision: request.revision,
+            }],
+            evidence: [{
+              endLine: requestLine,
+              sourceId: source.sourceId,
+              startLine: requestLine,
+            }],
+            kind: "question",
+            text: request.question ?? `Inspect ${request.path} to resolve this call path.`,
+          }]
+        : [];
+      if (observations.length > 0) requested = true;
+      return { observations, page: inspected.page };
+    });
+    const result = await checkpointDiffRunWindow(run.path, window.startPage, {
+      checkpoints,
+      endPage: window.endPage,
       generation: current.manifest.generation,
-      observations,
-      page,
       runId: current.manifest.runId,
       schemaVersion: 1,
       snapshotDigest: current.snapshot.digest,
+      startPage: window.startPage,
     }, { temporaryRoot });
+    window = result.nextWindow;
   }
   if (request && !requested) throw new Error("Test run did not deliver a source page");
   if (!request) return undefined;
@@ -113,7 +119,7 @@ test("context collection atomically refreshes the snapshot and inspection plan",
   assert.notEqual(result.snapshotDigest, created.snapshotDigest);
   const updated = await loadDiffRun(created.path, { temporaryRoot });
   assert.equal(updated.manifest.phase, "inspecting");
-  assert.equal(updated.manifest.deliveredPage, 1);
+  assert.equal(updated.manifest.deliveredPage, result.firstWindow.endPage);
   assert.equal(updated.manifest.generation, 2);
   assert.equal(updated.ledger.checkpoints.length, created.pageCount);
   assert.equal(updated.manifest.pageCount, result.pageCount);

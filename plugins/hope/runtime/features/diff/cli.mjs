@@ -8,6 +8,7 @@ import {
   buildMicroworldSkeleton,
   cancelDiff,
   checkpointDiffPage,
+  checkpointDiffWindow,
   createDiffConfirmationFromFile,
   createDiffInvocationContract,
   DIFF_MODEL_ADAPTER_CODE,
@@ -15,6 +16,7 @@ import {
   finishDiff,
   prepareDiff,
   readDiffPage,
+  readDiffWindow,
   readDiffLedger,
   resolveDiffTarget,
   runDiff,
@@ -38,6 +40,8 @@ function usage() {
     "  hope diff prepare [GitHub PR URL or PR number] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
     "  hope diff inspect --run <private-run-path> --page <number>",
     "  hope diff checkpoint --run <private-run-path> --page <number>",
+    "  hope diff inspect-window --run <private-run-path> --page <start-number>",
+    "  hope diff checkpoint-window --run <private-run-path> --page <start-number>",
     "  hope diff ledger --run <private-run-path> --page <number>",
     "  hope diff context --run <private-run-path> --request <context-request-id>",
     "  hope diff microworld-skeleton --input <private-controls.json>",
@@ -59,7 +63,9 @@ export function parseDiffArguments(argv) {
     "confirmation-create",
     "confirmation-transition",
     "inspect",
+    "inspect-window",
     "checkpoint",
+    "checkpoint-window",
     "ledger",
     "context",
     "microworld-skeleton",
@@ -182,7 +188,9 @@ export function parseDiffArguments(argv) {
   }
   if (
     command === "inspect"
+    || command === "inspect-window"
     || command === "checkpoint"
+    || command === "checkpoint-window"
     || command === "ledger"
   ) {
     const page = Number.parseInt(options.page, 10);
@@ -234,8 +242,22 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       options.page,
       dependencies,
     );
+  } else if (options.command === "inspect-window") {
+    result = await (dependencies.readDiffWindow ?? readDiffWindow)(
+      options.runPath,
+      options.page,
+      dependencies,
+    );
   } else if (options.command === "checkpoint") {
     result = await (dependencies.checkpointDiffPage ?? checkpointDiffPage)(
+      options.runPath,
+      options.page,
+      dependencies,
+    );
+  } else if (options.command === "checkpoint-window") {
+    result = await (
+      dependencies.checkpointDiffWindow ?? checkpointDiffWindow
+    )(
       options.runPath,
       options.page,
       dependencies,
@@ -269,6 +291,11 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (result !== undefined) {
     if (options.command === "inspect") {
       stdout.write(serializeInspectionPage(result));
+    } else if (
+      options.command === "inspect-window"
+      || options.command === "checkpoint-window"
+    ) {
+      stdout.write(`${JSON.stringify(result)}\n`);
     } else {
       stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     }
@@ -284,6 +311,7 @@ export function diffErrorDetails(error) {
     return "";
   }
   const details = { canRetry: error.canRetry, code: error.code };
+  if (Array.isArray(error.issues)) details.issues = error.issues;
   if (error.command !== undefined) details.command = error.command;
   if (error.runPath !== undefined) details.runPath = error.runPath;
   return `\n${JSON.stringify(details)}`;

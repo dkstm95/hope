@@ -519,20 +519,32 @@ those questions.
 
 The first inspection generation contains the change sources.
 
-After each page, the active host must submit a bounded checkpoint before it can
-read the next page.
+The active host receives a byte-bounded window containing one or more ordered
+pages.
 
-A successful checkpoint transition returns the next inspection page in the
-same runtime invocation.
+It must submit one page-local checkpoint entry for every page in that window
+before it can read another window.
 
-The host uses that returned page for normal advancement instead of starting a
+A successful checkpoint-window transition returns the next inspection window
+in the same runtime invocation.
+
+Hope validates every entry in the submitted window before committing new
+state.
+
+It then commits each page as a separate immutable record and advances the digest
+chain one page at a time.
+
+If a process stops during those commits, a retry verifies the already committed
+prefix and resumes only the uncommitted suffix.
+
+The host uses that returned window for normal advancement instead of starting a
 separate inspection invocation.
 
-The explicit inspection command remains available to replay the expected page
-after lost or truncated output.
+The explicit single-page inspection and checkpoint commands remain available
+after repeated window truncation or for compatibility.
 
-Repeating a committed checkpoint returns the same transition and replays its
-next page.
+Repeating a committed checkpoint window verifies the committed prefix and
+replays the outstanding next window when one exists.
 
 A checkpoint may record page-local facts, risks, and questions.
 
@@ -568,10 +580,11 @@ The host reads and checkpoints only those new pages.
 
 The runtime does not keep a long-lived process between host commands.
 
-Each checkpoint transition reads the manifest, the current page, and one
-bounded state summary.
+Each checkpoint-window transition reads the manifest, a bounded page window,
+and one bounded state summary.
 
-It adds one immutable checkpoint record, hands off the next page, and exits.
+It validates the whole window, adds one immutable checkpoint record per page,
+hands off the next window, and exits.
 
 It may repeat this question, request, and append cycle while the shared file and
 byte limits permit it.
@@ -824,18 +837,33 @@ artifact.
 Inspection pages may carry several short source chunks under one untrusted page
 envelope.
 
+A window keeps every page envelope and source boundary distinct.
+
 Source IDs and line ranges remain distinct.
 
 Before analysis, every delivered page must have one durable checkpoint.
 
-The active host reads every bounded ledger page, including Hope-extracted
-evidence excerpts, and checks its model-authored notes against those excerpts.
+The active host reads every bounded analysis-ledger page, including
+Hope-extracted evidence excerpts, and checks its model-authored notes against
+those excerpts.
+
+The durable audit ledger keeps every checkpoint.
+
+The model-facing analysis view reports complete checkpoint coverage but omits
+empty checkpoint bodies.
+
+It places each remaining checkpoint before its related evidence excerpts.
+
+Each analysis-ledger page includes the excerpts cited by its checkpoints.
+
+The view removes a repeated excerpt only within that page, so a later page does
+not depend on an earlier page for the cited source text.
 
 Context generations never remove earlier checkpoints or require earlier pages
 to be read again.
 
-Checkpoint and context transitions hand off their next page without a separate
-inspection process.
+Checkpoint and context transitions hand off their next window without a
+separate inspection process.
 
 This reduces process startup and repeated run loading while preserving explicit
 page order, replay, and crash recovery.
@@ -861,12 +889,14 @@ Record exact input or output tokens only when the active host supplies them.
 Durable review memory is also bounded:
 
 - 32 KiB for one checkpoint submission;
+- four pages and 32 KiB of serialized inspection data for one window;
+- 128 KiB for one checkpoint-window submission;
 - 8 observations per checkpoint and 256 across the run;
 - 96 KiB of model-authored checkpoint notes;
 - 96 KiB and 1,200 lines of cited checkpoint excerpts;
 - 12 context requests;
 - 256 KiB for the reconstructed ledger; and
-- 48 KiB for one ledger page.
+- 24 KiB for one model-facing ledger page.
 
 Reject an analysis before rendering when it exceeds any authoring limit:
 
@@ -1180,8 +1210,18 @@ This preflight is read-only: it does not render or publish an artifact.
 It also does not change the run phase, consume a repair attempt, or delete the
 run.
 
-Correct clear contract errors and repeat the preflight without collecting the
-pull request again.
+Snapshot and run identity errors fail immediately.
+
+After identity succeeds, Hope returns independent analysis contract errors
+together with stable codes and JSON paths.
+
+Correct them together and repeat the preflight without collecting the pull
+request again.
+
+Hope derives each code step's exact file IDs from its validated code evidence
+when the analysis omits the compatibility field.
+
+A supplied field must still match the derived set exactly.
 
 Every run uses analysis contract version 2 and requires teaching-aid decisions.
 

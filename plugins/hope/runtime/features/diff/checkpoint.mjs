@@ -627,12 +627,40 @@ export function resolveContextRequestIds(ledger, snapshot, requestIds) {
   }));
 }
 
+function ledgerCoverage(ledger) {
+  const generations = [];
+  let emptyCheckpoints = 0;
+  for (const checkpoint of ledger.checkpoints) {
+    if (checkpoint.observations.length === 0) emptyCheckpoints += 1;
+    let generation = generations.at(-1);
+    if (!generation || generation.generation !== checkpoint.generation) {
+      generation = {
+        firstPage: checkpoint.page,
+        generation: checkpoint.generation,
+        lastPage: checkpoint.page,
+        pageCount: 0,
+        snapshotDigest: checkpoint.snapshotDigest,
+      };
+      generations.push(generation);
+    }
+    generation.lastPage = checkpoint.page;
+    generation.pageCount += 1;
+  }
+  return Object.freeze({
+    checkpointCount: ledger.checkpoints.length,
+    emptyCheckpointCount: emptyCheckpoints,
+    generations: Object.freeze(generations.map((value) => Object.freeze(value))),
+    observationCheckpointCount: ledger.checkpoints.length - emptyCheckpoints,
+  });
+}
+
 function ledgerPageEnvelope(ledger, snapshot, page, totalPages, entries) {
   return {
     checkpoints: entries
       .filter((entry) => entry.kind === "checkpoint")
       .map((entry) => entry.value),
     contentIsUntrusted: true,
+    coverage: ledgerCoverage(ledger),
     evidenceExcerpts: entries
       .filter((entry) => entry.kind === "evidence-excerpt")
       .map((entry) => entry.value),
@@ -648,28 +676,63 @@ function ledgerPageEnvelope(ledger, snapshot, page, totalPages, entries) {
   };
 }
 
-function paginateLedgerEntries(ledger, snapshot, entries) {
+function dedupeLedgerEvidence(entries) {
+  const seen = new Set();
+  return entries.filter((entry) => {
+    if (entry.kind !== "evidence-excerpt") return true;
+    if (seen.has(entry.value.key)) return false;
+    seen.add(entry.value.key);
+    return true;
+  });
+}
+
+function ledgerEnvelopeBytes(ledger, snapshot, entries) {
+  return Buffer.byteLength(JSON.stringify(
+    ledgerPageEnvelope(ledger, snapshot, 1, 1, entries),
+  ), "utf8");
+}
+
+function paginateLedgerEntryGroups(ledger, snapshot, groups) {
   const pages = [];
   let current = [];
-  for (const entry of entries) {
-    const candidate = [...current, entry];
-    const envelope = ledgerPageEnvelope(ledger, snapshot, 1, 1, candidate);
+  for (const group of groups) {
+    const candidate = dedupeLedgerEvidence([...current, ...group]);
     if (
-      current.length > 0
-      && Buffer.byteLength(JSON.stringify(envelope), "utf8")
-        > LIMITS.ledgerPageBytes
+      ledgerEnvelopeBytes(ledger, snapshot, candidate)
+      <= LIMITS.ledgerPageBytes
     ) {
-      pages.push(current);
-      current = [entry];
-    } else {
       current = candidate;
+      continue;
     }
-    const single = ledgerPageEnvelope(ledger, snapshot, 1, 1, current);
+    if (current.length > 0) {
+      pages.push(current);
+      current = [];
+    }
+    const standalone = dedupeLedgerEvidence(group);
     if (
-      Buffer.byteLength(JSON.stringify(single), "utf8")
-      > LIMITS.ledgerPageBytes
+      ledgerEnvelopeBytes(ledger, snapshot, standalone)
+      <= LIMITS.ledgerPageBytes
     ) {
-      throw new Error("One Hope diff ledger entry exceeds the page limit");
+      current = standalone;
+      continue;
+    }
+    for (const entry of standalone) {
+      const partial = dedupeLedgerEvidence([...current, entry]);
+      if (
+        current.length > 0
+        && ledgerEnvelopeBytes(ledger, snapshot, partial) > LIMITS.ledgerPageBytes
+      ) {
+        pages.push(current);
+        current = [entry];
+      } else {
+        current = partial;
+      }
+      if (
+        ledgerEnvelopeBytes(ledger, snapshot, current)
+        > LIMITS.ledgerPageBytes
+      ) {
+        throw new Error("One Hope diff ledger entry exceeds the page limit");
+      }
     }
   }
   if (current.length > 0 || pages.length === 0) pages.push(current);
@@ -679,43 +742,49 @@ function paginateLedgerEntries(ledger, snapshot, entries) {
 export function diffLedgerView(ledger, snapshot, { page = 1 } = {}) {
   const pending = pendingContextRequests(ledger, snapshot);
   const sources = sourceMap(snapshot);
-  const evidenceExcerpts = [];
-  const seen = new Set();
+  const groups = [];
   for (const checkpoint of ledger.checkpoints) {
+    if (checkpoint.observations.length === 0) continue;
+    const entries = [{ kind: "checkpoint", value: checkpoint }];
     for (const observation of checkpoint.observations) {
       for (const evidence of observation.evidence) {
         const key = evidenceKey(evidence);
-        if (seen.has(key)) continue;
-        seen.add(key);
         const source = sources.get(evidence.sourceId);
-        evidenceExcerpts.push(Object.freeze({
-          ...evidence,
-          fileId: source.fileId,
-          key,
-          path: source.path,
-          revision: source.revision,
-          sourceKind: source.kind,
-          text: evidenceExcerpt(source, evidence),
-        }));
+        entries.push({
+          kind: "evidence-excerpt",
+          value: Object.freeze({
+            ...evidence,
+            fileId: source.fileId,
+            key,
+            path: source.path,
+            revision: source.revision,
+            sourceKind: source.kind,
+            text: evidenceExcerpt(source, evidence),
+          }),
+        });
       }
     }
+    groups.push(entries);
   }
-  const entries = [
-    ...ledger.checkpoints.map((value) => ({ kind: "checkpoint", value })),
-    ...evidenceExcerpts.map((value) => ({
-      kind: "evidence-excerpt",
-      value,
-    })),
-    ...pending.map((value) => ({
-      kind: "pending-context-request",
-      value,
-    })),
-  ];
-  const serializedBytes = Buffer.byteLength(JSON.stringify(entries), "utf8");
-  if (serializedBytes > LIMITS.ledgerBytes) {
+  groups.push(...pending.map((value) => [{
+    kind: "pending-context-request",
+    value,
+  }]));
+  const pages = paginateLedgerEntryGroups(ledger, snapshot, groups);
+  const outputBytes = pages.reduce((sum, values, index) => (
+    sum + Buffer.byteLength(JSON.stringify(
+      ledgerPageEnvelope(
+        ledger,
+        snapshot,
+        index + 1,
+        pages.length,
+        values,
+      ),
+    ), "utf8")
+  ), 0);
+  if (outputBytes > LIMITS.ledgerBytes) {
     throw new Error("Hope diff ledger exceeds its total output limit");
   }
-  const pages = paginateLedgerEntries(ledger, snapshot, entries);
   if (!Number.isSafeInteger(page) || page < 1 || page > pages.length) {
     throw new RangeError(`Ledger page must be from 1 to ${pages.length}`);
   }
