@@ -23,6 +23,9 @@ Read [docs/write.md](docs/write.md) before implementing Hope write.
   updates, and final responses in any format. If the Skill is unavailable, use
   the shared Write runtime brief and state that fallback.
 - Use short sentences and familiar names.
+- In maintained Markdown prose, use one sentence per top-level prose paragraph
+  unless keeping related sentences together better serves meaning, flow, voice,
+  or the target format. Record an exact exception in the prose-style test.
 - Keep `harness -> features <- host adapters` as the dependency direction.
 - Do not maintain feature code or product definitions in two places.
 - Use `npm run build:plugin` for required package copies. Never edit them.

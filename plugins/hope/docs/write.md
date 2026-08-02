@@ -45,6 +45,13 @@ standard.
 It adapts George Orwell's six writing rules and adds the structural and
 preservation rules needed for current Hope work.
 
+Write matches the amount and local order of non-material supporting detail to
+the target's purpose, intended reader, and next action.
+
+It consolidates repeated framing only when the intended reading path presents
+the elements together, they add no distinct meaning or voice, and standalone
+comprehension remains intact.
+
 Write prefers one sentence per prose paragraph when it improves meaning,
 readability, or rhythm.
 
@@ -57,8 +64,14 @@ paragraphs.
 Other formats use their native paragraph structure instead of a literal blank
 line.
 
-Write chooses target-supported headings, lists, dividers, and paragraph
-boundaries to express semantic structure.
+Write chooses headings, lists, dividers, callouts, and paragraph boundaries that
+the target and project support to express semantic structure.
+
+Write surfaces a boundary, prerequisite, caveat, or next action through an
+established target or project convention.
+
+It uses a callout only when that convention already exists or the request
+establishes it, and keeps ordinary explanation in the main flow.
 
 The renderer controls visible spacing, typography, and styling.
 
@@ -77,8 +90,27 @@ naturalness, then compare the versions for meaning drift.
 Meaning must stay aligned across versions; their sentence structure does not
 need to match.
 
-The feature returns that standard with the selected mode and the matching
-response contract.
+The writing standard and the Write brief have separate versions.
+
+The standard version changes when shared writing behavior changes.
+
+The brief version changes when the mode contract or returned brief shape
+changes.
+
+The shared standard contract includes representative decision examples for
+separating independent points, consolidating repeated framing, surfacing an
+important boundary, and preserving a material claim.
+
+Each example records a situation and the expected decision without prescribing
+one exact sentence.
+
+The examples guide an active host when a situation matches.
+
+They are not automated evaluation results or evidence that a model followed the
+standard.
+
+The standalone feature returns those examples and the standard with the selected
+mode and matching response contract.
 
 A host adapter must use the returned brief instead of carrying another copy of
 the rules.
@@ -143,6 +175,9 @@ Fixed protocol output stays deterministic and is edited at its source.
 - Do not silently narrow or expand a person's request while clarifying it.
 - Keep exact code, commands, identifiers, interface text, quotations, and legal
   language intact unless the person asks to change them.
+- Do not delete, demote, or reorder a material claim unless the request or
+  authoritative context explicitly permits that content change. Route
+  section-level restructuring of a named completed work product to Polish.
 - Treat sentence length as a signal, not a fixed pass or fail limit.
 - Follow a more specific project rule when it serves a clear local need.
 - Do not change files when the person asks only for a review.

@@ -195,8 +195,8 @@ ledger --run <run-path> --page 1
 
 Read every page through the returned `totalPages`.
 
-Also read the complete analysis schema, `writingStandard.text`, and
-`teachingAids` returned by `prepare`.
+Also read the complete analysis schema, `writingStandard.text`,
+`writingStandard.decisionExamples`, and `teachingAids` returned by `prepare`.
 
 Use them with this skill as the authoring contract for the run.
 
@@ -216,10 +216,13 @@ Follow these rules:
 
 - Copy `runId`, `snapshotDigest`, and `locale` from `prepare`.
 - Use only source IDs and line ranges shown in inspection pages.
-- Follow `writingStandard.text` for every user-facing prose field. Apply its
-  final check before writing the analysis. The evidence, uncertainty,
-  exact-source, and locale rules below are more specific. Keep them when
-  simpler wording would change the meaning.
+- Follow `writingStandard.text` and use `writingStandard.decisionExamples` to
+  resolve matching editing decisions for every user-facing prose field. Apply
+  the standard's final check before writing the analysis. The evidence,
+  uncertainty, exact-source, and locale rules below are more specific. Keep
+  them when simpler wording would change the meaning.
+- The writing decision examples guide matching decisions; they are not
+  evaluation results.
 - Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` short enough
   for the first screen. Use `coreChange.details` for the main explanation.
   Start that explanation with the purpose, previous and new behavior, affected

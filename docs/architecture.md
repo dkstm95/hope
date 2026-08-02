@@ -345,8 +345,8 @@ The write implementation starts from [write.md](write.md).
 
 The editable writing standard lives only in `features/write/standard.md`.
 
-The feature core returns the standard with a `draft`, `edit`, or `review`
-response contract.
+The feature core returns the versioned standard, its representative decision
+examples, and a `draft`, `edit`, or `review` response contract.
 
 The Claude and Codex Skills choose a mode and ask the generated runtime for the
 same brief.

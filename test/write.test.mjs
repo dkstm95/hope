@@ -1,117 +1,22 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
 
 import {
   createTaskWritingPass,
   createWritingBrief,
+  createWritingStandard,
   loadWritingStandard,
   runWrite,
   WRITE_BRIEF_VERSION,
+  WRITE_DECISION_EXAMPLES,
   WRITE_MODEL_ADAPTER_CODE,
   WRITE_MODEL_ADAPTER_MESSAGE,
+  WRITE_STANDARD_VERSION,
 } from "../features/write/index.mjs";
 import {
   main as runWriteCommand,
   parseWriteArguments,
 } from "../features/write/cli.mjs";
-
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-
-const maintainedProsePaths = [
-  "AGENTS.md",
-  "CONTRIBUTING.md",
-  "PRINCIPLES.md",
-  "README.md",
-  "README.ko.md",
-  "SECURITY.md",
-  "assets/brand/README.md",
-  "design/fonts/SOURCE.md",
-  "docs/align.md",
-  "docs/architecture.md",
-  "docs/design.md",
-  "docs/design/baseline-v1/README.md",
-  "docs/diff.md",
-  "docs/polish.md",
-  "docs/toxic-review.md",
-  "docs/write.md",
-  "plugins/hope/skills/align/SKILL.md",
-  "plugins/hope/skills/diff/SKILL.md",
-  "plugins/hope/skills/polish/SKILL.md",
-  "plugins/hope/skills/settings/SKILL.md",
-  "plugins/hope/skills/toxic-review/SKILL.md",
-  "plugins/hope/skills/write/SKILL.md",
-];
-
-// Add an exact paragraph here only when keeping related sentences together
-// serves meaning, flow, voice, or the target format better than splitting them.
-const paragraphExceptions = new Set();
-
-function proseParagraphs(markdown) {
-  const lines = markdown.replace(/\r\n?/gu, "\n").split("\n");
-  const paragraphs = [];
-  let paragraph = [];
-  let paragraphLine = 1;
-  let fence = null;
-  let inFrontmatter = lines[0] === "---";
-
-  const flush = () => {
-    if (paragraph.length === 0) return;
-
-    const first = paragraph[0] ?? "";
-    const structured = (
-      /^(?: {2,}|\t)/u.test(first)
-      || /^(?:#{1,6}\s|[-+*]\s|\d+[.)]\s|>\s?|[|<]|!\[)/u.test(first)
-      || /^\[[^\]]+\]:/u.test(first)
-      || /^(?:---|\*\*\*|___)$/u.test(first.trim())
-    );
-
-    if (!structured) {
-      paragraphs.push({
-        line: paragraphLine,
-        text: paragraph.map((line) => line.trim()).join(" "),
-      });
-    }
-
-    paragraph = [];
-  };
-
-  lines.forEach((line, index) => {
-    if (inFrontmatter) {
-      if (index > 0 && line === "---") inFrontmatter = false;
-      return;
-    }
-
-    const fenceMatch = line.match(/^\s*(```+|~~~+)/u);
-    if (fenceMatch) {
-      flush();
-      fence = fence ? null : fenceMatch[1][0];
-      return;
-    }
-
-    if (fence) return;
-
-    if (line.trim() === "") {
-      flush();
-      return;
-    }
-
-    if (paragraph.length === 0) paragraphLine = index + 1;
-    paragraph.push(line);
-  });
-
-  flush();
-  return paragraphs;
-}
-
-function sentenceCount(text) {
-  return text
-    .split(/(?<=[.!?])\s+(?=(?:[*_`[(]*[\p{L}\p{N}]))/u)
-    .filter(Boolean)
-    .length;
-}
 
 test("the writing standard has one normalized core source", async () => {
   assert.equal(
@@ -155,7 +60,7 @@ test("the writing standard prefers one sentence per prose paragraph", async () =
   );
   assert.match(
     standard,
-    /Choose target-supported headings, lists, dividers, and paragraph boundaries[\s\S]+to express semantic structure/u,
+    /Choose headings, lists, dividers, callouts, and paragraph boundaries that[\s\S]+target and project support/u,
   );
   assert.match(
     standard,
@@ -171,34 +76,83 @@ test("the writing standard prefers one sentence per prose paragraph", async () =
   );
 });
 
-test("maintained prose applies the paragraph guidance or records an exception", async () => {
-  const violations = [];
-
-  for (const path of maintainedProsePaths) {
-    const markdown = await readFile(resolve(root, path), "utf8");
-
-    for (const paragraph of proseParagraphs(markdown)) {
-      if (sentenceCount(paragraph.text) < 2) continue;
-      if (paragraphExceptions.has(`${path}\n${paragraph.text}`)) continue;
-      violations.push(`${path}:${paragraph.line}`);
-    }
-  }
-
-  assert.deepEqual(violations, []);
+test("the writing standard covers document-level information structure", async () => {
+  const standard = await loadWritingStandard();
+  assert.match(
+    standard,
+    /amount and local order of non-material supporting detail[\s\S]+target's purpose, intended reader, and next action/u,
+  );
+  assert.match(standard, /Consolidate repeated framing only when/u);
+  assert.match(standard, /Preserve[\s\S]+standalone comprehension/u);
+  assert.match(standard, /target and project's established semantic structure/u);
+  assert.match(standard, /Use a callout[\s\S]+only when that convention already exists/u);
+  assert.match(
+    standard,
+    /Do not delete, demote, or reorder a material claim unless the request or[\s\S]+explicitly permits that content change/u,
+  );
+  assert.match(standard, /Route[\s\S]+section-level restructuring[\s\S]+to Polish/u);
+  assert.match(standard, /Did the revision delete, demote, or reorder/u);
 });
 
-test("a writing brief binds the shared standard to one mode", async () => {
+test("the writing standard carries representative decision examples", async () => {
+  assert.deepEqual(
+    WRITE_DECISION_EXAMPLES.map((item) => item.id),
+    [
+      "separate-independent-points",
+      "remove-repeated-framing",
+      "surface-important-boundary",
+      "preserve-material-claim",
+    ],
+  );
+  for (const item of WRITE_DECISION_EXAMPLES) {
+    assert.ok(item.situation.length > 0);
+    assert.ok(item.expectedDecision.length > 0);
+    assert.ok(Object.isFrozen(item));
+  }
+
+  const standard = await createWritingStandard({
+    loadStandard: async () => "shared standard\n",
+  });
+  assert.deepEqual(standard, {
+    decisionExamples: WRITE_DECISION_EXAMPLES,
+    text: "shared standard\n",
+    version: WRITE_STANDARD_VERSION,
+  });
+});
+
+test("a writing brief passes through the standard contract independently of its version", async () => {
+  const decisionExamples = Object.freeze([
+    Object.freeze({
+      expectedDecision: "Keep the sentinel.",
+      id: "sentinel",
+      situation: "A test needs a distinguishable contract.",
+    }),
+  ]);
+  const writingStandard = Object.freeze({
+    decisionExamples,
+    text: "sentinel standard\n",
+    version: 73,
+  });
   const brief = await createWritingBrief(
     { mode: "edit" },
-    { loadStandard: async () => "shared standard\n" },
+    {
+      createStandard: async ({ loadStandard }) => {
+        assert.equal(await loadStandard(), "shared standard\n");
+        return writingStandard;
+      },
+      loadStandard: async () => "shared standard\n",
+    },
   );
   assert.deepEqual(brief, {
+    decisionExamples,
     feature: "write",
     mode: "edit",
     response: "Change the requested target and lead with the completed result.\n\nPreserve a material ambiguity instead of silently choosing a new meaning.",
-    standard: "shared standard\n",
+    standard: "sentinel standard\n",
+    standardVersion: 73,
     version: WRITE_BRIEF_VERSION,
   });
+  assert.strictEqual(brief.decisionExamples, writingStandard.decisionExamples);
   await assert.rejects(
     createWritingBrief({ mode: "polish" }),
     /Unknown Hope write mode/u,

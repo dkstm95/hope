@@ -45,6 +45,11 @@ Follow its `snapshot`, `contract`, `planning`, `editing`, `verification`,
 `resultPreparation`, `stopping`, `writingStandard`, `schemaPath`, and `limits`
 fields.
 
+Use `writingStandard.text` for user-facing language and use
+`writingStandard.decisionExamples` only when a situation matches.
+
+The examples guide decisions; they are not evaluation results.
+
 Do not copy those rules into another checklist in this Skill.
 
 ## Run the host workflow

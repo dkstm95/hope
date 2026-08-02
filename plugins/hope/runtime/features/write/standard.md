@@ -21,6 +21,8 @@ These principles adapt George Orwell's six rules in
 ## Structure
 
 - Lead with the conclusion, decision, or requested result.
+- Match the amount and local order of non-material supporting detail to the
+  target's purpose, intended reader, and next action.
 - Keep one main idea in each sentence.
 - Split a sentence that is hard to understand in one pass.
 - Give each paragraph one clear job.
@@ -34,8 +36,14 @@ These principles adapt George Orwell's six rules in
 - Use a heading when it helps the reader find or understand a section.
 - Use a list for real sets, choices, steps, or comparisons. Do not use one only
   to decorate the page.
+- Consolidate repeated framing only when the intended reading path presents the
+  elements together and each adds no distinct meaning or voice. Preserve
+  standalone comprehension.
 - Use a divider only when the target format supports it and a stronger semantic
   break helps.
+- Use the target and project's established semantic structure for a boundary,
+  prerequisite, caveat, or next action the reader must not miss. Use a callout
+  only when that convention already exists or the request establishes it.
 
 ## Boundaries
 
@@ -49,8 +57,11 @@ These principles adapt George Orwell's six rules in
 - For translated or parallel text, read each version on its own. Replace
   literal translations and word combinations that are correct in isolation
   but unnatural together.
-- Choose target-supported headings, lists, dividers, and paragraph boundaries
-  to express semantic structure.
+- Choose headings, lists, dividers, callouts, and paragraph boundaries that the
+  target and project support to express semantic structure.
+- Do not delete, demote, or reorder a material claim unless the request or
+  authoritative context explicitly permits that content change. Route
+  section-level restructuring of a named completed work product to Polish.
 - Leave visible spacing, typography, and styling to the renderer.
 - Treat sentence length as a signal, not a fixed limit.
 - Follow a project-specific rule when it is stricter or serves a clear local
@@ -64,6 +75,8 @@ own for naturalness, then compare the versions for meaning drift.
 Before returning the text, ask:
 
 - Is the main point visible early?
+- Do the amount and local order of non-material detail serve this target,
+  reader, and next action?
 - Can a familiar word replace a harder one?
 - Can any word or sentence disappear without losing meaning?
 - Is the actor hidden where naming it would help?
@@ -76,6 +89,12 @@ Before returning the text, ask:
   between consecutive prose paragraphs in Markdown or plain text?
 - Does the target need a heading, list, or divider for stronger semantic
   separation?
+- Would consolidating repeated framing preserve distinct meaning, voice, and
+  standalone comprehension?
+- Does important information use an established semantic structure rather than
+  an invented convention?
+- Did the revision delete, demote, or reorder a material claim without explicit
+  authority?
 - Is visible spacing, typography, and styling left to the renderer?
 - Did the revision change a fact, level of certainty, or intended tone?
 - Does the result sound natural when read once?

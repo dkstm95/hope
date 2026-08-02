@@ -52,6 +52,11 @@ Follow its `snapshot`, `interview`, `state`, `polishing`, `approval`,
 `rendering`, `response`, `lifecycle`, `writingStandard`, `schemaPath`, and
 `limits` fields.
 
+Use `writingStandard.text` for user-facing language and use
+`writingStandard.decisionExamples` only when a situation matches.
+
+The examples guide decisions; they are not evaluation results.
+
 Do not replace those rules with another static interview contract in this Skill.
 
 ## Run the host workflow
