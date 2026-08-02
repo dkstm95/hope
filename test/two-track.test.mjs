@@ -11,6 +11,7 @@ import { delimiter, dirname, join, resolve } from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { createAlignBrief } from "../features/align/index.mjs";
 import {
   DIFF_MODEL_ADAPTER_CODE,
   DIFF_MODEL_ADAPTER_MESSAGE,
@@ -25,10 +26,14 @@ import {
   main as runDiffCommand,
   parseDiffArguments,
 } from "../features/diff/cli.mjs";
+import { createPolishBrief } from "../features/polish/index.mjs";
+import { createToxicReviewBrief } from "../features/toxic-review/index.mjs";
 import {
   loadWritingStandard,
   WRITE_BRIEF_VERSION,
+  WRITE_DECISION_EXAMPLES,
   WRITE_MODEL_ADAPTER_MESSAGE,
+  WRITE_STANDARD_VERSION,
   runWrite,
 } from "../features/write/index.mjs";
 import {
@@ -308,8 +313,20 @@ test("the harness delegates every entry to its shared command", async () => {
 });
 
 test("Codex and Claude Code share the same Hope skills", async () => {
+  const align = await readFile(
+    resolve(root, "plugins/hope/skills/align/SKILL.md"),
+    "utf8",
+  );
   const diffDirectory = resolve(root, "plugins/hope/skills/diff");
+  const polish = await readFile(
+    resolve(root, "plugins/hope/skills/polish/SKILL.md"),
+    "utf8",
+  );
   const settingsDirectory = resolve(root, "plugins/hope/skills/settings");
+  const toxicReview = await readFile(
+    resolve(root, "plugins/hope/skills/toxic-review/SKILL.md"),
+    "utf8",
+  );
   const writeDirectory = resolve(root, "plugins/hope/skills/write");
   const diff = await readFile(resolve(diffDirectory, "SKILL.md"), "utf8");
   const settings = await readFile(resolve(settingsDirectory, "SKILL.md"), "utf8");
@@ -342,6 +359,7 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(diff, /Add `contextChecks`/u);
   assert.match(diff, /Make each claim no broader than its evidence/u);
   assert.match(diff, /writingStandard\.text/u);
+  assert.match(diff, /writingStandard\.decisionExamples/u);
   assert.match(diff, /Write generated prose as plain text/u);
   assert.match(diff, /serialized byte count/u);
   assert.match(
@@ -357,6 +375,10 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(settings, /runtime\/settings\/cli\.mjs/u);
   assert.match(write, /runtime\/features\/write\/cli\.mjs/u);
   assert.match(write, /brief --mode <draft\|edit\|review>/u);
+  assert.match(write, /`standard`, `decisionExamples`/u);
+  for (const skill of [align, diff, polish, toxicReview, write]) {
+    assert.match(skill, /not\s+evaluation results/u);
+  }
   assert.doesNotMatch(write, /Prefer a short, familiar word/u);
   assert.equal(pluginWritingStandard, coreWritingStandard);
 });
@@ -405,16 +427,34 @@ test("every Write entry path returns the same brief", async () => {
     for (const brief of briefs) {
       assert.equal(brief.mode, mode);
       assert.equal(brief.standard, expectedStandard);
+      assert.equal(brief.standardVersion, WRITE_STANDARD_VERSION);
+      assert.equal(brief.version, WRITE_BRIEF_VERSION);
+      assert.deepEqual(brief.decisionExamples, WRITE_DECISION_EXAMPLES);
     }
     assert.deepEqual(briefs[1], briefs[0]);
     assert.deepEqual(briefs[2], briefs[0]);
   }
 });
 
-test("core and generated Diff preparation return one writing standard", async () => {
-  const pluginDiff = await import(
-    "../plugins/hope/runtime/features/diff/index.mjs"
-  );
+test("every cross-feature consumer passes through the exact writing standard contract", async () => {
+  const [pluginAlign, pluginDiff, pluginPolish, pluginToxicReview] = await Promise.all([
+    import("../plugins/hope/runtime/features/align/index.mjs"),
+    import("../plugins/hope/runtime/features/diff/index.mjs"),
+    import("../plugins/hope/runtime/features/polish/index.mjs"),
+    import("../plugins/hope/runtime/features/toxic-review/index.mjs"),
+  ]);
+  const decisionExamples = Object.freeze([
+    Object.freeze({
+      expectedDecision: "Keep the sentinel.",
+      id: "sentinel",
+      situation: "A consumer contract test needs a distinguishable example.",
+    }),
+  ]);
+  const writingStandard = Object.freeze({
+    decisionExamples,
+    text: "sentinel standard\n",
+    version: 73,
+  });
   const snapshot = {
     pullRequest: {
       number: 142,
@@ -422,6 +462,7 @@ test("core and generated Diff preparation return one writing standard", async ()
       url: "https://github.com/example/hope/pull/142",
     },
   };
+  let standardCalls = 0;
   const dependencies = {
     collect: async () => snapshot,
     createRun: async () => ({
@@ -432,6 +473,11 @@ test("core and generated Diff preparation return one writing standard", async ()
       snapshotDigest: "d".repeat(64),
     }),
     preflightOutput: async () => undefined,
+    createWritingStandard: async ({ loadStandard }) => {
+      assert.equal(typeof loadStandard, "function");
+      standardCalls += 1;
+      return writingStandard;
+    },
     resolveSettings: async () => ({
       locale: "en-US",
       localeSource: "default",
@@ -443,20 +489,53 @@ test("core and generated Diff preparation return one writing standard", async ()
     url: "https://github.com/example/hope/pull/142",
   };
 
-  const [core, plugin] = await Promise.all([
+  const [
+    coreAlign,
+    generatedAlign,
+    coreDiff,
+    generatedDiff,
+    corePolish,
+    generatedPolish,
+    coreToxicReview,
+    generatedToxicReview,
+  ] = await Promise.all([
+    createAlignBrief({ risk: "low" }, dependencies),
+    pluginAlign.createAlignBrief({ risk: "low" }, dependencies),
     prepareDiff(options, dependencies),
     pluginDiff.prepareDiff(options, dependencies),
+    createPolishBrief({ risk: "low" }, dependencies),
+    pluginPolish.createPolishBrief({ risk: "low" }, dependencies),
+    createToxicReviewBrief(
+      { risk: "low", stage: "implementation", target: "patch" },
+      dependencies,
+    ),
+    pluginToxicReview.createToxicReviewBrief(
+      { risk: "low", stage: "implementation", target: "patch" },
+      dependencies,
+    ),
   ]);
-  const expected = await loadWritingStandard();
 
-  assert.deepEqual(core.writingStandard, {
-    text: expected,
-    version: WRITE_BRIEF_VERSION,
-  });
-  assert.deepEqual(plugin.writingStandard, core.writingStandard);
-  assert.equal(core.analysisSchemaVersion, 2);
-  assert.match(core.analysisSchemaPath, /analysis-v2\.schema\.json$/u);
-  assert.deepEqual(plugin.teachingAids, core.teachingAids);
+  for (const consumer of [
+    coreAlign,
+    generatedAlign,
+    coreDiff,
+    generatedDiff,
+    corePolish,
+    generatedPolish,
+    coreToxicReview,
+    generatedToxicReview,
+  ]) {
+    assert.strictEqual(consumer.writingStandard, writingStandard);
+    assert.deepEqual(consumer.writingStandard, {
+      decisionExamples,
+      text: "sentinel standard\n",
+      version: 73,
+    });
+  }
+  assert.equal(standardCalls, 8);
+  assert.equal(coreDiff.analysisSchemaVersion, 2);
+  assert.match(coreDiff.analysisSchemaPath, /analysis-v2\.schema\.json$/u);
+  assert.deepEqual(generatedDiff.teachingAids, coreDiff.teachingAids);
 });
 
 test("the harness and generated runtime report the same missing AI boundary", () => {

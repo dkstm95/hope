@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { resolveSettings } from "../../settings/index.mjs";
 import {
+  createWritingStandard,
   loadWritingStandard,
-  WRITE_BRIEF_VERSION,
 } from "../write/index.mjs";
 import { readBoundedJson } from "../work-snapshot/index.mjs";
 import {
@@ -273,14 +273,16 @@ export async function prepareDiff({
   const preparedOutputPath = await (
     dependencies.preflightOutput ?? preflightReviewOutput
   )(outputPath);
-  const [settings, writingStandardText] = await Promise.all([
+  const [settings, writingStandard] = await Promise.all([
     (dependencies.resolveSettings ?? resolveSettings)({
       hostLocale,
       locale,
       theme,
       ...(dependencies.settingsOptions ?? {}),
     }),
-    (dependencies.loadWritingStandard ?? loadWritingStandard)(),
+    (dependencies.createWritingStandard ?? createWritingStandard)({
+      loadStandard: dependencies.loadWritingStandard ?? loadWritingStandard,
+    }),
   ]);
   const target = url
     ? parseGitHubPullRequestUrl(url)
@@ -311,10 +313,7 @@ export async function prepareDiff({
     selection: target.selection ?? "explicit",
     theme: settings.theme,
     teachingAids: createTeachingAidContract(),
-    writingStandard: Object.freeze({
-      text: writingStandardText,
-      version: WRITE_BRIEF_VERSION,
-    }),
+    writingStandard,
   });
 }
 

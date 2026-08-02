@@ -48,7 +48,11 @@ brief --mode <draft|edit|review>
 
 The returned JSON is Hope's complete writing brief.
 
-Follow its `standard` and mode-specific `response`.
+Follow its `standard`, `decisionExamples`, and mode-specific `response`.
+
+Use a decision example only when its situation matches.
+
+The examples guide decisions; they are not evaluation results.
 
 Also follow the person's request and any more specific project rule.
 

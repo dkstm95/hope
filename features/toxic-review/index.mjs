@@ -1,8 +1,8 @@
 import { fileURLToPath } from "node:url";
 
 import {
+  createWritingStandard,
   loadWritingStandard,
-  WRITE_BRIEF_VERSION,
 } from "../write/index.mjs";
 import { readBoundedJson } from "../work-snapshot/index.mjs";
 import {
@@ -34,8 +34,10 @@ export async function createToxicReviewBrief({
     throw new TypeError(`Unknown Hope toxic review target: ${target}`);
   }
   const writingStandard = await (
-    dependencies.loadWritingStandard ?? loadWritingStandard
-  )();
+    dependencies.createWritingStandard ?? createWritingStandard
+  )({
+    loadStandard: dependencies.loadWritingStandard ?? loadWritingStandard,
+  });
   return Object.freeze({
     feature: "toxic-review",
     version: TOXIC_REVIEW_CONTRACT_VERSION,
@@ -80,10 +82,7 @@ export async function createToxicReviewBrief({
       "Stop when another run would repeat evidence or only increase the criticism count.",
     ]),
     limits: TOXIC_REVIEW_LIMITS,
-    writingStandard: Object.freeze({
-      text: writingStandard,
-      version: WRITE_BRIEF_VERSION,
-    }),
+    writingStandard,
   });
 }
 

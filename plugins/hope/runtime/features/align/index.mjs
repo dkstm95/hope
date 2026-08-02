@@ -7,8 +7,8 @@ import {
   publishArtifact,
 } from "../artifact/index.mjs";
 import {
+  createWritingStandard,
   loadWritingStandard,
-  WRITE_BRIEF_VERSION,
 } from "../write/index.mjs";
 import { readBoundedJson } from "../work-snapshot/index.mjs";
 import { POLISH_LIMITS } from "../polish/constants.mjs";
@@ -50,7 +50,9 @@ export async function createAlignBrief({
       theme,
       ...(dependencies.settingsOptions ?? {}),
     }),
-    (dependencies.loadWritingStandard ?? loadWritingStandard)(),
+    (dependencies.createWritingStandard ?? createWritingStandard)({
+      loadStandard: dependencies.loadWritingStandard ?? loadWritingStandard,
+    }),
   ]);
   return Object.freeze({
     feature: "align",
@@ -115,10 +117,7 @@ export async function createAlignBrief({
       "Remove private state after completion or cancellation. Keep the published HTML artifact.",
     ]),
     limits: ALIGN_LIMITS,
-    writingStandard: Object.freeze({
-      text: writingStandard,
-      version: WRITE_BRIEF_VERSION,
-    }),
+    writingStandard,
   });
 }
 

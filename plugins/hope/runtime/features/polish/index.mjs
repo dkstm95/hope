@@ -2,8 +2,8 @@
 import { fileURLToPath } from "node:url";
 
 import {
+  createWritingStandard,
   loadWritingStandard,
-  WRITE_BRIEF_VERSION,
 } from "../write/index.mjs";
 import { readBoundedJson } from "../work-snapshot/index.mjs";
 import {
@@ -24,8 +24,10 @@ export async function createPolishBrief({
     throw new TypeError(`Unknown Hope polish risk: ${risk}`);
   }
   const writingStandard = await (
-    dependencies.loadWritingStandard ?? loadWritingStandard
-  )();
+    dependencies.createWritingStandard ?? createWritingStandard
+  )({
+    loadStandard: dependencies.loadWritingStandard ?? loadWritingStandard,
+  });
   return Object.freeze({
     feature: "polish",
     version: POLISH_CONTRACT_VERSION,
@@ -74,10 +76,7 @@ export async function createPolishBrief({
       "Changed evidence or a changed target requires a new run.",
     ]),
     limits: POLISH_LIMITS,
-    writingStandard: Object.freeze({
-      text: writingStandard,
-      version: WRITE_BRIEF_VERSION,
-    }),
+    writingStandard,
   });
 }
 

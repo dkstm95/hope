@@ -50,6 +50,11 @@ Follow its `snapshot`, `roleSelection`, `findings`, `adjudication`,
 `resultPreparation`, `stopping`, `finalVoice`, `writingStandard`, `schemaPath`,
 and `limits` fields.
 
+Use `writingStandard.text` for user-facing language and use
+`writingStandard.decisionExamples` only when a situation matches.
+
+The examples guide decisions; they are not evaluation results.
+
 Do not replace those rules with another static review contract in this Skill.
 
 ## Run the host workflow
