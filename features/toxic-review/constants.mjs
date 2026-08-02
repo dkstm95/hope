@@ -52,3 +52,33 @@ export const TOXIC_REVIEW_JUDGMENTS = Object.freeze([
   "deferred",
   "duplicate",
 ]);
+
+export const TOXIC_REVIEW_ROLE_METHODS = Object.freeze([
+  "causal-completeness",
+]);
+
+export const TOXIC_REVIEW_CAUSAL_CLAIM_ASSESSMENTS = Object.freeze([
+  "supported",
+  "unsupported",
+  "honest-uncertainty",
+]);
+
+export const TOXIC_REVIEW_CAUSAL_LEVELS = Object.freeze([
+  "structural",
+  "local",
+  "mixed",
+  "inconclusive",
+]);
+
+export const TOXIC_REVIEW_CAUSAL_CANDIDATE_LEVELS = Object.freeze([
+  "structural",
+  "local",
+  "mixed",
+]);
+
+export const TOXIC_REVIEW_CAUSAL_NEXT_CHECKS = Object.freeze([
+  "form-candidate",
+  "disconfirm",
+  "discriminate",
+  "no-safe-check",
+]);

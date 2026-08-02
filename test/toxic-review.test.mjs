@@ -12,7 +12,10 @@ import {
 import {
   validateToxicReview,
 } from "../features/toxic-review/validate.mjs";
-import { makeToxicReview } from "../test-support/toxic-review-fixture.mjs";
+import {
+  makeCausalToxicReview,
+  makeToxicReview,
+} from "../test-support/toxic-review-fixture.mjs";
 
 test("toxic review adjudicates every finding and sorts actionable work", () => {
   const review = validateToxicReview(makeToxicReview());
@@ -73,6 +76,137 @@ test("toxic review allows an honest empty finding set", () => {
   assert.equal(review.result.noMaterialIssueFound, true);
   assert.deepEqual(review.result.actionable, []);
   assert.equal(review.resources.actionableRatio, 0);
+});
+
+test("toxic review validates one explicit causal candidate record", () => {
+  const review = validateToxicReview(makeCausalToxicReview());
+  assert.equal(review.roles[0].method, "causal-completeness");
+  assert.equal(review.causalAnalysis.candidateCount, 2);
+  assert.equal(review.causalAnalysis.causeLevel, "mixed");
+  assert.equal(review.causalAnalysis.flow.length, 2);
+  assert.equal(review.resources.causalCandidates, 2);
+  assert.equal(review.resources.causalFlowItems, 2);
+});
+
+test("toxic review binds a selected causal role to its analysis record", () => {
+  const missingRecord = makeCausalToxicReview({ causalAnalysis: undefined });
+  assert.throws(
+    () => validateToxicReview(missingRecord),
+    /causalAnalysis is required/u,
+  );
+
+  const missingMethod = makeCausalToxicReview({
+    roles: makeToxicReview().roles,
+  });
+  assert.throws(
+    () => validateToxicReview(missingMethod),
+    /requires exactly one causal-completeness role/u,
+  );
+
+  const duplicateMethod = makeCausalToxicReview();
+  duplicateMethod.roles.push({
+    ...duplicateMethod.roles[0],
+    id: "role-2",
+  });
+  assert.throws(
+    () => validateToxicReview(duplicateMethod),
+    /at most one causal-completeness method/u,
+  );
+});
+
+test("toxic review requires flow disposition and candidate coverage", () => {
+  const missingDisposition = makeCausalToxicReview();
+  missingDisposition.causalAnalysis.flow[0].candidateIds = [];
+  assert.throws(
+    () => validateToxicReview(missingDisposition),
+    /exclusion is required when candidateIds is empty/u,
+  );
+
+  const excluded = makeCausalToxicReview();
+  excluded.causalAnalysis.flow[0].candidateIds = [];
+  excluded.causalAnalysis.flow[0].exclusion =
+    "The captured phase is outside the claimed outcome.";
+  assert.throws(
+    () => validateToxicReview(excluded),
+    /candidate candidate-1 must be linked/u,
+  );
+
+  const linkedAndExcluded = makeCausalToxicReview();
+  linkedAndExcluded.causalAnalysis.flow[0].exclusion =
+    "This contradicts the candidate link.";
+  assert.throws(
+    () => validateToxicReview(linkedAndExcluded),
+    /exclusion is allowed only when candidateIds is empty/u,
+  );
+});
+
+test("toxic review derives causal count, level, and next-check shape", () => {
+  const wrongCount = makeCausalToxicReview();
+  wrongCount.causalAnalysis.candidateCount = 1;
+  assert.throws(
+    () => validateToxicReview(wrongCount),
+    /candidateCount must match/u,
+  );
+
+  const wrongLevel = makeCausalToxicReview();
+  wrongLevel.causalAnalysis.causeLevel = "structural";
+  assert.throws(
+    () => validateToxicReview(wrongLevel),
+    /causeLevel must be mixed/u,
+  );
+
+  const wrongKind = makeCausalToxicReview();
+  wrongKind.causalAnalysis.nextCheck.kind = "disconfirm";
+  assert.throws(
+    () => validateToxicReview(wrongKind),
+    /nextCheck.kind must be discriminate/u,
+  );
+
+  const missingCandidate = makeCausalToxicReview();
+  missingCandidate.causalAnalysis.nextCheck.candidateIds = ["candidate-1"];
+  assert.throws(
+    () => validateToxicReview(missingCandidate),
+    /must reference every candidate exactly once/u,
+  );
+});
+
+test("toxic review accepts zero-candidate and one-candidate stopping records", () => {
+  const zero = makeCausalToxicReview();
+  zero.causalAnalysis.candidates = [];
+  zero.causalAnalysis.candidateCount = 0;
+  zero.causalAnalysis.causeLevel = "inconclusive";
+  for (const flowItem of zero.causalAnalysis.flow) {
+    flowItem.candidateIds = [];
+    flowItem.exclusion = "The capture cannot distinguish a causal candidate.";
+  }
+  zero.causalAnalysis.nextCheck = {
+    kind: "form-candidate",
+    action: "Capture the minimum missing observation.",
+    rationale: "No supported candidate can be formed from this snapshot.",
+    candidateIds: [],
+  };
+  assert.equal(validateToxicReview(zero).causalAnalysis.candidateCount, 0);
+
+  const one = makeCausalToxicReview();
+  one.causalAnalysis.candidates = [one.causalAnalysis.candidates[0]];
+  one.causalAnalysis.candidateCount = 1;
+  one.causalAnalysis.causeLevel = "structural";
+  one.causalAnalysis.flow[1].candidateIds = [];
+  one.causalAnalysis.flow[1].exclusion =
+    "The local observation is outside the retained causal claim.";
+  one.causalAnalysis.nextCheck = {
+    kind: "disconfirm",
+    action: "Measure the repeated boundary in one comparable run.",
+    rationale: "The observation can disconfirm the only retained candidate.",
+    candidateIds: ["candidate-1"],
+  };
+  assert.equal(validateToxicReview(one).causalAnalysis.candidateCount, 1);
+
+  one.causalAnalysis.nextCheck.kind = "no-safe-check";
+  assert.equal(
+    validateToxicReview(one).causalAnalysis.nextCheck.kind,
+    "no-safe-check",
+  );
 });
 
 test("toxic review keeps deferred risk unresolved", () => {
@@ -192,8 +326,162 @@ test("toxic review brief chooses roles dynamically instead of fixing a panel", a
       target: "idea",
     },
   );
+  assert.deepEqual(
+    parseToxicReviewArguments([
+      "evaluation-plan",
+    ]),
+    {
+      command: "evaluation-plan",
+    },
+  );
+  assert.deepEqual(
+    parseToxicReviewArguments([
+      "evaluation-prepare",
+      "--case",
+      "critical-path-ablation",
+      "--variant",
+      "rules-only",
+      "--run",
+      "2",
+    ]),
+    {
+      command: "evaluation-prepare",
+      caseId: "critical-path-ablation",
+      variant: "rules-only",
+      run: 2,
+    },
+  );
+  assert.deepEqual(
+    parseToxicReviewArguments([
+      "evaluation-oracle",
+      "--case",
+      "critical-path-ablation",
+    ]),
+    {
+      command: "evaluation-oracle",
+      caseId: "critical-path-ablation",
+    },
+  );
+  assert.deepEqual(
+    parseToxicReviewArguments([
+      "evaluation-receipt",
+      "--case",
+      "critical-path-ablation",
+      "--variant",
+      "full",
+      "--run",
+      "1",
+      "--input",
+      "review.json",
+      "--model",
+      "test-model",
+      "--effort",
+      "high",
+      "--invocation",
+      "host-run-1",
+    ]),
+    {
+      command: "evaluation-receipt",
+      caseId: "critical-path-ablation",
+      effort: "high",
+      inputPath: "review.json",
+      invocationId: "host-run-1",
+      model: "test-model",
+      run: 1,
+      variant: "full",
+    },
+  );
+  assert.deepEqual(
+    parseToxicReviewArguments([
+      "evaluation-validate-set",
+      "--input",
+      "receipts.json",
+    ]),
+    {
+      command: "evaluation-validate-set",
+      inputPath: "receipts.json",
+    },
+  );
+  assert.throws(
+    () => parseToxicReviewArguments([
+      "evaluation-prepare",
+      "--case",
+      "critical-path-ablation",
+      "--variant",
+      "full",
+      "--run",
+      "1.5",
+    ]),
+    /Internal Skill protocol/u,
+  );
   assert.throws(
     runToxicReview,
     (error) => error.code === TOXIC_REVIEW_MODEL_ADAPTER_CODE,
+  );
+});
+
+test("toxic review brief offers one conditional causal-completeness perspective", async () => {
+  const dependencies = { loadWritingStandard: async () => "shared standard\n" };
+  const [plan, incident] = await Promise.all([
+    createToxicReviewBrief(
+      { risk: "high", stage: "design", target: "plan" },
+      dependencies,
+    ),
+    createToxicReviewBrief(
+      { risk: "high", stage: "operation", target: "incident" },
+      dependencies,
+    ),
+  ]);
+  assert.deepEqual(plan.causalCompleteness, incident.causalCompleteness);
+  assert.match(
+    plan.causalCompleteness.activation,
+    /named work product makes or relies on a material causal claim/u,
+  );
+  assert.match(
+    plan.causalCompleteness.activation,
+    /Do not select it only because the target kind is incident/u,
+  );
+  assert.match(plan.causalCompleteness.role[0], /one selected role/u);
+  assert.match(plan.causalCompleteness.role[0], /method to causal-completeness/u);
+  assert.match(plan.causalCompleteness.role[1], /captured baseline/u);
+  assert.match(plan.causalCompleteness.role[2], /end-to-end flow/u);
+  assert.match(plan.causalCompleteness.role[3], /Zero or one supported candidate/u);
+  assert.match(plan.causalCompleteness.role[4], /Remove a proposed cause/u);
+  assert.match(plan.causalCompleteness.role[4], /disconfirms material contribution/u);
+  assert.match(plan.causalCompleteness.role[5], /long serial phase/u);
+  assert.match(plan.causalCompleteness.role[5], /phase-level candidate/u);
+  assert.match(plan.causalCompleteness.role[5], /independently bounded/u);
+  assert.match(plan.causalCompleteness.role[5], /do not merge them/u);
+  assert.match(plan.causalCompleteness.role[6], /prediction that could disconfirm/u);
+  assert.match(plan.causalCompleteness.role[7], /candidate count/u);
+  assert.match(plan.causalCompleteness.role[7], /with zero candidates/u);
+  assert.match(plan.causalCompleteness.role[7], /with one/u);
+  assert.match(plan.causalCompleteness.role[7], /with two or more/u);
+  assert.match(plan.causalCompleteness.role[8], /Do not execute a new check/u);
+  assert.match(plan.causalCompleteness.role[8], /no safe check exists/u);
+  assert.match(plan.causalCompleteness.record[0], /top-level causalAnalysis/u);
+  assert.match(plan.causalCompleteness.record[2], /every material observed phase/u);
+  assert.match(plan.causalCompleteness.record[2], /exclusion reason/u);
+  assert.match(plan.causalCompleteness.record[4], /inseparable aggregate/u);
+  assert.match(plan.causalCompleteness.record[4], /partition that aggregate/u);
+  assert.match(plan.causalCompleteness.record[4], /phase candidates/u);
+  assert.match(plan.causalCompleteness.record[5], /disconfirmed claimed cause/u);
+  assert.match(plan.causalCompleteness.record[6], /candidateCount/u);
+  assert.match(plan.causalCompleteness.outcome[0], /finding confidence/u);
+  assert.match(plan.causalCompleteness.outcome[0], /root cause/u);
+  assert.match(plan.causalCompleteness.outcome[1], /Defer a finding/u);
+  assert.match(plan.causalCompleteness.outcome[2], /scopeLimits/u);
+  assert.match(plan.causalCompleteness.outcome[3], /Do not manufacture a finding/u);
+  assert.match(plan.causalCompleteness.stopping[0], /zero candidates/u);
+  assert.match(plan.causalCompleteness.stopping[1], /one candidate/u);
+  assert.match(plan.causalCompleteness.stopping[2], /two or more candidates/u);
+  assert.match(plan.causalCompleteness.stopping[3], /no safe check exists/u);
+  assert.deepEqual(
+    plan.causalCompleteness.decisionExamples.map((example) => example.id),
+    [
+      "repeated-boundary-dominates",
+      "local-stage-dominates",
+      "missing-discriminating-evidence",
+    ],
   );
 });

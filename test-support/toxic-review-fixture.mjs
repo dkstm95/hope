@@ -79,3 +79,69 @@ export function makeToxicReview(overrides = {}) {
     ...overrides,
   };
 }
+
+export function makeCausalToxicReview(overrides = {}) {
+  const base = makeToxicReview();
+  return {
+    ...base,
+    roles: [
+      {
+        ...base.roles[0],
+        method: "causal-completeness",
+      },
+    ],
+    causalAnalysis: {
+      roleId: "role-1",
+      outcome: "The named workflow takes materially longer than expected.",
+      baseline: "The captured run records the complete end-to-end duration.",
+      claimAssessment: "unsupported",
+      causeLevel: "mixed",
+      candidateCount: 2,
+      flow: [
+        {
+          id: "phase-1",
+          phase: "Repeated boundary work",
+          observation: "The same bounded transition appears on the critical path.",
+          sourceIds: ["repository-1"],
+          candidateIds: ["candidate-1"],
+        },
+        {
+          id: "phase-2",
+          phase: "Local transformation",
+          observation: "One local operation also consumes measured time.",
+          sourceIds: ["repository-1"],
+          candidateIds: ["candidate-2"],
+        },
+      ],
+      candidates: [
+        {
+          id: "candidate-1",
+          level: "structural",
+          location: "The repeated host-to-runtime boundary",
+          statement: "Repeated boundary work may dominate the captured outcome.",
+          evidence: "The transition occurs repeatedly on the critical path.",
+          assumptions: ["The captured transition spans are not overlapped."],
+          disconfirmingPrediction: "Exclusive timing would show little time at the repeated boundary.",
+          sourceIds: ["repository-1"],
+        },
+        {
+          id: "candidate-2",
+          level: "local",
+          location: "The local transformation phase",
+          statement: "The local transformation may materially contribute to the outcome.",
+          evidence: "The captured source records a material local duration.",
+          assumptions: ["The local duration lies on the critical path."],
+          disconfirmingPrediction: "Exclusive timing would show that the local duration overlaps other work.",
+          sourceIds: ["repository-1"],
+        },
+      ],
+      nextCheck: {
+        kind: "discriminate",
+        action: "Capture one comparable run with mutually exclusive spans.",
+        rationale: "One bounded trace can distinguish the two retained candidates.",
+        candidateIds: ["candidate-1", "candidate-2"],
+      },
+    },
+    ...overrides,
+  };
+}

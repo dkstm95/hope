@@ -56,9 +56,16 @@ test("Toxic Review leaves normative rules in its runtime brief", async () => {
     toxicReview,
     /`roleSelection`.*`adjudication`.*`resultPreparation`/su,
   );
+  assert.match(toxicReview, /`causalCompleteness`/u);
+  assert.match(toxicReview, /`causalCompleteness\.activation`/u);
+  assert.match(toxicReview, /`evaluation-plan`/u);
+  assert.match(toxicReview, /`evaluation-prepare`/u);
+  assert.match(toxicReview, /`evaluation-receipt`/u);
+  assert.match(toxicReview, /`evaluation-validate-set`/u);
   assert.match(toxicReview, /`stopping`.*`finalVoice`/su);
   assert.doesNotMatch(toxicReview, /one to six roles/u);
   assert.doesNotMatch(toxicReview, /partially-accepted/u);
+  assert.doesNotMatch(toxicReview, /critical-path-ablation/u);
 });
 
 test("Align leaves normative rules in its runtime brief", async () => {

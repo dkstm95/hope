@@ -8,10 +8,15 @@ import { createResultValidation } from "../result-validation/index.mjs";
 import {
   TOXIC_REVIEW_CONFIDENCE,
   TOXIC_REVIEW_CONTRACT_VERSION,
+  TOXIC_REVIEW_CAUSAL_CANDIDATE_LEVELS,
+  TOXIC_REVIEW_CAUSAL_CLAIM_ASSESSMENTS,
+  TOXIC_REVIEW_CAUSAL_LEVELS,
+  TOXIC_REVIEW_CAUSAL_NEXT_CHECKS,
   TOXIC_REVIEW_JUDGMENTS,
   TOXIC_REVIEW_LIMITS,
   TOXIC_REVIEW_PRIORITIES,
   TOXIC_REVIEW_RISKS,
+  TOXIC_REVIEW_ROLE_METHODS,
   TOXIC_REVIEW_STAGES,
   TOXIC_REVIEW_TARGETS,
 } from "./constants.mjs";
@@ -64,6 +69,304 @@ function observedMetrics(value, errors) {
   return result;
 }
 
+function sameReferences(left, right) {
+  if (left.length !== right.length) return false;
+  const sortedRight = [...right].sort();
+  return [...left].sort().every(
+    (value, index) => value === sortedRight[index],
+  );
+}
+
+function enforceRoleEvidence(sourceIds, roleSources, path, roleId, errors) {
+  if (!roleSources) return;
+  for (const sourceId of sourceIds) {
+    if (!roleSources.has(sourceId)) {
+      errors.push(
+        `${path}.sourceIds references ${sourceId} outside role ${roleId} evidence`,
+      );
+    }
+  }
+}
+
+function causalAnalysis(value, errors, {
+  knownSources,
+  roles,
+  sourceIdsByRole,
+}) {
+  const causalRoles = roles.filter(
+    (role) => role.method === "causal-completeness",
+  );
+  if (value === undefined) {
+    if (causalRoles.length > 0) {
+      errors.push(
+        "causalAnalysis is required when a role uses causal-completeness",
+      );
+    }
+    return undefined;
+  }
+  if (causalRoles.length !== 1) {
+    errors.push(
+      "causalAnalysis requires exactly one causal-completeness role",
+    );
+  }
+
+  const input = object(value, "causalAnalysis", errors);
+  unknownKeys(
+    input,
+    [
+      "baseline",
+      "candidateCount",
+      "candidates",
+      "causeLevel",
+      "claimAssessment",
+      "flow",
+      "nextCheck",
+      "outcome",
+      "roleId",
+    ],
+    "causalAnalysis",
+    errors,
+  );
+  const roleId = text(input.roleId, "causalAnalysis.roleId", errors);
+  const selectedRole = roles.find((role) => role.id === roleId);
+  if (!selectedRole || selectedRole.method !== "causal-completeness") {
+    errors.push(
+      "causalAnalysis.roleId must reference the causal-completeness role",
+    );
+  }
+  const roleSources = sourceIdsByRole.get(roleId);
+
+  const candidateIds = new Set();
+  const candidates = array(
+    input.candidates,
+    "causalAnalysis.candidates",
+    errors,
+    TOXIC_REVIEW_LIMITS.groupItems,
+  ).map((entry, index) => {
+    const path = `causalAnalysis.candidates[${index}]`;
+    const item = object(entry, path, errors);
+    unknownKeys(
+      item,
+      [
+        "assumptions",
+        "disconfirmingPrediction",
+        "evidence",
+        "id",
+        "level",
+        "location",
+        "sourceIds",
+        "statement",
+      ],
+      path,
+      errors,
+    );
+    const sourceIds = references(
+      item.sourceIds,
+      `${path}.sourceIds`,
+      errors,
+      knownSources,
+      { minimum: 1 },
+    );
+    enforceRoleEvidence(sourceIds, roleSources, path, roleId, errors);
+    return {
+      id: id(item.id, `${path}.id`, errors, candidateIds),
+      level: choice(
+        item.level,
+        TOXIC_REVIEW_CAUSAL_CANDIDATE_LEVELS,
+        `${path}.level`,
+        errors,
+      ),
+      location: text(item.location, `${path}.location`, errors),
+      statement: text(item.statement, `${path}.statement`, errors),
+      evidence: text(item.evidence, `${path}.evidence`, errors),
+      assumptions: strings(item.assumptions, `${path}.assumptions`, errors, {
+        minimum: 1,
+      }),
+      disconfirmingPrediction: text(
+        item.disconfirmingPrediction,
+        `${path}.disconfirmingPrediction`,
+        errors,
+      ),
+      sourceIds,
+    };
+  });
+
+  const referencedCandidates = new Set();
+  const flowIds = new Set();
+  const flow = array(
+    input.flow,
+    "causalAnalysis.flow",
+    errors,
+    TOXIC_REVIEW_LIMITS.groupItems,
+  ).map((entry, index) => {
+    const path = `causalAnalysis.flow[${index}]`;
+    const item = object(entry, path, errors);
+    unknownKeys(
+      item,
+      [
+        "candidateIds",
+        "exclusion",
+        "id",
+        "observation",
+        "phase",
+        "sourceIds",
+      ],
+      path,
+      errors,
+    );
+    const linkedCandidates = references(
+      item.candidateIds,
+      `${path}.candidateIds`,
+      errors,
+      candidateIds,
+    );
+    for (const candidateId of linkedCandidates) {
+      referencedCandidates.add(candidateId);
+    }
+    const exclusion = text(item.exclusion, `${path}.exclusion`, errors, {
+      optional: true,
+    });
+    if (linkedCandidates.length === 0 && !exclusion) {
+      errors.push(
+        `${path}.exclusion is required when candidateIds is empty`,
+      );
+    }
+    if (linkedCandidates.length > 0 && exclusion) {
+      errors.push(
+        `${path}.exclusion is allowed only when candidateIds is empty`,
+      );
+    }
+    const sourceIds = references(
+      item.sourceIds,
+      `${path}.sourceIds`,
+      errors,
+      knownSources,
+      { minimum: 1 },
+    );
+    enforceRoleEvidence(sourceIds, roleSources, path, roleId, errors);
+    return {
+      id: id(item.id, `${path}.id`, errors, flowIds),
+      phase: text(item.phase, `${path}.phase`, errors),
+      observation: text(item.observation, `${path}.observation`, errors),
+      sourceIds,
+      candidateIds: linkedCandidates,
+      ...(exclusion ? { exclusion } : {}),
+    };
+  });
+  if (flow.length === 0) {
+    errors.push("causalAnalysis.flow must contain at least one mapped phase");
+  }
+  for (const candidateId of candidateIds) {
+    if (!referencedCandidates.has(candidateId)) {
+      errors.push(
+        `causal candidate ${candidateId} must be linked from a mapped flow phase`,
+      );
+    }
+  }
+
+  const candidateCount = nonNegative(
+    input.candidateCount,
+    "causalAnalysis.candidateCount",
+    errors,
+  );
+  if (candidateCount !== candidates.length) {
+    errors.push(
+      "causalAnalysis.candidateCount must match candidates.length",
+    );
+  }
+  const causeLevel = choice(
+    input.causeLevel,
+    TOXIC_REVIEW_CAUSAL_LEVELS,
+    "causalAnalysis.causeLevel",
+    errors,
+  );
+  const candidateLevels = new Set(candidates.map((candidate) => candidate.level));
+  const expectedCauseLevel = candidates.length === 0
+    ? "inconclusive"
+    : candidateLevels.size === 1 && candidateLevels.has("structural")
+      ? "structural"
+      : candidateLevels.size === 1 && candidateLevels.has("local")
+        ? "local"
+        : "mixed";
+  if (causeLevel !== expectedCauseLevel) {
+    errors.push(
+      `causalAnalysis.causeLevel must be ${expectedCauseLevel} for its candidates`,
+    );
+  }
+
+  const nextCheckInput = object(
+    input.nextCheck,
+    "causalAnalysis.nextCheck",
+    errors,
+  );
+  unknownKeys(
+    nextCheckInput,
+    ["action", "candidateIds", "kind", "rationale"],
+    "causalAnalysis.nextCheck",
+    errors,
+  );
+  const nextCheckKind = choice(
+    nextCheckInput.kind,
+    TOXIC_REVIEW_CAUSAL_NEXT_CHECKS,
+    "causalAnalysis.nextCheck.kind",
+    errors,
+  );
+  const nextCheckCandidateIds = references(
+    nextCheckInput.candidateIds,
+    "causalAnalysis.nextCheck.candidateIds",
+    errors,
+    candidateIds,
+  );
+  const expectedNextCheckKind = candidates.length === 0
+    ? "form-candidate"
+    : candidates.length === 1
+      ? "disconfirm"
+      : "discriminate";
+  if (
+    nextCheckKind !== "no-safe-check"
+    && nextCheckKind !== expectedNextCheckKind
+  ) {
+    errors.push(
+      `causalAnalysis.nextCheck.kind must be ${expectedNextCheckKind} for ${candidates.length} candidates`,
+    );
+  }
+  if (!sameReferences(nextCheckCandidateIds, [...candidateIds])) {
+    errors.push(
+      "causalAnalysis.nextCheck.candidateIds must reference every candidate exactly once",
+    );
+  }
+
+  return {
+    roleId,
+    outcome: text(input.outcome, "causalAnalysis.outcome", errors),
+    baseline: text(input.baseline, "causalAnalysis.baseline", errors),
+    claimAssessment: choice(
+      input.claimAssessment,
+      TOXIC_REVIEW_CAUSAL_CLAIM_ASSESSMENTS,
+      "causalAnalysis.claimAssessment",
+      errors,
+    ),
+    causeLevel,
+    candidateCount,
+    flow,
+    candidates,
+    nextCheck: {
+      kind: nextCheckKind,
+      action: text(
+        nextCheckInput.action,
+        "causalAnalysis.nextCheck.action",
+        errors,
+      ),
+      rationale: text(
+        nextCheckInput.rationale,
+        "causalAnalysis.nextCheck.rationale",
+        errors,
+      ),
+      candidateIds: nextCheckCandidateIds,
+    },
+  };
+}
+
 export function validateToxicReview(value, {
   inputFileBytes,
   observedMetrics: trustedObservedMetrics,
@@ -74,6 +377,7 @@ export function validateToxicReview(value, {
     input,
     [
       "adjudications",
+      "causalAnalysis",
       "findings",
       "risk",
       "roles",
@@ -137,6 +441,7 @@ export function validateToxicReview(value, {
         "focusRisks",
         "id",
         "name",
+        "method",
         "target",
       ],
       path,
@@ -145,6 +450,14 @@ export function validateToxicReview(value, {
     const role = {
       id: id(item.id, `${path}.id`, errors, roleIds),
       name: text(item.name, `${path}.name`, errors),
+      ...(item.method === undefined ? {} : {
+        method: choice(
+          item.method,
+          TOXIC_REVIEW_ROLE_METHODS,
+          `${path}.method`,
+          errors,
+        ),
+      }),
       target: text(item.target, `${path}.target`, errors),
       focusRisks: strings(item.focusRisks, `${path}.focusRisks`, errors, {
         minimum: 1,
@@ -168,6 +481,15 @@ export function validateToxicReview(value, {
   if (roles.length === 0) {
     errors.push("roles must contain at least one role");
   }
+  if (roles.filter((role) => role.method === "causal-completeness").length > 1) {
+    errors.push("roles may contain at most one causal-completeness method");
+  }
+
+  const normalizedCausalAnalysis = causalAnalysis(input.causalAnalysis, errors, {
+    knownSources,
+    roles,
+    sourceIdsByRole,
+  });
 
   const findingIds = new Set();
   const findings = array(
@@ -225,16 +547,13 @@ export function validateToxicReview(value, {
         { minimum: 1 },
       ),
     };
-    const allowedSources = sourceIdsByRole.get(roleId);
-    if (allowedSources) {
-      for (const sourceId of finding.sourceIds) {
-        if (!allowedSources.has(sourceId)) {
-          errors.push(
-            `${path}.sourceIds references ${sourceId} outside role ${roleId} evidence`,
-          );
-        }
-      }
-    }
+    enforceRoleEvidence(
+      finding.sourceIds,
+      sourceIdsByRole.get(roleId),
+      path,
+      roleId,
+      errors,
+    );
     return finding;
   });
 
@@ -489,6 +808,9 @@ export function validateToxicReview(value, {
     target,
     snapshot,
     roles,
+    ...(normalizedCausalAnalysis
+      ? { causalAnalysis: normalizedCausalAnalysis }
+      : {}),
     findings,
     adjudications,
     summary,
@@ -549,6 +871,8 @@ export function validateToxicReview(value, {
       inputFileBytes: actualFileBytes,
       jsonBytes,
       roles: roles.length,
+      causalCandidates: normalizedCausalAnalysis?.candidates.length ?? 0,
+      causalFlowItems: normalizedCausalAnalysis?.flow.length ?? 0,
       sources: snapshot.sources.length,
     }),
   });
