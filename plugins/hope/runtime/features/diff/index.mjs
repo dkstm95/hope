@@ -27,6 +27,12 @@ import {
 } from "./github.mjs";
 import { digestJson } from "./hash.mjs";
 import {
+  createDiffInvocationContract,
+  createDiffPendingConfirmation,
+  transitionDiffPendingConfirmation,
+  transitionDiffPendingConfirmationInput,
+} from "./invocation.mjs";
+import {
   appendDiffRunPlan,
   checkpointDiffRun,
   claimDiffRunFinalization,
@@ -38,12 +44,22 @@ import {
   recordAnalysisFailure,
   removeDiffRun,
 } from "./run.mjs";
-import { discoverGitHubPullRequest } from "./target.mjs";
+import {
+  discoverGitHubPullRequest,
+  resolveGitHubPullRequestNumber,
+} from "./target.mjs";
 import {
   createMicroworldSkeleton,
   createTeachingAidContract,
 } from "./teaching-aids.mjs";
 import { validateAnalysis } from "./validate.mjs";
+
+export {
+  createDiffInvocationContract,
+  createDiffPendingConfirmation,
+  transitionDiffPendingConfirmation,
+  transitionDiffPendingConfirmationInput,
+} from "./invocation.mjs";
 
 export const DIFF_MODEL_ADAPTER_CODE = "HOPE_DIFF_MODEL_ADAPTER_REQUIRED";
 export const DIFF_MODEL_ADAPTER_MESSAGE =
@@ -54,6 +70,47 @@ export const DIFF_REVALIDATION_RETRYABLE_MESSAGE =
   "Hope could not revalidate the pull request, so no review was created. "
   + "The private review run was kept. Restore GitHub access, then retry finish "
   + "with the same run.";
+
+export async function resolveDiffTarget({
+  pullRequestNumber,
+  url,
+} = {}, dependencies = {}) {
+  if (url && pullRequestNumber !== undefined) {
+    throw new TypeError("Hope diff accepts one pull request target");
+  }
+  if (url) return parseGitHubPullRequestUrl(url);
+  if (pullRequestNumber !== undefined) {
+    return await (
+      dependencies.resolveNumberTarget ?? resolveGitHubPullRequestNumber
+    )(pullRequestNumber, dependencies.targetOptions);
+  }
+  return await (dependencies.discoverTarget ?? discoverGitHubPullRequest)(
+    dependencies.targetOptions,
+  );
+}
+
+async function readDiffInvocationInput(inputPath, dependencies = {}) {
+  return await (dependencies.readInvocationInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff invocation input",
+    maximumBytes: LIMITS.modelBytes,
+  });
+}
+
+export async function createDiffConfirmationFromFile(
+  inputPath,
+  dependencies = {},
+) {
+  const { value } = await readDiffInvocationInput(inputPath, dependencies);
+  return createDiffPendingConfirmation(value);
+}
+
+export async function transitionDiffConfirmationFromFile(
+  inputPath,
+  dependencies = {},
+) {
+  const { value } = await readDiffInvocationInput(inputPath, dependencies);
+  return transitionDiffPendingConfirmationInput(value);
+}
 
 async function readPrivateJson(path, {
   label,
@@ -267,6 +324,7 @@ export async function prepareDiff({
   hostLocale,
   locale,
   outputPath,
+  pullRequestNumber,
   theme,
   url,
 } = {}, dependencies = {}) {
@@ -284,11 +342,7 @@ export async function prepareDiff({
       loadStandard: dependencies.loadWritingStandard ?? loadWritingStandard,
     }),
   ]);
-  const target = url
-    ? parseGitHubPullRequestUrl(url)
-    : await (dependencies.discoverTarget ?? discoverGitHubPullRequest)(
-      dependencies.targetOptions,
-    );
+  const target = await resolveDiffTarget({ pullRequestNumber, url }, dependencies);
   const snapshot = await (dependencies.collect ?? collectGitHubPullRequest)(target, {
     clock: dependencies.clock,
     gh: dependencies.gh,

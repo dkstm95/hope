@@ -98,8 +98,12 @@ export function parseGitHubPullRequestUrl(value) {
   if (!match) {
     throw new TypeError("Hope diff needs a URL shaped like https://github.com/owner/repo/pull/123");
   }
+  const number = Number.parseInt(match[3], 10);
+  if (!Number.isSafeInteger(number)) {
+    throw new TypeError("Hope diff needs a safe positive pull request number");
+  }
   return Object.freeze({
-    number: Number.parseInt(match[3], 10),
+    number,
     owner: match[1],
     repository: match[2],
     url: `https://github.com/${match[1]}/${match[2]}/pull/${match[3]}`,

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { discoverGitHubPullRequest } from "../features/diff/target.mjs";
+import {
+  discoverGitHubPullRequest,
+  parsePullRequestTargetArgument,
+  resolveGitHubPullRequestNumber,
+} from "../features/diff/target.mjs";
 
 function discoveryExec({ branch = "feature", pullRequests }) {
   return async (command, arguments_) => {
@@ -59,4 +63,61 @@ test("URL-free discovery falls back to the latest authored pull request", async 
   });
   assert.equal(target.number, 9);
   assert.equal(target.selection, "latest-authored");
+});
+
+test("an explicit pull request number resolves in the current repository", async () => {
+  const target = await resolveGitHubPullRequestNumber(123, {
+    exec: discoveryExec({ pullRequests: [] }),
+  });
+  assert.deepEqual(target, {
+    number: 123,
+    owner: "example",
+    repository: "repo",
+    selection: "explicit-number",
+    url: "https://github.com/example/repo/pull/123",
+  });
+  await assert.rejects(
+    resolveGitHubPullRequestNumber(0, {
+      exec: discoveryExec({ pullRequests: [] }),
+    }),
+    /positive pull request number/u,
+  );
+});
+
+test("pull request target arguments fail closed at numeric boundaries", () => {
+  assert.deepEqual(parsePullRequestTargetArgument("1"), {
+    pullRequestNumber: 1,
+    url: undefined,
+  });
+  assert.deepEqual(parsePullRequestTargetArgument("#123"), {
+    pullRequestNumber: 123,
+    url: undefined,
+  });
+  assert.deepEqual(
+    parsePullRequestTargetArgument(String(Number.MAX_SAFE_INTEGER)),
+    {
+      pullRequestNumber: Number.MAX_SAFE_INTEGER,
+      url: undefined,
+    },
+  );
+  for (const value of [
+    "0",
+    "#0",
+    "-1",
+    "+1",
+    "1.2",
+    "01",
+    "#abc",
+    String(BigInt(Number.MAX_SAFE_INTEGER) + 1n),
+  ]) {
+    assert.throws(
+      () => parsePullRequestTargetArgument(value),
+      /pull request number|GitHub pull request URL/u,
+      value,
+    );
+  }
+  assert.deepEqual(
+    parsePullRequestTargetArgument("https://github.com/example/repo/pull/7"),
+    { url: "https://github.com/example/repo/pull/7" },
+  );
 });

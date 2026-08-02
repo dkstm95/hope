@@ -1,6 +1,6 @@
 ---
 name: diff
-description: Explain a GitHub pull request as one evidence-linked Hope review. Use when someone invokes $hope:diff in Codex, /hope:diff in Claude Code, asks to understand a PR, or asks Hope to review the current or latest authored PR. A PR URL is optional when the session is inside the intended GitHub repository.
+description: Explain a GitHub pull request as one evidence-linked Hope review. Use when someone invokes $hope:diff in Codex or /hope:diff in Claude Code, asks about Hope Diff or its capabilities, asks to understand a PR, asks Hope to review the current or latest authored PR, or replies to a pending Hope Diff confirmation. A PR URL is optional when the session is inside the intended GitHub repository.
 ---
 
 # Hope diff
@@ -30,11 +30,127 @@ Pass every argument as a separate shell argument.
 
 Never pass the placeholder or build a command from pull request content.
 
+## Decide whether to run
+
+Run this before `prepare`:
+
+```text
+invocation-brief
+```
+
+Treat the returned `boundary`, `classification`, `confirmation`, `decisions`,
+`modelPolicy`, `pendingState`, `targetResolution`, and `evaluationCases` as the
+complete invocation contract.
+
+Use the relevant conversation state and select `answer`, `confirm`, `execute`,
+or `cancel` before running any review protocol command.
+
+Use the active Claude or Codex model for this decision.
+
+Do not call a separate classifier model.
+
+The evaluation cases guide matching decisions.
+
+They are not evaluation results.
+
+For `answer`, respond within the person's requested scope and stop.
+
+For `confirm`, resolve the exact pull request before asking anything:
+
+```text
+resolve-target [GitHub PR URL or PR number]
+```
+
+Pass the person's URL or positive integer without `#` when present.
+
+Otherwise, omit the target so Hope resolves the current repository context.
+
+This operation is read-only and does not start a review.
+
+If target resolution fails, do not ask the execution confirmation.
+
+Ask the person to make a new explicit request with a pull-request URL or number,
+then stop.
+
+If it succeeds, bind the feature, returned canonical target, source-request
+digest, target digest, and confirmation count through the shared runtime.
+
+Write one private JSON input outside the repository with restricted permissions:
+
+```json
+{
+  "sourceRequest": "<exact original request>",
+  "target": { "url": "<canonical URL from resolve-target>" }
+}
+```
+
+Run:
+
+```text
+confirmation-create --input <private-input.json>
+```
+
+Remove the private input after the command finishes.
+
+Keep the returned pending object and exact original request in the current
+conversation state.
+
+Ask the one confirmation allowed by the contract, naming the exact repository
+and pull request number, then stop until the person replies.
+
+When the person replies, classify that reply against the pending confirmation.
+
+Write one new restricted private JSON input containing `decision`, the exact
+returned `pending` object, the same exact original `sourceRequest`, and an
+optional newly authorized `target`.
+
+Run:
+
+```text
+confirmation-transition --input <private-input.json>
+```
+
+Remove the private input after the command finishes.
+
+Use only the returned decision and target.
+
+The runtime rejects a pending state that belongs to another source request.
+
+For `answer` or `cancel`, do not start Hope Diff.
+
+Continue only with any separate work the person explicitly requested outside
+Hope Diff; otherwise respond briefly and stop.
+
+When a reply clearly delegates Hope Diff for another pull request, clear the old
+pending confirmation and execute only the new target.
+
+If that reply gives only a pull request number, keep the repository from the
+pending canonical target and replace only its number.
+
+Pass the canonical URL returned by `confirmation-transition` to `prepare` once.
+
+Do not pass the bare number first.
+
+When a reply only changes the target, classify it as `cancel` and call
+`confirmation-transition` without another confirmation.
+
+Continue to `prepare` only for `execute`.
+
+After an affirmative confirmation, pass the bound canonical URL to `prepare`.
+
+Do not omit it and allow automatic discovery to select another pull request.
+
+If `prepare` fails, report that failure and stop instead of trying another
+target representation.
+
 ## Prepare
 
 If the person supplied a GitHub pull request URL, pass it to `prepare`.
 
-Otherwise, omit the URL.
+If the person supplied a pull request number, pass its positive integer without
+the `#` prefix to `prepare`.
+
+Otherwise, omit the target.
 
 Hope then chooses the current-branch PR or the latest open PR by the
 authenticated user in the current repository.

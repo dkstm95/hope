@@ -95,6 +95,28 @@ test("Diff leaves teaching-aid decisions in its runtime contract", async () => {
   assert.match(teachingAids, /Never claim.*ran repository code.*test result/u);
 });
 
+test("Diff leaves invocation decisions in its runtime contract", async () => {
+  const [diff, invocation] = await Promise.all([
+    readFile(resolve(skillsRoot, "diff", "SKILL.md"), "utf8"),
+    readFile(resolve(root, "features", "diff", "invocation.mjs"), "utf8"),
+  ]);
+  assert.match(diff, /invocation-brief/u);
+  assert.match(diff, /resolve-target/u);
+  assert.match(diff, /confirmation-create/u);
+  assert.match(diff, /confirmation-transition/u);
+  assert.match(
+    diff,
+    /`boundary`.*`classification`.*`confirmation`.*`decisions`.*`modelPolicy`.*`pendingState`.*`targetResolution`.*`evaluationCases`/su,
+  );
+  assert.doesNotMatch(diff, /PR #123을 Hope Diff로 리뷰해줄 수 있어/u);
+  assert.match(invocation, /confirmation-affirmative/u);
+  assert.match(invocation, /explicit-non-execution/u);
+  assert.match(invocation, /generic-url-review/u);
+  assert.match(invocation, /confirmation-explicit-retarget/u);
+  assert.match(invocation, /active Claude or Codex host model/u);
+  assert.match(invocation, /source request changed/u);
+});
+
 test("project work requires Hope Write wherever clearer language helps", async () => {
   const [claudeInstructions, instructions] = await Promise.all([
     readFile(resolve(root, "CLAUDE.md"), "utf8"),

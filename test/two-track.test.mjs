@@ -96,6 +96,36 @@ test("the harness parses every independent feature entry", () => {
     theme: undefined,
     url: "https://github.com/example/repo/pull/1",
   });
+  assert.deepEqual(parseDiffArguments(["prepare", "#123"]), {
+    command: "prepare",
+    hostLocale: undefined,
+    locale: undefined,
+    outputPath: undefined,
+    pullRequestNumber: 123,
+    theme: undefined,
+    url: undefined,
+  });
+  assert.deepEqual(parseDiffArguments(["resolve-target", "#123"]), {
+    command: "resolve-target",
+    pullRequestNumber: 123,
+    url: undefined,
+  });
+  assert.deepEqual(parseDiffArguments([
+    "confirmation-create",
+    "--input",
+    "/tmp/hope-confirmation.json",
+  ]), {
+    command: "confirmation-create",
+    inputPath: "/tmp/hope-confirmation.json",
+  });
+  assert.deepEqual(parseDiffArguments([
+    "confirmation-transition",
+    "--input",
+    "/tmp/hope-confirmation-reply.json",
+  ]), {
+    command: "confirmation-transition",
+    inputPath: "/tmp/hope-confirmation-reply.json",
+  });
   assert.deepEqual(parseDiffArguments([
     "validate",
     "--run",

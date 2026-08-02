@@ -8,16 +8,21 @@ import {
   buildMicroworldSkeleton,
   cancelDiff,
   checkpointDiffPage,
+  createDiffConfirmationFromFile,
+  createDiffInvocationContract,
   DIFF_MODEL_ADAPTER_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
   finishDiff,
   prepareDiff,
   readDiffPage,
   readDiffLedger,
+  resolveDiffTarget,
   runDiff,
+  transitionDiffConfirmationFromFile,
   validateDiff,
 } from "./index.mjs";
 import { serializeInspectionPage } from "./run.mjs";
+import { parsePullRequestTargetArgument } from "./target.mjs";
 
 function usage() {
   return [
@@ -26,7 +31,11 @@ function usage() {
     "The automatic AI path is provided by the Hope skill.",
     "",
     "Internal skill protocol:",
-    "  hope diff prepare [GitHub PR URL] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
+    "  hope diff invocation-brief",
+    "  hope diff resolve-target [GitHub PR URL or PR number]",
+    "  hope diff confirmation-create --input <private-input.json>",
+    "  hope diff confirmation-transition --input <private-input.json>",
+    "  hope diff prepare [GitHub PR URL or PR number] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
     "  hope diff inspect --run <private-run-path> --page <number>",
     "  hope diff checkpoint --run <private-run-path> --page <number>",
     "  hope diff ledger --run <private-run-path> --page <number>",
@@ -45,6 +54,10 @@ export function parseDiffArguments(argv) {
   const [command, ...rest] = argv;
   if (![
     "prepare",
+    "invocation-brief",
+    "resolve-target",
+    "confirmation-create",
+    "confirmation-transition",
     "inspect",
     "checkpoint",
     "ledger",
@@ -55,6 +68,10 @@ export function parseDiffArguments(argv) {
     "cancel",
   ].includes(command)) {
     return { arguments: argv, command: "automatic" };
+  }
+  if (command === "invocation-brief") {
+    if (rest.length > 0) throw new TypeError(usage());
+    return { command };
   }
   const { options, positionals } = takeOptions(rest, {
     allowed: [
@@ -70,7 +87,7 @@ export function parseDiffArguments(argv) {
     prefix: "Hope diff",
     repeatable: ["request"],
   });
-  if (command === "prepare") {
+  if (command === "prepare" || command === "resolve-target") {
     if (
       positionals.length > 1
       || options.run
@@ -80,14 +97,46 @@ export function parseDiffArguments(argv) {
     ) {
       throw new TypeError(usage());
     }
+    if (
+      command === "resolve-target"
+      && (
+        options["host-locale"]
+        || options.locale
+        || options.theme
+        || options.output
+      )
+    ) {
+      throw new TypeError(usage());
+    }
+    const target = parsePullRequestTargetArgument(positionals[0]);
+    if (command === "resolve-target") return { command, ...target };
     return {
       command,
       hostLocale: options["host-locale"],
       locale: options.locale,
       outputPath: options.output,
       theme: options.theme,
-      url: positionals[0],
+      ...target,
     };
+  }
+  if (
+    command === "confirmation-create"
+    || command === "confirmation-transition"
+  ) {
+    if (
+      positionals.length > 0
+      || !options.input
+      || options.run
+      || options.page
+      || options.request
+      || options["host-locale"]
+      || options.locale
+      || options.theme
+      || options.output
+    ) {
+      throw new TypeError(usage());
+    }
+    return { command, inputPath: options.input };
   }
   if (command === "microworld-skeleton") {
     if (
@@ -160,7 +209,24 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       dependencies,
     );
   }
-  if (options.command === "prepare") {
+  if (options.command === "invocation-brief") {
+    result = (dependencies.createInvocationContract
+      ?? createDiffInvocationContract)();
+  } else if (options.command === "confirmation-create") {
+    result = await (
+      dependencies.createDiffConfirmation ?? createDiffConfirmationFromFile
+    )(options.inputPath, dependencies);
+  } else if (options.command === "confirmation-transition") {
+    result = await (
+      dependencies.transitionDiffConfirmation
+        ?? transitionDiffConfirmationFromFile
+    )(options.inputPath, dependencies);
+  } else if (options.command === "resolve-target") {
+    result = await (dependencies.resolveDiffTarget ?? resolveDiffTarget)(
+      options,
+      dependencies,
+    );
+  } else if (options.command === "prepare") {
     result = await (dependencies.prepareDiff ?? prepareDiff)(options, dependencies);
   } else if (options.command === "inspect") {
     result = await (dependencies.readDiffPage ?? readDiffPage)(

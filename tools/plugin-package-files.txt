@@ -39,6 +39,7 @@ runtime/features/diff/github.mjs
 runtime/features/diff/hash.mjs
 runtime/features/diff/highlight.mjs
 runtime/features/diff/index.mjs
+runtime/features/diff/invocation.mjs
 runtime/features/diff/redact.mjs
 runtime/features/diff/render.mjs
 runtime/features/diff/run.mjs

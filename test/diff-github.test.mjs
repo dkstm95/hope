@@ -104,6 +104,12 @@ test("GitHub URL parsing is canonical and rejects lookalikes", () => {
     () => parseGitHubPullRequestUrl("https://github.com/example/repo/pull/1?diff=1"),
     /canonical/u,
   );
+  assert.throws(
+    () => parseGitHubPullRequestUrl(
+      `https://github.com/example/repo/pull/${BigInt(Number.MAX_SAFE_INTEGER) + 1n}`,
+    ),
+    /safe positive/u,
+  );
 });
 
 test("GitHub collection binds the exact snapshot and all changed files", async () => {
