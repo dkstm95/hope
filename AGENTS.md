@@ -61,6 +61,7 @@ are complete.
 ## Task references
 
 - Repository and release workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Release behavior: [docs/release.md](docs/release.md)
 - System structure: [docs/architecture.md](docs/architecture.md)
 - Align behavior: [docs/align.md](docs/align.md)
 - Diff behavior: [docs/diff.md](docs/diff.md)

@@ -1,6 +1,14 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+      - package-lock.json
+      - plugins/hope/.codex-plugin/plugin.json
+      - plugins/hope/.claude-plugin/plugin.json
   workflow_dispatch:
     inputs:
       increment:
@@ -13,7 +21,7 @@ on:
           - minor
           - major
 
-run-name: Release Hope (${{ inputs.increment }})
+run-name: Release Hope (${{ inputs.increment || 'recorded version' }})
 
 permissions:
   contents: write
@@ -40,15 +48,23 @@ jobs:
       - name: Choose release version
         id: version
         env:
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
           INCREMENT: ${{ inputs.increment }}
         run: |
           CURRENT_VERSION="$(node -p "require('./package.json').version")"
           CURRENT_TAG="v${CURRENT_VERSION}"
+          PUBLISH=true
           if git rev-parse --verify --quiet "refs/tags/${CURRENT_TAG}^{commit}" > /dev/null; then
             if gh release view "${CURRENT_TAG}" > /dev/null 2>&1; then
-              RELEASE_VERSION="$(node tools/next-release-version.mjs "${CURRENT_VERSION}" "${INCREMENT}")"
-              RESUME_TAG=false
+              if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+                RELEASE_VERSION="$(node tools/next-release-version.mjs "${CURRENT_VERSION}" "${INCREMENT}")"
+                RESUME_TAG=false
+              else
+                RELEASE_VERSION="${CURRENT_VERSION}"
+                RESUME_TAG=false
+                PUBLISH=false
+              fi
             else
               RELEASE_VERSION="${CURRENT_VERSION}"
               RESUME_TAG=true
@@ -58,7 +74,9 @@ jobs:
             RESUME_TAG=false
           fi
           RELEASE_TAG="v${RELEASE_VERSION}"
-          if git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}^{commit}" > /dev/null; then
+          if [ "${PUBLISH}" = "false" ]; then
+            TAG_EXISTS=true
+          elif git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}^{commit}" > /dev/null; then
             if [ "${RESUME_TAG}" = "true" ]; then
               TAG_EXISTS=true
             else
@@ -73,23 +91,31 @@ jobs:
             echo "tag=${RELEASE_TAG}"
             echo "tag-exists=${TAG_EXISTS}"
             echo "resume-tag=${RESUME_TAG}"
+            echo "publish=${PUBLISH}"
           } >> "${GITHUB_OUTPUT}"
       - name: Restore interrupted release commit
-        if: steps.version.outputs.resume-tag == 'true'
+        if: steps.version.outputs.publish == 'true' && steps.version.outputs.resume-tag == 'true'
         run: git checkout --detach "${{ steps.version.outputs.tag }}"
-      - run: npm ci
+      - if: steps.version.outputs.publish == 'true'
+        run: npm ci
       - name: Prepare release
+        if: steps.version.outputs.publish == 'true'
         run: npm run release:prepare -- "${{ steps.version.outputs.version }}"
-      - run: npm run check
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+      - if: steps.version.outputs.publish == 'true'
+        run: npm run check
+      - if: steps.version.outputs.publish == 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.version.outputs.publish == 'true'
+        run: npm run test:browser
       - name: Build plugin
+        if: steps.version.outputs.publish == 'true'
         run: |
           npm run build:plugin
           git diff --exit-code -- plugins/hope \
             ':(exclude)plugins/hope/.codex-plugin/plugin.json' \
             ':(exclude)plugins/hope/.claude-plugin/plugin.json'
       - name: Commit new version
+        if: steps.version.outputs.publish == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -98,17 +124,21 @@ jobs:
             git commit -m "Release Hope ${{ steps.version.outputs.version }}"
           fi
       - name: Tag and push release commit
+        if: steps.version.outputs.publish == 'true'
         run: |
           if [ "${{ steps.version.outputs.tag-exists }}" = "false" ]; then
             git tag -a "${{ steps.version.outputs.tag }}" -m "Hope ${{ steps.version.outputs.tag }}"
             git push origin HEAD:main "${{ steps.version.outputs.tag }}"
           fi
       - name: Stage plugin package
+        if: steps.version.outputs.publish == 'true'
         run: node tools/stage-plugin.mjs "${RUNNER_TEMP}/hope-package"
       - name: Package plugin
+        if: steps.version.outputs.publish == 'true'
         working-directory: ${{ runner.temp }}/hope-package
         run: zip -r "${GITHUB_WORKSPACE}/hope-${{ steps.version.outputs.tag }}.zip" .
       - name: Check package root
+        if: steps.version.outputs.publish == 'true'
         run: |
           unzip -Z1 "hope-${{ steps.version.outputs.tag }}.zip" | sed '/\/$/d' | sort > "${RUNNER_TEMP}/plugin-package-files.txt"
           diff -u tools/plugin-package-files.txt "${RUNNER_TEMP}/plugin-package-files.txt"
@@ -120,6 +150,7 @@ jobs:
           unzip -p "hope-${{ steps.version.outputs.tag }}.zip" runtime/features/write/standard.md > /dev/null
           sha256sum "hope-${{ steps.version.outputs.tag }}.zip" > "hope-${{ steps.version.outputs.tag }}.zip.sha256"
       - name: Create release
+        if: steps.version.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
@@ -128,4 +159,6 @@ jobs:
           "hope-${{ steps.version.outputs.tag }}.zip.sha256"
           --title "Hope ${{ steps.version.outputs.tag }}"
           --generate-notes
+          --fail-on-no-commits
+          --latest
           --verify-tag

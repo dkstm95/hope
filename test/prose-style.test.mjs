@@ -21,6 +21,7 @@ const maintainedProsePaths = [
   "docs/design/baseline-v1/README.md",
   "docs/diff.md",
   "docs/polish.md",
+  "docs/release.md",
   "docs/toxic-review.md",
   "docs/write.md",
   "plugins/hope/skills/align/SKILL.md",

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.0 - 2026-08-02
+
+- Add an explicit Diff invocation contract for target selection, confirmation,
+  retargeting, model policy, and representative evaluation cases.
+- Checkpoint bounded Diff page windows in one transition to reduce model round
+  trips while preserving page-local evidence and crash recovery.
+- Add causal-completeness review and blinded evaluation contracts to Hope Toxic
+  Review without turning raw symptom review into automatic diagnosis.
+- Consolidate shared command parsing and result validation while keeping each
+  feature responsible for its own behavior and error vocabulary.
+- Strengthen the required Hope Write pass across prompts, implementation text,
+  documentation, intermediate updates, and final responses.
+- Clarify the English and Korean project introductions and feature guidance.
+- Publish a verified release automatically when new public version files reach
+  `main`, while retaining manual version increases and interrupted-run recovery.
+
 ## 1.0.0 - 2026-07-31
 
 - Release Hope as a stable AI work harness and plugin for Codex and Claude Code.
