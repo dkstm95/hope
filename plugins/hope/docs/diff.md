@@ -854,6 +854,11 @@ empty checkpoint bodies.
 
 It places each remaining checkpoint before its related evidence excerpts.
 
+Each analysis-ledger page includes the excerpts cited by its checkpoints.
+
+The view removes a repeated excerpt only within that page, so a later page does
+not depend on an earlier page for the cited source text.
+
 Context generations never remove earlier checkpoints or require earlier pages
 to be read again.
 

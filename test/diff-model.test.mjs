@@ -172,6 +172,49 @@ test("analysis validation reports independent repair issues together", () => {
   );
 });
 
+test("analysis validation keeps an uncollected first error", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.teachingAids.visual = {
+    decision: "included",
+    reason: "A visual is required.",
+    teachingJob: "Show the changed behavior.",
+  };
+  analysis.codeSteps[0].fileIds = ["file-99"];
+
+  assert.throws(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+    (error) => {
+      assert.ok(error.issues.some(
+        (issue) => issue.path === "teachingAids.visual.decision",
+      ));
+      assert.ok(error.issues.some(
+        (issue) => issue.path === "codeSteps[0]",
+      ));
+      return true;
+    },
+  );
+});
+
+test("analysis validation reports the actual code-step index", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.codeSteps.push(structuredClone(analysis.codeSteps[0]));
+  analysis.codeSteps[1].fileIds = ["file-99"];
+
+  assert.throws(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+    (error) => {
+      assert.deepEqual(error.issues, [{
+        code: "ANALYSIS_CONTRACT",
+        message: "codeSteps[1] refers to an unknown file",
+        path: "codeSteps[1]",
+      }]);
+      return true;
+    },
+  );
+});
+
 test("analysis fails closed on unsupported schemas and model-owned URLs", () => {
   const snapshot = makeSnapshot();
   assert.throws(

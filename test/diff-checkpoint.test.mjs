@@ -332,7 +332,7 @@ test("checkpoint state is rejected before parsing when it exceeds its bound", as
   );
 });
 
-test("the final ledger is split into bounded deterministic pages", () => {
+test("ledger pages stay bounded and carry their cited evidence", () => {
   const snapshot = makeSnapshot();
   const ledger = {
     checkpoints: Array.from({ length: 20 }, (_, index) => ({
@@ -363,6 +363,18 @@ test("the final ledger is split into bounded deterministic pages", () => {
     ledger.checkpoints.length,
   );
   for (const page of pages) {
+    const citedEvidence = new Set(page.checkpoints.flatMap(
+      (checkpoint) => checkpoint.observations.flatMap(
+        (observation) => observation.evidence.map(
+          (evidence) => `${evidence.sourceId}:${evidence.startLine}:${evidence.endLine}`,
+        ),
+      ),
+    ));
+    assert.deepEqual(
+      new Set(page.evidenceExcerpts.map((evidence) => evidence.key)),
+      citedEvidence,
+    );
+    assert.equal(page.evidenceExcerpts.length, citedEvidence.size);
     assert.ok(
       Buffer.byteLength(JSON.stringify(page), "utf8")
         <= LIMITS.ledgerPageBytes,

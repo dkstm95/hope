@@ -164,6 +164,10 @@ When the Skill later reads the bounded analysis view, the runtime omits empty
 checkpoint bodies and places exact excerpts from the bound snapshot beside the
 model-authored notes they support.
 
+Each analysis-ledger page includes the excerpts cited by its checkpoints.
+
+The runtime removes a repeated excerpt only within that page.
+
 This gives every supported host durable review memory without assuming that its
 model will retain every earlier page.
 

@@ -886,40 +886,44 @@ function validateContextChecks(values, sourceMap, limitMap) {
   return checks;
 }
 
+function validateCodeStep(value, index, sourceMap, fileMap) {
+  const name = `codeSteps[${index}]`;
+  object(value, name, ["title", "text", "basis", "evidence", "fileIds"]);
+  const validatedClaim = claim({
+    basis: value.basis,
+    evidence: value.evidence,
+    text: value.text,
+    title: value.title,
+  }, name, sourceMap, { title: true });
+  const evidenceFiles = new Set(
+    validatedClaim.evidence.map((item) => item.fileId).filter(Boolean),
+  );
+  if (evidenceFiles.size === 0) {
+    throw new Error(`${name} needs code evidence`);
+  }
+  const fileIds = value.fileIds === undefined
+    ? [...evidenceFiles]
+    : array(value.fileIds, `${name}.fileIds`, 20);
+  if (fileIds.length === 0) throw new Error(`${name} needs at least one file`);
+  if (new Set(fileIds).size !== fileIds.length) {
+    throw new Error(`${name}.fileIds contains a duplicate`);
+  }
+  for (const fileId of fileIds) {
+    if (!fileMap.has(fileId)) throw new Error(`${name} refers to an unknown file`);
+  }
+  if (value.fileIds !== undefined && (
+    [...evidenceFiles].some((id) => !fileIds.includes(id))
+    || fileIds.some((id) => !evidenceFiles.has(id))
+  )) {
+    throw new Error(`${name} evidence does not match its files`);
+  }
+  return Object.freeze({ ...validatedClaim, fileIds: Object.freeze([...fileIds]) });
+}
+
 function validateCodeSteps(values, sourceMap, fileMap) {
-  return array(values, "codeSteps", 20).map((value, index) => {
-    const name = `codeSteps[${index}]`;
-    object(value, name, ["title", "text", "basis", "evidence", "fileIds"]);
-    const validatedClaim = claim({
-      basis: value.basis,
-      evidence: value.evidence,
-      text: value.text,
-      title: value.title,
-    }, name, sourceMap, { title: true });
-    const evidenceFiles = new Set(
-      validatedClaim.evidence.map((item) => item.fileId).filter(Boolean),
-    );
-    if (evidenceFiles.size === 0) {
-      throw new Error(`${name} needs code evidence`);
-    }
-    const fileIds = value.fileIds === undefined
-      ? [...evidenceFiles]
-      : array(value.fileIds, `${name}.fileIds`, 20);
-    if (fileIds.length === 0) throw new Error(`${name} needs at least one file`);
-    if (new Set(fileIds).size !== fileIds.length) {
-      throw new Error(`${name}.fileIds contains a duplicate`);
-    }
-    for (const fileId of fileIds) {
-      if (!fileMap.has(fileId)) throw new Error(`${name} refers to an unknown file`);
-    }
-    if (value.fileIds !== undefined && (
-      [...evidenceFiles].some((id) => !fileIds.includes(id))
-      || fileIds.some((id) => !evidenceFiles.has(id))
-    )) {
-      throw new Error(`${name} evidence does not match its files`);
-    }
-    return Object.freeze({ ...validatedClaim, fileIds: Object.freeze([...fileIds]) });
-  });
+  return array(values, "codeSteps", 20).map(
+    (value, index) => validateCodeStep(value, index, sourceMap, fileMap),
+  );
 }
 
 function validateAnalysisIdentity(analysis, snapshot, runId) {
@@ -1191,6 +1195,7 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
     add(error, "analysis");
     return issues;
   }
+  add(firstError);
 
   const sourceMap = new Map(snapshot.sources.map((source) => {
     const lines = typeof source.text === "string"
@@ -1266,7 +1271,7 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
   const codeSteps = capture("codeSteps", () => array(analysis.codeSteps, "codeSteps", 20));
   codeSteps?.forEach((value, index) => capture(
     `codeSteps[${index}]`,
-    () => validateCodeSteps([value], sourceMap, fileMap),
+    () => validateCodeStep(value, index, sourceMap, fileMap),
   ));
   const reviewItems = capture(
     "reviewItems",
@@ -1333,7 +1338,6 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
     },
   ));
 
-  if (issues.length === 0) add(firstError);
   return issues;
 }
 
