@@ -101,29 +101,67 @@ function makeBoundReview(prepared, { noMaterialIssueFound = false } = {}) {
   });
 }
 
-function makeBoundCausalReview(prepared) {
-  const input = makeCausalToxicReview();
+function makeBoundCausalReview(prepared, assessment) {
   const sourceIds = prepared.hostInput.reviewBinding.sources.map(
     (source) => source.id,
   );
-  input.target = structuredClone(prepared.hostInput.reviewBinding.target);
-  input.snapshot = {
-    capturedAt: evaluatedAt,
-    sources: structuredClone(prepared.hostInput.reviewBinding.sources),
-  };
-  input.roles[0].evidenceSourceIds = [...sourceIds];
-  for (const flowItem of input.causalAnalysis.flow) {
-    flowItem.sourceIds = [...sourceIds];
-  }
-  for (const candidate of input.causalAnalysis.candidates) {
-    candidate.sourceIds = [...sourceIds];
-  }
-  for (const finding of input.findings) {
-    finding.sourceIds = [...sourceIds];
-  }
-  for (const adjudication of input.adjudications) {
-    adjudication.sourceIds = [...sourceIds];
-  }
+  const bounded = makeBoundReview(prepared, {
+    noMaterialIssueFound: assessment.noMaterialIssueFound,
+  });
+  const template = makeCausalToxicReview();
+  const candidates = Array.from(
+    { length: assessment.candidateCount },
+    (_, index) => ({
+      ...structuredClone(template.causalAnalysis.candidates[index % 2]),
+      id: `candidate-${index + 1}`,
+      level: assessment.causeLevel === "mixed"
+        ? index === 0 ? "structural" : "local"
+        : assessment.causeLevel,
+      sourceIds: [...sourceIds],
+    }),
+  );
+  const candidateIds = candidates.map((candidate) => candidate.id);
+  const flow = candidates.length === 0
+    ? [{
+        id: "phase-1",
+        phase: "Captured outcome",
+        observation: "The captured evidence does not distinguish a material cause.",
+        sourceIds: [...sourceIds],
+        candidateIds: [],
+        exclusion: "No supported candidate can be formed from the captured evidence.",
+      }]
+    : candidates.map((candidate, index) => ({
+        id: `phase-${index + 1}`,
+        phase: `Observed phase ${index + 1}`,
+        observation: "The captured evidence supports one material phase candidate.",
+        sourceIds: [...sourceIds],
+        candidateIds: [candidate.id],
+      }));
+  const input = makeCausalToxicReview({
+    target: structuredClone(bounded.target),
+    snapshot: structuredClone(bounded.snapshot),
+    roles: structuredClone(bounded.roles),
+    findings: structuredClone(bounded.findings),
+    adjudications: structuredClone(bounded.adjudications),
+    summary: structuredClone(bounded.summary),
+    causalAnalysis: {
+      ...structuredClone(template.causalAnalysis),
+      claimAssessment: assessment.claimAssessment,
+      causeLevel: assessment.causeLevel,
+      candidateCount: candidates.length,
+      flow,
+      candidates,
+      nextCheck: {
+        kind: candidates.length === 0
+          ? "form-candidate"
+          : candidates.length === 1 ? "disconfirm" : "discriminate",
+        action: "Capture the lowest-cost safe observation for these candidates.",
+        rationale: "The observation matches the number of supported candidates.",
+        candidateIds,
+      },
+    },
+  });
+  input.roles[0].method = "causal-completeness";
   return validateToxicReview(input);
 }
 
@@ -157,6 +195,7 @@ function makeReceipt({
   variant = "full",
   run = 1,
   invocationId = `invocation-${caseId}-${variant}-${run}`,
+  assessment: assessmentOverrides = {},
 }) {
   const prepared = prepareCausalCompletenessEvaluationRun({
     brief,
@@ -165,9 +204,18 @@ function makeReceipt({
     run,
   });
   const oracle = findCase(caseId).oracle;
-  const review = makeBoundReview(prepared, {
+  const assessment = {
+    claimAssessment: oracle.expectedClaimAssessment,
+    causeLevel: oracle.expectedCauseLevels[0],
+    candidateCount: oracle.expectedCandidateCounts[0],
     noMaterialIssueFound: oracle.expectedNoMaterialIssueFound,
-  });
+    ...assessmentOverrides,
+  };
+  const review = variant === "legacy"
+    ? makeBoundReview(prepared, {
+        noMaterialIssueFound: assessment.noMaterialIssueFound,
+      })
+    : makeBoundCausalReview(prepared, assessment);
   return {
     receiptVersion: 1,
     caseId,
@@ -186,17 +234,21 @@ function makeReceipt({
       outputDigest: digestCausalEvaluationValue(review),
     },
     validatedReview: review,
-    assessment: {
-      claimAssessment: oracle.expectedClaimAssessment,
-      causeLevel: oracle.expectedCauseLevels[0],
-      candidateCount: oracle.expectedCandidateCounts[0],
-      noMaterialIssueFound: oracle.expectedNoMaterialIssueFound,
-    },
+    assessment,
     rubricResults: rubricResults(review),
     evaluator: "test evaluator",
     evaluatedAt,
     sanitized: true,
   };
+}
+
+function replaceReceiptReview(receipt, review, assessment) {
+  const replaced = structuredClone(receipt);
+  replaced.validatedReview = review;
+  replaced.invocation.outputDigest = digestCausalEvaluationValue(review);
+  replaced.assessment = assessment;
+  replaced.rubricResults = rubricResults(review);
+  return replaced;
 }
 
 test("causal evaluation separates conformance, ablation, and safety", () => {
@@ -307,7 +359,11 @@ test("evaluation preparation binds variants and synthetic sources", async () => 
 
 test("evaluation receipts bind the case, invocation, output, and decoded evidence", async () => {
   const brief = await makeBrief();
-  const receipt = makeReceipt({ brief });
+  const receipt = makeReceipt({
+    brief,
+    caseId: "critical-path-ablation",
+    variant: "legacy",
+  });
   const prepared = prepareCausalCompletenessEvaluationRun({
     brief,
     caseId: receipt.caseId,
@@ -410,6 +466,98 @@ test("evaluation receipts bind the case, invocation, output, and decoded evidenc
   );
 });
 
+test("evaluation receipt variants require the matching causal record", async () => {
+  const brief = await makeBrief();
+  const caseId = "critical-path-ablation";
+  const oracle = findCase(caseId).oracle;
+  const assessment = {
+    claimAssessment: oracle.expectedClaimAssessment,
+    causeLevel: oracle.expectedCauseLevels[0],
+    candidateCount: oracle.expectedCandidateCounts[0],
+    noMaterialIssueFound: oracle.expectedNoMaterialIssueFound,
+  };
+
+  const legacyPrepared = prepareCausalCompletenessEvaluationRun({
+    brief,
+    caseId,
+    variant: "legacy",
+    run: 1,
+  });
+  const legacyReview = makeBoundReview(legacyPrepared);
+  assert.equal(createCausalCompletenessEvaluationReceiptTemplate({
+    brief,
+    caseId,
+    variant: "legacy",
+    run: 1,
+    model: "test-model",
+    effort: "test-effort",
+    invocationId: "legacy-unstructured",
+    validatedReview: legacyReview,
+  }).receipt.assessment, null);
+
+  const structuredLegacyReview = makeBoundCausalReview(
+    legacyPrepared,
+    assessment,
+  );
+  assert.throws(
+    () => createCausalCompletenessEvaluationReceiptTemplate({
+      brief,
+      caseId,
+      variant: "legacy",
+      run: 1,
+      model: "test-model",
+      effort: "test-effort",
+      invocationId: "legacy-structured",
+      validatedReview: structuredLegacyReview,
+    }),
+    /legacy evaluation review must not contain causalAnalysis/u,
+  );
+  const legacyReceipt = makeReceipt({ brief, caseId, variant: "legacy" });
+  assert.throws(
+    () => validateCausalCompletenessEvaluationReceipt(
+      replaceReceiptReview(
+        legacyReceipt,
+        structuredLegacyReview,
+        assessment,
+      ),
+      { brief },
+    ),
+    /legacy evaluation review must not contain causalAnalysis/u,
+  );
+
+  for (const variant of ["rules-only", "full"]) {
+    const prepared = prepareCausalCompletenessEvaluationRun({
+      brief,
+      caseId,
+      variant,
+      run: 1,
+    });
+    const unstructuredReview = makeBoundReview(prepared);
+    assert.throws(
+      () => createCausalCompletenessEvaluationReceiptTemplate({
+        brief,
+        caseId,
+        variant,
+        run: 1,
+        model: "test-model",
+        effort: "test-effort",
+        invocationId: `${variant}-unstructured`,
+        validatedReview: unstructuredReview,
+      }),
+      new RegExp(`${variant} evaluation review must contain causalAnalysis`, "u"),
+    );
+
+    const receipt = makeReceipt({ brief, caseId, variant });
+    assert.throws(
+      () => validateCausalCompletenessEvaluationReceipt(
+        replaceReceiptReview(receipt, unstructuredReview, assessment),
+        { brief },
+      ),
+      new RegExp(`${variant} evaluation review must contain causalAnalysis`, "u"),
+    );
+  }
+});
+
 test("evaluation receipts bind a structured causal assessment", async () => {
   const brief = await makeBrief();
   const prepared = prepareCausalCompletenessEvaluationRun({
@@ -418,7 +566,12 @@ test("evaluation receipts bind a structured causal assessment", async () => {
     variant: "full",
     run: 1,
   });
-  const review = makeBoundCausalReview(prepared);
+  const review = makeBoundCausalReview(prepared, {
+    claimAssessment: "unsupported",
+    causeLevel: "mixed",
+    candidateCount: 2,
+    noMaterialIssueFound: false,
+  });
   const template = createCausalCompletenessEvaluationReceiptTemplate({
     brief,
     caseId: prepared.caseId,
@@ -468,7 +621,11 @@ test("valid failed runs remain auditable instead of disappearing", async () => {
   assert.equal(validated.evaluation.runPassed, false);
   assert.deepEqual(validated.evaluation.failedCriteria, ["binds-outcome"]);
 
-  const wrongAssessment = makeReceipt({ brief });
+  const wrongAssessment = makeReceipt({
+    brief,
+    caseId: "critical-path-ablation",
+    variant: "legacy",
+  });
   wrongAssessment.assessment.causeLevel = "inconclusive";
   const assessed = validateCausalCompletenessEvaluationReceipt(
     wrongAssessment,
@@ -485,9 +642,11 @@ test("ablation oracle accepts evidence-supported phase grouping", async () => {
     caseId: "critical-path-ablation",
     variant: "full",
     run: 1,
+    assessment: {
+      causeLevel: "mixed",
+      candidateCount: 3,
+    },
   });
-  grouped.assessment.causeLevel = "mixed";
-  grouped.assessment.candidateCount = 3;
   const accepted = validateCausalCompletenessEvaluationReceipt(
     grouped,
     { brief },
@@ -495,9 +654,18 @@ test("ablation oracle accepts evidence-supported phase grouping", async () => {
   assert.equal(accepted.evaluation.oracleMatched, true);
   assert.equal(accepted.evaluation.runPassed, true);
 
-  grouped.assessment.candidateCount = 4;
+  const outsideOracle = makeReceipt({
+    brief,
+    caseId: "critical-path-ablation",
+    variant: "full",
+    run: 1,
+    assessment: {
+      causeLevel: "mixed",
+      candidateCount: 4,
+    },
+  });
   const rejected = validateCausalCompletenessEvaluationReceipt(
-    grouped,
+    outsideOracle,
     { brief },
   );
   assert.equal(rejected.evaluation.oracleMatched, false);

@@ -494,6 +494,20 @@ function assertReviewMatchesPrepared(review, prepared) {
   );
 }
 
+function assertReviewMatchesVariant(review, variant) {
+  if (variant === "legacy") {
+    assertReceipt(
+      review.causalAnalysis === undefined,
+      "legacy evaluation review must not contain causalAnalysis",
+    );
+    return;
+  }
+  assertReceipt(
+    review.causalAnalysis !== undefined,
+    `${variant} evaluation review must contain causalAnalysis`,
+  );
+}
+
 export function createCausalCompletenessEvaluationReceiptTemplate({
   brief,
   caseId,
@@ -514,6 +528,7 @@ export function createCausalCompletenessEvaluationReceiptTemplate({
   receiptText(effort, "configuration.effort", { maximum: 256 });
   receiptText(invocationId, "invocation.id", { maximum: 512 });
   assertReviewMatchesPrepared(validatedReview, prepared);
+  assertReviewMatchesVariant(validatedReview, variant);
   const recordedAssessment = validatedReview.causalAnalysis
     ? Object.freeze({
         claimAssessment: validatedReview.causalAnalysis.claimAssessment,
@@ -556,7 +571,7 @@ export function createCausalCompletenessEvaluationReceiptTemplate({
     }),
     instructions: Object.freeze([
       "Read the oracle only after the reviewing host has returned this validated result.",
-      "Keep a prefilled assessment from causalAnalysis; otherwise replace its null value after evaluation. Replace every rubric result, evaluator, and evaluatedAt without changing the bound fields.",
+      "Keep the prefilled assessment for rules-only and full runs. For a legacy run, replace the null assessment after evaluation. Replace every rubric result, evaluator, and evaluatedAt without changing the bound fields.",
       "A passing rubric result needs a JSON Pointer to an authored text field and an exact excerpt from that decoded field.",
       "Keep failed rubric results with passed false and an empty evidence array when no result field supports the criterion.",
     ]),
@@ -654,6 +669,7 @@ export function validateCausalCompletenessEvaluationReceipt(receipt, { brief }) 
     "validatedReview does not match a fresh validation",
   );
   assertReviewMatchesPrepared(revalidated, prepared);
+  assertReviewMatchesVariant(revalidated, receipt.variant);
   assertReceipt(
     receipt.invocation.outputDigest === digestCausalEvaluationValue(revalidated),
     "invocation.outputDigest does not match validatedReview",
@@ -691,7 +707,7 @@ export function validateCausalCompletenessEvaluationReceipt(receipt, { brief }) 
       === revalidated.summary.noMaterialIssueFound,
     "assessment.noMaterialIssueFound must match validatedReview",
   );
-  if (revalidated.causalAnalysis) {
+  if (receipt.variant !== "legacy") {
     assertReceipt(
       receipt.assessment.claimAssessment
         === revalidated.causalAnalysis.claimAssessment

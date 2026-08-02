@@ -340,13 +340,16 @@ hope toxic-review evaluation-receipt \
 The runtime binds the prepared input, active brief, host invocation identity,
 and exact validated output digest.
 
-When the validated review contains `causalAnalysis`, the template copies its
-claim assessment, cause level, candidate count, and no-material-issue decision.
+Rules-only and full results must contain `causalAnalysis`.
+
+Their templates copy the claim assessment, cause level, candidate count, and
+no-material-issue decision from that record.
 
 The evaluator cannot replace those recorded values.
 
-For legacy results without the structured record, the evaluator supplies the
-observed assessment.
+Legacy results must not contain the structured record.
+
+For those results, the evaluator supplies the observed assessment.
 
 The evaluator completes every rubric result in both cases.
 

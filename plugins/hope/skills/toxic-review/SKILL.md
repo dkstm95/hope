@@ -79,8 +79,13 @@ Then call `evaluation-oracle` for the case and evaluate every rubric criterion.
 Call `evaluation-receipt` with the validated review and host-owned model,
 effort, and invocation identity.
 
-Complete only the returned assessment, rubric, evaluator, and evaluation-time
-fields; keep its prepared input, brief, invocation, and output bindings.
+For a legacy run, complete the returned null assessment after evaluation.
+
+For a rules-only or full run, keep the assessment copied from the structured
+causal result.
+
+For every run, complete the rubric, evaluator, and evaluation-time fields, and
+keep the prepared input, brief, invocation, and output bindings.
 
 Validate each receipt with `evaluation-validate` and the complete array with
 `evaluation-validate-set`.
