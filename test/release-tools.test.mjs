@@ -193,23 +193,29 @@ test("CI installs locked dependencies before running checks or builds", async ()
   const release = await readFile(join(root, ".github/workflows/release.yml"), "utf8");
 
   const verifyInstall = verify.indexOf("- run: npm ci");
-  const releaseInstall = release.indexOf("- run: npm ci");
+  const releaseInstall = release.indexOf("run: npm ci");
   assert.ok(verifyInstall >= 0, "verify workflow must install dependencies");
   assert.ok(releaseInstall >= 0, "release workflow must install dependencies");
   assert.ok(verifyInstall < verify.indexOf("- run: npm run check"));
-  assert.ok(releaseInstall < release.indexOf("- run: npm run check"));
+  assert.ok(releaseInstall < release.indexOf("run: npm run check"));
   assert.ok(releaseInstall < release.indexOf("npm run build:plugin"));
   assert.match(verify, /needs: \[check, browser\]/u);
   assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
   assert.match(release, /npx playwright install --with-deps chromium/u);
   assert.match(release, /npm run test:browser/u);
   assert.match(release, /workflow_dispatch/u);
+  assert.match(release, /push:\s+branches:\s+- main/su);
+  assert.match(release, /EVENT_NAME: \$\{\{ github\.event_name \}\}/u);
+  assert.match(release, /publish=\$\{PUBLISH\}/u);
+  assert.match(release, /steps\.version\.outputs\.publish == 'true'/u);
   assert.match(release, /node tools\/next-release-version\.mjs/u);
   assert.match(release, /gh release view/u);
   assert.match(release, /git checkout --detach/u);
   assert.match(release, /already exists unexpectedly/u);
   assert.match(release, /git push origin HEAD:main/u);
   assert.match(release, /gh release create/u);
+  assert.match(release, /--fail-on-no-commits/u);
+  assert.match(release, /--latest/u);
   assert.doesNotMatch(release, /--prerelease/u);
   assert.ok(
     release.indexOf("npm run test:browser") < release.indexOf("npm run build:plugin"),

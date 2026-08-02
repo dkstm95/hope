@@ -23,6 +23,7 @@ const requiredFiles = [
   ".agents/plugins/marketplace.json",
   ".claude-plugin/marketplace.json",
   "AGENTS.md",
+  "CHANGELOG.md",
   "CLAUDE.md",
   "assets/readme/hope-align-en.png",
   "assets/readme/hope-align-ko.png",
@@ -52,6 +53,7 @@ const requiredFiles = [
   "docs/architecture.md",
   "docs/design.md",
   "docs/diff.md",
+  "docs/release.md",
   "docs/toxic-review.md",
   "docs/write.md",
   "design/fonts/HopeCode.woff2",
@@ -153,6 +155,8 @@ const [
   diff,
   toxicReview,
   write,
+  releaseDefinition,
+  changelog,
   release,
   verify,
   packageLock,
@@ -177,6 +181,8 @@ const [
     read("docs/diff.md"),
     read("docs/toxic-review.md"),
     read("docs/write.md"),
+    read("docs/release.md"),
+    read("CHANGELOG.md"),
     read(".github/workflows/release.yml"),
     read(".github/workflows/verify.yml"),
     readJson("package-lock.json"),
@@ -274,11 +280,22 @@ assert.match(write, /features\/write\/standard\.md/u);
 assert.match(write, /hope write/u);
 assert.match(write, /input prompts and task restatements/u);
 assert.match(write, /implementation code when Write can improve/u);
+assert.match(releaseDefinition, /^# Hope releases\r?$/mu);
+assert.match(releaseDefinition, /public version files reach `main`/u);
+assert.match(
+  changelog,
+  new RegExp(
+    `^## ${currentVersion.replaceAll(".", "\\.")} - \\d{4}-\\d{2}-\\d{2}$`,
+    "mu",
+  ),
+);
 assert.match(agentInstructions, /Use the Hope Write Skill whenever/u);
 assert.match(agentInstructions, /again before sending any response/u);
 assert.match(claudeInstructions, /@AGENTS\.md/u);
 assert.match(release, /npm run build:plugin/u);
 assert.match(release, /workflow_dispatch/u);
+assert.match(release, /push:\s+branches:\s+- main/su);
+assert.match(release, /publish=\$\{PUBLISH\}/u);
 assert.match(release, /node tools\/next-release-version\.mjs/u);
 assert.match(release, /gh release view/u);
 assert.match(release, /git checkout --detach/u);
@@ -299,6 +316,8 @@ assert.match(
   /unzip -p [^\n]* runtime\/features\/write\/standard\.md/u,
 );
 assert.match(release, /--generate-notes/u);
+assert.match(release, /--fail-on-no-commits/u);
+assert.match(release, /--latest/u);
 assert.match(verify, /name: Verify/u);
 assert.equal((verify.match(/fetch-depth: 0/gu) ?? []).length, 2);
 assert.match(verify, /needs: \[check, browser\]/u);

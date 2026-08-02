@@ -16,6 +16,8 @@ review.
 
 Read [docs/write.md](docs/write.md) before implementing Hope write.
 
+Read [docs/release.md](docs/release.md) before changing the release workflow.
+
 ## Main rules
 
 - Use the Hope Write Skill whenever clearer writing would improve the task.
@@ -36,14 +38,28 @@ Read [docs/write.md](docs/write.md) before implementing Hope write.
 
 ## Prepare a release
 
-Run the `Release` workflow on `main` to publish Hope.
+Use semantic versioning to choose the next public version.
+
+Use patch for compatible fixes, minor for compatible capability changes, and
+major for incompatible public changes.
+
+Prepare that version and update its Changelog entry in the same pull request:
+
+```bash
+npm run release:prepare -- 1.1.0
+```
+
+Merging the four public version files into `main` starts the `Release` workflow.
 
 The workflow releases the version already recorded in the repository when that
 version has no GitHub Release.
 
-After that version is released, the next run increases it automatically.
+A later manual run increases an already released version automatically.
 
-Choose a patch, minor, or major increase when starting the workflow.
+Run the workflow manually only to release the next version without a separate
+version pull request or to resume an interrupted release.
+
+Choose a patch, minor, or major increase when starting it manually.
 
 Patch is the default.
 
@@ -54,13 +70,6 @@ If a run creates the tag but fails before publishing the GitHub Release, rerun
 it.
 
 The rerun resumes the same version instead of increasing it again.
-
-Use the preparation command locally when reviewing a specific version before
-release:
-
-```bash
-npm run release:prepare -- 1.0.0
-```
 
 Do not add files to a release by changing the zip command.
 

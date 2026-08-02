@@ -18,6 +18,9 @@ The project definitions are:
 - [write.md](write.md) defines Hope write; and
 - [design.md](design.md) defines the shared visual language.
 
+[release.md](release.md) defines how a repository version becomes a verified
+public release.
+
 ## Two tracks
 
 ```mermaid
