@@ -92,24 +92,30 @@ survive until implementation.
 Align reads available evidence, asks risk-adaptive questions, and keeps facts,
 decisions, proposals, assumptions, and open questions distinct.
 
-It renders the current shared understanding as one self-contained HTML artifact
-with the scope, success conditions, scenarios, and verifiable work.
+It renders one decision-centered HTML artifact with the goal, next action, and
+up to three primary agreements on the first screen.
+
+Supporting evidence and work details stay available without crowding the main
+reading path.
+
+When a task changes a user interface, Align compares wide and narrow previews
+from the same canonical screen content before implementation.
 
 > [!NOTE]
 > Align waits for explicit approval and never implements the task.
 
-> Example: “I want to build an upload feature. Help me clarify the requirements
-> before implementation.”
+> Example: “I want to add a failed-upload recovery screen. Help me clarify the
+> retry behavior and layout before implementation.”
 
-![Hope Align example showing a failed-upload recovery decision, current blockers, scope, and success conditions](assets/readme/hope-align-en.png)
+![Hope Align example showing the goal, primary agreements, next action, scope, and success conditions for failed-upload recovery](assets/readme/hope-align-en.png)
 
-*An actual Align HTML artifact generated from a failed-upload recovery example.*
+*An actual Align HTML artifact for a failed-upload recovery screen.*
 
-| Scope and success | Expected behavior |
+| Scope and success | Responsive preview |
 | --- | --- |
-| [![The work boundary and success conditions in an Align artifact](assets/readme/hope-align-scope-en.png)](assets/readme/hope-align-scope-en.png) | [![A representative scenario and expected behavior in an Align artifact](assets/readme/hope-align-scenarios-en.png)](assets/readme/hope-align-scenarios-en.png) |
-| Shared understanding and next decision | Verifiable work |
-| [![The open question, choices, recommendation, and settled decision in an Align artifact](assets/readme/hope-align-understanding-en.png)](assets/readme/hope-align-understanding-en.png) | [![The user change, scope, verification, and failure recovery in an Align artifact](assets/readme/hope-align-work-en.png)](assets/readme/hope-align-work-en.png) |
+| [![The work boundary and success conditions in an Align artifact](assets/readme/hope-align-scope-en.png)](assets/readme/hope-align-scope-en.png) | [![Wide and narrow recovery-screen previews built from the same content](assets/readme/hope-align-preview-en.png)](assets/readme/hope-align-preview-en.png) |
+| Agreements and supporting detail | Verifiable work |
+| [![Primary agreements, evidence, assumptions, and uncertainty in an Align artifact](assets/readme/hope-align-understanding-en.png)](assets/readme/hope-align-understanding-en.png) | [![The user change, scope, verification, and failure recovery in an Align artifact](assets/readme/hope-align-work-en.png)](assets/readme/hope-align-work-en.png) |
 
 ---
 

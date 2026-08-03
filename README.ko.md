@@ -92,23 +92,27 @@ claude plugin install hope@hope
 
 Align은 확인 가능한 근거를 먼저 읽고 작업의 위험도에 맞춰 질문하며, 사실, 결정, 제안, 가정, 열린 질문을 구분합니다.
 
-현재 공유된 이해는 범위, 성공 조건, 대표 시나리오, 검증 가능한 작업을 담은 하나의 HTML 결과물이 됩니다.
+현재 공유된 이해는 목표, 다음 행동, 핵심 합의 세 가지를 첫 화면에 담은 하나의 HTML 결과물이 됩니다.
+
+근거와 작업 세부 내용은 기본 흐름을 복잡하게 만들지 않으면서 필요할 때 확인할 수 있습니다.
+
+사용자 화면이 달라지는 작업은 구현 전에 하나의 표준 화면 내용을 넓은 화면과 좁은 화면으로 비교합니다.
 
 > [!NOTE]
 > Align은 명시적인 승인을 기다리며 작업을 직접 구현하지 않습니다.
 
-> 예시: “업로드 기능을 구현하려고 해요. 구현 전에 요구사항을 함께 정리해
-> 주세요.”
+> 예시: “실패한 업로드 복구 화면을 추가하려고 해요. 구현 전에 재시도 동작과
+> 화면 배치를 함께 정리해 주세요.”
 
-![실패한 업로드 복구의 남은 결정, 현재 차단 항목, 범위, 성공 조건을 보여 주는 Hope Align 예시](assets/readme/hope-align-ko.png)
+![실패한 업로드 복구 화면의 목표, 핵심 합의, 다음 행동, 범위, 성공 조건을 보여 주는 Hope Align 예시](assets/readme/hope-align-ko.png)
 
-*실패한 업로드 복구 예시로 생성한 실제 Align HTML 결과물입니다.*
+*실패한 업로드 복구 화면을 위한 실제 Align HTML 결과물입니다.*
 
-| 범위와 성공 조건 | 예상 동작 |
+| 범위와 성공 조건 | 반응형 미리보기 |
 | --- | --- |
-| [![Align 결과의 작업 범위와 성공 조건](assets/readme/hope-align-scope-ko.png)](assets/readme/hope-align-scope-ko.png) | [![Align 결과의 대표 시나리오와 예상 동작](assets/readme/hope-align-scenarios-ko.png)](assets/readme/hope-align-scenarios-ko.png) |
-| 공유 이해와 다음 결정 | 검증 가능한 작업 |
-| [![Align 결과의 열린 질문, 선택지, 추천, 확정된 결정](assets/readme/hope-align-understanding-ko.png)](assets/readme/hope-align-understanding-ko.png) | [![Align 결과의 사용자 변화, 범위, 검증, 실패 복구](assets/readme/hope-align-work-ko.png)](assets/readme/hope-align-work-ko.png) |
+| [![Align 결과의 작업 범위와 성공 조건](assets/readme/hope-align-scope-ko.png)](assets/readme/hope-align-scope-ko.png) | [![같은 화면 내용을 사용한 넓은 화면과 좁은 화면의 복구 화면 미리보기](assets/readme/hope-align-preview-ko.png)](assets/readme/hope-align-preview-ko.png) |
+| 핵심 합의와 보조 정보 | 검증 가능한 작업 |
+| [![Align 결과의 핵심 합의, 근거, 가정, 불확실성](assets/readme/hope-align-understanding-ko.png)](assets/readme/hope-align-understanding-ko.png) | [![Align 결과의 사용자 변화, 범위, 검증, 실패 복구](assets/readme/hope-align-work-ko.png)](assets/readme/hope-align-work-ko.png) |
 
 ---
 
