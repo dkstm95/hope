@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
 import {
   completeToxicReviewRole,
@@ -334,6 +336,7 @@ test("run-state validation detects a changed prepared input", async () => {
 });
 
 test("the harness loads only an explicitly configured adapter module", async () => {
+  const adapterDirectory = resolve("/tmp/hope-adapter-test");
   const adapter = {
     capabilities: { independentContexts: true, parallel: false },
     async plan() {},
@@ -342,7 +345,7 @@ test("the harness loads only an explicitly configured adapter module", async () 
   };
   let loadedSpecifier;
   const loaded = await loadToxicReviewModelAdapter({
-    cwd: "/tmp/hope-adapter-test",
+    cwd: adapterDirectory,
     environment: {
       HOPE_TOXIC_REVIEW_ADAPTER_MODULE: "adapter.mjs",
     },
@@ -351,7 +354,10 @@ test("the harness loads only an explicitly configured adapter module", async () 
       return { default: adapter };
     },
   });
-  assert.match(loadedSpecifier, /^file:\/\/\/tmp\/hope-adapter-test\/adapter\.mjs$/u);
+  assert.equal(
+    loadedSpecifier,
+    pathToFileURL(resolve(adapterDirectory, "adapter.mjs")).href,
+  );
   assert.equal(loaded.capabilities.independentContexts, true);
   assert.equal(loaded.capabilities.parallel, false);
   await assert.rejects(
