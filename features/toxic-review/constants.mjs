@@ -5,6 +5,7 @@ export const TOXIC_REVIEW_LIMITS = Object.freeze({
   groupItems: 32,
   inputBytes: 128 * 1024,
   proseBytes: 64 * 1024,
+  runStateBytes: 1024 * 1024,
   roles: 6,
   sources: 128,
   stringCharacters: 16 * 1024,

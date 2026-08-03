@@ -741,6 +741,8 @@ export function validateToxicReview(value, {
         priority: judgment.priority,
         confidence: judgment.confidence,
         sourceIds: judgment.sourceIds,
+        proposalSourceIds: finding.sourceIds,
+        adjudicatorSourceIds: judgment.sourceIds,
         status: judgment.status,
         rationale: judgment.rationale,
       };

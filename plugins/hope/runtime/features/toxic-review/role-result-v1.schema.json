@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/toxic-review/role-result-v1.schema.json",
+  "title": "Hope toxic review role result version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "runId",
+    "roleId",
+    "attemptId",
+    "bindingDigest",
+    "inputDigest",
+    "status",
+    "findings"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "runId": { "$ref": "review-v1.schema.json#/$defs/id" },
+    "roleId": { "$ref": "review-v1.schema.json#/$defs/id" },
+    "attemptId": { "$ref": "review-v1.schema.json#/$defs/id" },
+    "bindingDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "inputDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "status": { "const": "succeeded" },
+    "findings": {
+      "type": "array",
+      "maxItems": 96,
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "causalAnalysis": {
+      "$ref": "review-v1.schema.json#/$defs/causalAnalysis"
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "roleId",
+        "title",
+        "issue",
+        "impact",
+        "action",
+        "priority",
+        "confidence",
+        "sourceIds"
+      ],
+      "properties": {
+        "id": { "$ref": "review-v1.schema.json#/$defs/id" },
+        "roleId": { "$ref": "review-v1.schema.json#/$defs/id" },
+        "title": { "$ref": "review-v1.schema.json#/$defs/text" },
+        "issue": { "$ref": "review-v1.schema.json#/$defs/text" },
+        "impact": { "$ref": "review-v1.schema.json#/$defs/text" },
+        "action": { "$ref": "review-v1.schema.json#/$defs/text" },
+        "priority": { "enum": ["critical", "high", "medium", "low"] },
+        "confidence": {
+          "enum": ["established", "supported", "uncertain"]
+        },
+        "sourceIds": {
+          "allOf": [
+            { "$ref": "review-v1.schema.json#/$defs/idList" },
+            { "minItems": 1 }
+          ]
+        }
+      }
+    }
+  }
+}

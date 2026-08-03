@@ -28,6 +28,14 @@ test("toxic review adjudicates every finding and sorts actionable work", () => {
     "Add a test that invokes both generated and harness paths.",
   );
   assert.equal(review.result.actionable[0].priority, "high");
+  assert.deepEqual(
+    review.result.actionable[0].proposalSourceIds,
+    ["repository-1"],
+  );
+  assert.deepEqual(
+    review.result.actionable[0].adjudicatorSourceIds,
+    ["repository-1"],
+  );
   assert.equal(review.result.actionable[0].judgment, undefined);
   assert.deepEqual(review.result.judgmentCounts, {
     accepted: 1,
@@ -414,8 +422,8 @@ test("toxic review brief chooses roles dynamically instead of fixing a panel", a
     ]),
     /Internal Skill protocol/u,
   );
-  assert.throws(
-    runToxicReview,
+  await assert.rejects(
+    () => runToxicReview(),
     (error) => error.code === TOXIC_REVIEW_MODEL_ADAPTER_CODE,
   );
 });

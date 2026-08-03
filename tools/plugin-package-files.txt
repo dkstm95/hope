@@ -2,6 +2,7 @@
 .codex-plugin/plugin.json
 LICENSE
 THIRD_PARTY_NOTICES.md
+agents/toxic-reviewer.md
 assets/hope-protected-light-128.png
 assets/hope-protected-light.png
 docs/align.md
@@ -54,11 +55,16 @@ runtime/features/polish/index.mjs
 runtime/features/polish/run-v1.schema.json
 runtime/features/polish/validate.mjs
 runtime/features/result-validation/index.mjs
+runtime/features/toxic-review/adjudication-v1.schema.json
 runtime/features/toxic-review/causal-evaluation.mjs
 runtime/features/toxic-review/cli.mjs
 runtime/features/toxic-review/constants.mjs
 runtime/features/toxic-review/index.mjs
+runtime/features/toxic-review/model-adapter.mjs
 runtime/features/toxic-review/review-v1.schema.json
+runtime/features/toxic-review/role-result-v1.schema.json
+runtime/features/toxic-review/role-run.mjs
+runtime/features/toxic-review/run-plan-v1.schema.json
 runtime/features/toxic-review/validate.mjs
 runtime/features/work-snapshot/index.mjs
 runtime/features/write/cli.mjs

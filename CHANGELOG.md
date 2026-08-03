@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0 - 2026-08-03
+
+- Add one shared Toxic Review role-run lifecycle with exact input bindings,
+  complete ordered attempt receipts, visible failure and cancellation, bounded
+  retries, and finalization only after every selected reviewer succeeds.
+- Run multiple reviewers only in fresh independent contexts, expose the role
+  selection reason and maximum role count, and reject unsupported fan-out
+  before model work begins.
+- Ship a thin Claude Code reviewer agent, coordinate fresh Codex subagents from
+  the shared Skill, and let the independent harness use the same contract
+  through a trusted replaceable model-adapter module.
+- Preserve causal-completeness output inside its reviewer result and keep
+  reviewer evidence separate from adjudicator evidence in actionable results.
+
 ## 1.1.0 - 2026-08-02
 
 - Add an explicit Diff invocation contract for target selection, confirmation,
