@@ -12,7 +12,7 @@ import { validateAlignState } from "../features/align/validate.mjs";
 import { digestJson } from "../features/diff/hash.mjs";
 import { renderReview } from "../features/diff/render.mjs";
 import { validateAnalysis } from "../features/diff/validate.mjs";
-import { makeAlignState } from "../test-support/align-fixture.mjs";
+import { makeAlignPreviewState } from "../test-support/align-fixture.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const outputDirectory = join(root, "assets", "readme");
@@ -125,125 +125,153 @@ const changedFiles = Object.freeze([
 const words = Object.freeze({
   "en-US": Object.freeze({
     align: Object.freeze({
-      assumption: "The server keeps an idempotency key for 24 hours.",
-      change: "The retry policy became the next explicit decision.",
-      decision: "Version 1 keeps retry as a person-initiated action.",
-      decisionReason: "Automatic retry needs separate background-work rules.",
-      expected: "The second request resumes the same upload without another object.",
+      assumption: "The upload service can resume from the last confirmed byte.",
+      change: "The recovery behavior, retry window, and screen state became explicit agreements.",
+      decisionAction: "A person starts each retry.",
+      decisionActionReason: "Automatic retry needs separate background-work rules.",
+      decisionScreen: "The failed file stays visible with one Retry upload action.",
+      decisionScreenReason: "A visible failed state keeps recovery under the person's control.",
+      decisionWindow: "A failed upload remains retryable for 24 hours.",
+      decisionWindowReason: "This matches the current idempotency-key lifetime.",
+      expected: "The screen keeps the failed file visible, and retry resumes the same upload without another object.",
       fact: "The upload API already accepts an idempotency key.",
-      goal: "Let a person retry a failed upload without creating a duplicate.",
-      inScope: ["Interrupted uploads", "Manual retry", "Duplicate prevention"],
-      openQuestion: "How long should a failed upload remain retryable?",
-      optionA: "24 hours",
-      optionADetail: "Matches the current idempotency-key lifetime.",
-      optionB: "7 days",
-      optionBDetail: "Helps long-running work but needs longer server state.",
+      goal: "Let a person understand and retry a failed upload without creating a duplicate.",
+      inScope: ["Failed-upload screen", "Manual retry", "24-hour recovery", "Duplicate prevention"],
       outOfScope: ["Automatic background retry", "Cross-device recovery"],
-      rationale: "The retry window still changes storage and recovery behavior.",
-      recommendation: "Start with 24 hours.",
+      previewAction: "Retry upload",
+      previewDecisionItems: ["Manual retry", "24-hour recovery window"],
+      previewDecisions: "Agreements",
+      previewEvidence: "Evidence",
+      previewEvidenceItems: ["The API accepts an idempotency key"],
+      previewFile: "quarterly-report.pdf",
+      previewState: "Upload failed",
+      previewSummary: "12.4 MB · Upload stopped at 52%.",
+      previewUncertainty: "Implementation check",
+      previewUncertaintyItems: ["Confirm resumable progress for every storage provider"],
+      previewWork: "Verifiable work",
+      previewWorkItems: ["Interrupt and retry one upload", "Confirm one stored object"],
+      rationale: "The recovery behavior, layout, and verification path are ready for approval.",
       scenario: "A network failure interrupts an upload after half the file is sent.",
-      sliceFailure: "Keep the failed upload visible and allow a fresh attempt.",
-      sliceScope: "One failed upload and its manual retry action.",
-      sliceTitle: "Retry one interrupted upload",
-      sliceUserChange: "A person can retry without creating a duplicate.",
+      sliceFailure: "If resumable state expired, keep the failed item visible and allow a fresh upload.",
+      sliceScope: "One failed-upload screen, its retry action, and duplicate prevention.",
+      sliceTitle: "Recover one interrupted upload",
+      sliceUserChange: "A person sees what failed and retries without creating a duplicate.",
       sliceVerification: "Interrupt an upload, retry it, and confirm one stored object.",
       success: [
+        "The failed state and retry action are clear on wide and narrow screens.",
         "Retry continues the same logical upload.",
         "A repeated retry never creates a second stored object.",
       ],
-      title: "Define failed upload recovery",
+      title: "Design failed upload recovery",
+      uncertainty: "Some storage providers may not expose resumable progress.",
+      uncertaintyNext: "Check provider support during implementation and keep fresh upload as the fallback.",
     }),
   }),
   "ko-KR": Object.freeze({
     align: Object.freeze({
-      assumption: "서버는 멱등성 키를 24시간 보관합니다.",
-      change: "재시도 가능 기간을 다음 명시적 결정으로 정했습니다.",
-      decision: "첫 버전은 사용자가 직접 재시도합니다.",
-      decisionReason: "자동 재시도에는 별도의 백그라운드 작업 규칙이 필요합니다.",
-      expected: "두 번째 요청은 새 객체를 만들지 않고 같은 업로드를 이어갑니다.",
+      assumption: "업로드 서비스는 마지막으로 확인한 바이트부터 이어서 전송할 수 있습니다.",
+      change: "복구 동작, 재시도 기간, 화면 상태를 명시적인 합의로 정했습니다.",
+      decisionAction: "재시도는 사용자가 직접 시작합니다.",
+      decisionActionReason: "자동 재시도에는 별도의 백그라운드 작업 규칙이 필요합니다.",
+      decisionScreen: "실패한 파일을 화면에 유지하고 업로드 재시도 행동 하나를 표시합니다.",
+      decisionScreenReason: "실패 상태를 계속 보여 주면 사용자가 복구를 통제할 수 있습니다.",
+      decisionWindow: "실패한 업로드는 24시간 동안 다시 시도할 수 있습니다.",
+      decisionWindowReason: "현재 멱등성 키 보관 기간과 같습니다.",
+      expected: "화면은 실패한 파일을 계속 보여 주고, 재시도는 새 객체를 만들지 않고 같은 업로드를 이어갑니다.",
       fact: "업로드 API는 이미 멱등성 키를 받습니다.",
-      goal: "중복 파일을 만들지 않고 실패한 업로드를 다시 시도할 수 있게 합니다.",
-      inScope: ["중단된 업로드", "수동 재시도", "중복 방지"],
-      openQuestion: "실패한 업로드를 얼마 동안 다시 시도할 수 있어야 하나요?",
-      optionA: "24시간",
-      optionADetail: "현재 멱등성 키 보관 기간과 같습니다.",
-      optionB: "7일",
-      optionBDetail: "오래 걸리는 작업에는 유리하지만 서버 상태를 더 오래 보관해야 합니다.",
+      goal: "실패한 업로드를 이해하고 중복 파일 없이 다시 시도할 수 있게 합니다.",
+      inScope: ["업로드 실패 화면", "수동 재시도", "24시간 복구", "중복 방지"],
       outOfScope: ["자동 백그라운드 재시도", "기기 간 복구"],
-      rationale: "재시도 가능 기간은 저장과 복구 동작을 바꿉니다.",
-      recommendation: "24시간으로 시작하세요.",
+      previewAction: "업로드 재시도",
+      previewDecisionItems: ["수동 재시도", "24시간 복구 기간"],
+      previewDecisions: "핵심 합의",
+      previewEvidence: "근거",
+      previewEvidenceItems: ["API가 멱등성 키를 받음"],
+      previewFile: "분기보고서.pdf",
+      previewState: "업로드 실패",
+      previewSummary: "12.4MB · 52%에서 업로드가 중단되었습니다.",
+      previewUncertainty: "구현 확인",
+      previewUncertaintyItems: ["모든 저장소 제공자의 이어받기 지원 확인"],
+      previewWork: "검증 가능한 작업",
+      previewWorkItems: ["업로드 한 건 중단 후 재시도", "저장 객체 한 개 확인"],
+      rationale: "복구 동작, 화면 배치, 검증 경로가 정리되어 승인을 기다립니다.",
       scenario: "파일의 절반을 보낸 뒤 네트워크 오류로 업로드가 중단됩니다.",
-      sliceFailure: "실패한 업로드를 표시하고 새 업로드를 시작할 수 있게 합니다.",
-      sliceScope: "하나의 실패한 업로드와 수동 재시도 동작입니다.",
-      sliceTitle: "중단된 업로드 한 건 재시도",
-      sliceUserChange: "중복 파일 없이 업로드를 다시 시도할 수 있습니다.",
+      sliceFailure: "이어받기 상태가 만료되면 실패 항목을 유지하고 새 업로드를 시작할 수 있게 합니다.",
+      sliceScope: "업로드 실패 화면 한 개, 재시도 행동, 중복 방지입니다.",
+      sliceTitle: "중단된 업로드 한 건 복구",
+      sliceUserChange: "실패 원인을 확인하고 중복 파일 없이 다시 시도할 수 있습니다.",
       sliceVerification: "업로드를 중단한 뒤 재시도하고 저장된 객체가 하나인지 확인합니다.",
       success: [
+        "넓은 화면과 좁은 화면에서 실패 상태와 재시도 행동이 분명합니다.",
         "재시도는 같은 논리적 업로드를 이어갑니다.",
         "재시도를 반복해도 저장 객체가 하나만 생깁니다.",
       ],
-      title: "실패한 업로드 복구 방식 정하기",
+      title: "실패한 업로드 복구 화면 설계",
+      uncertainty: "일부 저장소 제공자는 업로드 진행률 이어받기를 지원하지 않을 수 있습니다.",
+      uncertaintyNext: "구현 중 제공자 지원을 확인하고 새 업로드를 대체 경로로 유지합니다.",
     }),
   }),
 });
 
 function alignState(locale) {
   const text = words[locale].align;
-  const base = makeAlignState();
+  const base = makeAlignPreviewState();
   const perspectiveText = locale === "ko-KR"
     ? {
-        "experience-design": ["건너뜀", "화면 구조는 이번 결정의 핵심이 아닙니다."],
-        "product-requirements": ["활성", "실패와 재시도 동작을 확정해야 합니다."],
-        "program-design": ["활성", "재시도 상태와 멱등성 키의 관계를 정해야 합니다."],
-        "shared-understanding": ["활성", "재시도라는 말이 여러 동작을 뜻할 수 있습니다."],
-        "system-architecture": ["활성", "서버가 재시도 상태를 보관해야 합니다."],
-        "vertical-slices": ["활성", "실패부터 복구까지 한 경로로 검증해야 합니다."],
+        "experience-design": ["active", "복구 화면의 위계와 반응형 배치가 달라집니다."],
+        "product-requirements": ["active", "실패와 재시도 동작을 확정해야 합니다."],
+        "program-design": ["active", "재시도 상태와 멱등성 키의 관계를 정해야 합니다."],
+        "shared-understanding": ["active", "재시도라는 말이 여러 동작을 뜻할 수 있습니다."],
+        "system-architecture": ["active", "서버가 재시도 상태를 보관해야 합니다."],
+        "vertical-slices": ["active", "실패부터 복구까지 한 경로로 검증해야 합니다."],
       }
     : {
-        "experience-design": ["skipped", "Screen structure is not the material decision here."],
+        "experience-design": ["active", "The recovery screen changes hierarchy and responsive layout."],
         "product-requirements": ["active", "Failure and retry behavior must be settled."],
         "program-design": ["active", "Retry state and the idempotency key need one rule."],
         "shared-understanding": ["active", "Retry can describe several different behaviors."],
         "system-architecture": ["active", "The server must retain retry state."],
         "vertical-slices": ["active", "One path must verify failure through recovery."],
       };
-  const stateByLabel = locale === "ko-KR"
-    ? { "건너뜀": "skipped", "활성": "active" }
-    : { active: "active", skipped: "skipped" };
   return {
     ...base,
-    changes: [{ round: 2, summary: text.change }],
-    interviewRounds: 2,
+    changes: [{ round: 3, summary: text.change }],
+    interviewRounds: 3,
     locale,
     readiness: {
       rationale: text.rationale,
-      state: "interviewing",
+      state: "ready-proposed",
     },
     records: {
-      decisions: [{
-        id: "decision-1",
-        rationale: text.decisionReason,
-        sourceIds: ["conversation-1"],
-        text: text.decision,
-      }],
+      decisions: [
+        {
+          id: "decision-action",
+          rationale: text.decisionActionReason,
+          sourceIds: ["conversation-1"],
+          text: text.decisionAction,
+        },
+        {
+          id: "decision-window",
+          rationale: text.decisionWindowReason,
+          sourceIds: ["conversation-1"],
+          text: text.decisionWindow,
+        },
+        {
+          id: "decision-screen",
+          rationale: text.decisionScreenReason,
+          sourceIds: ["conversation-1"],
+          text: text.decisionScreen,
+        },
+      ],
       facts: [{
         id: "fact-1",
         sourceIds: ["repository-1"],
         text: text.fact,
       }],
-      openQuestions: [{
-        id: "question-1",
-        options: [
-          { effect: text.optionADetail, label: text.optionA },
-          { effect: text.optionBDetail, label: text.optionB },
-        ],
-        question: text.openQuestion,
-        recommendation: text.recommendation,
-        whyItMatters: text.rationale,
-      }],
+      openQuestions: [],
       proposals: [],
     },
-    revision: 2,
+    revision: 3,
     slices: [{
       failureRecovery: text.sliceFailure,
       id: "slice-1",
@@ -255,7 +283,16 @@ function alignState(locale) {
     taskRisk: "medium",
     theme: "light",
     title: text.title,
-    ui: false,
+    ui: true,
+    snapshot: {
+      ...base.snapshot,
+      sources: base.snapshot.sources.map((source) => ({
+        ...source,
+        label: source.id === "conversation-1"
+          ? (locale === "ko-KR" ? "작업 요청" : "Task request")
+          : (locale === "ko-KR" ? "저장소 기준" : "Repository baseline"),
+      })),
+    },
     understanding: {
       goal: text.goal,
       inScope: text.inScope,
@@ -263,7 +300,7 @@ function alignState(locale) {
       scenarios: [{
         expected: text.expected,
         id: "scenario-1",
-        kind: "edge",
+        kind: "representative",
         situation: text.scenario,
       }],
       success: text.success,
@@ -272,13 +309,125 @@ function alignState(locale) {
       id: "assumption-1",
       origin: "repository",
       sourceIds: ["repository-1"],
-      status: "open",
+      status: "confirmed",
       text: text.assumption,
     }],
-    uncertainties: [],
+    uncertainties: [{
+      classification: "implementation-check",
+      id: "uncertainty-1",
+      nextStep: text.uncertaintyNext,
+      text: text.uncertainty,
+    }],
+    presentation: {
+      primaryAgreementIds: [
+        "decision-action",
+        "decision-window",
+        "decision-screen",
+      ],
+    },
+    preview: {
+      disposition: "provided",
+      rationale: locale === "ko-KR"
+        ? "구현 전 화면 위계와 반응형 배치를 합의하기 위한 목업입니다."
+        : "This mockup aligns hierarchy and responsive layout before implementation.",
+      changedAspects: [
+        "layout",
+        "visual-hierarchy",
+        "component-placement",
+        "user-flow",
+        "screen-state",
+      ],
+      screens: [{
+        id: "screen-recovery",
+        label: locale === "ko-KR" ? "업로드 실패 복구 화면" : "Failed upload recovery screen",
+        scenarioId: "scenario-1",
+        state: text.previewState,
+        root: {
+          id: "preview-root",
+          type: "group",
+          label: locale === "ko-KR" ? "복구 화면 내용" : "Recovery screen content",
+          layout: "stack",
+          children: [
+            { id: "preview-status", type: "status", text: text.previewState },
+            { id: "preview-title", type: "heading", level: 1, text: text.previewFile },
+            { id: "preview-summary", type: "text", text: text.previewSummary },
+            { id: "preview-action", type: "action", text: text.previewAction },
+            {
+              id: "preview-decisions-row",
+              type: "group",
+              label: locale === "ko-KR" ? "합의와 근거" : "Agreements and evidence",
+              layout: "row",
+              children: [
+                {
+                  id: "preview-decisions",
+                  type: "list",
+                  label: text.previewDecisions,
+                  items: text.previewDecisionItems,
+                },
+                {
+                  id: "preview-evidence",
+                  type: "list",
+                  label: text.previewEvidence,
+                  items: text.previewEvidenceItems,
+                },
+              ],
+            },
+            {
+              id: "preview-support-row",
+              type: "group",
+              label: locale === "ko-KR" ? "확인과 검증" : "Checks and verification",
+              layout: "row",
+              children: [
+                {
+                  id: "preview-uncertainty",
+                  type: "list",
+                  label: text.previewUncertainty,
+                  items: text.previewUncertaintyItems,
+                },
+                {
+                  id: "preview-work",
+                  type: "list",
+                  label: text.previewWork,
+                  items: text.previewWorkItems,
+                },
+              ],
+            },
+          ],
+        },
+        annotations: [
+          {
+            id: "annotation-action",
+            nodeId: "preview-action",
+            text: locale === "ko-KR"
+              ? "재시도 행동은 가장 강한 경계로 표시합니다."
+              : "The retry action uses the strongest boundary.",
+          },
+          {
+            id: "annotation-support",
+            nodeId: "preview-support-row",
+            text: locale === "ko-KR"
+              ? "보조 정보는 두 화면 크기에서 같은 순서를 유지합니다."
+              : "Supporting content keeps the same order at both viewport sizes.",
+          },
+        ],
+      }],
+      frames: [
+        {
+          id: "frame-wide",
+          label: locale === "ko-KR" ? "데스크톱" : "Desktop",
+          viewport: "wide",
+          screenId: "screen-recovery",
+        },
+        {
+          id: "frame-narrow",
+          label: locale === "ko-KR" ? "모바일" : "App",
+          viewport: "narrow",
+          screenId: "screen-recovery",
+        },
+      ],
+    },
     perspectives: base.perspectives.map((perspective) => {
-      const [stateLabel, reason] = perspectiveText[perspective.kind];
-      const state = stateByLabel[stateLabel];
+      const [state, reason] = perspectiveText[perspective.kind];
       return {
         ...perspective,
         items: state === "active"
@@ -637,9 +786,9 @@ async function main() {
       );
       for (const [name, selector, expandDetails] of [
         ["scope", "#scope", false],
-        ["scenarios", "#scenarios", false],
-        ["understanding", "#records", true],
-        ["work", "#slices", false],
+        ["preview", "#preview", false],
+        ["understanding", "#agreement", true],
+        ["work", "#work", true],
       ]) {
         await captureElement(
           page,
