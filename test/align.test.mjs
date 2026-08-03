@@ -22,7 +22,10 @@ import {
 } from "../features/align/cli.mjs";
 import {
   makeAlignApproval,
+  makeAlignPreviewState,
   makeAlignState,
+  makeLegacyAlignState,
+  makePreviewV2AlignState,
 } from "../test-support/align-fixture.mjs";
 import { makePolishRun } from "../test-support/polish-fixture.mjs";
 import {
@@ -103,6 +106,13 @@ function makeDenseAlignState() {
     create(index)
   ));
   state.ui = true;
+  state.preview = {
+    disposition: "required",
+    rationale: "The dense UI fixture still needs its preview.",
+    changedAspects: ["layout"],
+    screens: [],
+    frames: [],
+  };
   state.readiness = {
     state: "interviewing",
     rationale: "Material questions remain.",
@@ -301,13 +311,16 @@ test("align rendering is deterministic and keeps authored content inert", async 
   assert.doesNotMatch(html, /<img src=x/u);
   assert.match(html, /data:font\/woff2;base64/u);
   assert.match(html, /id="overview"/u);
-  assert.match(html, /class="phase-track"/u);
+  assert.doesNotMatch(html, /class="phase-track"/u);
   assert.match(html, /id="theme-toggle"/u);
-  assert.match(html, /class="toc-desktop"/u);
-  assert.match(html, /User decisions/u);
-  assert.match(html, /Repository facts/u);
-  assert.match(html, /AI proposals/u);
-  assert.equal(first.rendererVersion, 2);
+  assert.match(html, /class="toc"/u);
+  assert.match(html, /Agreed understanding/u);
+  assert.match(html, /Evidence/u);
+  assert.doesNotMatch(html, />Risk</u);
+  assert.doesNotMatch(html, />Resource use</u);
+  assert.doesNotMatch(html, /sha256:cccc/u);
+  assert.match(html, /id="theme-toggle" type="button" hidden/u);
+  assert.equal(first.rendererVersion, 5);
 });
 
 test("align puts the next material decision on the first screen", async () => {
@@ -334,7 +347,6 @@ test("align puts the next material decision on the first screen", async () => {
   assert.match(overview, /결정 필요/u);
   assert.match(overview, /첫 버전은 언제 실행할까요\?/u);
   assert.match(overview, /href="#question-question-1"/u);
-  assert.match(overview, /답할 질문이 남아 있음/u);
   assert.doesNotMatch(overview, />open-questions</u);
   assert.doesNotMatch(overview, /JSON 크기/u);
 });
@@ -362,7 +374,7 @@ test("align copy follows the approval phase", async () => {
   const ready = await renderAlignSession(validateAlignState(makeAlignState()));
   assert.match(
     ready.bytes.toString("utf8"),
-    /Review the recorded decisions, then approve or revise this understanding/u,
+    /Review and approve the shared understanding/u,
   );
 
   const approvedState = makeAlignState({
@@ -377,10 +389,10 @@ test("align copy follows the approval phase", async () => {
   const html = approved.bytes.toString("utf8");
   assert.match(
     html,
-    /Approval is recorded\. Use these decisions as the implementation contract/u,
+    /The work can move forward from this understanding/u,
   );
   assert.doesNotMatch(html, /before approving/u);
-  assert.match(overviewMarkup(html), /href="#slices">Review the work plan/u);
+  assert.match(overviewMarkup(html), /href="#work">Review the work plan/u);
 });
 
 test("align namespaces authored fragment IDs", async () => {
@@ -390,8 +402,8 @@ test("align namespaces authored fragment IDs", async () => {
       rationale: "One question remains.",
     },
   });
-  state.snapshot.sources[1].id = "sources";
-  state.records.facts[0].sourceIds = ["sources"];
+  state.snapshot.sources[1].id = "agreement";
+  state.records.facts[0].sourceIds = ["agreement"];
   state.records.openQuestions.push({
     id: "records",
     question: "Which record should lead?",
@@ -404,13 +416,190 @@ test("align namespaces authored fragment IDs", async () => {
   });
   const rendered = await renderAlignSession(validateAlignState(state));
   const html = rendered.bytes.toString("utf8");
-  assert.match(html, /id="records"/u);
+  assert.match(html, /id="agreement"/u);
   assert.match(html, /id="question-records"/u);
   assert.match(html, /href="#question-records"/u);
-  assert.match(html, /id="sources"/u);
-  assert.match(html, /id="source-sources"/u);
-  assert.equal(html.match(/id="records"/gu)?.length, 1);
-  assert.equal(html.match(/id="sources"/gu)?.length, 1);
+  assert.equal(html.match(/id="agreement"/gu)?.length, 1);
+  assert.doesNotMatch(html, /id="source-agreement"/u);
+});
+
+test("align version 3 renders one canonical preview at wide and narrow viewports", async () => {
+  const session = validateAlignState(makeAlignPreviewState());
+  assert.equal(session.result.contractReady, true);
+  assert.equal(session.resources.previewScreens, 1);
+  assert.equal(session.resources.previewFrames, 2);
+  const rendered = await renderAlignSession(session);
+  const html = rendered.bytes.toString("utf8");
+  assert.match(html, /class="preview-frame preview-frame-wide"/u);
+  assert.match(html, /class="preview-frame preview-frame-narrow"/u);
+  assert.equal(html.match(/Approve or revise this understanding/gu)?.length, 5);
+  assert.match(html, /Text view/u);
+  assert.match(html, /Alignment mockup · not the implementation/u);
+  assert.match(html, /class="preview-frames preview-desktop"/u);
+  assert.match(html, /class="preview-mobile"/u);
+  assert.match(html, /Show desktop preview/u);
+  assert.equal(
+    html.match(/Repository architecture source: docs\/architecture\.md/gu)?.length,
+    5,
+  );
+  assert.match(html, /class="preview-canvas" aria-hidden="true"/u);
+  assert.doesNotMatch(html, /role="heading"/u);
+});
+
+test("align uses explicit primary agreements and keeps supporting detail available", async () => {
+  const state = makeAlignPreviewState();
+  state.records.decisions.push(
+    {
+      id: "decision-2",
+      text: "Keep secondary evidence collapsed.",
+      rationale: "The first reading path stays short.",
+      sourceIds: ["conversation-1"],
+    },
+    {
+      id: "decision-3",
+      text: "Reveal every detail in print.",
+      rationale: "Printed artifacts must preserve content.",
+      sourceIds: ["conversation-1"],
+    },
+  );
+  state.presentation.primaryAgreementIds = ["decision-1", "decision-2"];
+  const session = validateAlignState(state);
+  assert.equal(session.resources.primaryAgreements, 2);
+  const rendered = await renderAlignSession(session);
+  const html = rendered.bytes.toString("utf8");
+  assert.match(html, /class="agreement-detail" id="agreement-decision-1"/u);
+  assert.match(html, /class="agreement-detail" id="agreement-decision-2"/u);
+  assert.match(
+    overviewMarkup(html),
+    /class="overview-agreements"[\s\S]*agreement-decision-1[\s\S]*agreement-decision-2/u,
+  );
+  assert.match(html, /User decision/u);
+  assert.match(html, /AI proposals · Accepted/u);
+  assert.match(html, /class="secondary-group additional-agreements"/u);
+  assert.match(html, /Additional agreements<\/span><small>2<\/small>/u);
+  assert.match(html, /id="agreement-decision-3"/u);
+  assert.match(html, /class="secondary-group evidence-group" id="evidence"/u);
+  assert.match(html, /class="work-item" id="work-slice-1"/u);
+  assert.doesNotMatch(
+    html,
+    /class="secondary-group evidence-group" id="evidence" open/u,
+  );
+
+  const urgent = makeAlignState();
+  urgent.assumptions[0].status = "open";
+  urgent.uncertainties[0].classification = "research";
+  urgent.readiness = {
+    state: "interviewing",
+    rationale: "An assumption and research question remain.",
+  };
+  const urgentHtml = (await renderAlignSession(
+    validateAlignState(urgent),
+  )).bytes.toString("utf8");
+  assert.match(
+    urgentHtml,
+    /class="secondary-group assumption-group" id="assumptions" open/u,
+  );
+  assert.match(
+    urgentHtml,
+    /class="secondary-group uncertainty-group" id="uncertainties" open/u,
+  );
+
+  const unknown = makeAlignState();
+  unknown.presentation.primaryAgreementIds = ["decision-missing"];
+  assert.throws(
+    () => validateAlignState(unknown),
+    /must reference a settled decision or proposal/u,
+  );
+
+  const openOnly = makeAlignState({
+    readiness: {
+      state: "interviewing",
+      rationale: "An open proposal remains.",
+    },
+  });
+  openOnly.records.proposals[0].status = "open";
+  openOnly.presentation.primaryAgreementIds = ["proposal-1"];
+  assert.throws(
+    () => validateAlignState(openOnly),
+    /must reference a settled decision or proposal|must identify at least one settled agreement/u,
+  );
+
+  openOnly.presentation.primaryAgreementIds = ["decision-1"];
+  const openHtml = (await renderAlignSession(
+    validateAlignState(openOnly),
+  )).bytes.toString("utf8");
+  assert.match(openHtml, /class="unresolved-proposals"/u);
+  assert.match(openHtml, /AI proposals · Open/u);
+  assert.doesNotMatch(
+    openHtml,
+    /class="agreement-detail" id="agreement-proposal-1"/u,
+  );
+});
+
+test("align preview readiness and safe node contract block incomplete UI work", () => {
+  const required = makeAlignPreviewState({
+    readiness: {
+      state: "interviewing",
+      rationale: "The visual preview is still missing.",
+    },
+    preview: {
+      disposition: "required",
+      rationale: "Layout changes need a preview.",
+      changedAspects: ["layout"],
+      screens: [],
+      frames: [],
+    },
+  });
+  assert.deepEqual(
+    validateAlignState(required).result.blockers,
+    ["preview-required"],
+  );
+  assert.throws(
+    () => validateAlignState({
+      ...required,
+      readiness: { state: "ready-proposed", rationale: "Ready." },
+    }),
+    /preview-required/u,
+  );
+
+  const unsafe = makeAlignPreviewState();
+  unsafe.preview.screens[0].root.style = "display:none";
+  assert.throws(() => validateAlignState(unsafe), /root\.style is not allowed/u);
+
+  const missingViewport = makeAlignPreviewState();
+  missingViewport.preview.frames.pop();
+  assert.throws(
+    () => validateAlignState(missingViewport),
+    /requires exactly one narrow frame/u,
+  );
+});
+
+test("align keeps version 1 states readable without implicit preview migration", async () => {
+  const state = makeLegacyAlignState();
+  const session = validateAlignState(state);
+  assert.equal(session.version, 1);
+  assert.equal(session.preview, undefined);
+  const rendered = await renderAlignSession(session);
+  assert.doesNotMatch(rendered.bytes.toString("utf8"), /Visual preview/u);
+});
+
+test("align keeps version 2 preview states readable without presentation data", async () => {
+  const state = makePreviewV2AlignState();
+  const session = validateAlignState(state);
+  assert.equal(session.version, 2);
+  assert.equal(session.presentation, undefined);
+  const html = (await renderAlignSession(session)).bytes.toString("utf8");
+  assert.match(html, /Visual preview/u);
+  assert.doesNotMatch(html, /Additional agreements/u);
+  assert.equal(html.match(/class="agreement-detail"/gu)?.length, 2);
+  assert.match(html, /AI proposals · Accepted/u);
+  assert.throws(
+    () => validateAlignState({
+      ...state,
+      presentation: { primaryAgreementIds: ["decision-1"] },
+    }),
+    /versions 1 and 2 cannot contain presentation data/u,
+  );
 });
 
 test("align renders a dense valid state within the artifact ceiling", async () => {
@@ -418,7 +607,7 @@ test("align renders a dense valid state within the artifact ceiling", async () =
   assert.ok(session.resources.jsonBytes < ALIGN_LIMITS.inputBytes);
   assert.ok(session.resources.authoredStringBytes < ALIGN_LIMITS.proseBytes);
   const rendered = await renderAlignSession(session);
-  assert.ok(rendered.bytes.length > 4 * 1024 * 1024);
+  assert.ok(rendered.bytes.length > 1024 * 1024);
   assert.ok(rendered.bytes.length <= ALIGN_LIMITS.artifactBytes);
 });
 

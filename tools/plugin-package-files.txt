@@ -25,6 +25,8 @@ runtime/features/align/constants.mjs
 runtime/features/align/index.mjs
 runtime/features/align/render.mjs
 runtime/features/align/session-v1.schema.json
+runtime/features/align/session-v2.schema.json
+runtime/features/align/session-v3.schema.json
 runtime/features/align/validate.mjs
 runtime/features/artifact/index.mjs
 runtime/features/command-options/index.mjs

@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.3.0 - 2026-08-03
+
+- Add a version 3 Align presentation contract that names primary agreements
+  without changing version 1 or version 2 state.
+- Add accessible progressive disclosure for supporting evidence, uncertainty,
+  work details, and duplicate mobile previews.
+- Match Diff's theme icons, current-section navigation, deep-link reveal, and
+  complete print output while retaining Align's simpler visual hierarchy.
+- Keep unresolved proposals outside the capped primary-agreement list and show
+  proposal status without claiming unavailable provenance.
+- Put primary decision text on the first screen and keep responsive preview
+  copies from duplicating the accessible document outline.
+- Verify unobscured fragment targets, enlarged text controls, silent disclosure
+  decoration, and a truthful no-JavaScript theme fallback in Chromium.
+- Simplify Align artifacts into one decision-centered reading path and omit
+  internal metadata that does not help the person decide or act.
+- Add a bounded version 2 preview contract that renders the same canonical UI
+  content at wide and narrow viewports without accepting executable markup.
+- Keep version 1 states readable, enforce preview readiness for visual UI
+  changes, and verify identical harness and generated-plugin behavior.
+
 ## 1.2.0 - 2026-08-03
 
 - Add one shared Toxic Review role-run lifecycle with exact input bindings,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -14,7 +14,12 @@ import {
   validateAlignState,
 } from "../features/align/validate.mjs";
 import { main, parseArguments } from "../harness/hope.mjs";
-import { makeAlignState } from "../test-support/align-fixture.mjs";
+import {
+  makeAlignPreviewState,
+  makeAlignState,
+  makeLegacyAlignState,
+  makePreviewV2AlignState,
+} from "../test-support/align-fixture.mjs";
 import { makePolishRun } from "../test-support/polish-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
@@ -75,14 +80,20 @@ test("core and generated Align reach the same brief and validator", async () => 
   ]);
   const { schemaPath: coreSchemaPath, ...coreContract } = coreBrief;
   const { schemaPath: pluginSchemaPath, ...pluginContract } = pluginBrief;
-  const schemaSuffix = join("features", "align", "session-v1.schema.json");
+  const schemaSuffix = join("features", "align", "session-v3.schema.json");
   assert.ok(coreSchemaPath.endsWith(schemaSuffix));
   assert.ok(pluginSchemaPath.endsWith(schemaSuffix));
   assert.deepEqual(pluginContract, coreContract);
-  assert.deepEqual(
-    pluginValidator.validateAlignState(makeAlignState()),
-    validateAlignState(makeAlignState()),
-  );
+  for (const state of [
+    makeLegacyAlignState(),
+    makePreviewV2AlignState(),
+    makeAlignPreviewState(),
+  ]) {
+    assert.deepEqual(
+      pluginValidator.validateAlignState(state),
+      validateAlignState(state),
+    );
+  }
 });
 
 test("harness and generated Align report the same missing AI boundary", () => {
@@ -137,6 +148,23 @@ test("exact harness and generated Align commands stay equivalent", async () => {
   );
   assert.deepEqual(pluginCandidate, harnessCandidate);
   assert.match(harnessCandidate.source.digest, /^sha256:[a-f0-9]{64}$/u);
+
+  const harnessOutput = join(temporaryRoot, "harness.html");
+  const pluginOutput = join(temporaryRoot, "plugin.html");
+  const harnessRendered = runJson(
+    "harness/hope.mjs",
+    ["align", "render", "--input", input, "--output", harnessOutput],
+  );
+  const pluginRendered = runJson(
+    "plugins/hope/runtime/features/align/cli.mjs",
+    ["render", "--input", input, "--output", pluginOutput],
+  );
+  assert.equal(pluginRendered.artifactDigest, harnessRendered.artifactDigest);
+  assert.equal(pluginRendered.rendererVersion, harnessRendered.rendererVersion);
+  assert.deepEqual(
+    await readFile(pluginOutput),
+    await readFile(harnessOutput),
+  );
 
   const polishInput = join(temporaryRoot, "polish.json");
   const polish = makePolishRun();

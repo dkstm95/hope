@@ -119,6 +119,28 @@ The structured state separates:
 - active and skipped perspectives;
 - implementation slices.
 
+Version 2 also records a static UI preview contract when `ui` is true.
+
+The contract records:
+
+- which change axes apply: copy, layout, visual hierarchy, component
+  placement, user flow, or screen state;
+- whether a preview is required, provided, or not required;
+- one or more canonical screen content trees;
+- wide and narrow frames that reference those screens; and
+- annotations that reference nodes in the canonical tree.
+
+The screen tree accepts only Hope-owned layout and content nodes.
+
+It does not accept HTML, CSS, JavaScript, SVG, URLs, event handlers, class names,
+or arbitrary attributes.
+
+The renderer creates both the visual mockup and its text view from that same
+tree.
+
+A host does not author a second text alternative that can drift from the visual
+content.
+
 Hope derives resource counts and readiness blockers from this state.
 
 A host must not invent token, time, test, or source measurements that it did not
@@ -142,6 +164,20 @@ question, no open assumption, and at least one verifiable slice.
 
 Medium- and high-risk work also needs active product-requirement and
 vertical-slice perspectives.
+
+Version 2 applies an additional preview gate:
+
+- non-UI work records `not-required` with the `none` change axis;
+- copy-only UI work may record `not-required` with a reason;
+- layout, visual hierarchy, component placement, user flow, or screen-state
+  changes require `provided` previews;
+- `required` means the preview is still missing and blocks readiness; and
+- every provided screen must have one wide frame and one narrow frame.
+
+The wide and narrow frames reference the same screen tree.
+
+A viewport may change layout, but it cannot silently change content, state, or
+reading order.
 
 These checks find contradictions in the record.
 
@@ -210,9 +246,7 @@ The first screen helps the person answer four questions in about 30 seconds:
 3. What goal and success conditions are already shared?
 4. What is the next material choice or approval action?
 
-Show the three readiness phases as one compact path.
-
-Mark the current phase and completed earlier phases with text as well as shape.
+Show the current phase once beside the title.
 
 Do not turn interview rounds, source counts, byte counts, or other internal
 resource measurements into a first-screen dashboard.
@@ -222,8 +256,7 @@ as the primary next action.
 
 Link to the full choices instead of repeating every choice on the first screen.
 
-When no question remains, show the readiness rationale and the next approval or
-implementation action.
+When no question remains, show the next approval or implementation action.
 
 Translate blocker codes into actions a person can recognize.
 
@@ -238,53 +271,128 @@ Omit a conditional section when it has no content.
 
 | Order | Section | Job |
 | --- | --- | --- |
-| 1 | Alignment at a glance | Show phase, goal, readiness, and the next action. |
-| 2 | Scope | Make included work, excluded work, and success conditions easy to compare. |
+| 1 | Alignment at a glance | Show the title, phase, goal, next action, and version 3 primary agreements. |
+| 2 | Scope and success | Compare included work, excluded work, and success conditions. |
 | 3 | Expected behavior | Test the shared model with representative cases and boundaries. |
-| 4 | Current shared understanding | Put open questions first, then decisions, proposals, and repository facts. |
-| 5 | Assumptions and uncertainty | Keep unconfirmed claims and implementation-time checks visible. |
+| 4 | Visual preview | Compare the same screen content at wide and narrow viewports when required. |
+| 5 | Agreed understanding | Put open questions first, then decisions, accepted proposals, readable evidence, and material assumptions. |
 | 6 | Verifiable pieces of work | Show the path from user-visible change to verification and recovery. |
-| 7 | Design perspectives | Explain why perspectives were active or skipped. |
-| 8 | History, sources, and resource use | Preserve audit detail without dominating the main reading path. |
 
-Keep open questions, scope, expected behavior, and verifiable work visible.
+Keep open questions, scope, expected behavior, visual previews, material
+uncertainty, and verifiable work available in the main reading path.
 
-Start design perspectives, change history, sources, and resource use collapsed.
+Use progressive disclosure without hiding a material choice.
+
+Keep the goal, next action, scope, success conditions, scenarios, primary
+agreement text, and preview visible without opening a disclosure.
+
+Version 3 names up to three primary agreements in structured state instead of
+letting the renderer guess which records matter most.
+
+Those primary agreements are settled decisions or proposals.
+
+Show their short decision text with the next action and repeat it in the agreed
+understanding section with its supporting detail.
+
+An open proposal never counts as a primary agreement.
+
+Keep it visible in a separate unresolved-proposal block with its AI-proposal
+origin and open status.
+
+Keep the rationale and, for user decisions, readable source names behind each
+primary agreement's decision text.
+
+Show accepted and delegated AI proposals with their origin and status rather
+than claiming an unavailable source name.
+
+Group non-primary settled agreements under one compact count and keep their
+complete text, rationale, status, and available source names inside that
+disclosure.
+
+Start repository evidence, confirmed or delegated assumptions, deferred
+uncertainty, and work scope, verification, and recovery details closed.
+
+Start an assumption group with an open assumption and an uncertainty group
+with research or implementation-check work open.
+
+Show each work title and user-visible change in its disclosure summary.
+
+Do not nest disclosure controls in Align content.
 
 A direct fragment link opens every disclosure needed to reveal its target.
 
-The artifact shows:
+Leave enough scroll margin that the sticky header does not cover the focused
+target.
 
-- the goal, phase, risk, source basis, and current blockers;
+Print output reveals every disclosure and preserves the same content order.
+
+On a wide screen, show wide and narrow preview frames together.
+
+On a narrow screen, show the narrow frame first and put the wide frame behind
+one native disclosure.
+
+Keep responsive visual copies out of the document heading outline.
+
+Expose one canonical text representation for assistive technology and keep
+viewport captions available for the visual comparison.
+
+The artifact always shows:
+
+- the goal, current phase, and next action;
 - scope, success conditions, and expected scenarios;
-- user decisions, repository facts, AI proposals, and open items as distinct
-  groups;
-- assumptions, uncertainty, and changes since earlier rounds;
-- active and skipped perspectives;
+- open questions and agreed decisions;
+- open proposals in a visibly unresolved block;
+- accepted or delegated proposals with their status in the agreement flow;
+- repository facts as readable evidence with source names;
+- material assumptions and uncertainty;
 - verifiable pieces of work; and
-- deterministic resource and optional trusted host metrics.
+- provided static previews.
 
-For UI work, an active experience-design perspective may include low-fidelity
-HTML descriptions of flows and states.
+The artifact conditionally shows empty or missing material states only when the
+person must act on them.
 
-Version 1 does not accept authored HTML, CSS, JavaScript, SVG, or executable
-prototypes in the state.
+The artifact does not render version numbers, risk, capture time, the full
+phase track, a no-blocker row, design-perspective activation records, change
+history, resource counts, raw source locators, revisions, or digests.
 
-Repository and model text is escaped.
+Those values remain in structured state for validation and audit.
 
-A future interactive prototype must earn its own safe declarative contract.
+They do not create hidden or collapsed UI in the normal artifact.
+
+Version 1 stays readable and keeps its existing candidate and Polish receipt
+identity.
+
+Hope does not rewrite it implicitly.
+
+Version 2 states stay readable without a presentation field.
+
+New sessions use version 3.
+
+Version 2 preview data is bounded before rendering: at most 4 screens, 8 frames,
+256 nodes, 8 levels of nesting, 12 children per group, and 32 annotations.
+
+IDs are unique, references must resolve, and all authored text is escaped.
+
+A preview is a static alignment mockup, not an executable prototype and not
+evidence of production behavior.
 
 The renderer uses Hope design tokens, embeds the fixed fonts, supports light and
 dark themes, offers the same theme and responsive contents controls as other
 Hope artifacts, and remains useful with JavaScript disabled.
 
+It reveals the theme control only after its script initializes, so a disabled
+script never leaves a false interactive control.
+
 It never replaces an existing output path.
 
 ## Resource limits
 
-Version 1 accepts at most 128 KiB of structured input, 64 KiB of generated
-prose, 64 source references, 64 decisions or facts per group, 48 scenarios, 24
-perspectives, and 48 slices.
+Versions 1, 2, and 3 accept at most 128 KiB of structured input, 64 KiB of
+generated prose, 64 source references, 64 decisions or facts per group, 48
+scenarios, 24 perspectives, and 48 slices.
+
+Versions 2 and 3 also apply the preview-specific ceilings listed above before
+HTML generation.
 
 Structured input may contain at most 128 nesting levels and 65,536 values.
 
@@ -311,6 +419,10 @@ The independent harness exposes the same feature as `hope align`.
 
 Its internal `brief`, `validate`, `polish-candidate`, `complete-polish`, and
 `render` commands reach the shared core.
+
+For version 1, version 2, and version 3 fixtures, the harness and generated
+plugin must return the same validation result, Polish candidate, render bytes,
+digest, and invalid-input error.
 
 Automatic interviewing reports that the harness model adapter is unavailable
 until one exists.
