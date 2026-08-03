@@ -360,8 +360,15 @@ function variantBrief(brief, variant) {
 }
 
 function portableBrief(brief) {
-  const { schemaPath, ...portable } = brief;
-  return portable;
+  const { schemaPath, roleRun, ...portable } = brief;
+  if (!roleRun) return portable;
+  const {
+    adjudicationSchemaPath,
+    planSchemaPath,
+    roleResultSchemaPath,
+    ...portableRoleRun
+  } = roleRun;
+  return { ...portable, roleRun: portableRoleRun };
 }
 
 function expectedRunSpecifications() {

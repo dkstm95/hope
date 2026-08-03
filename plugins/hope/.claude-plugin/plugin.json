@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "hope",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Adds alignment before implementation, bounded work polishing, evidence-based review, PR explanations, clear writing, and shared settings. Requires Node.js 20 or newer.",
   "author": {
     "name": "SeungIl",

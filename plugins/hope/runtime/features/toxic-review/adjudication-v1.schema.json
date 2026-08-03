@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/toxic-review/adjudication-v1.schema.json",
+  "title": "Hope toxic review adjudication version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "runId", "adjudications", "summary"],
+  "properties": {
+    "version": { "const": 1 },
+    "runId": { "$ref": "review-v1.schema.json#/$defs/id" },
+    "adjudications": {
+      "$ref": "review-v1.schema.json#/properties/adjudications"
+    },
+    "summary": { "$ref": "review-v1.schema.json#/properties/summary" }
+  }
+}

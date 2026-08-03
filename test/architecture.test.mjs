@@ -48,10 +48,13 @@ test("every public Skill reaches shared runtime", async () => {
 });
 
 test("Toxic Review leaves normative rules in its runtime brief", async () => {
-  const toxicReview = await readFile(
-    resolve(skillsRoot, "toxic-review", "SKILL.md"),
-    "utf8",
-  );
+  const [toxicReview, reviewerAgent] = await Promise.all([
+    readFile(resolve(skillsRoot, "toxic-review", "SKILL.md"), "utf8"),
+    readFile(
+      resolve(root, "plugins", "hope", "agents", "toxic-reviewer.md"),
+      "utf8",
+    ),
+  ]);
   assert.match(
     toxicReview,
     /`roleSelection`.*`adjudication`.*`resultPreparation`/su,
@@ -63,9 +66,21 @@ test("Toxic Review leaves normative rules in its runtime brief", async () => {
   assert.match(toxicReview, /`evaluation-receipt`/u);
   assert.match(toxicReview, /`evaluation-validate-set`/u);
   assert.match(toxicReview, /`stopping`.*`finalVoice`/su);
+  assert.match(toxicReview, /run-prepare/u);
+  assert.match(toxicReview, /role-input/u);
+  assert.match(toxicReview, /role-complete/u);
+  assert.match(toxicReview, /role-fail/u);
+  assert.match(toxicReview, /role-retry/u);
+  assert.match(toxicReview, /run-finalize/u);
+  assert.match(toxicReview, /hope:toxic-reviewer/u);
+  assert.match(toxicReview, /fresh subagent/u);
   assert.doesNotMatch(toxicReview, /one to six roles/u);
   assert.doesNotMatch(toxicReview, /partially-accepted/u);
   assert.doesNotMatch(toxicReview, /critical-path-ablation/u);
+  assert.match(reviewerAgent, /name: toxic-reviewer/u);
+  assert.match(reviewerAgent, /disallowedTools: Write, Edit/u);
+  assert.match(reviewerAgent, /prepared Hope Toxic Review role/u);
+  assert.doesNotMatch(reviewerAgent, /accepted|partially-accepted/u);
 });
 
 test("Align leaves normative rules in its runtime brief", async () => {

@@ -4,11 +4,17 @@
 import { takeOptions } from "../command-options/index.mjs";
 import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
+  completeToxicReviewRoleFile,
   createCausalCompletenessEvaluationPlanForActiveBrief,
   createCausalCompletenessEvaluationReceiptTemplateFromFile,
   createCausalCompletenessEvaluationRun,
   createToxicReviewBrief,
+  failToxicReviewRoleFile,
+  finalizeToxicReviewRunFile,
+  getToxicReviewRoleInputFile,
   getCausalCompletenessEvaluationOracle,
+  prepareToxicReviewRunFile,
+  retryToxicReviewRoleFile,
   runToxicReview,
   TOXIC_REVIEW_MODEL_ADAPTER_CODE,
   validateCausalCompletenessEvaluationReceiptFile,
@@ -20,10 +26,16 @@ function usage() {
   return [
     "Use the Hope toxic review feature.",
     "",
-    "The automatic AI path is provided by the Hope Toxic Review Skill.",
+    "Automatic AI work uses the Hope Skill or a configured harness model adapter.",
     "",
     "Internal Skill protocol:",
     "  hope toxic-review brief [--target <kind>] [--stage <stage>] [--risk <low|medium|high>]",
+    "  hope toxic-review run-prepare --input <plan.json>",
+    "  hope toxic-review role-input --state <run.json> --role <id>",
+    "  hope toxic-review role-complete --state <run.json> --input <role-result.json> --invocation <id>",
+    "  hope toxic-review role-fail --state <run.json> --role <id> --invocation <id> --code <code> --message <message> --retryable <true|false> [--status <failed|cancelled>]",
+    "  hope toxic-review role-retry --state <run.json> --role <id>",
+    "  hope toxic-review run-finalize --state <run.json> --input <adjudication.json>",
     "  hope toxic-review validate --input <review.json>",
     "  hope toxic-review evaluation-plan",
     "  hope toxic-review evaluation-prepare --case <id> --variant <legacy|rules-only|full> --run <number>",
@@ -51,6 +63,12 @@ function parseRunNumber(value) {
   return run;
 }
 
+function parseBoolean(value) {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new TypeError(usage());
+}
+
 export function parseToxicReviewArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
@@ -59,6 +77,12 @@ export function parseToxicReviewArguments(argv) {
   if (![
     "brief",
     "validate",
+    "run-prepare",
+    "role-input",
+    "role-complete",
+    "role-fail",
+    "role-retry",
+    "run-finalize",
     "evaluation-plan",
     "evaluation-prepare",
     "evaluation-oracle",
@@ -71,13 +95,19 @@ export function parseToxicReviewArguments(argv) {
   const { options, positionals } = takeOptions(rest, {
     allowed: [
       "case",
+      "code",
       "effort",
       "input",
       "invocation",
+      "message",
       "model",
+      "retryable",
       "risk",
+      "role",
       "run",
       "stage",
+      "state",
+      "status",
       "target",
       "variant",
     ],
@@ -137,6 +167,60 @@ export function parseToxicReviewArguments(argv) {
       variant: options.variant,
     };
   }
+  if (command === "run-prepare") {
+    requireCommandOptions(options, { required: ["input"] });
+    return { command, inputPath: options.input };
+  }
+  if (["role-input", "role-retry"].includes(command)) {
+    requireCommandOptions(options, { required: ["role", "state"] });
+    return {
+      command,
+      roleId: options.role,
+      statePath: options.state,
+    };
+  }
+  if (command === "role-complete") {
+    requireCommandOptions(options, {
+      required: ["input", "invocation", "state"],
+    });
+    return {
+      command,
+      hostInvocationId: options.invocation,
+      resultPath: options.input,
+      statePath: options.state,
+    };
+  }
+  if (command === "role-fail") {
+    requireCommandOptions(options, {
+      optional: ["status"],
+      required: [
+        "code",
+        "invocation",
+        "message",
+        "retryable",
+        "role",
+        "state",
+      ],
+    });
+    return {
+      command,
+      code: options.code,
+      hostInvocationId: options.invocation,
+      message: options.message,
+      retryable: parseBoolean(options.retryable),
+      roleId: options.role,
+      statePath: options.state,
+      status: options.status ?? "failed",
+    };
+  }
+  if (command === "run-finalize") {
+    requireCommandOptions(options, { required: ["input", "state"] });
+    return {
+      command,
+      decisionPath: options.input,
+      statePath: options.state,
+    };
+  }
   requireCommandOptions(options, { required: ["input"] });
   return { command, inputPath: options.input };
 }
@@ -150,12 +234,11 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     return;
   }
   if (options.command === "automatic") {
-    return await (dependencies.runToxicReview ?? runToxicReview)(
+    result = await (dependencies.runToxicReview ?? runToxicReview)(
       options.arguments,
       dependencies,
     );
-  }
-  if (options.command === "brief") {
+  } else if (options.command === "brief") {
     result = await (
       dependencies.createToxicReviewBrief ?? createToxicReviewBrief
     )(options, dependencies);
@@ -163,6 +246,33 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     result = await (
       dependencies.validateToxicReviewFile ?? validateToxicReviewFile
     )(options.inputPath, dependencies);
+  } else if (options.command === "run-prepare") {
+    result = await (
+      dependencies.prepareToxicReviewRunFile ?? prepareToxicReviewRunFile
+    )(options.inputPath, dependencies);
+  } else if (options.command === "role-input") {
+    result = await (
+      dependencies.getToxicReviewRoleInputFile
+        ?? getToxicReviewRoleInputFile
+    )(options.statePath, options.roleId, dependencies);
+  } else if (options.command === "role-complete") {
+    result = await (
+      dependencies.completeToxicReviewRoleFile
+        ?? completeToxicReviewRoleFile
+    )(options, dependencies);
+  } else if (options.command === "role-fail") {
+    result = await (
+      dependencies.failToxicReviewRoleFile ?? failToxicReviewRoleFile
+    )(options, dependencies);
+  } else if (options.command === "role-retry") {
+    result = await (
+      dependencies.retryToxicReviewRoleFile ?? retryToxicReviewRoleFile
+    )(options.statePath, options.roleId, dependencies);
+  } else if (options.command === "run-finalize") {
+    result = await (
+      dependencies.finalizeToxicReviewRunFile
+        ?? finalizeToxicReviewRunFile
+    )(options, dependencies);
   } else if (options.command === "evaluation-prepare") {
     result = await (
       dependencies.createCausalCompletenessEvaluationRun

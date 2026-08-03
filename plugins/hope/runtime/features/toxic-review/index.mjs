@@ -23,6 +23,22 @@ import {
   validateCausalCompletenessEvaluationReceiptSet,
 } from "./causal-evaluation.mjs";
 import { validateToxicReview } from "./validate.mjs";
+import {
+  loadToxicReviewModelAdapter,
+  requireToxicReviewModelAdapter,
+  TOXIC_REVIEW_MODEL_ADAPTER_CODE,
+  TOXIC_REVIEW_MODEL_ADAPTER_MESSAGE,
+} from "./model-adapter.mjs";
+import {
+  completeToxicReviewRole,
+  failToxicReviewRole,
+  finalizeToxicReviewRun,
+  getToxicReviewRoleInput,
+  prepareToxicReviewRun,
+  retryToxicReviewRole,
+  validateToxicReviewRunPlan,
+  validateToxicReviewRunState,
+} from "./role-run.mjs";
 
 export {
   causalCompletenessEvaluationCases,
@@ -38,10 +54,28 @@ export {
   validateCausalCompletenessEvaluationReceiptSet,
 } from "./causal-evaluation.mjs";
 
-export const TOXIC_REVIEW_MODEL_ADAPTER_CODE =
-  "HOPE_TOXIC_REVIEW_MODEL_ADAPTER_REQUIRED";
-export const TOXIC_REVIEW_MODEL_ADAPTER_MESSAGE =
-  "Automatic Hope toxic review currently runs through the Claude or Codex Skill.";
+export {
+  completeToxicReviewRole,
+  digestToxicReviewValue,
+  failToxicReviewRole,
+  finalizeToxicReviewRun,
+  getToxicReviewRoleInput,
+  prepareToxicReviewRun,
+  retryToxicReviewRole,
+  TOXIC_REVIEW_EXECUTION_MODES,
+  TOXIC_REVIEW_ROLE_RUN_VERSION,
+  TOXIC_REVIEW_ROLE_STATUSES,
+  validateToxicReviewRunPlan,
+  validateToxicReviewRunState,
+} from "./role-run.mjs";
+
+export {
+  loadToxicReviewModelAdapter,
+  requireToxicReviewModelAdapter,
+  TOXIC_REVIEW_MODEL_ADAPTER_CODE,
+  TOXIC_REVIEW_MODEL_ADAPTER_MESSAGE,
+  validateToxicReviewModelAdapter,
+} from "./model-adapter.mjs";
 
 const causalCompletenessDecisionExamples = Object.freeze([
   Object.freeze({
@@ -135,6 +169,45 @@ export async function createToxicReviewBrief({
     schemaPath: fileURLToPath(
       new URL("./review-v1.schema.json", import.meta.url),
     ),
+    roleRun: Object.freeze({
+      planSchemaPath: fileURLToPath(
+        new URL("./run-plan-v1.schema.json", import.meta.url),
+      ),
+      roleResultSchemaPath: fileURLToPath(
+        new URL("./role-result-v1.schema.json", import.meta.url),
+      ),
+      adjudicationSchemaPath: fileURLToPath(
+        new URL("./adjudication-v1.schema.json", import.meta.url),
+      ),
+      contract: Object.freeze([
+        "The host model chooses the smallest useful role set. The core validates, normalizes, and binds that choice to the target and snapshot.",
+        "Record why the roles are needed and the person's maximum role count before execution.",
+        "Every role keeps one stable binding digest across retries. Every attempt gets a new attempt ID and input digest.",
+        "Do not finalize until every selected role has one valid successful completion receipt.",
+      ]),
+      reviewer: Object.freeze([
+        "Review exactly one prepared role input. Do not widen its target, sources, exclusions, or claims.",
+        "Return one version 1 role result with the exact runId, roleId, attemptId, bindingDigest, and inputDigest from the prepared input.",
+        "Return findings and the conditional causalAnalysis only. Do not adjudicate, summarize the whole review, edit the target, or write the final response.",
+        "Use a fresh context for every role in a multi-role run. Do not read another role's input or output.",
+      ]),
+      completion: Object.freeze([
+        "The trusted host records succeeded, failed, or cancelled for every attempt and includes its invocation identity.",
+        "A failed or cancelled role may be retried only with the same target, role, sources, and brief binding.",
+        "Never turn an unstarted, failed, cancelled, stale, or mismatched role into an empty successful finding set.",
+        "The completed execution record keeps every attempt receipt in order, including failure or cancellation details and the successful output digest.",
+      ]),
+      independence: Object.freeze([
+        "One role uses single mode.",
+        "Multiple roles require parallel or isolated-sequential mode and a fresh context for every role.",
+        "Sequential scheduling in one shared context is not independent execution. Reduce to one role or stop when fresh contexts are unavailable.",
+      ]),
+      harnessAdapter: Object.freeze([
+        "A harness adapter exports capabilities plus plan, review, and adjudicate functions.",
+        "Set HOPE_TOXIC_REVIEW_ADAPTER_MODULE only to a trusted local module. The module runs with the harness process permissions.",
+        "The adapter must declare independentContexts and parallel capabilities. Hope rejects a plan that the adapter cannot execute honestly.",
+      ]),
+    }),
     snapshot: Object.freeze([
       "Capture only sources needed to answer the selected claims.",
       "Use a full Git object ID or a `sha256:` content digest for Git. Use a `sha256:` content digest for every other source.",
@@ -185,6 +258,109 @@ export async function validateToxicReviewFile(inputPath, dependencies = {}) {
     inputFileBytes: input.fileBytes,
     observedMetrics: dependencies.observedMetrics,
   });
+}
+
+async function readRoleRunFile(inputPath, label, dependencies = {}, {
+  maximumBytes = TOXIC_REVIEW_LIMITS.runStateBytes,
+} = {}) {
+  return await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label,
+    maximumBytes,
+  });
+}
+
+export async function prepareToxicReviewRunFile(inputPath, dependencies = {}) {
+  const input = await readRoleRunFile(
+    inputPath,
+    "Hope toxic review role-run plan",
+    dependencies,
+    { maximumBytes: TOXIC_REVIEW_LIMITS.inputBytes },
+  );
+  const plan = validateToxicReviewRunPlan(input.value);
+  const brief = await createToxicReviewBrief({
+    risk: plan.risk,
+    stage: plan.target.stage,
+    target: plan.target.kind,
+  }, dependencies);
+  return prepareToxicReviewRun(plan, { brief });
+}
+
+export async function getToxicReviewRoleInputFile(
+  statePath,
+  roleId,
+  dependencies = {},
+) {
+  const state = await readRoleRunFile(
+    statePath,
+    "Hope toxic review role-run state",
+    dependencies,
+  );
+  return getToxicReviewRoleInput(state.value, roleId);
+}
+
+export async function completeToxicReviewRoleFile({
+  hostInvocationId,
+  resultPath,
+  statePath,
+}, dependencies = {}) {
+  const [state, result] = await Promise.all([
+    readRoleRunFile(
+      statePath,
+      "Hope toxic review role-run state",
+      dependencies,
+    ),
+    readRoleRunFile(
+      resultPath,
+      "Hope toxic review role result",
+      dependencies,
+      { maximumBytes: TOXIC_REVIEW_LIMITS.inputBytes },
+    ),
+  ]);
+  return completeToxicReviewRole(state.value, result.value, {
+    hostInvocationId,
+  });
+}
+
+export async function failToxicReviewRoleFile(options, dependencies = {}) {
+  const state = await readRoleRunFile(
+    options.statePath,
+    "Hope toxic review role-run state",
+    dependencies,
+  );
+  return failToxicReviewRole(state.value, options);
+}
+
+export async function retryToxicReviewRoleFile(
+  statePath,
+  roleId,
+  dependencies = {},
+) {
+  const state = await readRoleRunFile(
+    statePath,
+    "Hope toxic review role-run state",
+    dependencies,
+  );
+  return retryToxicReviewRole(state.value, roleId);
+}
+
+export async function finalizeToxicReviewRunFile({
+  decisionPath,
+  statePath,
+}, dependencies = {}) {
+  const [state, decision] = await Promise.all([
+    readRoleRunFile(
+      statePath,
+      "Hope toxic review role-run state",
+      dependencies,
+    ),
+    readRoleRunFile(
+      decisionPath,
+      "Hope toxic review adjudication",
+      dependencies,
+      { maximumBytes: TOXIC_REVIEW_LIMITS.inputBytes },
+    ),
+  ]);
+  return finalizeToxicReviewRun(state.value, decision.value);
 }
 
 async function activeCausalEvaluationBrief(dependencies) {
@@ -256,8 +432,121 @@ export async function validateCausalCompletenessEvaluationReceiptSetFile(
   return validateCausalCompletenessEvaluationReceiptSet(input.value, { brief });
 }
 
-export function runToxicReview() {
-  const error = new Error(TOXIC_REVIEW_MODEL_ADAPTER_MESSAGE);
-  error.code = TOXIC_REVIEW_MODEL_ADAPTER_CODE;
-  throw error;
+function adapterCapabilityError(message) {
+  const error = new Error(`Hope toxic review cannot execute this plan: ${message}`);
+  error.code = "HOPE_TOXIC_REVIEW_ADAPTER_CAPABILITY_MISMATCH";
+  return error;
+}
+
+async function resolveModelAdapter(dependencies) {
+  if (dependencies.modelAdapter) {
+    return requireToxicReviewModelAdapter(dependencies.modelAdapter);
+  }
+  const loaded = await (dependencies.loadModelAdapter
+    ?? loadToxicReviewModelAdapter)({
+    cwd: dependencies.cwd,
+    environment: dependencies.environment,
+    importModule: dependencies.importModule,
+  });
+  return requireToxicReviewModelAdapter(loaded);
+}
+
+async function reviewPreparedRole(adapter, roleInput, run) {
+  try {
+    const response = await adapter.review(Object.freeze({
+      roleInput,
+      run: Object.freeze({
+        runId: run.runId,
+        runDigest: run.runDigest,
+        mode: run.execution.mode,
+      }),
+    }));
+    return Object.freeze({
+      ok: true,
+      roleId: roleInput.roleId,
+      hostInvocationId: response?.invocationId,
+      result: response?.result ?? response,
+    });
+  } catch (error) {
+    return Object.freeze({
+      ok: false,
+      roleId: roleInput.roleId,
+      hostInvocationId:
+        error.hostInvocationId ?? `adapter-error-${roleInput.attemptId}`,
+      error,
+    });
+  }
+}
+
+export async function runToxicReview(arguments_ = [], dependencies = {}) {
+  const adapter = await resolveModelAdapter(dependencies);
+  const planningBrief = await createToxicReviewBrief({}, dependencies);
+  const proposedPlan = await adapter.plan(Object.freeze({
+    request: Object.freeze([...arguments_]),
+    brief: planningBrief,
+    writingPass: dependencies.writingPass,
+  }));
+  const plan = validateToxicReviewRunPlan(proposedPlan);
+  const exactBrief = await createToxicReviewBrief({
+    risk: plan.risk,
+    stage: plan.target.stage,
+    target: plan.target.kind,
+  }, dependencies);
+  let run = prepareToxicReviewRun(plan, { brief: exactBrief });
+  const roleCount = run.selection.roles.length;
+  if (roleCount > 1 && !adapter.capabilities.independentContexts) {
+    throw adapterCapabilityError(
+      "multiple roles require an adapter that creates a fresh context for every role",
+    );
+  }
+  if (run.execution.mode === "parallel" && !adapter.capabilities.parallel) {
+    throw adapterCapabilityError(
+      "parallel mode requires an adapter that supports parallel calls",
+    );
+  }
+  const roleInputs = run.roleStates.map((role) =>
+    getToxicReviewRoleInput(run, role.roleId));
+  let executions;
+  if (run.execution.mode === "parallel") {
+    executions = await Promise.all(
+      roleInputs.map((roleInput) =>
+        reviewPreparedRole(adapter, roleInput, run)),
+    );
+  } else {
+    executions = [];
+    for (const roleInput of roleInputs) {
+      executions.push(await reviewPreparedRole(adapter, roleInput, run));
+    }
+  }
+  for (const execution of executions) {
+    if (execution.ok) {
+      run = completeToxicReviewRole(run, execution.result, {
+        hostInvocationId: execution.hostInvocationId,
+      });
+    } else {
+      run = failToxicReviewRole(run, {
+        roleId: execution.roleId,
+        status: execution.error.cancelled ? "cancelled" : "failed",
+        code: execution.error.code ?? "MODEL_ADAPTER_ERROR",
+        message: execution.error.message ?? "The model adapter failed.",
+        retryable: execution.error.retryable === true,
+        hostInvocationId: execution.hostInvocationId,
+      });
+    }
+  }
+  if (run.status !== "ready-for-adjudication") {
+    return Object.freeze({
+      feature: "toxic-review",
+      version: 1,
+      status: "incomplete",
+      run,
+    });
+  }
+  const adjudicated = await adapter.adjudicate(Object.freeze({
+    run,
+    roleResults: Object.freeze(run.roleStates.map(
+      (role) => role.attempts.at(-1).result,
+    )),
+  }));
+  return finalizeToxicReviewRun(run, adjudicated?.decision ?? adjudicated);
 }

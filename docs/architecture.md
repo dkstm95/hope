@@ -337,11 +337,14 @@ Polish uses the shared Write standard for language-bearing changes.
 The current toxic-review implementation starts from
 [toxic-review.md](toxic-review.md).
 
-The active host chooses a small set of target-specific review roles and may run
-them as independent subagents.
+The active host chooses a small set of target-specific review roles.
+
+The shared core validates that choice, binds every role to the exact target and
+source snapshot, and creates digest-bound execution attempts.
 
 The shared core owns the bounded role and finding contract, source binding,
-final adjudicated result, priority ordering, and deterministic resource metrics.
+attempt lifecycle, completion receipts, final adjudicated result, priority
+ordering, and deterministic resource metrics.
 
 Its brief also offers one optional causal-completeness perspective when a named
 work product makes or relies on a material causal claim.
@@ -359,7 +362,10 @@ the next-check shape.
 
 The Skill does not own or duplicate this record contract.
 
-The harness exposes the same brief and validator.
+The harness exposes the same brief, role-run transitions, and validator.
+
+Its replaceable Toxic Review model adapter uses the same prepared role inputs
+and finalization boundary as the Skills.
 
 The same core owns blinded causal-evaluation cases, brief variants, exact case
 and invocation bindings, and deterministic receipt validation.
@@ -371,9 +377,15 @@ The active Skill supplies the model execution and evaluator judgment.
 
 The deterministic tests do not claim that they ran a host model.
 
-It does not claim automatic multi-agent review without a model adapter.
+It does not claim automatic review without a configured model adapter.
 
-The Skill coordinates host agents but does not own review status or metric
+The Claude Code plugin ships a thin reviewer agent that consumes a prepared
+role input.
+
+The Codex Skill starts a fresh subagent dynamically because the current Codex
+plugin package does not distribute project or personal custom-agent files.
+
+Neither host adapter owns role status, retries, result validation, or metric
 derivation.
 
 ## Shared work snapshots

@@ -64,6 +64,79 @@ Do not copy the whole repository or conversation to every role.
 Parallel execution is useful for independent latency, but it does not count as a
 token saving.
 
+## Role-run lifecycle
+
+Toxic Review prepares every selected role through one shared role-run contract.
+
+The active host chooses the roles, while the shared core validates and binds
+that choice to the target and captured sources.
+
+The core does not choose roles with deterministic rules.
+
+A prepared run records:
+
+- the exact target and source snapshot;
+- why the selected roles are needed;
+- the person's maximum role count;
+- whether the run is single, parallel, or isolated-sequential;
+- one stable binding digest for every role; and
+- one attempt identity and input digest for every execution attempt.
+
+Each role receives only its assigned sources and the rules needed to produce
+findings.
+
+A causal-completeness role also receives the causal-analysis contract and
+returns its `causalAnalysis` with its findings.
+
+The role does not adjudicate findings or write the final response.
+
+Every attempt ends as `succeeded`, `failed`, or `cancelled`.
+
+A trusted host receipt records the host invocation identity and the exact output
+digest for a successful attempt.
+
+A failed or cancelled attempt records its error and may be retried without
+changing the role, target, or source binding.
+
+The retry gets a new attempt identity.
+
+The main reviewer may adjudicate only after every selected role has a valid
+successful receipt.
+
+An unstarted, failed, cancelled, stale, or mismatched role result cannot become
+an empty successful review.
+
+The final run result keeps the role selection reason, execution mode, binding
+digests, and the full ordered attempt history beside the validated review.
+
+Every attempt receipt keeps its input digest, status, and host invocation
+identity.
+
+Successful attempts also keep the output digest, while failed or cancelled
+attempts keep their error details.
+
+The private role plan, run state, role outputs, and adjudication input follow the
+same cleanup rule as the existing private review JSON.
+
+## Independent execution
+
+One role is the default when one focused pass covers the material risk.
+
+Multiple roles are valid only when they cover distinct material risks and the
+configured maximum role count allows them.
+
+Parallel and isolated-sequential execution both require a fresh context for
+each role.
+
+Scheduling roles one after another in the same context is not independent
+execution.
+
+When a host cannot provide fresh contexts, it must reduce the run to one role or
+stop before execution.
+
+The result shows the selection reason, role limit, execution mode, and actual
+completion state so the person can understand and limit fan-out.
+
 Useful perspectives can include:
 
 - problem selection;
@@ -404,7 +477,15 @@ A trusted host may supply them separately when it observed them.
 ## Two entry paths
 
 The Claude and Codex Skills use the active host session to choose roles,
-coordinate independent reviews, and adjudicate their findings.
+coordinate role runs, and adjudicate their findings.
+
+The Claude Code plugin ships one thin `toxic-reviewer` agent that executes an
+exact prepared role input.
+
+The Codex plugin cannot currently ship project or personal custom-agent files.
+
+Its Skill therefore starts a fresh Codex subagent with the same prepared role
+input instead of maintaining a second reviewer contract.
 
 It asks the generated runtime for the complete host workflow and validates the
 combined result before presenting one final voice.
@@ -412,9 +493,53 @@ combined result before presenting one final voice.
 Normative snapshot, role, finding, adjudication, stopping, and final-voice rules
 live in that runtime brief rather than in the Skill.
 
-The independent harness exposes the same feature as `hope toxic-review`.
+The independent harness exposes the same role-run commands as
+`hope toxic-review`.
 
-Its internal `brief` and `validate` commands reach the shared core.
+Its internal prepare, complete, fail, retry, finalize, `brief`, and `validate`
+commands reach the shared core.
 
-Automatic multi-agent review reports that the harness model adapter is
-unavailable until one exists.
+Automatic harness review uses a trusted local model-adapter module selected by
+`HOPE_TOXIC_REVIEW_ADAPTER_MODULE` or supplied by an embedding application.
+
+The feature-specific adapter plans the roles, starts a fresh model context for
+each role, and adjudicates the completed results.
+
+It reports the existing missing-adapter error when no adapter is configured.
+
+An adapter must declare whether it can create fresh independent contexts and
+whether it supports parallel calls.
+
+Hope rejects a multi-role plan when the adapter cannot satisfy its execution
+mode.
+
+The configured module exports this feature-specific shape:
+
+```js
+export default {
+  capabilities: {
+    independentContexts: true,
+    parallel: true,
+  },
+
+  async plan({ request, brief, writingPass }) {
+    return roleRunPlan;
+  },
+
+  async review({ roleInput, run }) {
+    return {
+      invocationId: "provider-invocation-id",
+      result: roleResult,
+    };
+  },
+
+  async adjudicate({ run, roleResults }) {
+    return adjudication;
+  },
+};
+```
+
+The adapter module is trusted local code and runs with the harness process
+permissions.
+
+Hope validates every value returned by the module.

@@ -17,6 +17,11 @@ import {
   makeToxicReview,
 } from "../test-support/toxic-review-fixture.mjs";
 import {
+  makeToxicReviewAdjudication,
+  makeToxicReviewRoleResult,
+  makeToxicReviewRunPlan,
+} from "../test-support/toxic-review-run-fixture.mjs";
+import {
   registerTestTemporaryDirectoryCleanup,
 } from "../test-support/temporary-directory.mjs";
 
@@ -33,9 +38,18 @@ function runJson(script, arguments_) {
 }
 
 function withoutSchemaPath(value) {
-  const { schemaPath, ...rest } = value;
+  const { schemaPath, roleRun, ...rest } = value;
   assert.ok(schemaPath);
-  return rest;
+  const {
+    adjudicationSchemaPath,
+    planSchemaPath,
+    roleResultSchemaPath,
+    ...portableRoleRun
+  } = roleRun;
+  assert.ok(adjudicationSchemaPath);
+  assert.ok(planSchemaPath);
+  assert.ok(roleResultSchemaPath);
+  return { ...rest, roleRun: portableRoleRun };
 }
 
 test("the harness parses and delegates Toxic Review", async () => {
@@ -72,8 +86,8 @@ test("core and generated Toxic Review reach the same brief and validator", async
     createToxicReviewBrief(options, dependencies),
     plugin.createToxicReviewBrief(options, dependencies),
   ]);
-  const { schemaPath: coreSchemaPath, ...coreContract } = coreBrief;
-  const { schemaPath: pluginSchemaPath, ...pluginContract } = pluginBrief;
+  const { schemaPath: coreSchemaPath } = coreBrief;
+  const { schemaPath: pluginSchemaPath } = pluginBrief;
   const schemaSuffix = join(
     "features",
     "toxic-review",
@@ -81,7 +95,10 @@ test("core and generated Toxic Review reach the same brief and validator", async
   );
   assert.ok(coreSchemaPath.endsWith(schemaSuffix));
   assert.ok(pluginSchemaPath.endsWith(schemaSuffix));
-  assert.deepEqual(pluginContract, coreContract);
+  assert.deepEqual(
+    withoutSchemaPath(pluginBrief),
+    withoutSchemaPath(coreBrief),
+  );
   assert.deepEqual(
     pluginValidator.validateToxicReview(makeToxicReview()),
     validateToxicReview(makeToxicReview()),
@@ -206,4 +223,80 @@ test("exact harness and generated Toxic Review commands stay equivalent", async 
     ["validate", "--input", input],
   );
   assert.deepEqual(pluginResult, harnessResult);
+});
+
+test("harness and generated plugin complete the same role-run transitions", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory("hope-toxic-role-run-");
+  const planPath = join(temporaryRoot, "plan.json");
+  const statePath = join(temporaryRoot, "state.json");
+  const resultPath = join(temporaryRoot, "role-result.json");
+  const decisionPath = join(temporaryRoot, "decision.json");
+  await writeFile(planPath, JSON.stringify(makeToxicReviewRunPlan()), {
+    mode: 0o600,
+  });
+  const harnessPrepared = runJson(
+    "harness/hope.mjs",
+    ["toxic-review", "run-prepare", "--input", planPath],
+  );
+  const pluginPrepared = runJson(
+    "plugins/hope/runtime/features/toxic-review/cli.mjs",
+    ["run-prepare", "--input", planPath],
+  );
+  assert.deepEqual(pluginPrepared, harnessPrepared);
+  await writeFile(statePath, JSON.stringify(harnessPrepared), { mode: 0o600 });
+
+  const roleArguments = [
+    "role-input",
+    "--state",
+    statePath,
+    "--role",
+    "role-1",
+  ];
+  const harnessRoleInput = runJson(
+    "harness/hope.mjs",
+    ["toxic-review", ...roleArguments],
+  );
+  assert.deepEqual(
+    runJson("plugins/hope/runtime/features/toxic-review/cli.mjs", roleArguments),
+    harnessRoleInput,
+  );
+  await writeFile(
+    resultPath,
+    JSON.stringify(makeToxicReviewRoleResult(harnessRoleInput)),
+    { mode: 0o600 },
+  );
+  const completeArguments = [
+    "role-complete",
+    "--state",
+    statePath,
+    "--input",
+    resultPath,
+    "--invocation",
+    "host-role-1",
+  ];
+  const harnessCompleted = runJson(
+    "harness/hope.mjs",
+    ["toxic-review", ...completeArguments],
+  );
+  assert.deepEqual(
+    runJson("plugins/hope/runtime/features/toxic-review/cli.mjs", completeArguments),
+    harnessCompleted,
+  );
+  await writeFile(statePath, JSON.stringify(harnessCompleted), { mode: 0o600 });
+  await writeFile(
+    decisionPath,
+    JSON.stringify(makeToxicReviewAdjudication(harnessCompleted)),
+    { mode: 0o600 },
+  );
+  const finalizeArguments = [
+    "run-finalize",
+    "--state",
+    statePath,
+    "--input",
+    decisionPath,
+  ];
+  assert.deepEqual(
+    runJson("plugins/hope/runtime/features/toxic-review/cli.mjs", finalizeArguments),
+    runJson("harness/hope.mjs", ["toxic-review", ...finalizeArguments]),
+  );
 });
