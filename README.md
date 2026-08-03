@@ -160,6 +160,15 @@ Toxic Review turns evidence-linked findings into one prioritized review.
 
 It is hard on the work, respectful toward people, and does not invent criticism.
 
+> [!NOTE]
+> Toxic Review uses one reviewer when a focused pass is enough and may run
+> multiple independent reviewers for distinct material risks.
+>
+> Multi-reviewer runs make a separate model call for each reviewer, so parallel
+> execution can reduce elapsed time but not token usage.
+>
+> Ask Hope to limit the reviewer count when you want a smaller run.
+
 > Example: “Review this database migration plan.”
 
 ---
