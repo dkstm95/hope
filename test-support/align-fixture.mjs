@@ -2,7 +2,7 @@ import { makeWorkSnapshot } from "./work-snapshot-fixture.mjs";
 
 export function makeAlignState(overrides = {}) {
   return {
-    version: 1,
+    version: 3,
     title: "Add a bounded alignment feature",
     taskRisk: "medium",
     ui: false,
@@ -141,8 +141,149 @@ export function makeAlignState(overrides = {}) {
       state: "ready-proposed",
       rationale: "No contract blocker remains; explicit approval is still required.",
     },
+    presentation: {
+      primaryAgreementIds: ["decision-1"],
+    },
+    preview: {
+      disposition: "not-required",
+      rationale: "This fixture does not change a user interface.",
+      changedAspects: ["none"],
+      screens: [],
+      frames: [],
+    },
     ...overrides,
   };
+}
+
+export function makeLegacyAlignState(overrides = {}) {
+  const {
+    presentation: _presentation,
+    preview: _preview,
+    ...state
+  } = makeAlignState(overrides);
+  return { ...state, version: 1 };
+}
+
+export function makePreviewV2AlignState(overrides = {}) {
+  const {
+    presentation: _presentation,
+    ...state
+  } = makeAlignPreviewState(overrides);
+  return { ...state, version: 2 };
+}
+
+export function makeAlignPreviewState(overrides = {}) {
+  const base = makeAlignState();
+  return makeAlignState({
+    ui: true,
+    perspectives: base.perspectives.map((perspective) => (
+      perspective.kind === "experience-design"
+        ? {
+          ...perspective,
+          state: "active",
+          reason: "The work changes layout and responsive behavior.",
+          items: [{
+            title: "Responsive preview",
+            detail: "Compare one screen at wide and narrow viewports.",
+          }],
+        }
+        : perspective
+    )),
+    preview: {
+      disposition: "provided",
+      rationale: "Alignment mockup only; this is not the implementation.",
+      changedAspects: ["layout", "visual-hierarchy", "screen-state"],
+      screens: [{
+        id: "screen-alignment",
+        label: "Alignment approval screen",
+        scenarioId: "scenario-1",
+        state: "Awaiting approval",
+        root: {
+          id: "screen-root",
+          type: "group",
+          label: "Approval content",
+          layout: "stack",
+          children: [
+            { id: "screen-status", type: "status", text: "Awaiting approval" },
+            { id: "screen-title", type: "heading", level: 1, text: "Align the work" },
+            { id: "screen-goal", type: "text", text: "Confirm the goal and next action." },
+            { id: "screen-action", type: "action", text: "Approve or revise this understanding" },
+            {
+              id: "screen-details",
+              type: "group",
+              label: "Scope and decisions",
+              layout: "row",
+              children: [
+                {
+                  id: "screen-scope",
+                  type: "list",
+                  label: "Scope",
+                  items: ["Decision-centered flow", "Static UI preview"],
+                },
+                {
+                  id: "screen-decisions",
+                  type: "list",
+                  label: "Decisions",
+                  items: ["Show status once", "Keep the same reading order"],
+                },
+              ],
+            },
+            {
+              id: "screen-supporting",
+              type: "group",
+              label: "Supporting content",
+              layout: "row",
+              children: [
+                {
+                  id: "screen-evidence",
+                  type: "list",
+                  label: "Evidence",
+                  items: [
+                    "Repository architecture source: docs/architecture.md",
+                  ],
+                },
+                {
+                  id: "screen-uncertainty",
+                  type: "list",
+                  label: "Remaining uncertainty",
+                  items: [
+                    "Confirm long source labels and uncertainty at narrow widths.",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        annotations: [
+          {
+            id: "annotation-action",
+            nodeId: "screen-action",
+            text: "The next action uses the strongest boundary.",
+          },
+          {
+            id: "annotation-supporting",
+            nodeId: "screen-supporting",
+            text: "Dense supporting content stays readable in both viewports.",
+          },
+        ],
+      }],
+      frames: [
+        {
+          id: "frame-wide",
+          label: "Desktop",
+          viewport: "wide",
+          screenId: "screen-alignment",
+        },
+        {
+          id: "frame-narrow",
+          label: "Mobile",
+          viewport: "narrow",
+          screenId: "screen-alignment",
+        },
+      ],
+    },
+    ...overrides,
+  });
 }
 
 export function makeAlignApproval() {

@@ -125,6 +125,8 @@ export const generatedPluginFiles = Object.freeze([
     "index.mjs",
     "render.mjs",
     "session-v1.schema.json",
+    "session-v2.schema.json",
+    "session-v3.schema.json",
     "validate.mjs",
   ].map((name) => generatedText(
     `features/align/${name}`,

@@ -8,7 +8,9 @@ import { renderAlignSession } from "../features/align/render.mjs";
 import { validateAlignState } from "../features/align/validate.mjs";
 import {
   makeAlignApproval,
-  makeAlignState,
+  makeAlignPreviewState,
+  makeLegacyAlignState,
+  makePreviewV2AlignState,
 } from "../test-support/align-fixture.mjs";
 
 let artifactDirectory;
@@ -24,7 +26,7 @@ test.beforeAll(async () => {
     artifactUrls[name] = pathToFileURL(artifactPath).href;
   };
 
-  const approved = makeAlignState({
+  const approved = makeAlignPreviewState({
     locale: "ko-KR",
     theme: "dark",
     title: "구현 전에 사람과 AI의 이해를 맞춥니다",
@@ -34,20 +36,17 @@ test.beforeAll(async () => {
     },
   });
   approved.understanding.goal =
-    "중요한 오해를 구현 뒤가 아니라 구현 전에 찾고, 긴 내용도 화면에서 편하게 읽을 수 있게 합니다.";
-  approved.records.facts[0].text =
-    "저장소에서 확인한 사실과 사용자 결정, AI 제안은 서로 다른 그룹으로 보입니다.";
+    "중요한 오해를 구현 전에 찾고, 긴 내용도 한 방향으로 편하게 읽습니다.";
   await renderArtifact("approved", approved, {
     approval: makeAlignApproval(),
   });
 
-  const ready = makeAlignState({
+  await renderArtifact("ready", makeAlignPreviewState({
     locale: "ko-KR",
     theme: "dark",
-  });
-  await renderArtifact("ready", ready);
+  }));
 
-  const blocked = makeAlignState({
+  const blocked = makeAlignPreviewState({
     locale: "ko-KR",
     theme: "dark",
     readiness: {
@@ -58,15 +57,38 @@ test.beforeAll(async () => {
   blocked.understanding.success = [];
   await renderArtifact("blocked", blocked);
 
-  const longContent = makeAlignState({
+  const longContent = makeAlignPreviewState({
     locale: "ko-KR",
     theme: "dark",
   });
   longContent.understanding.goal =
     `https://example.com/${"unbroken-path-segment".repeat(80)}`;
-  longContent.snapshot.sources[0].label =
-    `conversation-${"long-identifier".repeat(80)}`;
   await renderArtifact("long-content", longContent);
+
+  await renderArtifact("legacy-v1", makeLegacyAlignState({
+    locale: "ko-KR",
+    theme: "dark",
+  }));
+  await renderArtifact("preview-v2", makePreviewV2AlignState({
+    locale: "ko-KR",
+    theme: "dark",
+  }));
+
+  const agreementStates = makeAlignPreviewState({
+    locale: "ko-KR",
+    theme: "dark",
+    readiness: {
+      state: "interviewing",
+      rationale: "결정할 제안이 남아 있습니다.",
+    },
+  });
+  agreementStates.records.proposals.push({
+    id: "proposal-open",
+    text: "미결 제안은 합의와 분리해 보여 줍니다.",
+    rationale: "결정되지 않은 상태를 숨기지 않습니다.",
+    status: "open",
+  });
+  await renderArtifact("agreement-states", agreementStates);
 });
 
 test.afterAll(async () => {
@@ -86,159 +108,165 @@ async function expectNoOverflow(page) {
   expect(overflow.rootScroll).toBeLessThanOrEqual(overflow.rootClient);
 }
 
-test("alignment stays readable and offline on desktop and mobile", async ({ page }) => {
+test("alignment shows one decision path and embeds controlled previews", async ({ page }) => {
   const remoteRequests = [];
   page.on("request", (request) => {
     if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(artifactUrls.approved);
+
   await expect(page.locator("h1")).toHaveText(
     "구현 전에 사람과 AI의 이해를 맞춥니다",
   );
-  await expect(page.locator(".phase-badge")).toHaveText("사용자 승인 완료");
-  await expect(page.locator('.phase-step[aria-current="step"]')).toContainText(
-    "시작 준비",
-  );
-  await expect(page.locator(".goal-card")).toContainText(
-    "중요한 오해를 구현 뒤가 아니라 구현 전에 찾고",
-  );
-  await expect(page.locator(".next-card")).toContainText(
+  await expect(page.locator("#overview .status")).toHaveText("사용자 승인 완료");
+  await expect(page.locator(".status")).toHaveCount(1);
+  await expect(page.locator("#overview .goal")).toContainText("중요한 오해를 구현 전에 찾고");
+  await expect(page.locator("#overview .next-action")).toContainText(
     "이 이해를 바탕으로 작업을 시작할 수 있습니다",
   );
-  await expect(page.locator("#records .record-primary .eyebrow")).toHaveText(
-    "사용자 결정",
+  await expect(page.locator("#overview .overview-agreements")).toContainText(
+    "The person approved implementation.",
   );
-  await expect(page.locator("#records h3 > span:first-child")).toHaveText([
-    "AI 제안",
-    "저장소에서 확인한 사실",
-  ]);
-  await expect(page.locator("#records .decision-clear")).toBeVisible();
-  expect(await page.locator("#records .record-disclosure").evaluateAll(
-    (items) => items.every((item) => !item.hasAttribute("open")),
-  )).toBe(true);
-  await expect(page.locator("#perspectives")).not.toHaveAttribute("open", "");
-  await expect(page.locator("#history")).not.toHaveAttribute("open", "");
-  await expect(page.locator("#sources")).not.toHaveAttribute("open", "");
-  await expect(page.locator(".toc-desktop")).toBeVisible();
+  const overviewBox = await page.locator("#overview").boundingBox();
+  expect(overviewBox.y + overviewBox.height).toBeLessThanOrEqual(900);
+
+  await expect(page.locator(".preview-desktop")).toBeVisible();
+  await expect(page.locator(".preview-mobile")).toBeHidden();
+  await expect(page.locator(".preview-desktop .preview-frame-wide")).toBeVisible();
+  await expect(page.locator(".preview-desktop .preview-frame-narrow")).toBeVisible();
+  await expect(page.locator(".preview-desktop .preview-frame-wide .preview-action")).toHaveText(
+    "Approve or revise this understanding",
+  );
+  await expect(page.locator(".preview-desktop .preview-frame-narrow .preview-action")).toHaveText(
+    "Approve or revise this understanding",
+  );
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await expect(page.locator(".preview-canvas").first()).toHaveAttribute(
+    "aria-hidden",
+    "true",
+  );
+  await expect(page.locator(".preview-desktop")).toContainText(
+    "Repository architecture source: docs/architecture.md",
+  );
+  await expect(page.locator(".preview-description")).toContainText("텍스트로 보기");
+  await expect(page.locator(".agreement-detail")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".additional-agreements")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".evidence-group")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".assumption-group")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".uncertainty-group")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".work-item")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".agreement-detail > summary").first()).toHaveAccessibleName(
+    /사용자 결정.*The person approved implementation\./u,
+  );
+  expect(
+    await page.locator(".agreement-detail > summary").first().ariaSnapshot(),
+  ).not.toContain("›");
+
+  await expect(page.locator("#perspectives,#history,#sources,#metrics")).toHaveCount(0);
+  await expect(page.getByText("위험도", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("기준 시각", { exact: true })).toHaveCount(0);
+  await expect(page.locator("code")).toHaveCount(0);
+
+  await expect(page.locator(".toc")).toBeVisible();
   await expect(page.locator(".toc-mobile")).toBeHidden();
+  await expect(page.locator(".toc ol a")).toHaveText([
+    "범위와 성공 조건",
+    "예상 동작",
+    "시각적 미리보기",
+    "합의된 이해",
+    "검증 가능한 작업 단위",
+  ]);
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.locator("body")).toHaveCSS("color-scheme", "dark");
+  await expect(page.locator('[data-theme-icon="light"]')).toBeVisible();
   await page.locator("#theme-toggle").click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await expect(page.locator("body")).toHaveCSS("color-scheme", "light");
-  await expect(page.locator(".toc-desktop ol a")).toHaveText([
-    "범위",
-    "예상 동작",
-    "현재 공유된 이해",
-    "가정과 불확실성",
-    "검증 가능한 작업 단위",
-    "설계 관점",
-    "변경 이력, 근거 출처와 사용량",
-  ]);
-  await expectNoOverflow(page);
-
-  await page.setViewportSize({ width: 375, height: 812 });
-  expect(await page.locator(".overview-grid").evaluate(
-    (element) => getComputedStyle(element).gridTemplateColumns.split(/\s+/u),
-  )).toHaveLength(1);
-  expect(await page.locator(".record-secondary").evaluate(
-    (element) => getComputedStyle(element).gridTemplateColumns.split(/\s+/u),
-  )).toHaveLength(1);
-  await expect(page.locator(".toc-desktop")).toBeHidden();
-  await expect(page.locator(".toc-mobile")).toBeVisible();
-  await expect(page.locator(".toc-mobile > summary")).toHaveCSS(
-    "height",
-    "44px",
+  await expect(page.locator('[data-theme-icon="dark"]')).toBeVisible();
+  await page.locator('.toc a[href="#work"]').click();
+  await expect(page.locator('.toc a[href="#work"]')).toHaveAttribute(
+    "aria-current",
+    "location",
   );
-  const sectionTargetHeights = await page.locator(
-    "details.section > summary",
-  ).evaluateAll((summaries) => summaries.map(
-    (summary) => summary.getBoundingClientRect().height,
-  ));
-  expect(sectionTargetHeights.every((height) => height >= 44)).toBe(true);
-  await page.locator("#history > summary").click();
-  await page.locator("#sources > summary").click();
-  const nestedTargetHeights = await page.locator(
-    "#records .record-disclosure > summary,"
-      + "#history .audit-disclosure > summary,"
-      + "#sources .source > summary",
-  ).evaluateAll((summaries) => summaries
-    .filter((summary) => summary.getBoundingClientRect().height > 0)
-    .map((summary) => summary.getBoundingClientRect().height));
-  expect(nestedTargetHeights.length).toBeGreaterThan(0);
-  expect(nestedTargetHeights.every((height) => height >= 44)).toBe(true);
   await expectNoOverflow(page);
   expect(remoteRequests).toEqual([]);
 });
 
-test("alignment has one heading path and visible keyboard focus", async ({ page }) => {
+test("alignment keeps the same order without horizontal overflow on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(artifactUrls.approved);
-  await expect(page.locator("h1")).toHaveCount(1);
-  const headingLevels = await page.locator("h1,h2,h3").evaluateAll(
-    (headings) => headings.map((heading) => Number(heading.tagName.slice(1))),
-  );
-  expect(headingLevels[0]).toBe(1);
-  expect(headingLevels.includes(2)).toBe(true);
-  for (let index = 1; index < headingLevels.length; index += 1) {
-    expect(headingLevels[index]).toBeLessThanOrEqual(headingLevels[index - 1] + 1);
-  }
+  await expect(page.locator(".toc")).toBeHidden();
+  await expect(page.locator(".toc-mobile")).toBeVisible();
+  await expect(page.locator(".toc-mobile > summary")).toHaveCSS("min-height", "44px");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  const overviewBox = await page.locator("#overview").boundingBox();
+  expect(overviewBox.y + overviewBox.height).toBeLessThanOrEqual(812);
+
   await page.keyboard.press("Tab");
   await expect(page.locator(".skip")).toBeFocused();
   await expect(page.locator(".skip")).toBeVisible();
 
+  await expect(page.locator(".preview-desktop")).toBeHidden();
+  await expect(page.locator(".preview-mobile")).toBeVisible();
+  await expect(page.locator(".preview-mobile > .preview-frame-narrow")).toBeVisible();
+  await expect(page.locator(".preview-other")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".preview-other .preview-frame-wide")).toBeHidden();
+  await page.locator(".preview-other > summary").click();
+  await expect(page.locator(".preview-other .preview-frame-wide")).toBeVisible();
+  await expectNoOverflow(page);
+
   await page.locator(".toc-mobile > summary").focus();
   await page.keyboard.press("Enter");
-  await page.locator('.toc-mobile-panel a[href="#scope"]').focus();
+  await page.locator('.toc-mobile-panel a[href="#preview"]').focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".toc-mobile")).not.toHaveAttribute("open", "");
-  await expect(page.locator("#scope")).toBeFocused();
-
-  await page.goto(`${artifactUrls.approved}#source-repository-1`);
-  await expect(page.locator("#history")).toHaveAttribute("open", "");
-  await expect(page.locator("#sources")).toHaveAttribute("open", "");
-  await expect(page.locator("#source-repository-1")).toHaveAttribute("open", "");
 });
 
-test("first-screen actions follow interviewing, approval, and approved states", async ({
-  page,
-}) => {
+test("first-screen action follows interviewing, approval, and approved states", async ({ page }) => {
   await page.goto(artifactUrls.blocked);
-  await expect(page.locator("#overview .next-card h3")).toHaveText(
+  await expect(page.locator("#overview .next-action h2")).toHaveText(
     "측정 가능한 성공 조건을 추가하세요",
   );
-  await expect(page.locator("#overview .next-link")).toHaveAttribute(
-    "href",
-    "#scope",
-  );
-  await expect(page.locator("#overview .metric-grid")).toHaveCount(0);
+  await expect(page.locator("#overview .next-action a")).toHaveAttribute("href", "#scope");
 
   await page.goto(artifactUrls.ready);
-  await expect(page.locator("#overview .next-card h3")).toHaveText(
+  await expect(page.locator("#overview .next-action h2")).toHaveText(
     "공유된 이해를 확인하고 승인하세요",
   );
-  await expect(page.locator("#overview .next-link")).toHaveAttribute(
-    "href",
-    "#records",
-  );
-  await expect(page.locator("#records .decision-clear")).toContainText(
-    "기록된 결정을 확인한 뒤 이 이해를 승인하거나 수정하세요.",
-  );
+  await expect(page.locator("#overview .next-action > a")).toHaveAttribute("href", "#agreement");
 
   await page.goto(artifactUrls.approved);
-  await expect(page.locator("#overview .next-link")).toHaveAttribute(
-    "href",
-    "#slices",
-  );
-  await expect(page.locator("#records .decision-clear")).toContainText(
-    "승인이 기록되었습니다. 이 결정을 구현 계약으로 사용하세요.",
-  );
+  await expect(page.locator("#overview .next-action > a")).toHaveAttribute("href", "#work");
+
+  await page.goto(`${artifactUrls.ready}#fact-fact-1`);
+  await expect(page.locator(".evidence-group")).toHaveAttribute("open", "");
+  await expect(page.locator("#fact-fact-1")).toBeFocused();
+  await expect.poll(async () => page.locator("#fact-fact-1").evaluate(
+    (node) => node.getBoundingClientRect().top,
+  )).toBeGreaterThanOrEqual(64);
 });
 
-test("long authored text reflows at narrow and enlarged text sizes", async ({
-  page,
-}) => {
+test("alignment preserves version fallbacks and separates unresolved proposals", async ({ page }) => {
+  await page.goto(artifactUrls["legacy-v1"]);
+  await expect(page.locator(".agreement-list-primary .agreement-detail")).toHaveCount(2);
+  await expect(page.locator(".additional-agreements")).toHaveCount(0);
+  await expect(page.locator(".preview-screen-group")).toHaveCount(0);
+
+  await page.goto(artifactUrls["preview-v2"]);
+  await expect(page.locator(".agreement-list-primary .agreement-detail")).toHaveCount(2);
+  await expect(page.locator(".additional-agreements")).toHaveCount(0);
+  await expect(page.locator(".preview-screen-group")).toHaveCount(1);
+
+  await page.goto(artifactUrls["agreement-states"]);
+  await expect(page.locator(".agreement-list-primary .agreement-detail")).toHaveCount(1);
+  await expect(page.locator(".additional-agreements")).toContainText("AI 제안 · 수락");
+  await expect(page.locator(".unresolved-proposals")).toContainText("AI 제안 · 열림");
+  await expect(page.locator(".unresolved-proposals")).toContainText(
+    "미결 제안은 합의와 분리해 보여 줍니다.",
+  );
+  await expect(page.locator(".unresolved-proposals details")).toHaveCount(0);
+});
+
+test("long text reflows at narrow and enlarged text sizes", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto(artifactUrls["long-content"]);
   await expectNoOverflow(page);
@@ -254,30 +282,53 @@ test("long authored text reflows at narrow and enlarged text sizes", async ({
     text: "body{font-size:32px!important}",
   });
   await expectNoOverflow(page);
+  const enlarged = await page.evaluate(() => {
+    const contents = document.querySelector(".toc-mobile > summary");
+    const goal = document.querySelector("#overview .goal");
+    const header = document.querySelector(".topbar").getBoundingClientRect();
+    const layout = document.querySelector(".layout").getBoundingClientRect();
+    return {
+      contentsClientHeight: contents.clientHeight,
+      contentsScrollHeight: contents.scrollHeight,
+      goalFontSize: Number.parseFloat(getComputedStyle(goal).fontSize),
+      headerBottom: header.bottom,
+      layoutTop: layout.top,
+    };
+  });
+  expect(enlarged.contentsClientHeight).toBeGreaterThanOrEqual(
+    enlarged.contentsScrollHeight,
+  );
+  expect(enlarged.goalFontSize).toBeGreaterThanOrEqual(32);
+  expect(enlarged.layoutTop).toBeGreaterThanOrEqual(enlarged.headerBottom);
+  await page.locator(".toc-mobile > summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".toc-mobile")).toHaveAttribute("open", "");
 });
 
-test("native disclosures remain useful without JavaScript", async ({ browser }) => {
+test("native disclosures work without JavaScript and print keeps content", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
-  await page.setViewportSize({ width: 320, height: 800 });
+  await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(artifactUrls.approved);
-  await expect(page.locator("#history")).not.toHaveAttribute("open", "");
-  await page.locator("#history > summary").click();
-  await expect(page.locator("#history")).toHaveAttribute("open", "");
-  await page.locator("#sources > summary").click();
-  await expect(page.locator("#sources")).toHaveAttribute("open", "");
-  await page.locator("#source-repository-1 > summary").click();
-  await expect(page.locator("#source-repository-1 .source-content")).toBeVisible();
-  await context.close();
-});
-
-test("print reveals content inside every disclosure", async ({ page }) => {
-  await page.goto(artifactUrls.approved);
+  await expect(page.locator("#theme-toggle")).toBeHidden();
+  await expect(page.locator(".preview-mobile > .preview-frame-narrow")).toBeVisible();
+  await expect(page.locator(".preview-other .preview-frame-wide")).toBeHidden();
+  await page.locator(".preview-other > summary").click();
+  await expect(page.locator(".preview-other .preview-frame-wide")).toBeVisible();
+  await page.locator(".preview-description > summary").click();
+  await expect(page.locator(".preview-description ol")).toBeVisible();
+  await page.locator(".work-item > summary").click();
+  await expect(page.locator(".work-item .disclosure-content")).toBeVisible();
+  await page.locator(".work-item > summary").click();
   await page.emulateMedia({ media: "print" });
-  await expect(page.locator("#history .metric-grid")).toBeVisible();
-  await expect(
-    page.locator("#source-repository-1 .source-content"),
-  ).toBeVisible();
-  await expect(page.locator("#records .record-disclosure-content").first())
-    .toBeVisible();
+  await expect(page.locator(".work-item .disclosure-content")).toBeVisible();
+  await expect(page.locator(".evidence-group .disclosure-content")).toBeVisible();
+  await expect(page.locator(".preview-desktop")).toBeVisible();
+  await expect(page.locator(".preview-mobile")).toBeHidden();
+  await page.emulateMedia({ media: "screen" });
+  await page.goto(`${artifactUrls.approved}#scope`);
+  await expect.poll(async () => page.locator("#scope").evaluate(
+    (node) => node.getBoundingClientRect().top,
+  )).toBeGreaterThanOrEqual(64);
+  await context.close();
 });

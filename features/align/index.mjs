@@ -61,7 +61,7 @@ export async function createAlignBrief({
     locale: settings.locale,
     theme: settings.theme,
     schemaPath: fileURLToPath(
-      new URL("./session-v1.schema.json", import.meta.url),
+      new URL("./session-v3.schema.json", import.meta.url),
     ),
     perspectives: ALIGN_PERSPECTIVES,
     activation: Object.freeze({
@@ -88,9 +88,12 @@ export async function createAlignBrief({
       "Propose readiness only when the runtime reports no blocker. Wait for explicit user approval before implementation.",
     ]),
     state: Object.freeze([
-      "Keep one private version 1 state that follows schemaPath and update it instead of replaying the conversation.",
+      "Keep one private version 3 state that follows schemaPath and update it instead of replaying the conversation.",
       "Keep repository facts, user decisions with source IDs, AI proposals, open questions, assumptions, and uncertainty distinct.",
       "Record why every perspective is active or skipped. Do not activate one only to fill the schema.",
+      "For UI work, record the changed aspects and preview disposition. Layout, hierarchy, placement, flow, and screen-state changes require provided wide and narrow frames from one canonical screen tree.",
+      "Choose up to three primary agreement IDs for the first reading path. Open proposals remain visible even when they are not selected.",
+      "Use not-required only for non-UI or copy-only work and record the reason.",
       "Validate after several related decisions are settled. A successful validation does not prove perfect understanding.",
     ]),
     polishing: Object.freeze([

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/align/session-v3.schema.json",
+  "title": "Hope align session version 3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "title",
+    "taskRisk",
+    "ui",
+    "revision",
+    "interviewRounds",
+    "locale",
+    "theme",
+    "snapshot",
+    "understanding",
+    "records",
+    "assumptions",
+    "uncertainties",
+    "perspectives",
+    "slices",
+    "changes",
+    "readiness",
+    "presentation",
+    "preview"
+  ],
+  "properties": {
+    "version": { "const": 3 },
+    "title": { "$ref": "session-v1.schema.json#/$defs/text" },
+    "taskRisk": { "$ref": "session-v1.schema.json#/properties/taskRisk" },
+    "ui": { "$ref": "session-v1.schema.json#/properties/ui" },
+    "revision": { "$ref": "session-v1.schema.json#/properties/revision" },
+    "interviewRounds": { "$ref": "session-v1.schema.json#/properties/interviewRounds" },
+    "locale": { "$ref": "session-v1.schema.json#/properties/locale" },
+    "theme": { "$ref": "session-v1.schema.json#/properties/theme" },
+    "snapshot": { "$ref": "session-v1.schema.json#/$defs/snapshot" },
+    "understanding": { "$ref": "session-v1.schema.json#/properties/understanding" },
+    "records": { "$ref": "session-v1.schema.json#/properties/records" },
+    "assumptions": { "$ref": "session-v1.schema.json#/properties/assumptions" },
+    "uncertainties": { "$ref": "session-v1.schema.json#/properties/uncertainties" },
+    "perspectives": { "$ref": "session-v1.schema.json#/properties/perspectives" },
+    "slices": { "$ref": "session-v1.schema.json#/properties/slices" },
+    "changes": { "$ref": "session-v1.schema.json#/properties/changes" },
+    "readiness": { "$ref": "session-v1.schema.json#/properties/readiness" },
+    "polish": { "$ref": "session-v1.schema.json#/properties/polish" },
+    "preview": { "$ref": "session-v2.schema.json#/$defs/preview" },
+    "presentation": { "$ref": "#/$defs/presentation" }
+  },
+  "$defs": {
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primaryAgreementIds"],
+      "properties": {
+        "primaryAgreementIds": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "$ref": "session-v1.schema.json#/$defs/id" }
+        }
+      }
+    }
+  }
+}

@@ -78,6 +78,56 @@ update itself.
 A complex drawer is allowed only after its focus, keyboard, scroll, and deep
 link behavior is tested.
 
+### Align artifacts
+
+Align uses one decision-centered reading path.
+
+Show status once beside the artifact title.
+
+Put the goal and next action in the same first-screen flow without nesting
+complete bordered cards.
+
+Use quiet section dividers for scope, expected behavior, preview, agreement,
+uncertainty, and verifiable work.
+
+Reserve a stronger boundary for the next action, an unanswered question, and
+each preview viewport.
+
+Wide and narrow preview frames must use the same canonical content and state.
+
+The viewport changes layout only.
+
+Keep the same semantic order and label every intentional difference.
+
+Use the same theme icons, current-section contents marker, disclosure arrow,
+deep-link reveal behavior, and print expansion as Diff.
+
+Keep decorative disclosure arrows out of accessible names.
+
+Offset fragment destinations below the sticky header and verify the final
+focused position.
+
+Keep Align disclosures to one level.
+
+A disclosure summary carries the decision, group count, or user-visible work
+change needed to decide whether to open it.
+
+Do not use a generic **Details** label when the summary can name its content.
+
+On narrow screens, show the narrow preview first and collapse the duplicate
+wide preview.
+
+Do not make a preview look simple by removing content that the final artifact
+must show.
+
+The representative preview fixture includes decisions, evidence, material
+uncertainty, and verifiable work.
+
+Responsive visual copies do not create duplicate document headings.
+
+One canonical text representation carries the preview meaning for assistive
+technology.
+
 ## Type
 
 Use three clear roles.
@@ -113,6 +163,8 @@ Start with this compact scale and adjust it only through named tokens:
 Keep prose near 60–80 characters per line.
 
 Long paths and code may scroll inside their own region.
+
+Text-bearing controls use a minimum height and grow when text is enlarged.
 
 They must not create page-level horizontal scrolling.
 
