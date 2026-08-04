@@ -1,6 +1,6 @@
 ---
 name: settings
-description: Show, set, or reset the global Hope language and theme preferences shared by the harness and plugin. Use when someone invokes $hope:settings in Codex, /hope:settings in Claude Code, or asks to change Hope's default language or light, dark, or system theme.
+description: Use to show, set, or reset Hope's language or theme.
 ---
 
 # Hope settings

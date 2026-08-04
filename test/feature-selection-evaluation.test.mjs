@@ -87,10 +87,10 @@ function attestedReceiptFor(specification) {
 
 test("feature selection covers every decision in 13 unique paired cases", () => {
   const plan = createHopeFeatureSelectionEvaluationPlan();
-  assert.equal(plan.contractVersion, 2);
-  assert.equal(plan.version, 3);
-  assert.equal(HOPE_FEATURE_SELECTION_CONTRACT_VERSION, 2);
-  assert.equal(HOPE_FEATURE_SELECTION_EVALUATION_VERSION, 3);
+  assert.equal(plan.contractVersion, 3);
+  assert.equal(plan.version, 4);
+  assert.equal(HOPE_FEATURE_SELECTION_CONTRACT_VERSION, 3);
+  assert.equal(HOPE_FEATURE_SELECTION_EVALUATION_VERSION, 4);
   assert.equal(plan.totalRuns, 26);
   assert.equal(plan.runs.filter((run) => run.variant === "minimal").length, 13);
   assert.equal(plan.runs.filter((run) => run.variant === "full").length, 13);
@@ -102,15 +102,18 @@ test("feature selection covers every decision in 13 unique paired cases", () => 
   assert.deepEqual([...decisions].sort(), [...HOPE_FEATURE_SELECTION_DECISIONS].sort());
 });
 
-test("published Skills retain the full descriptions pending trusted evidence", async () => {
-  const contract = createHopeFeatureSelectionContract({ variant: "full" });
+test("published Skills use the evaluated minimal descriptions", async () => {
+  const contract = createHopeFeatureSelectionContract({ variant: "minimal" });
   for (const feature of contract.features) {
     const skill = await readFile(
       resolve(root, "plugins", "hope", "skills", feature.id, "SKILL.md"),
       "utf8",
     );
     const description = skill.match(/^description: (.+)$/mu)?.[1];
-    assert.equal(description, hopeFeatureSelectionDescriptions.full[feature.id]);
+    assert.equal(
+      description,
+      hopeFeatureSelectionDescriptions.minimal[feature.id],
+    );
   }
 });
 

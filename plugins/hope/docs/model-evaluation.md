@@ -229,7 +229,7 @@ Create and validate bounded receipts with the matching
 `feature-selection-receipt`, `feature-selection-validate`, and
 `feature-selection-validate-set` commands.
 
-Version 3 keeps the 26-run matrix and adds the shared evidence boundary.
+Version 3 kept the 26-run matrix and added the shared evidence boundary.
 
 A release-eligible complete set requires every planned run, one declared host,
 model, and effort, a unique invocation identity for every run, valid host
@@ -238,7 +238,23 @@ attestations, and a trusted complete-attempt ledger.
 It returns `candidate-minimal` only when all 26 decisions pass.
 
 Earlier version 1 and version 2 runs reported 26 of 26 passing decisions, but
-their caller-authored receipts cannot satisfy the version 3 evidence gate.
+their caller-authored receipts cannot satisfy the shared evidence gate.
+
+Version 4 narrows the candidate Align description to requests that explicitly
+ask for a shared-understanding check or clarification before coding. Two fresh
+Codex dispatcher attempts with the earlier candidate incorrectly selected Align
+for an ordinary database-client upgrade after finding an empty workspace.
+
+The revised candidate retained the shorter descriptions for the other six
+features. A fresh `gpt-5.6-sol` high-effort dispatcher comparison reported 13 of
+13 correct selections for the complete descriptions and 13 of 13 for the
+revised candidate. The model-only comparison also reported 26 of 26 correct
+decisions.
+
+Those manual host observations include fresh invocation identities, but they
+were not issued by the trusted attestation and complete-ledger adapters. Treat
+them as bounded smoke evidence, not release-eligible evidence under the shared
+trust contract.
 
 Those runs are useful historical smoke data, not release authorization.
 

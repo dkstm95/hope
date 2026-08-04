@@ -1,6 +1,6 @@
 ---
 name: diff
-description: Explain a GitHub pull request as one evidence-linked Hope review. Use when someone invokes $hope:diff in Codex or /hope:diff in Claude Code, asks about Hope Diff or its capabilities, asks to understand a PR, asks Hope to review the current or latest authored PR, or replies to a pending Hope Diff confirmation. A PR URL is optional when the session is inside the intended GitHub repository.
+description: Use to explain a GitHub pull request as an evidence-linked review, including a pending Hope Diff confirmation.
 ---
 
 # Hope diff
