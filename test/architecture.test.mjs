@@ -95,6 +95,22 @@ test("Align leaves normative rules in its runtime brief", async () => {
   assert.doesNotMatch(align, /Medium- and high-risk tasks activate/u);
 });
 
+test("Sweep leaves maintenance, approval, and execution rules in its runtime brief", async () => {
+  const sweep = await readFile(
+    resolve(skillsRoot, "sweep", "SKILL.md"),
+    "utf8",
+  );
+  assert.match(
+    sweep,
+    /`discovery`.*`categories`.*`checks`.*`categoryContract`.*`evidenceContract`/su,
+  );
+  assert.match(sweep, /`planning`.*`approval`.*`execution`.*`completion`/su);
+  assert.match(sweep, /approval-candidate/u);
+  assert.match(sweep, /runtime\/features\/polish\/cli\.mjs/u);
+  assert.doesNotMatch(sweep, /Version 1 supports only the dead-code check/u);
+  assert.doesNotMatch(sweep, /Static reference absence alone/u);
+});
+
 test("Diff leaves teaching-aid decisions in its runtime contract", async () => {
   const [diff, teachingAids] = await Promise.all([
     readFile(resolve(skillsRoot, "diff", "SKILL.md"), "utf8"),

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/sweep/approval-v1.schema.json",
+  "title": "Hope sweep approval receipt version 1",
+  "description": "Structural schema. The shared Sweep runtime revalidates the candidate, execution contract, conversation authority, host attestation, decision, and receipt digest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "feature",
+    "version",
+    "approvalCandidate",
+    "decision",
+    "authoritySource",
+    "hostAttestation",
+    "receiptDigest"
+  ],
+  "properties": {
+    "feature": { "const": "sweep-approval-receipt" },
+    "version": { "const": 1 },
+    "approvalCandidate": { "type": "object" },
+    "decision": { "enum": ["approved", "rejected"] },
+    "authoritySource": { "$ref": "#/$defs/source" },
+    "hostAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "issuer",
+        "eventId",
+        "issuedAt",
+        "statementDigest",
+        "proof"
+      ],
+      "properties": {
+        "version": { "const": 1 },
+        "issuer": { "$ref": "#/$defs/text" },
+        "eventId": { "$ref": "#/$defs/text" },
+        "issuedAt": { "type": "string", "format": "date-time" },
+        "statementDigest": { "$ref": "#/$defs/digest" },
+        "proof": { "$ref": "#/$defs/text" }
+      }
+    },
+    "receiptDigest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384,
+      "pattern": "\\S"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "label", "locator", "digest"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "const": "conversation" },
+        "label": { "$ref": "#/$defs/text" },
+        "locator": { "$ref": "#/$defs/text" },
+        "revision": { "$ref": "#/$defs/text" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
+}

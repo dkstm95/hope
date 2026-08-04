@@ -23,6 +23,10 @@ import {
 } from "../features/polish/index.mjs";
 import { main as runPolishCommand } from "../features/polish/cli.mjs";
 import {
+  SWEEP_MODEL_ADAPTER_CODE,
+} from "../features/sweep/index.mjs";
+import { main as runSweepCommand } from "../features/sweep/cli.mjs";
+import {
   createTaskWritingPass,
   WRITE_MODEL_ADAPTER_CODE,
 } from "../features/write/index.mjs";
@@ -41,6 +45,7 @@ function usage() {
     "  hope align",
     "  hope diff",
     "  hope polish",
+    "  hope sweep",
     "  hope toxic-review",
     "  hope write",
     "  hope settings <show|set|reset>",
@@ -63,6 +68,7 @@ export function parseArguments(argv) {
       "diff",
       "polish",
       "settings",
+      "sweep",
       "toxic-review",
       "write",
     ].includes(command)
@@ -123,6 +129,12 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       taskDependencies,
     );
   }
+  if (options.command === "sweep") {
+    return await (dependencies.runSweepCommand ?? runSweepCommand)(
+      options.arguments.length === 0 ? ["automatic"] : options.arguments,
+      taskDependencies,
+    );
+  }
   return await (dependencies.runDiffCommand ?? runDiffCommand)(
     options.arguments.length === 0 ? ["automatic"] : options.arguments,
     taskDependencies,
@@ -133,6 +145,7 @@ export function harnessErrorReport(error) {
   if ([
     ALIGN_MODEL_ADAPTER_CODE,
     POLISH_MODEL_ADAPTER_CODE,
+    SWEEP_MODEL_ADAPTER_CODE,
     TOXIC_REVIEW_MODEL_ADAPTER_CODE,
     WRITE_MODEL_ADAPTER_CODE,
   ].includes(error?.code)) {

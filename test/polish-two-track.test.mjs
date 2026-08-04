@@ -28,9 +28,18 @@ function runJson(script, arguments_) {
   return JSON.parse(run.stdout);
 }
 
+function runFailure(script, arguments_) {
+  const run = spawnSync(process.execPath, [resolve(root, script), ...arguments_], {
+    encoding: "utf8",
+  });
+  assert.notEqual(run.status, 0, run.stdout);
+  return run.stderr.replace(/^hope(?: polish)?: /u, "");
+}
+
 function withoutSchemaPath(value) {
-  const { schemaPath, ...rest } = value;
+  const { schemaPath, receiptSchemaPath, ...rest } = value;
   assert.ok(schemaPath);
+  assert.ok(receiptSchemaPath);
   return rest;
 }
 
@@ -67,11 +76,22 @@ test("core and generated Polish reach the same brief and validator", async () =>
     createPolishBrief({ risk: "medium" }, dependencies),
     plugin.createPolishBrief({ risk: "medium" }, dependencies),
   ]);
-  const { schemaPath: coreSchemaPath, ...coreContract } = coreBrief;
-  const { schemaPath: pluginSchemaPath, ...pluginContract } = pluginBrief;
-  const schemaSuffix = join("features", "polish", "run-v1.schema.json");
+  const {
+    schemaPath: coreSchemaPath,
+    receiptSchemaPath: coreReceiptSchemaPath,
+    ...coreContract
+  } = coreBrief;
+  const {
+    schemaPath: pluginSchemaPath,
+    receiptSchemaPath: pluginReceiptSchemaPath,
+    ...pluginContract
+  } = pluginBrief;
+  const schemaSuffix = join("features", "polish", "run-v2.schema.json");
+  const receiptSuffix = join("features", "polish", "receipt-v1.schema.json");
   assert.ok(coreSchemaPath.endsWith(schemaSuffix));
   assert.ok(pluginSchemaPath.endsWith(schemaSuffix));
+  assert.ok(coreReceiptSchemaPath.endsWith(receiptSuffix));
+  assert.ok(pluginReceiptSchemaPath.endsWith(receiptSuffix));
   assert.deepEqual(pluginContract, coreContract);
   assert.deepEqual(
     pluginValidator.validatePolishRun(makePolishRun()),
@@ -99,7 +119,11 @@ test("harness and generated Polish report the same missing AI boundary", () => {
 test("exact harness and generated Polish commands stay equivalent", async () => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-polish-two-track-");
   const input = join(temporaryRoot, "polish.json");
+  const invalidInput = join(temporaryRoot, "invalid-polish.json");
   await writeFile(input, JSON.stringify(makePolishRun()), { mode: 0o600 });
+  const invalidRun = makePolishRun();
+  delete invalidRun.outcome.removedSourceIds;
+  await writeFile(invalidInput, JSON.stringify(invalidRun), { mode: 0o600 });
   const brief = ["brief", "--risk", "high"];
   const harnessBrief = runJson("harness/hope.mjs", ["polish", ...brief]);
   const pluginBrief = runJson(
@@ -120,4 +144,28 @@ test("exact harness and generated Polish commands stay equivalent", async () => 
     ["validate", "--input", input],
   );
   assert.deepEqual(pluginResult, harnessResult);
+
+  const harnessReceipt = runJson(
+    "harness/hope.mjs",
+    ["polish", "receipt", "--input", input],
+  );
+  const pluginReceipt = runJson(
+    "plugins/hope/runtime/features/polish/cli.mjs",
+    ["receipt", "--input", input],
+  );
+  assert.deepEqual(pluginReceipt, harnessReceipt);
+
+  assert.equal(
+    runFailure("plugins/hope/runtime/features/polish/cli.mjs", [
+      "validate",
+      "--input",
+      invalidInput,
+    ]),
+    runFailure("harness/hope.mjs", [
+      "polish",
+      "validate",
+      "--input",
+      invalidInput,
+    ]),
+  );
 });

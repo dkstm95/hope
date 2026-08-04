@@ -28,7 +28,8 @@ remaining uncertainty clear to the person responsible for it.
 Hope provides a focused tool for each of those moments.
 
 Use Hope to align before implementation, challenge a work product, understand a
-code change, refine completed work, or clarify language without losing meaning.
+code change, sweep codebase maintenance, refine completed work, or clarify
+language without losing meaning.
 
 ## Start with your problem
 
@@ -37,6 +38,7 @@ code change, refine completed work, or clarify language without losing meaning.
 | “The AI and I may not understand this task the same way.” | **Align** | Find material misunderstandings and make the current shared understanding visible before implementation |
 | “This looks convincing, but I may be missing an important problem.” | **Toxic Review** | Challenge the work with relevant perspectives and return one evidence-based result |
 | “AI changed the code, but I cannot explain what changed or judge it yet.” | **Diff** | Understand one exact change, make an informed judgment, and carry that understanding into later work |
+| “I want to clean up this codebase.” | **Sweep** | Plan codebase maintenance and apply only approved work |
 | “The work is complete, but it needs refinement without changing settled behavior or meaning.” | **Polish** | Refine it once within explicit preservation conditions and a stated verification scope |
 | “This language needs to be clearer without losing meaning, facts, uncertainty, citations, or voice.” | **Write** | Draft, edit, or review prose with one shared writing standard |
 
@@ -190,6 +192,28 @@ It preserves settled behavior and meaning, reports what changed and what was
 checked, and stops when the work needs a material decision.
 
 > Example: “Refine the current work product.”
+
+---
+
+### Sweep
+
+> “I want to clean up this codebase.”
+
+Sweep runs one codebase maintenance task that adapts to the codebase instead of
+using schedule-based profiles.
+
+It inspects an exact snapshot and shows a bounded plan before changing files.
+
+Sweep checks every [maintenance area](docs/sweep.md#codebase-maintenance-categories),
+including dead code, abstractions, tests, dependencies, performance, releases,
+and recovery.
+
+Incomplete evidence stays visible instead of being reported as complete.
+
+Sweep applies only approved behavior-preserving work and hands behavior,
+public-contract, or dependency changes to a separate implementation task.
+
+> Example: “Sweep this codebase.”
 
 ---
 

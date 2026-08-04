@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   serializedJsonBytes,
   stringBytes,
@@ -9,9 +11,13 @@ import {
   POLISH_CONTRACT_VERSION,
   POLISH_LIMITS,
   POLISH_OUTCOMES,
+  POLISH_RECEIPT_VERSION,
   POLISH_RISKS,
+  POLISH_SUPPORTED_VERSIONS,
   POLISH_VERIFICATION_STATUSES,
 } from "./constants.mjs";
+
+const digestPattern = /^sha256:[a-f0-9]{64}$/u;
 
 const {
   array,
@@ -86,6 +92,7 @@ export function validatePolishRun(value, {
     input,
     [
       "application",
+      "composition",
       "outcome",
       "plan",
       "preservation",
@@ -100,9 +107,14 @@ export function validatePolishRun(value, {
     "polish",
     errors,
   );
-  if (input.version !== POLISH_CONTRACT_VERSION) {
-    errors.push(`polish.version must be ${POLISH_CONTRACT_VERSION}`);
+  if (!POLISH_SUPPORTED_VERSIONS.includes(input.version)) {
+    errors.push(
+      `polish.version must be one of ${POLISH_SUPPORTED_VERSIONS.join(", ")}`,
+    );
   }
+  const runVersion = POLISH_SUPPORTED_VERSIONS.includes(input.version)
+    ? input.version
+    : POLISH_CONTRACT_VERSION;
   const title = text(input.title, "polish.title", errors);
   const risk = choice(input.risk, POLISH_RISKS, "polish.risk", errors);
 
@@ -118,6 +130,58 @@ export function validatePolishRun(value, {
     snapshot.sources.map((source) => [source.id, source]),
   );
   const knownSources = new Set(sourceById.keys());
+
+  let composition;
+  if (input.composition !== undefined) {
+    const compositionInput = object(input.composition, "composition", errors);
+    unknownKeys(
+      compositionInput,
+      [
+        "authorityReceiptDigest",
+        "caller",
+        "executionContractDigest",
+        "sessionId",
+        "workUnitDigest",
+      ],
+      "composition",
+      errors,
+    );
+    composition = {
+      caller: text(compositionInput.caller, "composition.caller", errors),
+      sessionId: text(
+        compositionInput.sessionId,
+        "composition.sessionId",
+        errors,
+      ),
+      workUnitDigest: text(
+        compositionInput.workUnitDigest,
+        "composition.workUnitDigest",
+        errors,
+      ),
+      executionContractDigest: text(
+        compositionInput.executionContractDigest,
+        "composition.executionContractDigest",
+        errors,
+      ),
+      authorityReceiptDigest: text(
+        compositionInput.authorityReceiptDigest,
+        "composition.authorityReceiptDigest",
+        errors,
+      ),
+    };
+    if (runVersion !== 2) {
+      errors.push("composition requires Polish version 2");
+    }
+    for (const key of [
+      "workUnitDigest",
+      "executionContractDigest",
+      "authorityReceiptDigest",
+    ]) {
+      if (!digestPattern.test(composition[key])) {
+        errors.push(`composition.${key} must use the sha256: format`);
+      }
+    }
+  }
 
   const targetInput = object(input.target, "target", errors);
   unknownKeys(
@@ -321,7 +385,13 @@ export function validatePolishRun(value, {
   const outcomeInput = object(input.outcome, "outcome", errors);
   unknownKeys(
     outcomeInput,
-    ["changes", "outputSnapshot", "status", "unresolved"],
+    [
+      "changes",
+      "outputSnapshot",
+      "removedSourceIds",
+      "status",
+      "unresolved",
+    ],
     "outcome",
     errors,
   );
@@ -331,8 +401,30 @@ export function validatePolishRun(value, {
     "outcome.status",
     errors,
   );
+  if (runVersion === 2 && !Object.hasOwn(outcomeInput, "outputSnapshot")) {
+    errors.push("outcome.outputSnapshot is required in Polish version 2; use null when absent");
+  }
+  if (runVersion === 2 && !Object.hasOwn(outcomeInput, "removedSourceIds")) {
+    errors.push("outcome.removedSourceIds is required in Polish version 2");
+  }
+  if (runVersion === 1 && Object.hasOwn(outcomeInput, "removedSourceIds")) {
+    errors.push("outcome.removedSourceIds requires Polish version 2");
+  }
+  const targetSourceIdSet = new Set(target.sourceIds);
+  const removedSourceIds = runVersion === 2
+    ? references(
+      outcomeInput.removedSourceIds,
+      "outcome.removedSourceIds",
+      errors,
+      targetSourceIdSet,
+      { noun: "target source ID" },
+    )
+    : [];
   let outputSnapshot;
-  if (outcomeInput.outputSnapshot !== undefined) {
+  if (
+    outcomeInput.outputSnapshot !== undefined
+    && outcomeInput.outputSnapshot !== null
+  ) {
     try {
       outputSnapshot = validateWorkSnapshot(outcomeInput.outputSnapshot, {
         maximumSources: POLISH_LIMITS.sources,
@@ -431,9 +523,23 @@ export function validatePolishRun(value, {
   if (changes.length > target.maximumChanges) {
     errors.push("outcome.changes exceeds target.maximumChanges");
   }
+  const removedTargetIds = new Set(removedSourceIds);
+  const survivingTargetIds = target.sourceIds.filter(
+    (sourceId) => !removedTargetIds.has(sourceId),
+  );
   if (status === "revised") {
-    if (!outputSnapshot) {
+    if (runVersion === 1 && !outputSnapshot) {
       errors.push("outcome.outputSnapshot is required when status is revised");
+    }
+    if (runVersion === 2 && survivingTargetIds.length > 0 && !outputSnapshot) {
+      errors.push(
+        "outcome.outputSnapshot must identify every surviving revised target",
+      );
+    }
+    if (runVersion === 2 && survivingTargetIds.length === 0 && outputSnapshot) {
+      errors.push(
+        "outcome.outputSnapshot must be null when every revised target was removed",
+      );
     }
     if (plan.length === 0 || changes.length === 0) {
       errors.push("a revised outcome requires at least one plan item and change");
@@ -456,6 +562,9 @@ export function validatePolishRun(value, {
     if (unresolved.length > 0) {
       errors.push("a no-change outcome cannot leave material items unresolved");
     }
+    if (removedSourceIds.length > 0) {
+      errors.push("a no-change outcome cannot remove target sources");
+    }
   }
   if (status === "needs-alignment") {
     if (outputSnapshot) {
@@ -464,23 +573,26 @@ export function validatePolishRun(value, {
     if (unresolved.length === 0) {
       errors.push("needs-alignment requires at least one unresolved item");
     }
+    if (removedSourceIds.length > 0) {
+      errors.push("needs-alignment cannot remove target sources");
+    }
   }
 
-  let changedTargetSources = 0;
+  const changedTargetIds = new Set(removedSourceIds);
   if (outputSnapshot) {
     const outputById = new Map(
       outputSnapshot.sources.map((source) => [source.id, source]),
     );
     const outputIds = new Set(outputById.keys());
     if (
-      outputIds.size !== target.sourceIds.length
-      || target.sourceIds.some((id) => !outputIds.has(id))
+      outputIds.size !== survivingTargetIds.length
+      || survivingTargetIds.some((id) => !outputIds.has(id))
     ) {
       errors.push(
-        "outcome.outputSnapshot must contain exactly the target source IDs",
+        "outcome.outputSnapshot must contain exactly the surviving target source IDs",
       );
     }
-    for (const sourceId of target.sourceIds) {
+    for (const sourceId of survivingTargetIds) {
       const before = sourceById.get(sourceId);
       const after = outputById.get(sourceId);
       if (!before || !after) continue;
@@ -509,7 +621,7 @@ export function validatePolishRun(value, {
         );
       }
       if (sourceContentIdentity(before) !== sourceContentIdentity(after)) {
-        changedTargetSources += 1;
+        changedTargetIds.add(sourceId);
       }
       if (
         status === "no-change"
@@ -520,10 +632,57 @@ export function validatePolishRun(value, {
         );
       }
     }
-    if (status === "revised" && changedTargetSources === 0) {
-      errors.push("a revised outcome must change at least one target identity");
+  }
+  if (status === "revised" && changedTargetIds.size === 0) {
+    errors.push("a revised outcome must change or remove at least one target identity");
+  }
+  if (changedTargetIds.size > target.maximumChanges) {
+    errors.push("changed target identities exceed target.maximumChanges");
+  }
+
+  if (status === "revised") {
+    const coveredTargetIds = new Set();
+    const verificationById = new Map(
+      verification.map((item) => [item.id, item]),
+    );
+    for (let index = 0; index < changes.length; index += 1) {
+      const change = changes[index];
+      const changedIds = change.sourceIds.filter((sourceId) => (
+        targetSourceIdSet.has(sourceId)
+      ));
+      if (changedIds.length === 0) {
+        errors.push(
+          `outcome.changes[${index}] must cite at least one changed target source`,
+        );
+      }
+      for (const sourceId of changedIds) {
+        if (!changedTargetIds.has(sourceId)) {
+          errors.push(
+            `outcome.changes[${index}] cites unchanged target source ${sourceId}`,
+          );
+          continue;
+        }
+        coveredTargetIds.add(sourceId);
+        const verificationCoversTarget = change.verificationIds.some(
+          (verificationId) => verificationById
+            .get(verificationId)
+            ?.sourceIds.includes(sourceId),
+        );
+        if (!verificationCoversTarget) {
+          errors.push(
+            `outcome.changes[${index}] has no linked verification for target ${sourceId}`,
+          );
+        }
+      }
+    }
+    for (const sourceId of changedTargetIds) {
+      if (!coveredTargetIds.has(sourceId)) {
+        errors.push(`changed target source ${sourceId} is missing from outcome.changes`);
+      }
     }
   }
+
+  const changedTargetSources = changedTargetIds.size;
 
   if (["revised", "no-change"].includes(status)) {
     if (verification.length === 0) {
@@ -715,16 +874,24 @@ export function validatePolishRun(value, {
         : "verified-in-checked-scope";
   }
   return Object.freeze({
-    version: input.version,
+    version: runVersion,
     title,
     risk,
     snapshot,
+    ...(composition ? { composition } : {}),
     target,
     preservation,
     plan,
     outcome: {
       status,
-      ...(outputSnapshot ? { outputSnapshot } : {}),
+      ...(runVersion === 2
+        ? {
+          outputSnapshot: outputSnapshot ?? null,
+          removedSourceIds,
+        }
+        : outputSnapshot
+          ? { outputSnapshot }
+          : {}),
       changes,
       unresolved,
     },
@@ -742,6 +909,7 @@ export function validatePolishRun(value, {
       changeBudget: target.maximumChanges,
       changes: changes.length,
       changedTargetSources,
+      removedTargetSources: removedSourceIds.length,
       inputFileBytes: actualFileBytes,
       jsonBytes,
       planItems: plan.length,
@@ -750,4 +918,185 @@ export function validatePolishRun(value, {
       verifications: verification.length,
     }),
   });
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) {
+    return value;
+  }
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function canonicalValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .filter((key) => value[key] !== undefined)
+      .sort()
+      .map((key) => [key, canonicalValue(value[key])]),
+  );
+}
+
+function polishRunRecord(run) {
+  return {
+    version: run.version,
+    title: run.title,
+    risk: run.risk,
+    snapshot: run.snapshot,
+    ...(run.composition ? { composition: run.composition } : {}),
+    target: run.target,
+    preservation: run.preservation,
+    plan: run.plan,
+    outcome: run.outcome,
+    verification: run.verification,
+    application: run.application,
+    summary: run.summary,
+  };
+}
+
+function polishReceiptPayload(value) {
+  return {
+    feature: value.feature,
+    version: value.version,
+    run: value.run,
+    result: value.result,
+  };
+}
+
+export function polishReceiptDigest(value) {
+  return `sha256:${createHash("sha256")
+    .update(JSON.stringify(canonicalValue(polishReceiptPayload(value))))
+    .digest("hex")}`;
+}
+
+export function createPolishReceipt(value, options = {}) {
+  const run = validatePolishRun(value, options);
+  if (run.version !== POLISH_CONTRACT_VERSION) {
+    throw new TypeError(
+      `Hope Polish receipts require run version ${POLISH_CONTRACT_VERSION}`,
+    );
+  }
+  const receipt = {
+    feature: "polish-receipt",
+    version: POLISH_RECEIPT_VERSION,
+    run: polishRunRecord(run),
+    result: {
+      changed: run.result.changed,
+      status: run.result.status,
+      verificationStatus: run.result.verificationStatus,
+    },
+  };
+  return deepFreeze({
+    ...receipt,
+    receiptDigest: polishReceiptDigest(receipt),
+  });
+}
+
+export function validatePolishReceipt(value) {
+  const errors = [];
+  const input = object(value, "polishReceipt", errors);
+  unknownKeys(
+    input,
+    ["feature", "version", "run", "result", "receiptDigest"],
+    "polishReceipt",
+    errors,
+  );
+  const feature = text(input.feature, "polishReceipt.feature", errors);
+  const version = integer(
+    input.version,
+    "polishReceipt.version",
+    errors,
+    { minimum: POLISH_RECEIPT_VERSION },
+  );
+  if (feature !== "polish-receipt") {
+    errors.push("polishReceipt.feature must be polish-receipt");
+  }
+  if (version !== POLISH_RECEIPT_VERSION) {
+    errors.push(`polishReceipt.version must be ${POLISH_RECEIPT_VERSION}`);
+  }
+
+  let run;
+  try {
+    run = validatePolishRun(input.run);
+  } catch (error) {
+    errors.push(`polishReceipt.run: ${error.message}`);
+  }
+  if (run && run.version !== POLISH_CONTRACT_VERSION) {
+    errors.push(
+      `polishReceipt.run.version must be ${POLISH_CONTRACT_VERSION}`,
+    );
+  }
+
+  const resultInput = object(input.result, "polishReceipt.result", errors);
+  unknownKeys(
+    resultInput,
+    ["changed", "status", "verificationStatus"],
+    "polishReceipt.result",
+    errors,
+  );
+  const result = {
+    changed: boolean(
+      resultInput.changed,
+      "polishReceipt.result.changed",
+      errors,
+    ),
+    status: choice(
+      resultInput.status,
+      POLISH_OUTCOMES,
+      "polishReceipt.result.status",
+      errors,
+    ),
+    verificationStatus: choice(
+      resultInput.verificationStatus,
+      [
+        "verified-in-checked-scope",
+        "incomplete",
+        "failed",
+        "not-completed",
+      ],
+      "polishReceipt.result.verificationStatus",
+      errors,
+    ),
+  };
+  if (
+    run
+    && JSON.stringify(result) !== JSON.stringify(run.result)
+  ) {
+    errors.push("polishReceipt.result must match the validated Polish run");
+  }
+
+  const receiptDigest = text(
+    input.receiptDigest,
+    "polishReceipt.receiptDigest",
+    errors,
+  );
+  if (receiptDigest && !digestPattern.test(receiptDigest)) {
+    errors.push("polishReceipt.receiptDigest must use the sha256: format");
+  }
+  const normalized = {
+    feature,
+    version,
+    ...(run ? { run: polishRunRecord(run) } : {}),
+    result,
+  };
+  if (
+    run
+    && receiptDigest !== polishReceiptDigest(normalized)
+  ) {
+    errors.push("polishReceipt.receiptDigest does not match its normalized run");
+  }
+  if (serializedJsonBytes(value) > POLISH_LIMITS.inputBytes) {
+    errors.push(`polishReceipt exceeds ${POLISH_LIMITS.inputBytes} bytes`);
+  }
+  if (errors.length > 0) {
+    const error = new TypeError(
+      `Hope polish receipt is invalid:\n${errors.map((item) => `- ${item}`).join("\n")}`,
+    );
+    error.code = "HOPE_POLISH_RECEIPT_INVALID";
+    error.issues = Object.freeze([...errors]);
+    throw error;
+  }
+  return deepFreeze({ ...normalized, receiptDigest });
 }

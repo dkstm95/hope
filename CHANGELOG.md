@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.5.0 - 2026-08-04
+
+- Add Hope Sweep as one profile-free codebase maintenance task that plans
+  before changing files and waits for exact work-unit approval.
+- Support 21 checks across integrity, unused and stale work, abstractions,
+  tests and documentation, dependency lifecycle, performance and CI, and
+  architecture, release, support, and recovery readiness.
+- Give every maintenance check its own evidence contract and classify behavior,
+  public-contract, and dependency impact before deciding whether to use Polish,
+  report the finding, or hand it to a separate implementation task.
+- Derive every executable candidate's canonical plan and execution-contract
+  digests from validated content instead of caller-provided identities.
+- Require a trusted host verifier for the exact conversation event and opaque
+  or signed approval attestation instead of trusting self-authored receipts.
+- Add Polish run version 2 and a validated receipt so composed work can
+  represent target deletion and cannot substitute an inline result summary.
+- Enforce the approved action, preview, preservation conditions, verification
+  methods, change budget, and changed-target coverage at Sweep completion.
+- Add one aggregate session result that binds every plan candidate, completion
+  digest, terminal disposition, and remaining gap.
+- Add blinded Sweep model-evaluation cases and digest-bound receipts for every
+  maintenance category plus uncertain, public-contract, and untrusted-input
+  judgments across the harness and generated plugin.
+- Bind each Sweep model-evaluation receipt to the exact evaluation version and
+  separate synthetic test receipts from runner-recorded release evidence.
+- Report unsupported, partial, failed, stale, inconclusive, rejected, and
+  handed-off work without presenting it as successful maintenance.
+- Compose approved behavior-preserving work through the existing Polish
+  contract and keep behavior, public-contract, and dependency changes in
+  separately approved implementation tasks.
+- Keep deterministic plan, approval, completion, and entry-path tests separate
+  from fresh-host model-behavior evidence.
+
 ## 1.4.0 - 2026-08-04
 
 - Add a blinded multilingual Hope Diff invocation evaluation that compares

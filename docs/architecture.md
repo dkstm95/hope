@@ -14,6 +14,7 @@ The project definitions are:
 - [diff.md](diff.md) defines Hope diff;
 - [align.md](align.md) defines Hope align;
 - [polish.md](polish.md) defines Hope polish;
+- [sweep.md](sweep.md) defines Hope sweep;
 - [toxic-review.md](toxic-review.md) defines Hope toxic review;
 - [write.md](write.md) defines Hope write; and
 - [design.md](design.md) defines the shared visual language.
@@ -124,6 +125,7 @@ plugins/hope/
 ├── skills/align/SKILL.md
 ├── skills/diff/SKILL.md
 ├── skills/polish/SKILL.md
+├── skills/sweep/SKILL.md
 ├── skills/settings/SKILL.md
 ├── skills/toxic-review/SKILL.md
 ├── skills/write/SKILL.md
@@ -345,6 +347,64 @@ The receipt prevents another pass over the same candidate.
 The dependency direction is `Align -> Polish`; Polish does not import or invoke
 Align.
 
+## Current sweep boundary
+
+The current sweep implementation starts from [sweep.md](sweep.md).
+
+One invocation performs bounded discovery and produces a validated plan before
+any repository file changes.
+
+The shared core owns the versioned category catalog, supported-check disclosure,
+plan, approval-receipt, completion, and session-result schemas, source and
+evidence links, derived file budgets, session states, approval and execution
+contract digests, stale-identity checks, and terminal result rules.
+
+Version 1 exposes all 21 checks across the seven codebase maintenance
+categories.
+
+Each category records its ordered check results, and each candidate uses the
+exact evidence contract declared for its check.
+
+The active Claude or Codex host inspects the repository, authors the bounded
+plan, shows an exact candidate, and waits for the person's approval.
+
+The independent harness exposes the same brief, plan validation, approval
+candidate, approval receipt, and completion validation.
+
+It also exposes the same blinded model-evaluation preparation and versioned
+receipt validation used by the Skills before release.
+
+It reports that automatic repository inspection is unavailable until it has a
+model adapter.
+
+The Skill is a thin adapter to the generated core.
+
+After the person's decision, the trusted host adapter creates a shared-runtime
+receipt that binds the approval candidate, decision, exact conversation event,
+and opaque or signed host attestation.
+
+The core refuses to validate that authority without the host's independent
+attestation verifier.
+
+After an identity recheck, Sweep invokes one normal Polish version 2 run for
+the behavior-preserving work unit and creates its shared-runtime receipt.
+
+Sweep revalidates both receipts and validates the exact action contract, final
+output, approved change budget, changed-target coverage, and verification scope
+in one completion record.
+
+One aggregate session result then binds the plan, every candidate disposition,
+every completion digest, and all remaining gaps.
+
+Only work that preserves behavior, public contracts, and dependencies enters
+Polish.
+
+Changing work is handed off to a separately approved ordinary implementation
+task, while uncertain work remains report-only.
+
+The dependency direction is `Sweep -> Polish`; Polish does not import or invoke
+Sweep.
+
 ## Current polish boundary
 
 The current polish implementation starts from [polish.md](polish.md).
@@ -359,7 +419,8 @@ evidence links, the change budget, and no-change or needs-alignment outcomes.
 It also records the verification scope and whether a revision is only proposed
 or was applied with captured authority and identity checks.
 
-The independent harness exposes the same brief and validator.
+The independent harness exposes the same brief, validator, and versioned
+receipt creator.
 
 It does not claim automatic AI editing without a model adapter.
 
@@ -367,6 +428,9 @@ The Skill coordinates the active host but does not own the Polish contract or
 result status.
 
 Polish uses the shared Write standard for language-bearing changes.
+
+Align and Sweep may invoke the same Polish boundary under their documented
+composition contracts.
 
 ## Current toxic-review boundary
 

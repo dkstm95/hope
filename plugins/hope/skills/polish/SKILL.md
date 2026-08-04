@@ -48,6 +48,9 @@ fields.
 Use `writingStandard.text` for user-facing language and use
 `writingStandard.decisionExamples` only when a situation matches.
 
+Use both `schemaPath` and `receiptSchemaPath` when the run is composed by
+another Hope feature.
+
 The examples guide decisions; they are not evaluation results.
 
 Do not copy those rules into another checklist in this Skill.
@@ -76,14 +79,28 @@ Record it as `applied` only when the person's request or explicit approval
 authorizes the write, the authority is captured as a conversation source, and
 the before-and-after comparison and identity checks succeeded.
 
-Write the version 1 run required by `schemaPath` to a private temporary JSON
+Write the version 2 run required by `schemaPath` to a private temporary JSON
 file with restricted permissions.
+
+List deleted targets in `outcome.removedSourceIds`.
+
+Keep every surviving target in `outcome.outputSnapshot`, and use `null` when
+every target was removed.
 
 Validate it with:
 
 ```text
 validate --input <private-run.json>
 ```
+
+When another Hope feature consumes the result, create the receipt from the
+same validated run:
+
+```text
+receipt --input <private-run.json>
+```
+
+Do not write or summarize a composition receipt by hand.
 
 Use the validated result to report the revised work, change summary, checked
 scope, and uncertainty.
