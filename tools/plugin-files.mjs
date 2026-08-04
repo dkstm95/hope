@@ -122,13 +122,19 @@ export const generatedPluginFiles = Object.freeze([
     "feature-selection.mjs",
     "index.mjs",
     "polish-preservation.mjs",
+    "write-plain-language-comparison.mjs",
     "write-examples.mjs",
+    "write-plain-language.mjs",
   ].map((name) =>
     generatedText(
       `features/model-evaluation/${name}`,
       `plugins/hope/runtime/features/model-evaluation/${name}`,
       `// Generated from features/model-evaluation/${name}. Do not edit.\n`,
     )
+  ),
+  generatedText(
+    "features/model-evaluation/write-baseline-v2.md",
+    "plugins/hope/runtime/features/model-evaluation/write-baseline-v2.md",
   ),
   ...[
     "cli.mjs",

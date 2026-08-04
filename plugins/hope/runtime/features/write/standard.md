@@ -18,6 +18,32 @@ Prefer a direct sentence over one that sounds formal, clever, or impressive.
 These principles adapt George Orwell's six rules in
 [Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).
 
+## Plain-language pass
+
+Write so the intended reader can follow the sentence structure in one pass.
+A complex idea may still need explanation. Keep a specialist term when it is
+precise or expected, but make the sentence around it direct and explain the
+term when the reader may not know it.
+
+Do not treat this as a request to shorten the text at any cost.
+
+For each passage that may make the intended reader stop or reread:
+
+1. Identify the actor, action, object, conditions, causes, results, sequence,
+   exceptions, and uncertainty that the passage must preserve.
+2. State the actor and action directly when that makes the meaning easier to
+   follow. Turn an abstract noun back into a verb when doing so stays accurate.
+3. Replace unfamiliar wording with familiar wording when it keeps the same
+   meaning. Keep a necessary technical term and explain it in familiar words
+   when the reader may not know it.
+4. Make the relationship between ideas explicit. Say whether one idea is a
+   cause, condition, result, sequence, contrast, or exception when the reader
+   would otherwise have to infer it.
+5. Split stacked ideas at a meaning boundary when each new sentence remains
+   clear. Repeat a noun when a pronoun would make the reference uncertain.
+6. Read the revision on its own as the intended reader. Revise it again if the
+   reader still has to unpack who does what, when, or why.
+
 ## Structure
 
 - Lead with the conclusion, decision, or requested result.
@@ -52,6 +78,8 @@ These principles adapt George Orwell's six rules in
   the person's request.
 - Keep exact code, commands, identifiers, interface text, and quotations exact.
 - Keep a technical term when it is more precise than an everyday substitute.
+- Do not remove a condition, cause, exception, uncertainty, or technical
+  distinction merely to make the prose look shorter or simpler.
 - Write each language as original prose. Preserve meaning without copying
   another language's word order, idioms, or sentence shape.
 - For translated or parallel text, read each version on its own. Replace
@@ -78,6 +106,7 @@ Before returning the text, ask:
 - Do the amount and local order of non-material detail serve this target,
   reader, and next action?
 - Can a familiar word replace a harder one?
+- Can the intended reader understand who does what, when, and why in one pass?
 - Can any word or sentence disappear without losing meaning?
 - Is the actor hidden where naming it would help?
 - Does each sentence carry one main idea?
@@ -97,5 +126,7 @@ Before returning the text, ask:
   authority?
 - Is visible spacing, typography, and styling left to the renderer?
 - Did the revision change a fact, level of certainty, or intended tone?
+- Did simplification hide a condition, relationship, exception, or technical
+  distinction?
 - Does the result sound natural when read once?
 - Does any phrase sound translated even though each word is correct?

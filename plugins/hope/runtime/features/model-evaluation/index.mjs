@@ -17,6 +17,18 @@ import {
   validateHopeWriteProductionVerificationReceiptSet,
 } from "./write-examples.mjs";
 import {
+  createHopeWritePlainLanguageEvaluationReceipt,
+  hopeWritePlainLanguageEvaluationLimits,
+  prepareHopeWritePlainLanguageAssessment,
+  validateHopeWritePlainLanguageEvaluationReceipt,
+  validateHopeWritePlainLanguageEvaluationReceiptSet,
+} from "./write-plain-language.mjs";
+import {
+  createHopeWritePlainLanguageComparisonResult,
+  hopeWritePlainLanguageComparisonLimits,
+  prepareHopeWritePlainLanguageComparisonAssessment,
+} from "./write-plain-language-comparison.mjs";
+import {
   createHopePolishPreservationEvaluationReceipt,
   hopePolishPreservationEvaluationLimits,
   validateHopePolishPreservationEvaluationReceipt,
@@ -27,6 +39,8 @@ export * from "./feature-selection.mjs";
 export * from "./evidence.mjs";
 export * from "./polish-preservation.mjs";
 export * from "./write-examples.mjs";
+export * from "./write-plain-language.mjs";
+export * from "./write-plain-language-comparison.mjs";
 
 export async function createHopeFeatureSelectionEvaluationReceiptFromFile({
   inputPath,
@@ -206,4 +220,107 @@ export async function validateHopeWriteProductionVerificationReceiptSetFile(
     input.value,
     dependencies,
   );
+}
+
+export async function prepareHopeWritePlainLanguageAssessmentFromFile({
+  caseId,
+  inputPath,
+  run,
+}, dependencies = {}) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Write plain-language writer output",
+    maximumBytes: hopeWritePlainLanguageEvaluationLimits.outputBytes,
+  });
+  return (dependencies.prepareAssessment
+    ?? prepareHopeWritePlainLanguageAssessment)({
+    caseId,
+    output: input.value,
+    run,
+  });
+}
+
+export async function createHopeWritePlainLanguageEvaluationReceiptFromFile({
+  inputPath,
+  ...options
+}, dependencies = {}) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Write plain-language evaluated run",
+    maximumBytes: hopeWritePlainLanguageEvaluationLimits.receiptBytes,
+  });
+  if (
+    !input.value
+    || typeof input.value !== "object"
+    || Array.isArray(input.value)
+    || JSON.stringify(Object.keys(input.value).sort())
+      !== JSON.stringify(["assessment", "output"])
+  ) {
+    throw new TypeError(
+      "Hope Write plain-language evaluated run must contain exactly output and assessment",
+    );
+  }
+  return await (dependencies.createReceipt
+    ?? createHopeWritePlainLanguageEvaluationReceipt)({
+    ...options,
+    assessment: input.value.assessment,
+    output: input.value.output,
+  }, dependencies);
+}
+
+export async function validateHopeWritePlainLanguageEvaluationReceiptFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Write plain-language evaluation receipt",
+    maximumBytes: hopeWritePlainLanguageEvaluationLimits.receiptBytes,
+  });
+  return await (dependencies.validateReceipt
+    ?? validateHopeWritePlainLanguageEvaluationReceipt)(
+    input.value,
+    dependencies,
+  );
+}
+
+export async function validateHopeWritePlainLanguageEvaluationReceiptSetFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Write plain-language evaluation receipt set",
+    maximumBytes: hopeWritePlainLanguageEvaluationLimits.receiptSetBytes,
+  });
+  return await (dependencies.validateReceiptSet
+    ?? validateHopeWritePlainLanguageEvaluationReceiptSet)(
+    input.value,
+    dependencies,
+  );
+}
+
+export async function prepareHopeWritePlainLanguageComparisonAssessmentFromFile({
+  caseId,
+  inputPath,
+  run,
+}, dependencies = {}) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Write plain-language comparison outputs",
+    maximumBytes: hopeWritePlainLanguageComparisonLimits.assessmentBytes,
+  });
+  return (dependencies.prepareComparisonAssessment
+    ?? prepareHopeWritePlainLanguageComparisonAssessment)({
+    caseId,
+    outputs: input.value,
+    run,
+  });
+}
+
+export async function createHopeWritePlainLanguageComparisonResultFromFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Write plain-language comparison assessments",
+    maximumBytes: hopeWritePlainLanguageComparisonLimits.resultBytes,
+  });
+  return (dependencies.createComparisonResult
+    ?? createHopeWritePlainLanguageComparisonResult)(input.value);
 }

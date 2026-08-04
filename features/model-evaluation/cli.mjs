@@ -10,17 +10,26 @@ import {
   createHopePolishPreservationEvaluationReceiptFromFile,
   createHopeWriteExampleEvaluationPlan,
   createHopeWriteExampleEvaluationReceiptFromFile,
+  createHopeWritePlainLanguageComparisonPlan,
+  createHopeWritePlainLanguageComparisonResultFromFile,
+  createHopeWritePlainLanguageEvaluationPlan,
+  createHopeWritePlainLanguageEvaluationReceiptFromFile,
   createHopeWriteProductionVerificationPlan,
   createHopeWriteProductionVerificationReceiptFromFile,
   getHopeFeatureSelectionEvaluationOracle,
   getHopePolishPreservationEvaluationOracle,
   getHopeWriteExampleEvaluationOracle,
+  getHopeWritePlainLanguageEvaluationOracle,
   HOPE_FEATURE_SELECTION_VARIANTS,
   HOPE_POLISH_PRESERVATION_VARIANTS,
   HOPE_WRITE_EXAMPLE_VARIANTS,
   prepareHopeFeatureSelectionEvaluationRun,
   prepareHopePolishPreservationEvaluationRun,
   prepareHopeWriteExampleEvaluationRun,
+  prepareHopeWritePlainLanguageComparisonAssessmentFromFile,
+  prepareHopeWritePlainLanguageComparisonRun,
+  prepareHopeWritePlainLanguageAssessmentFromFile,
+  prepareHopeWritePlainLanguageEvaluationRun,
   prepareHopeWriteProductionVerificationRun,
   validateHopeFeatureSelectionEvaluationReceiptFile,
   validateHopeFeatureSelectionEvaluationReceiptSetFile,
@@ -28,6 +37,8 @@ import {
   validateHopePolishPreservationEvaluationReceiptSetFile,
   validateHopeWriteExampleEvaluationReceiptFile,
   validateHopeWriteExampleEvaluationReceiptSetFile,
+  validateHopeWritePlainLanguageEvaluationReceiptFile,
+  validateHopeWritePlainLanguageEvaluationReceiptSetFile,
   validateHopeWriteProductionVerificationReceiptFile,
   validateHopeWriteProductionVerificationReceiptSetFile,
 } from "./index.mjs";
@@ -79,6 +90,17 @@ function usage() {
     "  hope model-evaluation write-example-receipt --case <id> --variant <rules-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
     "  hope model-evaluation write-example-validate --input <receipt.json>",
     "  hope model-evaluation write-example-validate-set --input <receipts.json>",
+    "  hope model-evaluation write-plain-language-plan",
+    "  hope model-evaluation write-plain-language-prepare --case <id> --run <number>",
+    "  hope model-evaluation write-plain-language-assessment-prepare --case <id> --run <number> --input <output.json>",
+    "  hope model-evaluation write-plain-language-oracle --case <id>",
+    "  hope model-evaluation write-plain-language-receipt --case <id> --run <number> --input <evaluated.json> --host <id> --model <id> --effort <level> --invocation <id> --evaluator-host <id> --evaluator-model <id> --evaluator-effort <level> --evaluator-invocation <id>",
+    "  hope model-evaluation write-plain-language-validate --input <receipt.json>",
+    "  hope model-evaluation write-plain-language-validate-set --input <receipts.json>",
+    "  hope model-evaluation write-plain-language-comparison-plan",
+    "  hope model-evaluation write-plain-language-comparison-prepare --case <id> --variant <baseline|current> --run <1|2|3>",
+    "  hope model-evaluation write-plain-language-comparison-assessment-prepare --case <id> --run <1|2|3> --input <outputs.json>",
+    "  hope model-evaluation write-plain-language-comparison-result --input <assessments.json>",
     "  hope model-evaluation write-production-plan",
     "  hope model-evaluation write-production-prepare --case <id> --run <number>",
     "  hope model-evaluation write-production-receipt --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
@@ -129,6 +151,17 @@ export function parseModelEvaluationArguments(argv) {
     "write-example-receipt",
     "write-example-validate",
     "write-example-validate-set",
+    "write-plain-language-assessment-prepare",
+    "write-plain-language-comparison-assessment-prepare",
+    "write-plain-language-comparison-plan",
+    "write-plain-language-comparison-prepare",
+    "write-plain-language-comparison-result",
+    "write-plain-language-oracle",
+    "write-plain-language-plan",
+    "write-plain-language-prepare",
+    "write-plain-language-receipt",
+    "write-plain-language-validate",
+    "write-plain-language-validate-set",
     "write-production-plan",
     "write-production-prepare",
     "write-production-receipt",
@@ -140,10 +173,95 @@ export function parseModelEvaluationArguments(argv) {
     command === "feature-selection-plan"
     || command === "polish-preservation-plan"
     || command === "write-example-plan"
+    || command === "write-plain-language-comparison-plan"
+    || command === "write-plain-language-plan"
     || command === "write-production-plan"
   ) {
     if (values.length !== 0) throw new TypeError(usage());
     return { command };
+  }
+  if (command.startsWith("write-plain-language-")) {
+    const allowed = command === "write-plain-language-receipt"
+      ? [
+        "case",
+        "effort",
+        "evaluator-effort",
+        "evaluator-host",
+        "evaluator-invocation",
+        "evaluator-model",
+        "host",
+        "input",
+        "invocation",
+        "model",
+        "run",
+      ]
+      : command === "write-plain-language-assessment-prepare"
+        ? ["case", "input", "run"]
+        : command === "write-plain-language-comparison-assessment-prepare"
+          ? ["case", "input", "run"]
+          : command === "write-plain-language-comparison-prepare"
+            ? ["case", "run", "variant"]
+        : command === "write-plain-language-prepare"
+          ? ["case", "run"]
+          : command === "write-plain-language-oracle"
+            ? ["case"]
+            : ["input"];
+    const { options, positionals } = takeOptions(values, {
+      allowed,
+      prefix: "Hope model-evaluation",
+    });
+    if (positionals.length > 0) throw new TypeError(usage());
+    if (command === "write-plain-language-comparison-result") {
+      return { command, inputPath: required(options.input, "--input") };
+    }
+    if (command === "write-plain-language-oracle") {
+      return { caseId: required(options.case, "--case"), command };
+    }
+    if (
+      command === "write-plain-language-validate"
+      || command === "write-plain-language-validate-set"
+    ) {
+      return { command, inputPath: required(options.input, "--input") };
+    }
+    const common = {
+      caseId: required(options.case, "--case"),
+      command,
+      run: runNumber(options.run),
+    };
+    if (command === "write-plain-language-comparison-prepare") {
+      const variant = required(options.variant, "--variant");
+      if (!["baseline", "current"].includes(variant)) {
+        throw new TypeError(
+          `Unknown Hope model-evaluation variant: ${variant}`,
+        );
+      }
+      return { ...common, variant };
+    }
+    if (command === "write-plain-language-prepare") return common;
+    if (
+      command === "write-plain-language-assessment-prepare"
+      || command === "write-plain-language-comparison-assessment-prepare"
+    ) {
+      return {
+        ...common,
+        inputPath: required(options.input, "--input"),
+      };
+    }
+    return {
+      ...common,
+      evaluatorEffort: required(options["evaluator-effort"], "--evaluator-effort"),
+      evaluatorHost: required(options["evaluator-host"], "--evaluator-host"),
+      evaluatorInvocationId: required(
+        options["evaluator-invocation"],
+        "--evaluator-invocation",
+      ),
+      evaluatorModel: required(options["evaluator-model"], "--evaluator-model"),
+      inputPath: required(options.input, "--input"),
+      writerEffort: required(options.effort, "--effort"),
+      writerHost: required(options.host, "--host"),
+      writerInvocationId: required(options.invocation, "--invocation"),
+      writerModel: required(options.model, "--model"),
+    };
   }
   const receiptCommand = command === "feature-selection-receipt"
     || command === "polish-preservation-receipt"
@@ -265,6 +383,20 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
         ?? createHopeWriteExampleEvaluationPlan)(),
     );
   }
+  if (options.command === "write-plain-language-comparison-plan") {
+    return writeJson(
+      stdout,
+      (dependencies.createWritePlainLanguageComparisonPlan
+        ?? createHopeWritePlainLanguageComparisonPlan)(),
+    );
+  }
+  if (options.command === "write-plain-language-plan") {
+    return writeJson(
+      stdout,
+      (dependencies.createWritePlainLanguagePlan
+        ?? createHopeWritePlainLanguageEvaluationPlan)(),
+    );
+  }
   if (options.command === "write-production-plan") {
     return writeJson(
       stdout,
@@ -291,6 +423,43 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       stdout,
       await (dependencies.prepareWriteExampleRun
         ?? prepareHopeWriteExampleEvaluationRun)(options),
+    );
+  }
+  if (options.command === "write-plain-language-comparison-prepare") {
+    return writeJson(
+      stdout,
+      await (dependencies.prepareWritePlainLanguageComparisonRun
+        ?? prepareHopeWritePlainLanguageComparisonRun)(options),
+    );
+  }
+  if (
+    options.command
+      === "write-plain-language-comparison-assessment-prepare"
+  ) {
+    return writeJson(
+      stdout,
+      await (dependencies.prepareWritePlainLanguageComparisonAssessmentFromFile
+        ?? prepareHopeWritePlainLanguageComparisonAssessmentFromFile)(
+          options,
+          dependencies,
+        ),
+    );
+  }
+  if (options.command === "write-plain-language-prepare") {
+    return writeJson(
+      stdout,
+      await (dependencies.prepareWritePlainLanguageRun
+        ?? prepareHopeWritePlainLanguageEvaluationRun)(options),
+    );
+  }
+  if (options.command === "write-plain-language-assessment-prepare") {
+    return writeJson(
+      stdout,
+      await (dependencies.prepareWritePlainLanguageAssessmentFromFile
+        ?? prepareHopeWritePlainLanguageAssessmentFromFile)(
+          options,
+          dependencies,
+        ),
     );
   }
   if (options.command === "write-production-prepare") {
@@ -321,6 +490,13 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
         ?? getHopeWriteExampleEvaluationOracle)(options.caseId),
     );
   }
+  if (options.command === "write-plain-language-oracle") {
+    return writeJson(
+      stdout,
+      (dependencies.getWritePlainLanguageOracle
+        ?? getHopeWritePlainLanguageEvaluationOracle)(options.caseId),
+    );
+  }
   if (options.command === "feature-selection-receipt") {
     return writeJson(
       stdout,
@@ -346,6 +522,16 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       stdout,
       await (dependencies.createWriteExampleReceiptFromFile
         ?? createHopeWriteExampleEvaluationReceiptFromFile)(
+          options,
+          dependencies,
+        ),
+    );
+  }
+  if (options.command === "write-plain-language-receipt") {
+    return writeJson(
+      stdout,
+      await (dependencies.createWritePlainLanguageReceiptFromFile
+        ?? createHopeWritePlainLanguageEvaluationReceiptFromFile)(
           options,
           dependencies,
         ),
@@ -401,6 +587,26 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
         ),
     );
   }
+  if (options.command === "write-plain-language-validate") {
+    return writeJson(
+      stdout,
+      await (dependencies.validateWritePlainLanguageReceiptFile
+        ?? validateHopeWritePlainLanguageEvaluationReceiptFile)(
+          options.inputPath,
+          dependencies,
+        ),
+    );
+  }
+  if (options.command === "write-plain-language-validate-set") {
+    return writeJson(
+      stdout,
+      await (dependencies.validateWritePlainLanguageReceiptSetFile
+        ?? validateHopeWritePlainLanguageEvaluationReceiptSetFile)(
+          options.inputPath,
+          dependencies,
+        ),
+    );
+  }
   if (options.command === "write-production-validate") {
     return writeJson(
       stdout,
@@ -416,6 +622,16 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       stdout,
       await (dependencies.validateWriteProductionReceiptSetFile
         ?? validateHopeWriteProductionVerificationReceiptSetFile)(
+          options.inputPath,
+          dependencies,
+        ),
+    );
+  }
+  if (options.command === "write-plain-language-comparison-result") {
+    return writeJson(
+      stdout,
+      await (dependencies.createWritePlainLanguageComparisonResultFromFile
+        ?? createHopeWritePlainLanguageComparisonResultFromFile)(
           options.inputPath,
           dependencies,
         ),

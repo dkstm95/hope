@@ -570,6 +570,32 @@ The editable writing standard lives only in `features/write/standard.md`.
 The feature core returns the versioned standard, its representative decision
 examples, and a `draft`, `edit`, or `review` response contract.
 
+The standard owns one plain-language pass for passages that may make the
+intended reader stop or reread.
+
+That pass identifies the meaning to preserve, then applies only the matching
+repair: name a hidden actor when helpful, replace unfamiliar wording where
+accurate, explain a necessary unfamiliar term, make an unclear relationship
+explicit, or split genuinely stacked ideas at a safe meaning boundary.
+
+`features/model-evaluation/write-plain-language.mjs` owns the generated-prose
+evaluation boundary.
+
+It prepares the writer input, reveals preservation
+assertions only after the revision exists, prepares a writer-blind reader
+assessment, and binds both invocations through separate provenance records.
+
+`features/model-evaluation/write-plain-language-comparison.mjs` owns the
+observational A/B boundary between the immutable Write version 2 fixture and the
+current brief.
+
+It prepares 24 isolated writer runs, counterbalances 12 blinded candidate pairs,
+validates pairwise assessments, and refuses to mark the unattested result as
+release eligible.
+
+The independent harness and generated plugin expose that boundary through the
+shared model-evaluation command.
+
 The Claude and Codex Skills choose a mode and ask the generated runtime for the
 same brief.
 

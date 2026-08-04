@@ -227,7 +227,7 @@ Create and validate bounded receipts with the matching
 `feature-selection-receipt`, `feature-selection-validate`, and
 `feature-selection-validate-set` commands.
 
-Version 3 keeps the 26-run matrix and adds the shared evidence boundary.
+Version 3 kept the 26-run matrix and added the shared evidence boundary.
 
 A release-eligible complete set requires every planned run, one declared host,
 model, and effort, a unique invocation identity for every run, valid host
@@ -236,7 +236,23 @@ attestations, and a trusted complete-attempt ledger.
 It returns `candidate-minimal` only when all 26 decisions pass.
 
 Earlier version 1 and version 2 runs reported 26 of 26 passing decisions, but
-their caller-authored receipts cannot satisfy the version 3 evidence gate.
+their caller-authored receipts cannot satisfy the shared evidence gate.
+
+Version 4 narrows the candidate Align description to requests that explicitly
+ask for a shared-understanding check or clarification before coding. Two fresh
+Codex dispatcher attempts with the earlier candidate incorrectly selected Align
+for an ordinary database-client upgrade after finding an empty workspace.
+
+The revised candidate retained the shorter descriptions for the other six
+features. A fresh `gpt-5.6-sol` high-effort dispatcher comparison reported 13 of
+13 correct selections for the complete descriptions and 13 of 13 for the
+revised candidate. The model-only comparison also reported 26 of 26 correct
+decisions.
+
+Those manual host observations include fresh invocation identities, but they
+were not issued by the trusted attestation and complete-ledger adapters. Treat
+them as bounded smoke evidence, not release-eligible evidence under the shared
+trust contract.
 
 Those runs are useful historical smoke data, not release authorization.
 
@@ -333,18 +349,26 @@ deterministic preparation and validation boundary.
 
 ## Write decision examples
 
-Write carries four representative decision examples alongside its semantic
+Write carries five representative decision examples alongside its semantic
 writing standard.
 
 Hope treats those examples as removable guidance, not as permanent product
 invariants.
 
-The version 2 ablation compares the exact current `edit` brief with a
+The version 4 ablation compares the exact current `edit` brief with a
 `rules-only` brief that removes only `decisionExamples`.
 
-It checks six synthetic artifacts and edit requests: the four represented
-decisions and two safety boundaries where aggressive splitting or
-consolidation would be wrong.
+It checks eight synthetic artifacts and edit requests: the five represented
+decisions and three safety boundaries where aggressive splitting,
+consolidation, or rewriting exact evidence would be wrong.
+
+The added Korean case checks whether the host recognizes a dense sentence that
+hides actions and stacks a required sequence as a plain-language rewrite. Its
+request uses neutral task language instead of repeating the expected decision
+or the standard's one-pass wording.
+
+The nearby Korean safety case keeps a dense quoted regulatory name exact. It
+checks that surface difficulty alone does not trigger a rewrite.
 
 Each input supplies the current artifact, the requested edit, and factual
 constraints without stating whether an action is correct or describing its
@@ -352,7 +376,7 @@ expected harm.
 
 Review case neutrality independently before starting a release campaign.
 
-The plan requires two fresh contexts per decision and variant, producing 24
+The plan requires two fresh contexts per decision and variant, producing 32
 runs.
 
 List and prepare the matrix with:
@@ -369,8 +393,8 @@ Give a fresh host only the returned `brief`, `hostInput`, and
 Use the matching `write-example-receipt`, `write-example-validate`, and
 `write-example-validate-set` commands to bind and validate the evidence.
 
-The release-eligible complete set returns `remove-examples` only when all 24
-runs pass with one declared host, model, and effort, 24 unique invocation
+The release-eligible complete set returns `remove-examples` only when all 32
+runs pass with one declared host, model, and effort, 32 unique invocation
 identities, valid host attestations, and a trusted complete-attempt ledger.
 
 The historical version 1 run reported all 24 decisions passing, but its
@@ -378,10 +402,16 @@ caller-authored receipts do not satisfy the version 2 evidence gate.
 
 Its production verification also reused the ablation cases.
 
-Hope therefore restored and retains the four active decision examples and the
+Hope therefore restored and retains the original four decision examples and the
 Skill instructions that consume them.
 
-List and prepare those six exact-production runs with:
+The version 4 candidate adds the fifth plain-language example because repeated
+real output required readers to reread dense sentences.
+
+That new guidance is not release evidence until the version 4 ablation and
+production verification pass through the trusted evidence boundary.
+
+List and prepare the seven exact-production runs with:
 
 ```text
 hope model-evaluation write-production-plan
@@ -391,10 +421,15 @@ hope model-evaluation write-production-prepare --case <id> --run 1
 Use the matching `write-production-receipt`, `write-production-validate`, and
 `write-production-validate-set` commands for the final evidence.
 
-Version 2 production verification uses six separate held-out situations and
+Version 4 production verification uses seven separate held-out situations and
 the exact active brief.
 
-It does not reuse an ablation case.
+The added production case uses an unexplained necessary product term and an
+uncertain reference instead of the ablation case's prerequisite-then-retry
+sequence.
+
+Treat it only as a candidate held-out case until the required independent
+comparison confirms that it is materially distinct from every ablation input.
 
 Before a release campaign, an independent reviewer must compare every
 production case with every ablation case and confirm that its artifact
@@ -407,10 +442,10 @@ matching ablation structures.
 The runtime compares the complete prepared brief with the canonical active
 `edit` brief, not only its decision examples.
 
-This checks transfer to new scenarios; it does not claim a separate decision
-taxonomy.
+Only a passing, independently reviewed, host-attested campaign can support a
+bounded transfer claim. The deterministic case contract alone does not.
 
-The active brief is accepted only when all six runs pass with host attestations
+The active brief is accepted only when all seven runs pass with host attestations
 and a trusted complete-attempt ledger.
 
 The CLI alone cannot produce that release decision.
@@ -420,6 +455,121 @@ a versioned production check of the exact example-free candidate.
 
 It does not justify removing the underlying semantic structure or preservation
 rules.
+
+## Write generated prose
+
+Decision labels show whether a host recognized an editing situation. They do
+not show whether the resulting sentence became easier or kept every required
+condition.
+
+The version 1 plain-language evaluation therefore requires the writer to return
+the complete revised passage for four structurally varied Korean and English
+cases.
+
+Prepare a writer run with:
+
+```text
+hope model-evaluation write-plain-language-plan
+hope model-evaluation write-plain-language-prepare \
+  --case <id> --run 1
+```
+
+Give the writer only the returned `brief`, `hostInput`, and `outputContract`.
+Do not reveal the preservation assertions, reader rubric, another case, or an
+earlier output.
+
+After the writer returns `{"revision":"..."}`, prepare the assessment with:
+
+```text
+hope model-evaluation write-plain-language-assessment-prepare \
+  --case <id> --run 1 --input <writer-output.json>
+```
+
+Give that result's `evaluatorInput` and `assessmentContract` to a fresh
+evaluator. The evaluator must not receive the writer identity, model, effort,
+invocation, provenance, decision label, or a reference revision.
+
+The evaluator checks every case-specific meaning-preservation assertion and
+three reader-oriented criteria: whether the intended reader can follow the
+sentence structure, whether the target-language prose is natural, and whether
+the revision applies only needed repairs.
+
+The receipt binds the source brief and input, generated revision, revealed
+rubric, assessment input, and assessment. Writer and evaluator have separate
+configuration, invocation, and attestation records.
+
+Use `write-plain-language-receipt`, `write-plain-language-validate`, and
+`write-plain-language-validate-set` to create synthetic smoke receipts or
+validate trusted evidence.
+
+A release-eligible result requires all four revisions to pass every assertion
+and criterion, valid writer and evaluator attestations, unique invocation
+identities, and a trusted complete-attempt ledger for both campaigns.
+
+CLI-created receipts remain synthetic and cannot accept the behavior. A passing
+bounded campaign still does not prove clarity for every reader or domain.
+
+## Write plain-language comparison
+
+The generated-prose suite checks the active brief in isolation.
+
+To test whether the plain-language patch improved output, version 1 of the
+comparison evaluates the exact committed Write version 2 brief against the
+current brief.
+
+The historical standard is an immutable evaluation fixture at
+`features/model-evaluation/write-baseline-v2.md`.
+
+The comparison runs each of the four generated-prose cases three times for both
+variants, producing 24 fresh writer outputs and 12 paired assessments.
+
+List and prepare writer runs with:
+
+```text
+hope model-evaluation write-plain-language-comparison-plan
+hope model-evaluation write-plain-language-comparison-prepare \
+  --case <id> --variant <baseline|current> --run <1|2|3>
+```
+
+Give each writer only the prepared `brief`, `hostInput`, and `outputContract`.
+
+Never reuse a writer context or reveal another output, the oracle, or the
+assessment rubric.
+
+After both variants return for one case and run, place them in one object with
+`baseline` and `current` output fields and prepare the blind assessment:
+
+```text
+hope model-evaluation write-plain-language-comparison-assessment-prepare \
+  --case <id> --run <1|2|3> --input <outputs.json>
+```
+
+Give a fresh evaluator only `evaluatorInput` and `assessmentContract`.
+
+The evaluator sees candidates A and B in a counterbalanced order but does not
+receive variant names, assignment, brief versions, writer identities, models,
+effort, invocation IDs, or earlier judgments.
+
+The evaluator checks every preservation assertion and reader criterion for both
+candidates before recording comparative preferences.
+
+Build the bounded observational result with:
+
+```text
+hope model-evaluation write-plain-language-comparison-result \
+  --input <assessed-pairs.json>
+```
+
+The result reports `observed-improvement` only when all 12 current outputs pass
+every assertion and criterion, current wins exceed baseline wins overall and
+for plain-language clarity, and no current output loses a preservation
+assertion.
+
+This campaign uses real model outputs, but its core result is intentionally
+`observational-unattested` and never release eligible.
+
+Release evidence still requires trusted writer and evaluator attestations and
+complete-attempt ledgers through the separate generated-prose receipt boundary.
 
 ## Source influence
 

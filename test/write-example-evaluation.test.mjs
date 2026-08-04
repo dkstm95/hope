@@ -10,6 +10,7 @@ import {
   createHopeWriteProductionVerificationPlan,
   createHopeWriteProductionVerificationReceipt,
   getHopeWriteExampleEvaluationOracle,
+  hopeWriteExampleEvaluationCases,
   hopeWriteProductionVerificationCases,
   prepareHopeWriteExampleEvaluationRun,
   prepareHopeWriteProductionVerificationRun,
@@ -135,12 +136,12 @@ async function productionReceiptFor(specification, {
   })).receipt;
 }
 
-test("Write example ablation pairs 24 fresh runs", () => {
+test("Write example ablation pairs 32 fresh runs", () => {
   const plan = createHopeWriteExampleEvaluationPlan();
-  assert.equal(plan.totalRuns, 24);
-  assert.equal(plan.runs.filter((run) => run.variant === "rules-only").length, 12);
-  assert.equal(plan.runs.filter((run) => run.variant === "full").length, 12);
-  assert.equal(new Set(plan.runs.map((run) => run.caseId)).size, 6);
+  assert.equal(plan.totalRuns, 32);
+  assert.equal(plan.runs.filter((run) => run.variant === "rules-only").length, 16);
+  assert.equal(plan.runs.filter((run) => run.variant === "full").length, 16);
+  assert.equal(new Set(plan.runs.map((run) => run.caseId)).size, 8);
 });
 
 test("rules-only removes only decision examples from the active Write brief", async () => {
@@ -155,7 +156,7 @@ test("rules-only removes only decision examples from the active Write brief", as
     variant: "full",
   });
   assert.equal(Object.hasOwn(rulesOnly.brief, "decisionExamples"), false);
-  assert.equal(full.brief.decisionExamples.length, 4);
+  assert.equal(full.brief.decisionExamples.length, 5);
   assert.equal(rulesOnly.brief.standard, full.brief.standard);
   assert.equal(rulesOnly.brief.response, full.brief.response);
   assert.equal(Object.hasOwn(rulesOnly, "oracle"), false);
@@ -183,6 +184,24 @@ test("Write example outputs are exact and bounded", () => {
     }),
     /not published/u,
   );
+});
+
+test("plain-language ablation stays neutral and includes a precision control", () => {
+  const rewrite = hopeWriteExampleEvaluationCases.find(
+    (evaluationCase) => evaluationCase.id === "write-example-07",
+  );
+  const precision = hopeWriteExampleEvaluationCases.find(
+    (evaluationCase) => evaluationCase.id === "write-example-08",
+  );
+  assert.ok(rewrite);
+  assert.ok(precision);
+  assert.doesNotMatch(
+    rewrite.input.request,
+    /한 번|쉽|어렵|다시 읽|one pass|reread|simpl/u,
+  );
+  assert.equal(rewrite.oracle.expectedDecision, "simplify-hard-sentence");
+  assert.equal(precision.oracle.expectedDecision, "keep-current-structure");
+  assert.match(precision.input.constraints.join(" "), /그대로 유지/u);
 });
 
 test("Write example receipts retain failures and reject tampering", async () => {
@@ -224,13 +243,13 @@ test("complete Write example evidence requires every run and one configuration",
   assert.deepEqual(result.summary, {
     deletionReady: true,
     failedRuns: 0,
-    passedRuns: 24,
-    totalRuns: 24,
+    passedRuns: 32,
+    totalRuns: 32,
   });
   assert.equal(result.decision, "remove-examples");
   assert.deepEqual(result.byVariant, {
-    "rules-only": { failed: 0, passed: 12, total: 12 },
-    full: { failed: 0, passed: 12, total: 12 },
+    "rules-only": { failed: 0, passed: 16, total: 16 },
+    full: { failed: 0, passed: 16, total: 16 },
   });
 
   const repeated = structuredClone(receipts);
@@ -258,7 +277,7 @@ test("complete Write example evidence requires every run and one configuration",
       receipts.slice(1),
       { allowSynthetic: true },
     ),
-    /must contain 24 runs/u,
+    /must contain 32 runs/u,
   );
 });
 
@@ -283,7 +302,7 @@ test("Write ablation trusted evidence rejects mixed campaigns", async () => {
   ));
   const result = await validateHopeWriteExampleEvaluationReceiptSet(receipts, {
     verifyModelEvaluationAttestation: () => true,
-    verifyModelEvaluationSet: (manifest) => manifest.events.length === 24,
+    verifyModelEvaluationSet: (manifest) => manifest.events.length === 32,
   });
   assert.equal(result.provenance.kind, "host-attested");
 
@@ -368,9 +387,9 @@ test("harness and generated plugin expose the same Write example plan", () => {
   assert.deepEqual(JSON.parse(harness.stdout), JSON.parse(plugin.stdout));
 });
 
-test("Write production verification uses the exact active brief in six runs", async () => {
+test("Write production verification uses the exact active brief in seven runs", async () => {
   const plan = createHopeWriteProductionVerificationPlan();
-  assert.equal(plan.totalRuns, 6);
+  assert.equal(plan.totalRuns, 7);
   const prepared = await prepareHopeWriteProductionVerificationRun({
     caseId: "write-production-01",
     run: 1,
@@ -411,6 +430,10 @@ test("Write production cases use structures distinct from their ablation counter
     Object.keys(productionById.get("write-production-06").input.artifact).sort(),
     ["columns", "format", "rows"],
   );
+  assert.deepEqual(
+    Object.keys(productionById.get("write-production-07").input.artifact).sort(),
+    ["audience", "body", "placement"],
+  );
   assert.match(
     productionById.get("write-production-01").input.constraints.join(" "),
     /first two sentences form one recovery update/u,
@@ -423,9 +446,13 @@ test("Write production cases use structures distinct from their ablation counter
     productionById.get("write-production-06").input.constraints.join(" "),
     /mutually exclusive outcomes/u,
   );
+  assert.match(
+    productionById.get("write-production-07").input.constraints.join(" "),
+    /같은 요청에 같은 키를 보내면 중복 결제를 막는다는 동작/u,
+  );
 });
 
-test("complete Write production evidence accepts only six passing fresh runs", async () => {
+test("complete Write production evidence accepts only seven passing fresh runs", async () => {
   const plan = createHopeWriteProductionVerificationPlan();
   const receipts = await Promise.all(plan.runs.map((specification) =>
     productionReceiptFor(specification)
@@ -441,8 +468,8 @@ test("complete Write production evidence accepts only six passing fresh runs", a
   assert.deepEqual(result.summary, {
     accepted: true,
     failedRuns: 0,
-    passedRuns: 6,
-    totalRuns: 6,
+    passedRuns: 7,
+    totalRuns: 7,
   });
   assert.equal(result.decision, "accept-production");
 
@@ -474,7 +501,7 @@ test("Write production trusted evidence fails a rejected attempt ledger", async 
     receipts,
     {
       verifyModelEvaluationAttestation: () => true,
-      verifyModelEvaluationSet: (manifest) => manifest.events.length === 6,
+      verifyModelEvaluationSet: (manifest) => manifest.events.length === 7,
     },
   );
   assert.equal(result.provenance.kind, "host-attested");

@@ -1,8 +1,8 @@
 // Generated from features/write/index.mjs. Do not edit.
 import { readFile } from "node:fs/promises";
 
-export const WRITE_BRIEF_VERSION = 2;
-export const WRITE_STANDARD_VERSION = 2;
+export const WRITE_BRIEF_VERSION = 4;
+export const WRITE_STANDARD_VERSION = 4;
 export const WRITE_MODEL_ADAPTER_CODE = "HOPE_WRITE_MODEL_ADAPTER_REQUIRED";
 export const WRITE_MODEL_ADAPTER_MESSAGE =
   "Automatic Hope writing currently runs through the Claude or Codex skill.";
@@ -36,12 +36,19 @@ export const WRITE_DECISION_EXAMPLES = Object.freeze([
     situation:
       "An edit would delete, demote, or reorder a unique product claim, and the request does not explicitly authorize that content change.",
   }),
+  Object.freeze({
+    expectedDecision:
+      "Apply only the repair that matches the diagnosed problem: name the actor when it is hidden and helpful, use familiar wording when it stays accurate, explain a necessary unfamiliar term, make an unclear relationship explicit, or split genuinely stacked ideas at a safe meaning boundary.",
+    id: "simplify-hard-sentence",
+    situation:
+      "A passage may make its intended reader stop or reread because it hides a helpful actor or action, uses unfamiliar wording, stacks several relationships, leaves a necessary term unexplained, or makes a reference uncertain.",
+  }),
 ]);
 
 const RESPONSE_BY_MODE = Object.freeze({
-  draft: "Return the finished prose.\n\nMention a factual gap or deliberate exception only when it helps the person judge the result.",
-  edit: "Change the requested target and lead with the completed result.\n\nPreserve a material ambiguity instead of silently choosing a new meaning.",
-  review: "Do not change files.\n\nReport only material clarity, meaning, or flow problems, and pair each problem with a concrete revision.",
+  draft: "Return the finished prose.\n\nUse direct sentence structure and familiar wording where they stay accurate. Keep a precise specialist term when needed, and explain it when the intended reader may not know it.\n\nMention a factual gap or deliberate exception only when it helps the person judge the result.",
+  edit: "Change the requested target and lead with the completed result.\n\nRevise passages that may make the intended reader stop or reread. Apply only the repair that matches the problem: name a hidden actor when helpful, explain an unfamiliar necessary term, make an unclear relationship explicit, or split genuinely stacked ideas at a safe meaning boundary.\n\nPreserve every material meaning and ambiguity instead of silently choosing a new one.",
+  review: "Do not change files.\n\nReport only material clarity, meaning, or flow problems, including passages that may make the intended reader stop or reread. Pair each problem with a concrete, conditional revision that preserves the full meaning.",
 });
 
 function assertMode(mode) {

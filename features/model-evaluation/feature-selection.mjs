@@ -7,8 +7,8 @@ import {
   validateHopeModelEvaluationReceiptSetProvenance,
 } from "./evidence.mjs";
 
-export const HOPE_FEATURE_SELECTION_CONTRACT_VERSION = 2;
-export const HOPE_FEATURE_SELECTION_EVALUATION_VERSION = 3;
+export const HOPE_FEATURE_SELECTION_CONTRACT_VERSION = 3;
+export const HOPE_FEATURE_SELECTION_EVALUATION_VERSION = 4;
 
 export const hopeFeatureSelectionEvaluationLimits = Object.freeze({
   outputBytes: 16 * 1024,
@@ -52,7 +52,7 @@ const fullDescriptions = Object.freeze({
 
 const minimalDescriptions = Object.freeze({
   align:
-    "Use before implementation to resolve material misunderstandings about requirements, scope, design, or expected behavior.",
+    "Use when someone asks for a pre-implementation shared-understanding check or wants requirements, scope, design, or expected behavior clarified before coding.",
   diff:
     "Use to explain a GitHub pull request as an evidence-linked review, including a pending Hope Diff confirmation.",
   polish:

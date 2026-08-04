@@ -45,6 +45,51 @@ standard.
 It adapts George Orwell's six writing rules and adds the structural and
 preservation rules needed for current Hope work.
 
+## Plain-language behavior
+
+Write makes the sentence structure direct enough for the intended reader to
+follow in one pass.
+
+A complex idea may still need explanation, and a precise or expected specialist
+term may remain.
+
+The sentence around that term must still be direct.
+
+Write explains the term when the reader may not know it.
+
+Passage length alone does not decide whether language is hard.
+
+Write treats hidden actors and actions, abstract noun chains, unfamiliar words,
+unexplained necessary terms, stacked relationships, and uncertain references as
+signals that a reader may have to stop or reread.
+
+For each such passage, Write first identifies the meaning that must remain:
+actors, actions, objects, conditions, causes, results, sequence, exceptions, and
+uncertainty.
+
+It then applies only the repair supported by the diagnosed problem.
+
+It states a hidden actor or action directly where helpful, replaces unfamiliar
+wording where accurate, and explains a necessary technical term only when the
+reader may not know it.
+
+It names relationships that the reader would otherwise have to infer, such as a
+cause, condition, result, sequence, contrast, or exception.
+
+It splits stacked ideas only at a meaning boundary where every new sentence
+remains clear.
+
+It repeats a noun instead of using an uncertain reference when that makes the
+result easier to follow.
+
+Finally, it reads the revision on its own from the intended reader's point of
+view and revises again when who does what, when, or why is still hard to see.
+
+This pass does not use a fixed word count or reading-grade threshold.
+
+It does not remove a condition, relationship, exception, uncertainty, or
+technical distinction merely to make the result look shorter.
+
 Write matches the amount and local order of non-material supporting detail to
 the target's purpose, intended reader, and next action.
 
@@ -99,7 +144,8 @@ changes.
 
 The shared standard contract includes representative decision examples for
 separating independent points, consolidating repeated framing, surfacing an
-important boundary, and preserving a material claim.
+important boundary, preserving a material claim, and simplifying a passage that
+requires rereading.
 
 Each example records a situation and the expected decision without prescribing
 one exact sentence.
@@ -108,6 +154,17 @@ The examples guide an active host when a situation matches.
 
 They are not automated evaluation results or evidence that a model followed the
 standard.
+
+The model-evaluation boundary tests plain-language output in two ways.
+
+The generated-prose suite checks whether the current brief preserves required
+meaning and produces natural prose that the intended reader can follow.
+
+The comparison suite uses fresh, blinded A/B runs to test whether the current
+brief improves on the immutable Write version 2 baseline.
+
+Neither deterministic contract tests nor unattested observations are release
+evidence.
 
 The standalone feature returns those examples and the standard with the selected
 mode and matching response contract.

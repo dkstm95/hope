@@ -76,6 +76,30 @@ test("the writing standard prefers one sentence per prose paragraph", async () =
   );
 });
 
+test("the writing standard performs a plain-language pass", async () => {
+  const standard = await loadWritingStandard();
+  assert.match(
+    standard,
+    /follow the sentence structure in one pass/u,
+  );
+  assert.match(
+    standard,
+    /Identify the actor, action, object, conditions, causes, results, sequence,[\s\S]+exceptions, and uncertainty/u,
+  );
+  assert.match(
+    standard,
+    /Turn an abstract noun back into a verb/u,
+  );
+  assert.match(
+    standard,
+    /cause, condition, result, sequence, contrast, or exception/u,
+  );
+  assert.match(
+    standard,
+    /Do not remove a condition, cause, exception, uncertainty, or technical[\s\S]+distinction/u,
+  );
+});
+
 test("the writing standard covers document-level information structure", async () => {
   const standard = await loadWritingStandard();
   assert.match(
@@ -102,6 +126,7 @@ test("the writing standard carries representative decision examples", async () =
       "remove-repeated-framing",
       "surface-important-boundary",
       "preserve-material-claim",
+      "simplify-hard-sentence",
     ],
   );
   for (const item of WRITE_DECISION_EXAMPLES) {
@@ -109,6 +134,11 @@ test("the writing standard carries representative decision examples", async () =
     assert.ok(item.expectedDecision.length > 0);
     assert.ok(Object.isFrozen(item));
   }
+  const plainLanguage = WRITE_DECISION_EXAMPLES.find(
+    (item) => item.id === "simplify-hard-sentence",
+  );
+  assert.match(plainLanguage.expectedDecision, /Apply only the repair/u);
+  assert.match(plainLanguage.situation, /may make its intended reader/u);
 
   const standard = await createWritingStandard({
     loadStandard: async () => "shared standard\n",
@@ -147,7 +177,7 @@ test("a writing brief passes through the standard contract independently of its 
     decisionExamples,
     feature: "write",
     mode: "edit",
-    response: "Change the requested target and lead with the completed result.\n\nPreserve a material ambiguity instead of silently choosing a new meaning.",
+    response: "Change the requested target and lead with the completed result.\n\nRevise passages that may make the intended reader stop or reread. Apply only the repair that matches the problem: name a hidden actor when helpful, explain an unfamiliar necessary term, make an unclear relationship explicit, or split genuinely stacked ideas at a safe meaning boundary.\n\nPreserve every material meaning and ambiguity instead of silently choosing a new one.",
     standard: "sentinel standard\n",
     standardVersion: 73,
     version: WRITE_BRIEF_VERSION,
