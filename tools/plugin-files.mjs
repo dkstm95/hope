@@ -49,6 +49,11 @@ export const generatedPluginFiles = Object.freeze([
     "<!-- Generated from docs/polish.md. Do not edit. -->\n\n",
   ),
   generatedText(
+    "docs/sweep.md",
+    "plugins/hope/docs/sweep.md",
+    "<!-- Generated from docs/sweep.md. Do not edit. -->\n\n",
+  ),
+  generatedText(
     "docs/toxic-review.md",
     "plugins/hope/docs/toxic-review.md",
     "<!-- Generated from docs/toxic-review.md. Do not edit. -->\n\n",
@@ -110,13 +115,33 @@ export const generatedPluginFiles = Object.freeze([
     "cli.mjs",
     "constants.mjs",
     "index.mjs",
+    "receipt-v1.schema.json",
     "run-v1.schema.json",
+    "run-v2.schema.json",
     "validate.mjs",
   ].map((name) => generatedText(
     `features/polish/${name}`,
     `plugins/hope/runtime/features/polish/${name}`,
     name.endsWith(".mjs")
       ? `// Generated from features/polish/${name}. Do not edit.\n`
+      : "",
+  )),
+  ...[
+    "approval-v1.schema.json",
+    "cli.mjs",
+    "completion-v1.schema.json",
+    "constants.mjs",
+    "evaluation-output-v1.schema.json",
+    "index.mjs",
+    "model-evaluation.mjs",
+    "plan-v1.schema.json",
+    "session-result-v1.schema.json",
+    "validate.mjs",
+  ].map((name) => generatedText(
+    `features/sweep/${name}`,
+    `plugins/hope/runtime/features/sweep/${name}`,
+    name.endsWith(".mjs")
+      ? `// Generated from features/sweep/${name}. Do not edit.\n`
       : "",
   )),
   ...[
@@ -244,6 +269,8 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/settings/assets/hope-protected-light.png",
   "plugins/hope/skills/polish/SKILL.md",
   "plugins/hope/skills/polish/agents/openai.yaml",
+  "plugins/hope/skills/sweep/SKILL.md",
+  "plugins/hope/skills/sweep/agents/openai.yaml",
   "plugins/hope/skills/toxic-review/SKILL.md",
   "plugins/hope/skills/toxic-review/agents/openai.yaml",
   "plugins/hope/skills/write/SKILL.md",

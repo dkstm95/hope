@@ -85,6 +85,8 @@ function makeAlignPolishRun({
     run.preservation[0].verificationIds = [];
     run.outcome = {
       status: "needs-alignment",
+      outputSnapshot: null,
+      removedSourceIds: [],
       changes: [],
       unresolved: ["A material wording choice needs user input."],
     };

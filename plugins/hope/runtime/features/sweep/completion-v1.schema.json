@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/sweep/completion-v1.schema.json",
+  "title": "Hope sweep completion version 1",
+  "description": "Structural authoring schema. The shared Sweep runtime revalidates attested approval and Polish receipts and enforces the approved execution contract, identity, evidence, and change budget.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "title",
+    "snapshot",
+    "approvalReceipt",
+    "outcome",
+    "summary"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "title": { "$ref": "#/$defs/text" },
+    "snapshot": { "$ref": "#/$defs/snapshot" },
+    "approvalReceipt": { "$ref": "approval-v1.schema.json" },
+    "polishReceipt": { "$ref": "../polish/receipt-v1.schema.json" },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "outputSnapshot",
+        "removedSourceIds",
+        "changes",
+        "verification",
+        "gaps"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "applied",
+            "no-change",
+            "stale",
+            "rejected",
+            "failed",
+            "inconclusive",
+            "handed-off"
+          ]
+        },
+        "outputSnapshot": {
+          "oneOf": [
+            { "$ref": "#/$defs/snapshot" },
+            { "type": "null" }
+          ]
+        },
+        "removedSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "changes": {
+          "type": "array",
+          "maxItems": 96,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["polishChangeId", "summary", "sourceIds", "verificationIds"],
+            "properties": {
+              "polishChangeId": { "$ref": "#/$defs/id" },
+              "summary": { "$ref": "#/$defs/text" },
+              "sourceIds": { "$ref": "#/$defs/sourceIds" },
+              "verificationIds": { "$ref": "#/$defs/ids" }
+            }
+          }
+        },
+        "verification": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "method", "status", "scope", "detail", "sourceIds"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "name": { "$ref": "#/$defs/text" },
+              "method": { "$ref": "#/$defs/text" },
+              "status": { "enum": ["passed", "failed", "inconclusive", "not-run"] },
+              "scope": { "$ref": "#/$defs/text" },
+              "detail": { "$ref": "#/$defs/text" },
+              "sourceIds": { "$ref": "#/$defs/sourceIds" }
+            }
+          }
+        },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assessment", "remainingGaps"],
+      "properties": {
+        "assessment": { "$ref": "#/$defs/text" },
+        "remainingGaps": { "$ref": "#/$defs/textList" }
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384,
+      "pattern": "\\S"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "ids": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "textList": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "sourceIds": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "label", "locator"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["conversation", "git", "file", "url", "artifact"] },
+        "label": { "$ref": "#/$defs/text" },
+        "locator": { "$ref": "#/$defs/text" },
+        "revision": { "$ref": "#/$defs/text" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capturedAt", "sources"],
+      "properties": {
+        "capturedAt": { "type": "string", "format": "date-time" },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/source" }
+        }
+      }
+    }
+  }
+}

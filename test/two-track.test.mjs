@@ -27,6 +27,7 @@ import {
   parseDiffArguments,
 } from "../features/diff/cli.mjs";
 import { createPolishBrief } from "../features/polish/index.mjs";
+import { createSweepBrief } from "../features/sweep/index.mjs";
 import { createToxicReviewBrief } from "../features/toxic-review/index.mjs";
 import {
   loadWritingStandard,
@@ -421,6 +422,10 @@ test("Codex and Claude Code share the same Hope skills", async () => {
     "utf8",
   );
   const settingsDirectory = resolve(root, "plugins/hope/skills/settings");
+  const sweep = await readFile(
+    resolve(root, "plugins/hope/skills/sweep/SKILL.md"),
+    "utf8",
+  );
   const toxicReview = await readFile(
     resolve(root, "plugins/hope/skills/toxic-review/SKILL.md"),
     "utf8",
@@ -449,6 +454,7 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   await access(resolve(root, "plugins/hope/runtime/features/diff/cli.mjs"));
   await access(resolve(root, "plugins/hope/runtime/settings/cli.mjs"));
   await access(resolve(root, "plugins/hope/runtime/features/write/cli.mjs"));
+  await access(resolve(root, "plugins/hope/runtime/features/sweep/cli.mjs"));
   assert.equal(codexPlugin.skills, "./skills/");
   assert.equal(claudePlugin.skills, "./skills/");
   assert.match(diff, /runtime\/features\/diff\/cli\.mjs/u);
@@ -471,10 +477,12 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(diff, /structured error's\s+`command` and\s+`runPath` fields/u);
   assert.match(diff, /before the\s+first `finish` attempt/u);
   assert.match(settings, /runtime\/settings\/cli\.mjs/u);
+  assert.match(sweep, /runtime\/features\/sweep\/cli\.mjs/u);
+  assert.match(sweep, /runtime\/features\/polish\/cli\.mjs/u);
   assert.match(write, /runtime\/features\/write\/cli\.mjs/u);
   assert.match(write, /brief --mode <draft\|edit\|review>/u);
   assert.match(write, /`standard`, `decisionExamples`/u);
-  for (const skill of [align, diff, polish, toxicReview, write]) {
+  for (const skill of [align, diff, polish, sweep, toxicReview, write]) {
     assert.match(skill, /not\s+evaluation results/u);
   }
   assert.doesNotMatch(write, /Prefer a short, familiar word/u);
@@ -535,10 +543,17 @@ test("every Write entry path returns the same brief", async () => {
 });
 
 test("every cross-feature consumer passes through the exact writing standard contract", async () => {
-  const [pluginAlign, pluginDiff, pluginPolish, pluginToxicReview] = await Promise.all([
+  const [
+    pluginAlign,
+    pluginDiff,
+    pluginPolish,
+    pluginSweep,
+    pluginToxicReview,
+  ] = await Promise.all([
     import("../plugins/hope/runtime/features/align/index.mjs"),
     import("../plugins/hope/runtime/features/diff/index.mjs"),
     import("../plugins/hope/runtime/features/polish/index.mjs"),
+    import("../plugins/hope/runtime/features/sweep/index.mjs"),
     import("../plugins/hope/runtime/features/toxic-review/index.mjs"),
   ]);
   const decisionExamples = Object.freeze([
@@ -594,6 +609,8 @@ test("every cross-feature consumer passes through the exact writing standard con
     generatedDiff,
     corePolish,
     generatedPolish,
+    coreSweep,
+    generatedSweep,
     coreToxicReview,
     generatedToxicReview,
   ] = await Promise.all([
@@ -603,6 +620,8 @@ test("every cross-feature consumer passes through the exact writing standard con
     pluginDiff.prepareDiff(options, dependencies),
     createPolishBrief({ risk: "low" }, dependencies),
     pluginPolish.createPolishBrief({ risk: "low" }, dependencies),
+    createSweepBrief({ risk: "low" }, dependencies),
+    pluginSweep.createSweepBrief({ risk: "low" }, dependencies),
     createToxicReviewBrief(
       { risk: "low", stage: "implementation", target: "patch" },
       dependencies,
@@ -620,6 +639,8 @@ test("every cross-feature consumer passes through the exact writing standard con
     generatedDiff,
     corePolish,
     generatedPolish,
+    coreSweep,
+    generatedSweep,
     coreToxicReview,
     generatedToxicReview,
   ]) {
@@ -630,7 +651,7 @@ test("every cross-feature consumer passes through the exact writing standard con
       version: 73,
     });
   }
-  assert.equal(standardCalls, 8);
+  assert.equal(standardCalls, 10);
   assert.equal(coreDiff.analysisSchemaVersion, 2);
   assert.match(coreDiff.analysisSchemaPath, /analysis-v2\.schema\.json$/u);
   assert.deepEqual(generatedDiff.teachingAids, coreDiff.teachingAids);

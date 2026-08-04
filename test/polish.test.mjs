@@ -10,6 +10,8 @@ import {
   parsePolishArguments,
 } from "../features/polish/cli.mjs";
 import {
+  createPolishReceipt,
+  validatePolishReceipt,
   validatePolishRun,
 } from "../features/polish/validate.mjs";
 import { makePolishRun } from "../test-support/polish-fixture.mjs";
@@ -33,6 +35,7 @@ test("polish accepts an exact no-change result", () => {
       capturedAt: "2026-07-29T00:05:00.000Z",
       sources: [{ ...input.snapshot.sources[0] }],
     },
+    removedSourceIds: [],
     changes: [],
     unresolved: [],
   };
@@ -64,6 +67,8 @@ test("polish stops on a material ambiguity instead of hiding a decision", () => 
   input.preservation[0].verificationIds = [];
   input.outcome = {
     status: "needs-alignment",
+    outputSnapshot: null,
+    removedSourceIds: [],
     changes: [],
     unresolved: [
       "The repeated paragraph may be a compatibility requirement.",
@@ -93,7 +98,7 @@ test("polish rejects unbounded or unverified revisions", () => {
     unchanged.snapshot.sources[0].digest;
   assert.throws(
     () => validatePolishRun(unchanged),
-    /must change at least one target identity/u,
+    /must change or remove at least one target identity/u,
   );
 
   const overBudget = makePolishRun();
@@ -123,7 +128,7 @@ test("polish binds revisions to content identity without changing the target", (
     metadataOnly.snapshot.sources[0].digest;
   assert.throws(
     () => validatePolishRun(metadataOnly),
-    /must change at least one target identity/u,
+    /must change or remove at least one target identity/u,
   );
 
   const movedTarget = makePolishRun();
@@ -170,8 +175,8 @@ test("polish source references use the snapshot limit, not the group limit", () 
   ];
   input.target.sourceIds = [...targetIds];
   input.preservation[0].sourceIds = [...targetIds];
-  input.plan[0].sourceIds = [...targetIds];
-  input.outcome.changes[0].sourceIds = [...targetIds];
+  input.plan[0].sourceIds = ["target-1"];
+  input.outcome.changes[0].sourceIds = ["target-1"];
   input.verification[0].sourceIds = [...targetIds];
   input.outcome.outputSnapshot.sources = targetSources.map((source, index) => ({
     ...source,
@@ -189,14 +194,58 @@ test("polish reports verification limits without claiming full preservation", ()
   assert.equal(run.result.verificationStatus, "incomplete");
 });
 
+test("polish version 2 represents an exact target deletion", () => {
+  const input = makePolishRun();
+  input.outcome.outputSnapshot = null;
+  input.outcome.removedSourceIds = ["target-1"];
+  input.outcome.changes[0].summary = "Removed the unused guide.";
+  input.outcome.changes[0].reason = "The exact approved target is unused.";
+  const run = validatePolishRun(input);
+  assert.equal(run.result.status, "revised");
+  assert.deepEqual(run.outcome.removedSourceIds, ["target-1"]);
+  assert.equal(run.resources.removedTargetSources, 1);
+});
+
+test("polish receipts revalidate the normalized version 2 run", () => {
+  const receipt = createPolishReceipt(makePolishRun());
+  const validated = validatePolishReceipt(receipt);
+  assert.equal(validated.feature, "polish-receipt");
+  assert.equal(validated.run.version, 2);
+  assert.equal(validated.result.verificationStatus, "verified-in-checked-scope");
+
+  const forged = structuredClone(receipt);
+  forged.result.status = "no-change";
+  assert.throws(
+    () => validatePolishReceipt(forged),
+    /result must match|receiptDigest does not match/u,
+  );
+});
+
+test("polish keeps version 1 runs readable without deletion semantics", () => {
+  const legacy = makePolishRun();
+  legacy.version = 1;
+  delete legacy.outcome.removedSourceIds;
+  assert.equal(validatePolishRun(legacy).version, 1);
+
+  legacy.outcome.outputSnapshot = undefined;
+  assert.throws(
+    () => validatePolishRun(legacy),
+    /outputSnapshot is required when status is revised/u,
+  );
+});
+
 test("polish brief keeps target heuristics out of the fixed contract", async () => {
   const brief = await createPolishBrief(
     { risk: "high" },
     { loadWritingStandard: async () => "shared standard\n" },
   );
   assert.equal(brief.feature, "polish");
+  assert.match(brief.schemaPath, /run-v2\.schema\.json$/u);
+  assert.match(brief.receiptSchemaPath, /receipt-v1\.schema\.json$/u);
   assert.match(brief.planning[1], /Do not use a fixed target checklist/u);
   assert.match(brief.contract[3], /no-change/u);
+  assert.deepEqual(brief.composition.callers, ["align", "sweep"]);
+  assert.match(brief.composition.rules.join(" "), /never imports or invokes/u);
   assert.equal(brief.writingStandard.text, "shared standard\n");
   assert.deepEqual(
     parsePolishArguments(["brief", "--risk", "low"]),

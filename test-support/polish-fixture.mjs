@@ -7,7 +7,7 @@ export function makePolishRun(overrides = {}) {
     digest: `sha256:${"a".repeat(64)}`,
   };
   return {
-    version: 1,
+    version: 2,
     title: "Refine the guide",
     risk: "medium",
     snapshot: {
@@ -70,6 +70,7 @@ export function makePolishRun(overrides = {}) {
           },
         ],
       },
+      removedSourceIds: [],
       changes: [
         {
           id: "change-1",

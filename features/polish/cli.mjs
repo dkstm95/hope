@@ -3,6 +3,7 @@
 import { takeOptions } from "../command-options/index.mjs";
 import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
+  createPolishReceiptFile,
   createPolishBrief,
   POLISH_MODEL_ADAPTER_CODE,
   runPolish,
@@ -18,6 +19,7 @@ function usage() {
     "Internal Skill protocol:",
     "  hope polish brief [--risk <low|medium|high>]",
     "  hope polish validate --input <run.json>",
+    "  hope polish receipt --input <run.json>",
   ].join("\n");
 }
 
@@ -26,7 +28,7 @@ export function parsePolishArguments(argv) {
     return { command: "help" };
   }
   const [command, ...rest] = argv;
-  if (!["brief", "validate"].includes(command)) {
+  if (!["brief", "validate", "receipt"].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
   const { options, positionals } = takeOptions(rest, {
@@ -60,9 +62,13 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     result = await (
       dependencies.createPolishBrief ?? createPolishBrief
     )(options, dependencies);
-  } else {
+  } else if (options.command === "validate") {
     result = await (
       dependencies.validatePolishFile ?? validatePolishFile
+    )(options.inputPath, dependencies);
+  } else {
+    result = await (
+      dependencies.createPolishReceiptFile ?? createPolishReceiptFile
     )(options.inputPath, dependencies);
   }
   stdout.write(`${JSON.stringify(result, null, 2)}\n`);

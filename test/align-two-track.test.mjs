@@ -188,6 +188,7 @@ test("exact harness and generated Align commands stay equivalent", async () => {
       capturedAt: "2026-07-29T00:05:00.000Z",
       sources: [{ ...candidateSource }],
     },
+    removedSourceIds: [],
     changes: [],
     unresolved: [],
   };

@@ -10,7 +10,10 @@ import {
   POLISH_LIMITS,
   POLISH_RISKS,
 } from "./constants.mjs";
-import { validatePolishRun } from "./validate.mjs";
+import {
+  createPolishReceipt,
+  validatePolishRun,
+} from "./validate.mjs";
 
 export const POLISH_MODEL_ADAPTER_CODE = "HOPE_POLISH_MODEL_ADAPTER_REQUIRED";
 export const POLISH_MODEL_ADAPTER_MESSAGE =
@@ -32,7 +35,10 @@ export async function createPolishBrief({
     version: POLISH_CONTRACT_VERSION,
     risk,
     schemaPath: fileURLToPath(
-      new URL("./run-v1.schema.json", import.meta.url),
+      new URL("./run-v2.schema.json", import.meta.url),
+    ),
+    receiptSchemaPath: fileURLToPath(
+      new URL("./receipt-v1.schema.json", import.meta.url),
     ),
     snapshot: Object.freeze([
       "Capture the exact target and only the authority sources needed to judge this run.",
@@ -54,6 +60,7 @@ export async function createPolishBrief({
     editing: Object.freeze([
       "Perform at most one bounded modification round and stay within maximumChanges.",
       "Produce a new revision and change summary before any application step.",
+      "For version 2, list deleted targets in removedSourceIds and identify every surviving target in outputSnapshot. Use null when every target was removed.",
       "Use the returned writing standard for language-bearing changes.",
       "Do not clean unrelated surrounding work, replace a formatter or linter, or commit, push, open a pull request, or merge unless the person separately asks.",
     ]),
@@ -63,17 +70,27 @@ export async function createPolishBrief({
       "Do not claim full semantic preservation from tests or inspection. Keep missing coverage and uncertainty visible.",
     ]),
     resultPreparation: Object.freeze([
-      "Write one version 1 run that follows schemaPath to a private temporary JSON file outside the repository with restricted permissions.",
-      "The output snapshot must identify every target source in the new revision. For no-change, it must match the input identity exactly.",
+      "Write one version 2 run that follows schemaPath to a private temporary JSON file outside the repository with restricted permissions.",
+      "The output snapshot must identify every surviving target source. List deleted targets in removedSourceIds; for no-change, every target identity must match the input exactly.",
       "Validate the run, fix only clear contract errors, and remove the private JSON after validation or cancellation.",
+      "Create the versioned receipt through the shared runtime when another feature composes this run. Do not author a receipt by hand.",
       "Record whether the revision is proposed, applied, or not needed. Applied work needs conversation-backed authority, a before-and-after comparison, and successful identity checks before and after application.",
       "Apply a revision only with explicit authority. Stop on an identity mismatch.",
     ]),
     stopping: Object.freeze([
-      "Version 1 performs one plan and one modification round per exact target snapshot.",
+      "Version 2 performs one plan and one modification round per exact target snapshot.",
       "Stop when the budget is used, the remaining candidate is a matter of taste, evidence is insufficient, or the next change is outside scope.",
       "Changed evidence or a changed target requires a new run.",
     ]),
+    composition: Object.freeze({
+      callers: Object.freeze(["align", "sweep"]),
+      rules: Object.freeze([
+        "The caller owns its discovery, approval, and result lifecycle. Polish owns only the bounded revision and its verification record.",
+        "A composed run uses the same exact target, preservation, evidence, authority, identity, and application contract as a standalone run.",
+        "Return needs-alignment instead of changing behavior, a public contract, a dependency, or another material decision.",
+        "Polish never imports or invokes Align or Sweep.",
+      ]),
+    }),
     limits: POLISH_LIMITS,
     writingStandard,
   });
@@ -85,6 +102,17 @@ export async function validatePolishFile(inputPath, dependencies = {}) {
     maximumBytes: POLISH_LIMITS.inputBytes,
   });
   return (dependencies.validate ?? validatePolishRun)(input.value, {
+    inputFileBytes: input.fileBytes,
+    observedMetrics: dependencies.observedMetrics,
+  });
+}
+
+export async function createPolishReceiptFile(inputPath, dependencies = {}) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope polish run",
+    maximumBytes: POLISH_LIMITS.inputBytes,
+  });
+  return (dependencies.createReceipt ?? createPolishReceipt)(input.value, {
     inputFileBytes: input.fileBytes,
     observedMetrics: dependencies.observedMetrics,
   });

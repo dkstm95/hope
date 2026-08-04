@@ -40,10 +40,16 @@ Each run records:
 - conditions that the revision must preserve;
 - one run-specific edit plan;
 - the evidence, reason, risk, and verification for every change;
-- an exact output snapshot;
-- a change summary and unresolved items; and
+- an exact output snapshot or an exact list of removed target IDs;
+- a change summary and unresolved items;
 - verification receipts with their checked scope; and
 - whether a revision is proposed, applied, or not needed.
+
+A version 2 run may also record one generic composition block supplied by a
+caller such as Sweep.
+
+The block binds the caller, session, work unit, execution contract, and
+authority receipt digests without making Polish import that caller.
 
 Polish does not intentionally change observable behavior, a public contract,
 core meaning, facts, uncertainty, citations, or voice.
@@ -58,7 +64,7 @@ When the boundary is ambiguous, Polish stops with `needs-alignment`.
 The active AI builds the plan from the target purpose, the person's intent,
 authoritative project rules, and available verification.
 
-Version 1 does not ship separate code, document, or comment checklists.
+Version 2 does not ship separate code, document, or comment checklists.
 
 Those lists can anchor a model on finding work even when no change is needed.
 
@@ -110,8 +116,12 @@ Polish performs one plan and one modification round for an exact snapshot.
 
 It produces a new revision and summary before application.
 
-A revised output snapshot contains exactly the target source IDs and changes at
-least one content identity.
+A revised result contains every surviving target in its output snapshot and
+lists every deleted target in `removedSourceIds`.
+
+The output snapshot is `null` when all targets were removed.
+
+Polish never invents an output identity for deleted content.
 
 A no-change output keeps every target identity unchanged.
 
@@ -130,7 +140,7 @@ digest, or when the target content changed after capture.
 The application record is an auditable host claim, not cryptographic proof that
 a write occurred.
 
-Version 1 does not automatically commit, push, open a pull request, or merge.
+Version 2 does not automatically commit, push, open a pull request, or merge.
 
 It does not attempt to roll back later edits that it cannot prove it owns.
 
@@ -156,9 +166,21 @@ Passing tests or inspection do not prove complete semantic preservation.
 
 The result names only the scope it checked and keeps missing coverage visible.
 
+The shared runtime can create one version 1 Polish receipt from a validated
+version 2 run.
+
+The receipt embeds the normalized run, derives its result, and binds both with
+a digest.
+
+Composition callers revalidate that receipt instead of accepting a
+caller-authored summary of Polish work.
+
+Version 1 run records remain readable for compatibility, but only version 2 can
+represent deletion and produce a composition receipt.
+
 ## Timing and composition
 
-General Polish runs only when a person asks for it.
+General Polish runs when a person asks for it.
 
 The best default time is after the main implementation or drafting work and
 before final approval.
@@ -166,7 +188,7 @@ before final approval.
 That placement gives Polish a stable target while keeping its cleanup separate
 from new behavior.
 
-Align is the first deliberate exception.
+Align and Sweep are the deliberate composition callers.
 
 After Align has closed its material questions and the runtime reports a
 contract-ready approval candidate, the Align host invokes Polish once for that
@@ -179,9 +201,24 @@ Align validates the revised state again before asking for approval.
 
 A user change creates a new candidate and may receive one new pass.
 
-The dependency direction is `Align -> Polish`.
+Sweep invokes Polish only after the person approves one exact, digest-bound,
+behavior-preserving work unit.
 
-Polish never invokes Align.
+Its completion validator requires the Polish composition block and checks the
+approved action, preview, preservation conditions, and verification methods
+against the run.
+
+Sweep owns repository discovery, category status, prioritization, the approval
+candidate, and the final session result.
+
+Polish owns the bounded revision and its preservation and verification record.
+
+If Polish returns `needs-alignment`, Sweep does not apply the candidate and
+records a handoff or another honest terminal state.
+
+The dependency directions are `Align -> Polish` and `Sweep -> Polish`.
+
+Polish never invokes Align or Sweep.
 
 It returns `needs-alignment` when it discovers a material choice.
 
@@ -211,12 +248,12 @@ private run record before presenting the result.
 
 The independent harness exposes the same feature as `hope polish`.
 
-Its internal `brief` and `validate` commands reach the shared core.
+Its internal `brief`, `validate`, and `receipt` commands reach the shared core.
 
 Automatic polishing reports that the harness model adapter is unavailable until
 one exists.
 
-Version 1 has no separate graphical interface.
+Version 2 has no separate graphical interface.
 
 ## Design sources
 

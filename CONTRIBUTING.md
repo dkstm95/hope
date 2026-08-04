@@ -11,6 +11,8 @@ Read [docs/diff.md](docs/diff.md) before implementing Hope diff.
 
 Read [docs/polish.md](docs/polish.md) before implementing Hope polish.
 
+Read [docs/sweep.md](docs/sweep.md) before implementing Hope sweep.
+
 Read [docs/toxic-review.md](docs/toxic-review.md) before implementing Hope toxic
 review.
 

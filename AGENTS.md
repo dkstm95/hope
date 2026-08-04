@@ -65,6 +65,7 @@ are complete.
 - System structure: [docs/architecture.md](docs/architecture.md)
 - Align behavior: [docs/align.md](docs/align.md)
 - Diff behavior: [docs/diff.md](docs/diff.md)
+- Sweep behavior: [docs/sweep.md](docs/sweep.md)
 - Toxic Review behavior: [docs/toxic-review.md](docs/toxic-review.md)
 - Write behavior: [docs/write.md](docs/write.md)
 - Model behavior evaluation: [docs/model-evaluation.md](docs/model-evaluation.md)
