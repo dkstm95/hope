@@ -1,6 +1,6 @@
 ---
 name: toxic-review
-description: Strictly review an idea, requirement, UI, prototype, plan, implementation, patch, PR, Align result, Diff result, incident analysis, recovery plan, document, or other work product without attacking people or manufacturing criticism. Use when someone invokes $hope:toxic-review in Codex or /hope:toxic-review in Claude Code, asks for a toxic review, wants a harsh or skeptical review, or needs independent risk-focused reviewers and one adjudicated result.
+description: Use for a strict, skeptical, risk-focused review of a named work product without attacking people or inventing criticism.
 ---
 
 # Hope toxic review

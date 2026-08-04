@@ -1,6 +1,6 @@
 ---
 name: write
-description: Draft, edit, or review clear language without losing meaning, facts, uncertainty, or voice. Use when someone invokes $hope:write in Codex or /hope:write in Claude Code, works on documentation or other prose, or would benefit from clearer prompts, instructions, responses, interface text, errors, comments, or names inside implementation work.
+description: Use for a standalone language-only draft, edit, or review that must preserve meaning, facts, uncertainty, and voice.
 ---
 
 # Hope write

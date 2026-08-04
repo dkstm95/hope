@@ -1,6 +1,6 @@
 ---
 name: align
-description: Align a person and AI on a task before implementation by finding important misunderstandings, adapting the interview to risk, and rendering the current shared understanding. Use when someone invokes $hope:align in Codex or /hope:align in Claude Code, asks to align before coding, wants requirements or design clarified before implementation, or needs a pre-implementation shared-understanding check.
+description: Use when someone asks for a pre-implementation shared-understanding check or wants requirements, scope, design, or expected behavior clarified before coding.
 ---
 
 # Hope align

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.0 - 2026-08-04
+
+- Replace the seven public Hope Skill descriptions with the shorter candidates
+  that passed the bounded feature-selection checks.
+- Narrow Align selection to explicit shared-understanding or clarification
+  requests after the earlier candidate matched an ordinary database upgrade.
+- Add feature-selection contract version 3 and evaluation version 4, verify the
+  published descriptions against that contract, and keep the observed Codex
+  dispatcher results outside the trusted release-evidence boundary.
+
 ## 1.6.0 - 2026-08-04
 
 - Add one shared model-evaluation boundary for choosing among Hope features,
