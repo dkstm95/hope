@@ -15,8 +15,15 @@ import {
   validateHopeWriteProductionVerificationReceipt,
   validateHopeWriteProductionVerificationReceiptSet,
 } from "./write-examples.mjs";
+import {
+  createHopePolishPreservationEvaluationReceipt,
+  hopePolishPreservationEvaluationLimits,
+  validateHopePolishPreservationEvaluationReceipt,
+  validateHopePolishPreservationEvaluationReceiptSet,
+} from "./polish-preservation.mjs";
 
 export * from "./feature-selection.mjs";
+export * from "./polish-preservation.mjs";
 export * from "./write-examples.mjs";
 
 export async function createHopeFeatureSelectionEvaluationReceiptFromFile({
@@ -56,6 +63,51 @@ export async function validateHopeFeatureSelectionEvaluationReceiptSetFile(
   });
   return (dependencies.validateReceiptSet
     ?? validateHopeFeatureSelectionEvaluationReceiptSet)(input.value);
+}
+
+export async function createHopePolishPreservationEvaluationReceiptFromFile({
+  inputPath,
+  ...options
+}, dependencies = {}) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Polish preservation model output",
+    maximumBytes: hopePolishPreservationEvaluationLimits.outputBytes,
+  });
+  return await (dependencies.createReceipt
+    ?? createHopePolishPreservationEvaluationReceipt)({
+    ...options,
+    output: input.value,
+  }, dependencies);
+}
+
+export async function validateHopePolishPreservationEvaluationReceiptFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Polish preservation evaluation receipt",
+    maximumBytes: hopePolishPreservationEvaluationLimits.receiptBytes,
+  });
+  return await (dependencies.validateReceipt
+    ?? validateHopePolishPreservationEvaluationReceipt)(
+    input.value,
+    dependencies,
+  );
+}
+
+export async function validateHopePolishPreservationEvaluationReceiptSetFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope Polish preservation evaluation receipt set",
+    maximumBytes: hopePolishPreservationEvaluationLimits.receiptSetBytes,
+  });
+  return await (dependencies.validateReceiptSet
+    ?? validateHopePolishPreservationEvaluationReceiptSet)(
+    input.value,
+    dependencies,
+  );
 }
 
 export async function createHopeWriteExampleEvaluationReceiptFromFile({

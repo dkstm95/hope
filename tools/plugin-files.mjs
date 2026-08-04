@@ -120,6 +120,7 @@ export const generatedPluginFiles = Object.freeze([
     "cli.mjs",
     "feature-selection.mjs",
     "index.mjs",
+    "polish-preservation.mjs",
     "write-examples.mjs",
   ].map((name) =>
     generatedText(

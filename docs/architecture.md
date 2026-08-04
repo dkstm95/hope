@@ -22,9 +22,9 @@ The project definitions are:
 [model-evaluation.md](model-evaluation.md) defines how Hope tests model-facing
 behavior before changing prompts, tools, or orchestration.
 
-The shared model-evaluation runtime owns cross-feature selection and Write
-decision-example ablation cases, prepared inputs, output bindings, receipts,
-and complete-set validation.
+The shared model-evaluation runtime owns cross-feature selection, Polish
+preservation, and Write decision-example ablation cases, prepared inputs,
+output bindings, receipts, and complete-set validation.
 
 The harness exposes those deterministic commands under `model-evaluation`.
 

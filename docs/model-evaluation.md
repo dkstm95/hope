@@ -227,6 +227,61 @@ before one feature adapter is active.
 The independent harness and generated plugin runtime expose the same
 deterministic preparation and validation boundary.
 
+## Polish preservation
+
+Hope owns one versioned evaluation for deciding whether a proposed Polish
+change preserves the named target's contract.
+
+The version 1 evaluation uses 12 distinct synthetic code, test, documentation,
+interface-text, incident, and research cases.
+
+It covers observable behavior, public contracts, core meaning, facts,
+uncertainty, citations, voice, supported removal, dynamic reachability,
+generated sources, verification limits, and material product choices.
+
+Each case runs once with `invariants-only` and once with `full`, producing 24
+runs.
+
+Both variants keep the active Polish product invariants.
+
+The full variant also includes the current scope, planning, editing, stopping,
+and verification guidance relevant to preservation judgment.
+
+The model chooses one supported candidate, keeps the current target, or returns
+`needs-alignment` for a material product, requirement, or behavior choice.
+
+List and prepare the matrix with:
+
+```text
+hope model-evaluation polish-preservation-plan
+hope model-evaluation polish-preservation-prepare \
+  --case <id> --variant <invariants-only|full> --run 1
+```
+
+Give a fresh host only the returned `brief`, `hostInput`, and
+`outputContract`.
+
+Do not read the case oracle or give the host another case or variant before it
+returns one JSON object with `decision`, `candidateId`, and `reason`.
+
+Use the matching `polish-preservation-receipt`,
+`polish-preservation-validate`, and `polish-preservation-validate-set` commands
+to bind and validate the evidence.
+
+The complete set requires every planned run, one declared host, model, and
+effort, and a unique host invocation identity for every run.
+
+It returns `candidate-invariants-only` only when all 24 judgments pass.
+
+That decision applies only to the bounded preservation judgment tested here.
+
+It does not prove that a free-form edit preserved semantics or permit removal
+of identity, authority, planning, application, receipt, or verification
+protocol.
+
+The independent harness and generated plugin runtime expose the same
+deterministic preparation and validation boundary.
+
 ## Write decision examples
 
 Write carries four representative decision examples alongside its semantic
