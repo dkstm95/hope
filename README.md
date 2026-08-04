@@ -31,17 +31,6 @@ Use Hope to align before implementation, challenge a work product, understand a
 code change, sweep codebase maintenance, refine completed work, or clarify
 language without losing meaning.
 
-## Start with your problem
-
-| If this sounds familiar… | Use | Hope helps you… |
-| --- | --- | --- |
-| “The AI and I may not understand this task the same way.” | **Align** | Find material misunderstandings and make the current shared understanding visible before implementation |
-| “This looks convincing, but I may be missing an important problem.” | **Toxic Review** | Challenge the work with relevant perspectives and return one evidence-based result |
-| “AI changed the code, but I cannot explain what changed or judge it yet.” | **Diff** | Understand one exact change, make an informed judgment, and carry that understanding into later work |
-| “I want to clean up this codebase.” | **Sweep** | Plan codebase maintenance and apply only approved work |
-| “The work is complete, but it needs refinement without changing settled behavior or meaning.” | **Polish** | Refine it once within explicit preservation conditions and a stated verification scope |
-| “This language needs to be clearer without losing meaning, facts, uncertainty, citations, or voice.” | **Write** | Draft, edit, or review prose with one shared writing standard |
-
 ## Install
 
 Install the Hope plugin in Codex or Claude Code.
@@ -84,9 +73,12 @@ Start a new Codex or Claude Code session after installation.
 
 ## Features
 
-### Align
+Choose the work you need.
 
-> “The AI and I may not understand this task the same way.”
+Open a feature for its full behavior, limits, and examples.
+
+<details>
+<summary><strong>Align</strong> — Reach shared understanding before implementation</summary>
 
 Misunderstandings about a task's goal, scope, behavior, or important choices can
 survive until implementation.
@@ -119,11 +111,10 @@ from the same canonical screen content before implementation.
 | Agreements and supporting detail | Verifiable work |
 | [![Primary agreements, evidence, assumptions, and uncertainty in an Align artifact](assets/readme/hope-align-understanding-en.png)](assets/readme/hope-align-understanding-en.png) | [![The user change, scope, verification, and failure recovery in an Align artifact](assets/readme/hope-align-work-en.png)](assets/readme/hope-align-work-en.png) |
 
----
+</details>
 
-### Diff
-
-> “AI changed the code, but I cannot explain what changed or judge it yet.”
+<details>
+<summary><strong>Diff</strong> — Understand what changed and how to judge it</summary>
 
 A code change can be complete while its owner still cannot predict, explain, or
 judge it, and that gap is cognitive debt.
@@ -158,11 +149,10 @@ and carry that understanding into follow-up decisions and work.
 > If none exists, it selects your latest open pull request in the repository.
 > Run Diff again when the pull request changes.
 
----
+</details>
 
-### Toxic Review
-
-> “This looks convincing, but I may be missing an important problem.”
+<details>
+<summary><strong>Toxic Review</strong> — Find important risks you may have missed</summary>
 
 Toxic Review turns evidence-linked findings into one prioritized review.
 
@@ -179,11 +169,10 @@ It is hard on the work, respectful toward people, and does not invent criticism.
 
 > Example: “Review this database migration plan.”
 
----
+</details>
 
-### Polish
-
-> “The work is complete, but I want to refine it without changing what we already settled.”
+<details>
+<summary><strong>Polish</strong> — Refine completed work without changing settled decisions</summary>
 
 Polish defines what must stay unchanged and refines the work once within a clear
 scope.
@@ -193,20 +182,21 @@ checked, and stops when the work needs a material decision.
 
 > Example: “Refine the current work product.”
 
----
+</details>
 
-### Sweep
-
-> “I want to clean up this codebase.”
+<details>
+<summary><strong>Sweep</strong> — Clean up and maintain a codebase safely</summary>
 
 Sweep runs one codebase maintenance task that adapts to the codebase instead of
 using schedule-based profiles.
 
 It inspects an exact snapshot and shows a bounded plan before changing files.
 
-Sweep checks every [maintenance area](docs/sweep.md#codebase-maintenance-categories),
-including dead code, abstractions, tests, dependencies, performance, releases,
-and recovery.
+It checks broken references and configuration drift; dead or stale code, tests,
+documentation, and configuration; repeated, missing, or premature abstractions;
+test and documentation gaps; dependency, security, license, and compatibility
+risks; performance, package, build, and CI waste; and architecture, support,
+release, and recovery readiness.
 
 Incomplete evidence stays visible instead of being reported as complete.
 
@@ -215,11 +205,10 @@ public-contract, or dependency changes to a separate implementation task.
 
 > Example: “Sweep this codebase.”
 
----
+</details>
 
-### Write
-
-> “Make this clearer without changing what it means or inventing what we do not know.”
+<details>
+<summary><strong>Write</strong> — Make language clearer without losing meaning</summary>
 
 Write drafts, edits, or reviews language without losing meaning, facts,
 uncertainty, citations, or the person's voice.
@@ -232,15 +221,18 @@ Write's shared standard adapts George Orwell's six rules in
 
 > Example: “Make this incident update easier to understand.”
 
----
+</details>
 
-### Settings
+<details>
+<summary><strong>Settings</strong> — Set Hope's language and theme</summary>
 
 Settings stores a supported locale and initial `system`, `light`, or `dark`
 theme as shared defaults.
 
 The harness and installed plugin share these settings, and changes affect new
 artifacts only.
+
+</details>
 
 ## License
 
