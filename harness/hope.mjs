@@ -23,6 +23,12 @@ import {
 } from "../features/polish/index.mjs";
 import { main as runPolishCommand } from "../features/polish/cli.mjs";
 import {
+  asHopeModelEvaluationCommandError,
+  HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE,
+  main as runModelEvaluationCommand,
+  modelEvaluationErrorReport,
+} from "../features/model-evaluation/cli.mjs";
+import {
   SWEEP_MODEL_ADAPTER_CODE,
 } from "../features/sweep/index.mjs";
 import { main as runSweepCommand } from "../features/sweep/cli.mjs";
@@ -44,6 +50,7 @@ function usage() {
     "  hope --version",
     "  hope align",
     "  hope diff",
+    "  hope model-evaluation <command>",
     "  hope polish",
     "  hope sweep",
     "  hope toxic-review",
@@ -66,6 +73,7 @@ export function parseArguments(argv) {
     ![
       "align",
       "diff",
+      "model-evaluation",
       "polish",
       "settings",
       "sweep",
@@ -108,6 +116,15 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       { ...dependencies, stdout },
     );
   }
+  if (options.command === "model-evaluation") {
+    try {
+      return await (
+        dependencies.runModelEvaluationCommand ?? runModelEvaluationCommand
+      )(options.arguments, { ...dependencies, stdout });
+    } catch (error) {
+      throw asHopeModelEvaluationCommandError(error);
+    }
+  }
   const taskDependencies = await withWritingPass(dependencies, stdout);
   if (options.command === "align") {
     return await (dependencies.runAlignCommand ?? runAlignCommand)(
@@ -142,6 +159,9 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
 }
 
 export function harnessErrorReport(error) {
+  if (error?.code === HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE) {
+    return modelEvaluationErrorReport(error);
+  }
   if ([
     ALIGN_MODEL_ADAPTER_CODE,
     POLISH_MODEL_ADAPTER_CODE,

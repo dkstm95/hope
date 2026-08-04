@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.6.0 - 2026-08-04
+
+- Add one shared model-evaluation boundary for choosing among Hope features,
+  testing Polish preservation guidance, and evaluating whether Write still
+  needs its representative decision examples.
+- Expose the same blinded preparation, receipt, and complete-set validation
+  commands through the independent harness and generated plugin runtime.
+- Add feature-selection contract version 2 with Sweep and 13 distinct Korean
+  and English boundary, conformance, and safety cases.
+- Add versioned provenance that separates synthetic receipts from
+  host-attested receipts and fails release validation without both a trusted
+  attestation verifier and a trusted complete-attempt ledger.
+- Retain the full descriptions for all seven public Hope Skills because the
+  historical 26-run sets injected candidate descriptions instead of testing
+  the installed Codex dispatcher and lacked trusted provenance.
+- Redesign Write version 2 inputs so they describe neutral situations without
+  naming the candidate action, then use six separate held-out production
+  cases.
+- Restore and retain Write's four active decision examples because historical
+  caller-authored receipts cannot satisfy the new evidence gate.
+- Preserve the historical Polish score of 23 out of 24 as non-release smoke
+  data and keep the full preservation guidance.
+- Make harness and generated-runtime model-evaluation failures use the same
+  command prefix and exit behavior.
+
 ## 1.5.0 - 2026-08-04
 
 - Add Hope Sweep as one profile-free codebase maintenance task that plans
@@ -50,12 +75,13 @@
 - Add a separate 22-run rules-only follow-up that preserves the first baseline
   and requires 28 passing candidate runs before removing invocation examples.
 - Remove the representative invocation examples from the active version 4
-  candidate after all 28 Codex rules-only runs pass, while retaining the
-  version 3 evaluation baseline for audit.
+  candidate after the historical receipts report 28 rules-only runs passing,
+  while retaining the version 3 evaluation baseline for audit.
 - Add a final eight-run gate that evaluates the exact active version 4 brief
   without examples or evaluation-only control text.
-- Accept the active version 4 brief after all eight exact-production Codex runs
-  pass.
+- Record the historical active-version-4 receipt calculation as eight passing
+  exact-production runs. Those receipts predate the current host-attestation
+  and complete-attempt gate.
 
 ## 1.3.0 - 2026-08-03
 

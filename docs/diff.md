@@ -191,8 +191,8 @@ The version 3 evaluation baseline included representative decision cases in
 Those examples were teaching input, not evidence that a model followed the
 invocation contract.
 
-Version 4 removes them from the active brief after the bounded rules-only
-comparison and follow-up both passed.
+Version 4 removed them from the active brief after the historical bounded
+rules-only comparison and follow-up reported passing results.
 
 The historical version 3 baseline keeps the examples so its receipts remain
 auditable.
@@ -300,8 +300,13 @@ declared host, model, effort, and contract version.
 
 A valid failure returns `keep-examples` and remains part of the evidence.
 
-The accepted Codex evidence covered 28 rules-only candidate runs without a
-failure, so version 4 became the production-verification candidate.
+The historical receipt calculation reported 28 rules-only candidate runs
+without a failure, so version 4 became the production-verification candidate at
+that time.
+
+Those receipts predate the current trusted host-attestation and
+complete-attempt gate and do not independently establish their Codex identity
+or fresh-context execution.
 
 Example-removal evidence does not verify the exact active brief because its
 historical version 3 candidate includes evaluation-only control text.
@@ -322,8 +327,12 @@ Release the active brief only when the complete set returns
 
 A failed decision returns `do-not-release` and remains part of the evidence.
 
-The accepted Codex production evidence passed all eight cases with the exact
-active version 4 brief, so version 4 keeps the rules and omits the examples.
+The historical production receipt calculation reported all eight cases passing
+with the exact active version 4 brief, so version 4 keeps the rules and omits
+the examples as a historical product state.
+
+That result is not release evidence under the current model-evaluation policy
+and cannot authorize another prompt removal.
 
 ## Product boundary
 

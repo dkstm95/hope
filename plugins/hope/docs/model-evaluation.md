@@ -1,3 +1,5 @@
+<!-- Generated from docs/model-evaluation.md. Do not edit. -->
+
 # Hope model behavior evaluation
 
 Hope evaluates model-dependent behavior before changing the instructions, tools,

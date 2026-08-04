@@ -44,6 +44,11 @@ export const generatedPluginFiles = Object.freeze([
     "<!-- Generated from docs/diff.md. Do not edit. -->\n\n",
   ),
   generatedText(
+    "docs/model-evaluation.md",
+    "plugins/hope/docs/model-evaluation.md",
+    "<!-- Generated from docs/model-evaluation.md. Do not edit. -->\n\n",
+  ),
+  generatedText(
     "docs/polish.md",
     "plugins/hope/docs/polish.md",
     "<!-- Generated from docs/polish.md. Do not edit. -->\n\n",
@@ -110,6 +115,20 @@ export const generatedPluginFiles = Object.freeze([
     "features/artifact/index.mjs",
     "plugins/hope/runtime/features/artifact/index.mjs",
     "// Generated from features/artifact/index.mjs. Do not edit.\n",
+  ),
+  ...[
+    "cli.mjs",
+    "evidence.mjs",
+    "feature-selection.mjs",
+    "index.mjs",
+    "polish-preservation.mjs",
+    "write-examples.mjs",
+  ].map((name) =>
+    generatedText(
+      `features/model-evaluation/${name}`,
+      `plugins/hope/runtime/features/model-evaluation/${name}`,
+      `// Generated from features/model-evaluation/${name}. Do not edit.\n`,
+    )
   ),
   ...[
     "cli.mjs",
