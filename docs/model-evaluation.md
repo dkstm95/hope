@@ -73,16 +73,37 @@ Record the exact model identity when the host exposes it.
 When the host does not expose one, record that limitation explicitly instead of
 guessing a model name.
 
-Keep failed runs in the evidence set.
+Keep failed runs and retries in the runner's attempt ledger.
+
+Hope distinguishes two evidence classes:
+
+- `synthetic` receipts come from the deterministic factories and CLI receipt
+  commands; and
+- `host-attested` receipts carry a trusted runner campaign, host event identity,
+  statement digest, issuer, time, and proof accepted by a verifier outside the
+  receipt.
+
+Individual host-attested receipts are not enough for a release decision.
+
+Complete-set validation also requires every receipt to use one runner campaign
+and issuer, then asks a trusted ledger verifier to confirm that every planned
+run is present and that the caller did not omit, replace, or hide an attempt or
+retry from that campaign.
+
+The verifier must consult host-owned state instead of trusting the submitted
+JSON.
+
+Without both trusted verifiers, validation fails closed.
+
+Tests may opt in to synthetic complete-set validation with
+`allowSynthetic: true`, but that result is test-only and cannot authorize a
+production prompt or Skill change.
+
+The public CLI has no flag that turns synthetic receipts into release
+evidence.
 
 Store bounded receipts under ignored `test-results/` or an equivalent private
-release-evidence location.
-
-Mark receipts created directly by deterministic test factories as synthetic.
-
-When a feature has a release evidence gate, require its trusted runner to bind
-the recorded host events and raw model output before the set can pass that
-gate.
+location.
 
 Never put private user content into a checked-in evaluation case or receipt.
 
@@ -131,16 +152,22 @@ Hope Diff invocation classification is the first feature to apply this policy.
 Its shared runtime prepares blinded multilingual decisions, three instruction
 variants, exact receipts, and complete-set validation.
 
-The first completed follow-up kept the semantic rules and made example removal
-a candidate after all 28 version 3 `rules-only` runs passed in fresh Codex
-contexts.
+The historical follow-up reported all 28 version 3 `rules-only` runs passing.
 
 A separate production verification prepares the exact active version 4 brief
 without examples or evaluation-only control text. Its eight fresh runs must all
 pass before Hope treats the active brief as release evidence.
 
-The first production-verification set passed all eight checked decisions in
-fresh Codex contexts.
+The historical production set reported all eight checked decisions passing.
+
+Those Diff receipts predate the shared host-attestation and complete-attempt
+gate.
+
+They do not independently establish their Codex identity, fresh-context
+execution, or release eligibility under the current policy.
+
+The active version 4 brief remains a historical product state, not new evidence
+that authorizes another removal.
 
 The Claude and Codex Skill coordinates fresh host runs, while the independent
 harness exposes the same deterministic preparation and validation commands.
@@ -170,7 +197,7 @@ Every decision ran once under both variants.
 All decisions except the fixed Settings preference change ran a second time
 under both variants, producing 26 runs in total.
 
-The version 2 evaluation adds Sweep and replaces repeated inputs with six
+The version 2 evaluation added Sweep and replaced repeated inputs with six
 harder boundary, conformance, and safety cases.
 
 It uses 13 distinct synthetic requests under both variants, producing 26 runs.
@@ -200,23 +227,26 @@ Create and validate bounded receipts with the matching
 `feature-selection-receipt`, `feature-selection-validate`, and
 `feature-selection-validate-set` commands.
 
-The complete set requires every planned run, one declared host, model, and
-effort, and a unique host invocation identity for every run.
+Version 3 keeps the 26-run matrix and adds the shared evidence boundary.
 
-It returns `candidate-minimal` only when all 26 version 2 decisions pass.
+A release-eligible complete set requires every planned run, one declared host,
+model, and effort, a unique invocation identity for every run, valid host
+attestations, and a trusted complete-attempt ledger.
 
-The version 1 complete set passed all 26 runs in fresh Codex contexts.
+It returns `candidate-minimal` only when all 26 decisions pass.
 
-Hope adopted the exact evaluated `minimal` descriptions for the six published
-Skills in version 1.
+Earlier version 1 and version 2 runs reported 26 of 26 passing decisions, but
+their caller-authored receipts cannot satisfy the version 3 evidence gate.
 
-The version 2 complete set passed all 26 distinct runs in fresh Codex contexts.
+Those runs are useful historical smoke data, not release authorization.
 
-Hope then adopted the exact evaluated `minimal` description for Sweep alongside
-the six version 1 descriptions.
+They also injected Hope's descriptions and rules into isolated contexts rather
+than exercising the installed Codex dispatcher.
 
-This remains direct selection evidence, not proof that a host's internal plugin
-dispatcher makes the same choice.
+Hope therefore retains the full published Skill descriptions.
+
+Shortening them requires new trusted evidence from the actual supported
+dispatcher being changed.
 
 Adding a public feature or changing a Skill description requires a new contract
 version and matching cases.
@@ -268,18 +298,25 @@ Use the matching `polish-preservation-receipt`,
 `polish-preservation-validate`, and `polish-preservation-validate-set` commands
 to bind and validate the evidence.
 
-The complete set requires every planned run, one declared host, model, and
-effort, and a unique host invocation identity for every run.
+Version 2 adds the shared evidence boundary.
+
+A release-eligible complete set requires every planned run, one declared host,
+model, and effort, a unique invocation identity for every run, valid host
+attestations, and a trusted complete-attempt ledger.
 
 It returns `candidate-invariants-only` only when all 24 judgments pass.
 
-The first complete set passed 23 of 24 runs in fresh Codex contexts and
-returned `keep-full`.
+The historical version 1 run reported 23 of 24 passing judgments and returned
+`keep-full`.
 
-The full variant passed all 12 cases. The invariants-only variant passed 11 of
-12 and kept the current target in `polish-preservation-02` because it did not
-find enough evidence that the safe private-helper extraction preserved every
-accepted option and return value.
+The full variant reportedly passed all 12 cases. The invariants-only variant
+reportedly passed 11 of 12 and kept the current target in
+`polish-preservation-02` because it did not find enough evidence that the safe
+private-helper extraction preserved every accepted option and return value.
+
+That score remains reproducible as a deterministic receipt calculation, but
+the version 1 receipt cannot independently prove its fresh-context or host
+configuration claims.
 
 That result keeps the full Polish preservation guidance. It does not justify
 removing the additional scope, planning, editing, stopping, or verification
@@ -302,13 +339,21 @@ writing standard.
 Hope treats those examples as removable guidance, not as permanent product
 invariants.
 
-The version 1 ablation compares the exact current `edit` brief with a
+The version 2 ablation compares the exact current `edit` brief with a
 `rules-only` brief that removes only `decisionExamples`.
 
-It checks six synthetic decisions: the four represented situations and two
-safety boundaries where aggressive splitting or consolidation would be wrong.
+It checks six synthetic artifacts and edit requests: the four represented
+decisions and two safety boundaries where aggressive splitting or
+consolidation would be wrong.
 
-Each decision runs twice under both variants, producing 24 fresh runs.
+Each input supplies the current artifact, the requested edit, and factual
+constraints without stating whether an action is correct or describing its
+expected harm.
+
+Review case neutrality independently before starting a release campaign.
+
+The plan requires two fresh contexts per decision and variant, producing 24
+runs.
 
 List and prepare the matrix with:
 
@@ -324,16 +369,17 @@ Give a fresh host only the returned `brief`, `hostInput`, and
 Use the matching `write-example-receipt`, `write-example-validate`, and
 `write-example-validate-set` commands to bind and validate the evidence.
 
-The complete set returns `remove-examples` only when all 24 runs pass with one
-declared host, model, and effort and 24 unique invocation identities.
+The release-eligible complete set returns `remove-examples` only when all 24
+runs pass with one declared host, model, and effort, 24 unique invocation
+identities, valid host attestations, and a trusted complete-attempt ledger.
 
-The first complete set passed all 24 runs in fresh Codex contexts and returned
-`remove-examples`.
+The historical version 1 run reported all 24 decisions passing, but its
+caller-authored receipts do not satisfy the version 2 evidence gate.
 
-That result permitted removal of the examples and their Skill instructions.
+Its production verification also reused the ablation cases.
 
-The resulting exact production brief passed all six verification runs in fresh
-Codex contexts.
+Hope therefore restored and retains the four active decision examples and the
+Skill instructions that consume them.
 
 List and prepare those six exact-production runs with:
 
@@ -345,10 +391,32 @@ hope model-evaluation write-production-prepare --case <id> --run 1
 Use the matching `write-production-receipt`, `write-production-validate`, and
 `write-production-validate-set` commands for the final evidence.
 
-The active brief is accepted only when all six runs pass in fresh contexts.
+Version 2 production verification uses six separate held-out situations and
+the exact active brief.
 
-The first exact-production set met that condition and returned
-`accept-production`.
+It does not reuse an ablation case.
+
+Before a release campaign, an independent reviewer must compare every
+production case with every ablation case and confirm that its artifact
+structure, constraints, and competing cues differ.
+
+The current production inputs include a mixed incident update, native error
+dialog fields, and a troubleshooting decision table instead of repeating the
+matching ablation structures.
+
+The runtime compares the complete prepared brief with the canonical active
+`edit` brief, not only its decision examples.
+
+This checks transfer to new scenarios; it does not claim a separate decision
+taxonomy.
+
+The active brief is accepted only when all six runs pass with host attestations
+and a trusted complete-attempt ledger.
+
+The CLI alone cannot produce that release decision.
+
+Removing the examples later requires a new trusted ablation result followed by
+a versioned production check of the exact example-free candidate.
 
 It does not justify removing the underlying semantic structure or preservation
 rules.

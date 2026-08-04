@@ -25,6 +25,10 @@ import {
   validateHopeFeatureSelectionEvaluationReceiptSetFile,
 } from "../features/model-evaluation/index.mjs";
 import {
+  digestHopeModelEvaluationEvidence,
+  HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
+} from "../features/model-evaluation/evidence.mjs";
+import {
   main as runModelEvaluationCommand,
   parseModelEvaluationArguments,
 } from "../features/model-evaluation/cli.mjs";
@@ -39,8 +43,9 @@ function expectedOutput(caseId, decision) {
   };
 }
 
-function receiptFor(specification, overrides = {}) {
+function receiptFor(specification, overrides = {}, dependencies = {}) {
   return createHopeFeatureSelectionEvaluationReceipt({
+    attestation: overrides.attestation,
     caseId: specification.caseId,
     effort: overrides.effort ?? "test-effort",
     host: overrides.host ?? "codex-test-host",
@@ -50,15 +55,42 @@ function receiptFor(specification, overrides = {}) {
     output: overrides.output ?? expectedOutput(specification.caseId),
     run: specification.run,
     variant: specification.variant,
-  }).receipt;
+  }, dependencies).receipt;
+}
+
+function attestedReceiptFor(specification) {
+  const synthetic = receiptFor(specification);
+  const statement = {
+    configuration: synthetic.configuration,
+    evaluation: {
+      bindings: synthetic.bindings,
+      feature: synthetic.feature,
+      version: synthetic.version,
+    },
+    invocation: synthetic.invocation,
+    specification: synthetic.specification,
+  };
+  return receiptFor(specification, {
+    attestation: {
+      campaignId: "feature-selection-campaign",
+      eventId: synthetic.invocation.id,
+      issuedAt: "2026-08-04T00:00:00.000Z",
+      issuer: "trusted-test-runner",
+      proof: `proof-for-${synthetic.invocation.id}`,
+      statementDigest: digestHopeModelEvaluationEvidence(statement),
+      version: HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
+    },
+  }, {
+    verifyModelEvaluationAttestation: () => true,
+  });
 }
 
 test("feature selection covers every decision in 13 unique paired cases", () => {
   const plan = createHopeFeatureSelectionEvaluationPlan();
   assert.equal(plan.contractVersion, 2);
-  assert.equal(plan.version, 2);
+  assert.equal(plan.version, 3);
   assert.equal(HOPE_FEATURE_SELECTION_CONTRACT_VERSION, 2);
-  assert.equal(HOPE_FEATURE_SELECTION_EVALUATION_VERSION, 2);
+  assert.equal(HOPE_FEATURE_SELECTION_EVALUATION_VERSION, 3);
   assert.equal(plan.totalRuns, 26);
   assert.equal(plan.runs.filter((run) => run.variant === "minimal").length, 13);
   assert.equal(plan.runs.filter((run) => run.variant === "full").length, 13);
@@ -70,15 +102,15 @@ test("feature selection covers every decision in 13 unique paired cases", () => 
   assert.deepEqual([...decisions].sort(), [...HOPE_FEATURE_SELECTION_DECISIONS].sort());
 });
 
-test("the accepted minimal contract uses the published Skill descriptions", async () => {
-  const contract = createHopeFeatureSelectionContract({ variant: "minimal" });
+test("published Skills retain the full descriptions pending trusted evidence", async () => {
+  const contract = createHopeFeatureSelectionContract({ variant: "full" });
   for (const feature of contract.features) {
     const skill = await readFile(
       resolve(root, "plugins", "hope", "skills", feature.id, "SKILL.md"),
       "utf8",
     );
     const description = skill.match(/^description: (.+)$/mu)?.[1];
-    assert.equal(description, hopeFeatureSelectionDescriptions.minimal[feature.id]);
+    assert.equal(description, hopeFeatureSelectionDescriptions.full[feature.id]);
   }
 });
 
@@ -168,7 +200,14 @@ test("feature-selection receipts retain wrong decisions and reject tampering", (
 test("complete feature-selection evidence requires unique runs and one configuration", () => {
   const plan = createHopeFeatureSelectionEvaluationPlan();
   const receipts = plan.runs.map(receiptFor);
-  const result = validateHopeFeatureSelectionEvaluationReceiptSet(receipts);
+  assert.throws(
+    () => validateHopeFeatureSelectionEvaluationReceiptSet(receipts),
+    /requires host-attested evidence/u,
+  );
+  const result = validateHopeFeatureSelectionEvaluationReceiptSet(
+    receipts,
+    { allowSynthetic: true },
+  );
   assert.deepEqual(result.summary, {
     candidateMinimal: true,
     failedRuns: 0,
@@ -186,28 +225,63 @@ test("complete feature-selection evidence requires unique runs and one configura
     output: expectedOutput(plan.runs[0].caseId, "none"),
   });
   assert.equal(
-    validateHopeFeatureSelectionEvaluationReceiptSet(failed).decision,
+    validateHopeFeatureSelectionEvaluationReceiptSet(
+      failed,
+      { allowSynthetic: true },
+    ).decision,
     "keep-full",
   );
 
   const reusedInvocation = structuredClone(receipts);
   reusedInvocation.at(-1).invocation.id = reusedInvocation[0].invocation.id;
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceiptSet(reusedInvocation),
+    () => validateHopeFeatureSelectionEvaluationReceiptSet(
+      reusedInvocation,
+      { allowSynthetic: true },
+    ),
     /repeats an invocation identity/u,
   );
 
   const mixedModel = structuredClone(receipts);
   mixedModel.at(-1).configuration.model = "another-model";
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceiptSet(mixedModel),
+    () => validateHopeFeatureSelectionEvaluationReceiptSet(
+      mixedModel,
+      { allowSynthetic: true },
+    ),
     /one host, model, and effort/u,
   );
 
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceiptSet(receipts.slice(1)),
+    () => validateHopeFeatureSelectionEvaluationReceiptSet(
+      receipts.slice(1),
+      { allowSynthetic: true },
+    ),
     /must contain 26 runs/u,
   );
+});
+
+test("host-attested feature-selection evidence also requires the complete ledger", () => {
+  const receipts = createHopeFeatureSelectionEvaluationPlan().runs.map(
+    attestedReceiptFor,
+  );
+  assert.throws(
+    () => validateHopeFeatureSelectionEvaluationReceiptSet(receipts, {
+      verifyModelEvaluationAttestation: () => true,
+    }),
+    /requires a trusted complete-attempt verifier/u,
+  );
+  let eventCount = 0;
+  const result = validateHopeFeatureSelectionEvaluationReceiptSet(receipts, {
+    verifyModelEvaluationAttestation: () => true,
+    verifyModelEvaluationSet(manifest) {
+      eventCount = manifest.events.length;
+      return manifest.plannedRunKeys.length === 26;
+    },
+  });
+  assert.equal(eventCount, 26);
+  assert.equal(result.provenance.kind, "host-attested");
+  assert.match(result.provenance.manifestDigest, /^sha256:[a-f0-9]{64}$/u);
 });
 
 test("feature-selection file validators use bounded JSON inputs", async () => {
@@ -226,7 +300,10 @@ test("feature-selection file validators use bounded JSON inputs", async () => {
       true,
     );
     assert.equal(
-      (await validateHopeFeatureSelectionEvaluationReceiptSetFile(setPath))
+      (await validateHopeFeatureSelectionEvaluationReceiptSetFile(
+        setPath,
+        { allowSynthetic: true },
+      ))
         .summary.passedRuns,
       26,
     );
@@ -305,4 +382,23 @@ test("harness and generated plugin expose the same feature-selection plan", () =
   assert.equal(harness.status, 0, harness.stderr);
   assert.equal(plugin.status, 0, plugin.stderr);
   assert.deepEqual(JSON.parse(harness.stdout), JSON.parse(plugin.stdout));
+});
+
+test("harness and generated plugin report model-evaluation failures identically", () => {
+  const argumentsList = ["model-evaluation", "not-a-command"];
+  const harness = spawnSync(
+    process.execPath,
+    ["harness/hope.mjs", ...argumentsList],
+    { cwd: root, encoding: "utf8" },
+  );
+  const plugin = spawnSync(
+    process.execPath,
+    [
+      "plugins/hope/runtime/features/model-evaluation/cli.mjs",
+      "not-a-command",
+    ],
+    { cwd: root, encoding: "utf8" },
+  );
+  assert.equal(harness.status, plugin.status);
+  assert.equal(harness.stderr, plugin.stderr);
 });

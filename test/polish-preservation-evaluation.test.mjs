@@ -24,6 +24,10 @@ import {
   validateHopePolishPreservationEvaluationReceiptSetFile,
 } from "../features/model-evaluation/index.mjs";
 import {
+  digestHopeModelEvaluationEvidence,
+  HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
+} from "../features/model-evaluation/evidence.mjs";
+import {
   main as runModelEvaluationCommand,
   parseModelEvaluationArguments,
 } from "../features/model-evaluation/cli.mjs";
@@ -39,8 +43,34 @@ function expectedOutput(caseId, overrides = {}) {
   };
 }
 
-async function receiptFor(specification, overrides = {}) {
+function attestationFor(receipt, {
+  campaignId = "polish-preservation-campaign",
+  issuer = "trusted-test-runner",
+} = {}) {
+  const statement = {
+    configuration: receipt.configuration,
+    evaluation: {
+      bindings: receipt.bindings,
+      feature: receipt.feature,
+      version: receipt.version,
+    },
+    invocation: receipt.invocation,
+    specification: receipt.specification,
+  };
+  return {
+    campaignId,
+    eventId: receipt.invocation.id,
+    issuedAt: "2026-08-04T00:00:00.000Z",
+    issuer,
+    proof: `proof-for-${receipt.invocation.id}`,
+    statementDigest: digestHopeModelEvaluationEvidence(statement),
+    version: HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
+  };
+}
+
+async function receiptFor(specification, overrides = {}, dependencies = {}) {
   return (await createHopePolishPreservationEvaluationReceipt({
+    attestation: overrides.attestation,
     caseId: specification.caseId,
     effort: overrides.effort ?? "test-effort",
     host: overrides.host ?? "codex-test-host",
@@ -50,7 +80,16 @@ async function receiptFor(specification, overrides = {}) {
     output: overrides.output ?? expectedOutput(specification.caseId),
     run: specification.run,
     variant: specification.variant,
-  })).receipt;
+  }, dependencies)).receipt;
+}
+
+async function attestedReceiptFor(specification, attestationOptions) {
+  const synthetic = await receiptFor(specification);
+  return await receiptFor(specification, {
+    attestation: attestationFor(synthetic, attestationOptions),
+  }, {
+    verifyModelEvaluationAttestation: () => true,
+  });
 }
 
 test("Polish preservation evaluates 12 distinct cases under both variants", () => {
@@ -195,7 +234,14 @@ test("Polish preservation receipts retain wrong judgments and reject tampering",
 test("complete Polish preservation evidence requires unique runs and one configuration", async () => {
   const plan = createHopePolishPreservationEvaluationPlan();
   const receipts = await Promise.all(plan.runs.map(receiptFor));
-  const result = await validateHopePolishPreservationEvaluationReceiptSet(receipts);
+  await assert.rejects(
+    validateHopePolishPreservationEvaluationReceiptSet(receipts),
+    /requires host-attested evidence/u,
+  );
+  const result = await validateHopePolishPreservationEvaluationReceiptSet(
+    receipts,
+    { allowSynthetic: true },
+  );
   assert.deepEqual(result.summary, {
     candidateInvariantsOnly: true,
     failedRuns: 0,
@@ -217,7 +263,10 @@ test("complete Polish preservation evidence requires unique runs and one configu
     },
   });
   assert.equal(
-    (await validateHopePolishPreservationEvaluationReceiptSet(failed)).decision,
+    (await validateHopePolishPreservationEvaluationReceiptSet(
+      failed,
+      { allowSynthetic: true },
+    )).decision,
     "keep-full",
   );
 
@@ -226,6 +275,7 @@ test("complete Polish preservation evidence requires unique runs and one configu
   await assert.rejects(
     async () => await validateHopePolishPreservationEvaluationReceiptSet(
       reusedInvocation,
+      { allowSynthetic: true },
     ),
     /repeats an invocation identity/u,
   );
@@ -235,8 +285,37 @@ test("complete Polish preservation evidence requires unique runs and one configu
   await assert.rejects(
     async () => await validateHopePolishPreservationEvaluationReceiptSet(
       mixedModel,
+      { allowSynthetic: true },
     ),
     /one host, model, effort, and contract version/u,
+  );
+});
+
+test("Polish trusted evidence validates one campaign and issuer end to end", async () => {
+  const plan = createHopePolishPreservationEvaluationPlan();
+  const receipts = await Promise.all(plan.runs.map((specification) =>
+    attestedReceiptFor(specification)
+  ));
+  const result = await validateHopePolishPreservationEvaluationReceiptSet(
+    receipts,
+    {
+      verifyModelEvaluationAttestation: () => true,
+      verifyModelEvaluationSet: (manifest) => manifest.events.length === 24,
+    },
+  );
+  assert.equal(result.provenance.kind, "host-attested");
+
+  const mixedIssuer = [...receipts];
+  mixedIssuer[mixedIssuer.length - 1] = await attestedReceiptFor(
+    plan.runs.at(-1),
+    { issuer: "another-trusted-runner" },
+  );
+  await assert.rejects(
+    validateHopePolishPreservationEvaluationReceiptSet(mixedIssuer, {
+      verifyModelEvaluationAttestation: () => true,
+      verifyModelEvaluationSet: () => true,
+    }),
+    /one trusted attestation issuer/u,
   );
 });
 
@@ -258,7 +337,10 @@ test("Polish preservation file validators use bounded JSON inputs", async () => 
       true,
     );
     assert.equal(
-      (await validateHopePolishPreservationEvaluationReceiptSetFile(setPath))
+      (await validateHopePolishPreservationEvaluationReceiptSetFile(
+        setPath,
+        { allowSynthetic: true },
+      ))
         .summary.passedRuns,
       24,
     );

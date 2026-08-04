@@ -23,6 +23,7 @@ import {
 } from "./polish-preservation.mjs";
 
 export * from "./feature-selection.mjs";
+export * from "./evidence.mjs";
 export * from "./polish-preservation.mjs";
 export * from "./write-examples.mjs";
 
@@ -38,7 +39,7 @@ export async function createHopeFeatureSelectionEvaluationReceiptFromFile({
     ?? createHopeFeatureSelectionEvaluationReceipt)({
     ...options,
     output: input.value,
-  });
+  }, dependencies);
 }
 
 export async function validateHopeFeatureSelectionEvaluationReceiptFile(
@@ -50,7 +51,10 @@ export async function validateHopeFeatureSelectionEvaluationReceiptFile(
     maximumBytes: hopeFeatureSelectionEvaluationLimits.receiptBytes,
   });
   return (dependencies.validateReceipt
-    ?? validateHopeFeatureSelectionEvaluationReceipt)(input.value);
+    ?? validateHopeFeatureSelectionEvaluationReceipt)(
+    input.value,
+    dependencies,
+  );
 }
 
 export async function validateHopeFeatureSelectionEvaluationReceiptSetFile(
@@ -62,7 +66,10 @@ export async function validateHopeFeatureSelectionEvaluationReceiptSetFile(
     maximumBytes: hopeFeatureSelectionEvaluationLimits.receiptSetBytes,
   });
   return (dependencies.validateReceiptSet
-    ?? validateHopeFeatureSelectionEvaluationReceiptSet)(input.value);
+    ?? validateHopeFeatureSelectionEvaluationReceiptSet)(
+    input.value,
+    dependencies,
+  );
 }
 
 export async function createHopePolishPreservationEvaluationReceiptFromFile({
@@ -118,11 +125,11 @@ export async function createHopeWriteExampleEvaluationReceiptFromFile({
     label: "Hope Write example evaluation output",
     maximumBytes: hopeWriteExampleEvaluationLimits.outputBytes,
   });
-  return (dependencies.createReceipt
+  return await (dependencies.createReceipt
     ?? createHopeWriteExampleEvaluationReceipt)({
     ...options,
     output: input.value,
-  });
+  }, dependencies);
 }
 
 export async function validateHopeWriteExampleEvaluationReceiptFile(
@@ -133,8 +140,11 @@ export async function validateHopeWriteExampleEvaluationReceiptFile(
     label: "Hope Write example evaluation receipt",
     maximumBytes: hopeWriteExampleEvaluationLimits.receiptBytes,
   });
-  return (dependencies.validateReceipt
-    ?? validateHopeWriteExampleEvaluationReceipt)(input.value);
+  return await (dependencies.validateReceipt
+    ?? validateHopeWriteExampleEvaluationReceipt)(
+    input.value,
+    dependencies,
+  );
 }
 
 export async function validateHopeWriteExampleEvaluationReceiptSetFile(
@@ -145,8 +155,11 @@ export async function validateHopeWriteExampleEvaluationReceiptSetFile(
     label: "Hope Write example evaluation receipt set",
     maximumBytes: hopeWriteExampleEvaluationLimits.receiptSetBytes,
   });
-  return (dependencies.validateReceiptSet
-    ?? validateHopeWriteExampleEvaluationReceiptSet)(input.value);
+  return await (dependencies.validateReceiptSet
+    ?? validateHopeWriteExampleEvaluationReceiptSet)(
+    input.value,
+    dependencies,
+  );
 }
 
 export async function createHopeWriteProductionVerificationReceiptFromFile({
@@ -157,11 +170,11 @@ export async function createHopeWriteProductionVerificationReceiptFromFile({
     label: "Hope Write production verification output",
     maximumBytes: hopeWriteExampleEvaluationLimits.outputBytes,
   });
-  return (dependencies.createReceipt
+  return await (dependencies.createReceipt
     ?? createHopeWriteProductionVerificationReceipt)({
     ...options,
     output: input.value,
-  });
+  }, dependencies);
 }
 
 export async function validateHopeWriteProductionVerificationReceiptFile(
@@ -172,8 +185,11 @@ export async function validateHopeWriteProductionVerificationReceiptFile(
     label: "Hope Write production verification receipt",
     maximumBytes: hopeWriteExampleEvaluationLimits.receiptBytes,
   });
-  return (dependencies.validateReceipt
-    ?? validateHopeWriteProductionVerificationReceipt)(input.value);
+  return await (dependencies.validateReceipt
+    ?? validateHopeWriteProductionVerificationReceipt)(
+    input.value,
+    dependencies,
+  );
 }
 
 export async function validateHopeWriteProductionVerificationReceiptSetFile(
@@ -184,6 +200,9 @@ export async function validateHopeWriteProductionVerificationReceiptSetFile(
     label: "Hope Write production verification receipt set",
     maximumBytes: hopeWriteExampleEvaluationLimits.receiptSetBytes,
   });
-  return (dependencies.validateReceiptSet
-    ?? validateHopeWriteProductionVerificationReceiptSet)(input.value);
+  return await (dependencies.validateReceiptSet
+    ?? validateHopeWriteProductionVerificationReceiptSet)(
+    input.value,
+    dependencies,
+  );
 }

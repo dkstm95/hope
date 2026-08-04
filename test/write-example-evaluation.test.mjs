@@ -10,6 +10,7 @@ import {
   createHopeWriteProductionVerificationPlan,
   createHopeWriteProductionVerificationReceipt,
   getHopeWriteExampleEvaluationOracle,
+  hopeWriteProductionVerificationCases,
   prepareHopeWriteExampleEvaluationRun,
   prepareHopeWriteProductionVerificationRun,
   validateHopeWriteExampleEvaluationOutput,
@@ -21,6 +22,11 @@ import {
   main as runModelEvaluationCommand,
   parseModelEvaluationArguments,
 } from "../features/model-evaluation/cli.mjs";
+import {
+  digestHopeModelEvaluationEvidence,
+  HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
+} from "../features/model-evaluation/evidence.mjs";
+import { createWritingBrief } from "../features/write/index.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -33,8 +39,46 @@ function outputFor(caseId, decision) {
   };
 }
 
-async function receiptFor(specification, overrides = {}) {
+function productionOutputFor(caseId, decision) {
+  const evaluationCase = hopeWriteProductionVerificationCases.find(
+    (candidate) => candidate.id === caseId,
+  );
+  assert.ok(evaluationCase, `Unknown production case ${caseId}`);
+  const selected = decision ?? evaluationCase.oracle.expectedDecision;
+  return {
+    decision: selected,
+    reason: `The active brief supports ${selected}.`,
+  };
+}
+
+function attestationFor(receipt, {
+  campaignId,
+  issuer = "trusted-test-runner",
+} = {}) {
+  const statement = {
+    configuration: receipt.configuration,
+    evaluation: {
+      bindings: receipt.bindings,
+      feature: receipt.feature,
+      version: receipt.version,
+    },
+    invocation: receipt.invocation,
+    specification: receipt.specification,
+  };
+  return {
+    campaignId,
+    eventId: receipt.invocation.id,
+    issuedAt: "2026-08-04T00:00:00.000Z",
+    issuer,
+    proof: `proof-for-${receipt.invocation.id}`,
+    statementDigest: digestHopeModelEvaluationEvidence(statement),
+    version: HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
+  };
+}
+
+async function receiptFor(specification, overrides = {}, dependencies = {}) {
   return (await createHopeWriteExampleEvaluationReceipt({
+    attestation: overrides.attestation,
     caseId: specification.caseId,
     effort: overrides.effort ?? "test-effort",
     host: overrides.host ?? "codex-test-host",
@@ -44,11 +88,51 @@ async function receiptFor(specification, overrides = {}) {
     output: overrides.output ?? outputFor(specification.caseId),
     run: specification.run,
     variant: specification.variant,
-  })).receipt;
+  }, dependencies)).receipt;
 }
 
 async function completeReceipts() {
   return Promise.all(createHopeWriteExampleEvaluationPlan().runs.map(receiptFor));
+}
+
+async function attestedReceiptFor(specification, attestationOptions = {}) {
+  const synthetic = await receiptFor(specification);
+  return await receiptFor(specification, {
+    attestation: attestationFor(synthetic, {
+      campaignId: "write-example-campaign",
+      ...attestationOptions,
+    }),
+  }, {
+    verifyModelEvaluationAttestation: () => true,
+  });
+}
+
+async function productionReceiptFor(specification, {
+  attestationOptions,
+  attested = false,
+} = {}) {
+  const options = {
+    caseId: specification.caseId,
+    effort: "test-effort",
+    host: "codex-test-host",
+    invocationId: `production-${specification.caseId}`,
+    model: "test-model",
+    output: productionOutputFor(specification.caseId),
+    run: specification.run,
+  };
+  const synthetic = (await createHopeWriteProductionVerificationReceipt(
+    options,
+  )).receipt;
+  if (!attested) return synthetic;
+  return (await createHopeWriteProductionVerificationReceipt({
+    ...options,
+    attestation: attestationFor(synthetic, {
+      campaignId: "write-production-campaign",
+      ...attestationOptions,
+    }),
+  }, {
+    verifyModelEvaluationAttestation: () => true,
+  })).receipt;
 }
 
 test("Write example ablation pairs 24 fresh runs", () => {
@@ -75,6 +159,12 @@ test("rules-only removes only decision examples from the active Write brief", as
   assert.equal(rulesOnly.brief.standard, full.brief.standard);
   assert.equal(rulesOnly.brief.response, full.brief.response);
   assert.equal(Object.hasOwn(rulesOnly, "oracle"), false);
+  assert.equal(Object.hasOwn(rulesOnly.hostInput, "candidateAction"), false);
+  assert.deepEqual(
+    Object.keys(rulesOnly.hostInput).sort(),
+    ["artifact", "constraints", "contentIsSynthetic", "request"],
+  );
+  assert.deepEqual(full.brief, await createWritingBrief({ mode: "edit" }));
   assert.notEqual(rulesOnly.briefDigest, full.briefDigest);
   assert.notEqual(rulesOnly.inputDigest, full.inputDigest);
 });
@@ -123,7 +213,14 @@ test("Write example receipts retain failures and reject tampering", async () => 
 
 test("complete Write example evidence requires every run and one configuration", async () => {
   const receipts = await completeReceipts();
-  const result = await validateHopeWriteExampleEvaluationReceiptSet(receipts);
+  await assert.rejects(
+    validateHopeWriteExampleEvaluationReceiptSet(receipts),
+    /requires host-attested evidence/u,
+  );
+  const result = await validateHopeWriteExampleEvaluationReceiptSet(
+    receipts,
+    { allowSynthetic: true },
+  );
   assert.deepEqual(result.summary, {
     deletionReady: true,
     failedRuns: 0,
@@ -139,19 +236,28 @@ test("complete Write example evidence requires every run and one configuration",
   const repeated = structuredClone(receipts);
   repeated.at(-1).invocation.id = repeated[0].invocation.id;
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceiptSet(repeated),
+    validateHopeWriteExampleEvaluationReceiptSet(
+      repeated,
+      { allowSynthetic: true },
+    ),
     /repeats an invocation identity/u,
   );
 
   const mixed = structuredClone(receipts);
   mixed.at(-1).configuration.model = "another-model";
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceiptSet(mixed),
+    validateHopeWriteExampleEvaluationReceiptSet(
+      mixed,
+      { allowSynthetic: true },
+    ),
     /one host, model, and effort/u,
   );
 
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceiptSet(receipts.slice(1)),
+    validateHopeWriteExampleEvaluationReceiptSet(
+      receipts.slice(1),
+      { allowSynthetic: true },
+    ),
     /must contain 24 runs/u,
   );
 });
@@ -162,9 +268,37 @@ test("one failed Write example run keeps the examples", async () => {
   receipts[0] = await receiptFor(plan.runs[0], {
     output: outputFor(plan.runs[0].caseId, "keep-current-structure"),
   });
-  const result = await validateHopeWriteExampleEvaluationReceiptSet(receipts);
+  const result = await validateHopeWriteExampleEvaluationReceiptSet(
+    receipts,
+    { allowSynthetic: true },
+  );
   assert.equal(result.summary.deletionReady, false);
   assert.equal(result.decision, "keep-examples");
+});
+
+test("Write ablation trusted evidence rejects mixed campaigns", async () => {
+  const plan = createHopeWriteExampleEvaluationPlan();
+  const receipts = await Promise.all(plan.runs.map((specification) =>
+    attestedReceiptFor(specification)
+  ));
+  const result = await validateHopeWriteExampleEvaluationReceiptSet(receipts, {
+    verifyModelEvaluationAttestation: () => true,
+    verifyModelEvaluationSet: (manifest) => manifest.events.length === 24,
+  });
+  assert.equal(result.provenance.kind, "host-attested");
+
+  const mixedCampaign = [...receipts];
+  mixedCampaign[mixedCampaign.length - 1] = await attestedReceiptFor(
+    plan.runs.at(-1),
+    { campaignId: "another-write-campaign" },
+  );
+  await assert.rejects(
+    validateHopeWriteExampleEvaluationReceiptSet(mixedCampaign, {
+      verifyModelEvaluationAttestation: () => true,
+      verifyModelEvaluationSet: () => true,
+    }),
+    /one trusted runner campaign/u,
+  );
 });
 
 test("the model-evaluation CLI parses and delegates Write example preparation", async () => {
@@ -238,30 +372,71 @@ test("Write production verification uses the exact active brief in six runs", as
   const plan = createHopeWriteProductionVerificationPlan();
   assert.equal(plan.totalRuns, 6);
   const prepared = await prepareHopeWriteProductionVerificationRun({
-    caseId: "write-example-01",
+    caseId: "write-production-01",
     run: 1,
   });
   assert.equal(prepared.variant, "production");
-  assert.equal(Object.hasOwn(prepared.brief, "decisionExamples"), false);
-  assert.equal(prepared.brief.version, 3);
+  const activeBrief = await createWritingBrief({ mode: "edit" });
+  assert.deepEqual(prepared.brief, activeBrief);
   assert.equal(Object.hasOwn(prepared, "oracle"), false);
+  assert.equal(Object.hasOwn(prepared.hostInput, "candidateAction"), false);
+
+  await assert.rejects(
+    prepareHopeWriteProductionVerificationRun({
+      caseId: "write-production-01",
+      run: 1,
+    }, {
+      createBrief: async () => ({
+        ...activeBrief,
+        response: `${activeBrief.response} Return a heading first.`,
+      }),
+    }),
+    /must match the complete canonical active Write brief/u,
+  );
+});
+
+test("Write production cases use structures distinct from their ablation counterparts", () => {
+  const productionById = new Map(hopeWriteProductionVerificationCases.map(
+    (evaluationCase) => [evaluationCase.id, evaluationCase],
+  ));
+  assert.deepEqual(
+    Object.keys(productionById.get("write-production-01").input.artifact).sort(),
+    ["format", "text"],
+  );
+  assert.deepEqual(
+    Object.keys(productionById.get("write-production-05").input.artifact).sort(),
+    ["body", "buttonLabel", "format", "title"],
+  );
+  assert.deepEqual(
+    Object.keys(productionById.get("write-production-06").input.artifact).sort(),
+    ["columns", "format", "rows"],
+  );
+  assert.match(
+    productionById.get("write-production-01").input.constraints.join(" "),
+    /first two sentences form one recovery update/u,
+  );
+  assert.match(
+    productionById.get("write-production-05").input.constraints.join(" "),
+    /separate semantic fields/u,
+  );
+  assert.match(
+    productionById.get("write-production-06").input.constraints.join(" "),
+    /mutually exclusive outcomes/u,
+  );
 });
 
 test("complete Write production evidence accepts only six passing fresh runs", async () => {
   const plan = createHopeWriteProductionVerificationPlan();
-  const receipts = await Promise.all(plan.runs.map(async (specification) =>
-    (await createHopeWriteProductionVerificationReceipt({
-      caseId: specification.caseId,
-      effort: "test-effort",
-      host: "codex-test-host",
-      invocationId: `production-${specification.caseId}`,
-      model: "test-model",
-      output: outputFor(specification.caseId),
-      run: specification.run,
-    })).receipt
+  const receipts = await Promise.all(plan.runs.map((specification) =>
+    productionReceiptFor(specification)
   ));
+  await assert.rejects(
+    validateHopeWriteProductionVerificationReceiptSet(receipts),
+    /requires host-attested evidence/u,
+  );
   const result = await validateHopeWriteProductionVerificationReceiptSet(
     receipts,
+    { allowSynthetic: true },
   );
   assert.deepEqual(result.summary, {
     accepted: true,
@@ -274,9 +449,35 @@ test("complete Write production evidence accepts only six passing fresh runs", a
   const reused = structuredClone(receipts);
   reused.at(-1).invocation.id = reused[0].invocation.id;
   await assert.rejects(
-    validateHopeWriteProductionVerificationReceiptSet(reused),
+    validateHopeWriteProductionVerificationReceiptSet(
+      reused,
+      { allowSynthetic: true },
+    ),
     /repeats an invocation identity/u,
   );
+});
+
+test("Write production trusted evidence fails a rejected attempt ledger", async () => {
+  const receipts = await Promise.all(
+    createHopeWriteProductionVerificationPlan().runs.map((specification) =>
+      productionReceiptFor(specification, { attested: true })
+    ),
+  );
+  await assert.rejects(
+    validateHopeWriteProductionVerificationReceiptSet(receipts, {
+      verifyModelEvaluationAttestation: () => true,
+      verifyModelEvaluationSet: () => false,
+    }),
+    /did not verify the complete attempt history/u,
+  );
+  const result = await validateHopeWriteProductionVerificationReceiptSet(
+    receipts,
+    {
+      verifyModelEvaluationAttestation: () => true,
+      verifyModelEvaluationSet: (manifest) => manifest.events.length === 6,
+    },
+  );
+  assert.equal(result.provenance.kind, "host-attested");
 });
 
 test("harness and generated plugin expose the same Write production plan", () => {

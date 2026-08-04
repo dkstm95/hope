@@ -3,8 +3,14 @@ import { isDeepStrictEqual } from "node:util";
 
 import { createPolishBrief } from "../polish/index.mjs";
 
+import {
+  createHopeModelEvaluationProvenance,
+  validateHopeModelEvaluationProvenance,
+  validateHopeModelEvaluationReceiptSetProvenance,
+} from "./evidence.mjs";
+
 export const HOPE_POLISH_PRESERVATION_CONTRACT_VERSION = 1;
-export const HOPE_POLISH_PRESERVATION_EVALUATION_VERSION = 1;
+export const HOPE_POLISH_PRESERVATION_EVALUATION_VERSION = 2;
 
 export const HOPE_POLISH_PRESERVATION_VARIANTS = Object.freeze([
   "invariants-only",
@@ -477,9 +483,9 @@ export const hopePolishPreservationEvaluationProtocol = Object.freeze({
   hostInput:
     "Give a fresh host only the prepared brief, hostInput, and outputContract. Do not give it the oracle, another case, or the other variant.",
   interpretation:
-    "A passing set tests bounded preservation judgments. It does not prove that a free-form edit preserved semantics or that unrelated Polish protocol can be removed.",
+    "A synthetic passing set is test-only. Host-attested release evidence tests bounded preservation judgments but does not prove that a free-form edit preserved semantics or that unrelated Polish protocol can be removed.",
   storage:
-    "Keep bounded receipts under ignored test-results/ or equivalent release evidence. Checked-in cases contain synthetic data only.",
+    "Keep bounded receipts under ignored test-results/. CLI-created receipts are synthetic; release evidence must come through a trusted runner adapter.",
   variants: HOPE_POLISH_PRESERVATION_VARIANTS,
   version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
 });
@@ -662,6 +668,7 @@ function createEvaluation(evaluationCase, output) {
 }
 
 export async function createHopePolishPreservationEvaluationReceipt({
+  attestation,
   caseId,
   effort,
   host,
@@ -677,30 +684,49 @@ export async function createHopePolishPreservationEvaluationReceipt({
   );
   const normalizedOutput = validateHopePolishPreservationEvaluationOutput(output);
   const evaluation = createEvaluation(findCase(caseId), normalizedOutput);
+  const bindings = Object.freeze({
+    briefDigest: prepared.briefDigest,
+    inputDigest: prepared.inputDigest,
+    outputDigest: digestHopePolishPreservationEvaluationValue(normalizedOutput),
+  });
+  const configuration = Object.freeze({
+    contractVersion: prepared.contractVersion,
+    effort: boundedText(effort, "configuration.effort"),
+    host: boundedText(host, "configuration.host"),
+    model: boundedText(model, "configuration.model"),
+  });
+  const invocation = Object.freeze({
+    id: boundedText(invocationId, "invocation.id"),
+  });
+  const specification = Object.freeze({
+    caseId,
+    run,
+    suite: prepared.suite,
+    variant,
+  });
+  const statement = Object.freeze({
+    configuration,
+    evaluation: Object.freeze({
+      bindings,
+      feature: "hope-polish-preservation-evaluation-receipt",
+      version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
+    }),
+    invocation,
+    specification,
+  });
+  const provenance = createHopeModelEvaluationProvenance(
+    { attestation, statement },
+    dependencies,
+  );
   const receipt = Object.freeze({
-    bindings: Object.freeze({
-      briefDigest: prepared.briefDigest,
-      inputDigest: prepared.inputDigest,
-      outputDigest: digestHopePolishPreservationEvaluationValue(normalizedOutput),
-    }),
-    configuration: Object.freeze({
-      contractVersion: prepared.contractVersion,
-      effort: boundedText(effort, "configuration.effort"),
-      host: boundedText(host, "configuration.host"),
-      model: boundedText(model, "configuration.model"),
-    }),
+    bindings,
+    configuration,
     evaluation,
     feature: "hope-polish-preservation-evaluation-receipt",
-    invocation: Object.freeze({
-      id: boundedText(invocationId, "invocation.id"),
-    }),
+    invocation,
     output: normalizedOutput,
-    specification: Object.freeze({
-      caseId,
-      run,
-      suite: prepared.suite,
-      variant,
-    }),
+    provenance,
+    specification,
     version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
   });
   return Object.freeze({ evaluation, receipt });
@@ -717,6 +743,7 @@ export async function validateHopePolishPreservationEvaluationReceipt(
     "feature",
     "invocation",
     "output",
+    "provenance",
     "specification",
     "version",
   ], "receipt");
@@ -794,6 +821,21 @@ export async function validateHopePolishPreservationEvaluationReceipt(
     isDeepStrictEqual(value.bindings, bindings),
     "receipt.bindings do not match the prepared run and output",
   );
+  const statement = Object.freeze({
+    configuration,
+    evaluation: Object.freeze({
+      bindings,
+      feature: value.feature,
+      version: value.version,
+    }),
+    invocation,
+    specification: Object.freeze({ ...value.specification }),
+  });
+  const provenance = validateHopeModelEvaluationProvenance(
+    value.provenance,
+    statement,
+    dependencies,
+  );
   return Object.freeze({
     evaluation,
     receipt: Object.freeze({
@@ -803,6 +845,7 @@ export async function validateHopePolishPreservationEvaluationReceipt(
       feature: value.feature,
       invocation,
       output,
+      provenance,
       specification: Object.freeze({ ...value.specification }),
       version: value.version,
     }),
@@ -861,6 +904,16 @@ export async function validateHopePolishPreservationEvaluationReceiptSet(
     configurations.size === 1,
     "receipt set must use one host, model, effort, and contract version",
   );
+  const provenance = validateHopeModelEvaluationReceiptSetProvenance(
+    receipts,
+    {
+      feature: "hope-polish-preservation-evaluation",
+      plannedRunKeys: expected.map(runKey),
+      runKey,
+      version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
+    },
+    dependencies,
+  );
   const passedRuns = receipts.filter(
     (receipt) => receipt.evaluation.runPassed,
   ).length;
@@ -888,6 +941,7 @@ export async function validateHopePolishPreservationEvaluationReceiptSet(
       ? "candidate-invariants-only"
       : "keep-full",
     feature: "hope-polish-preservation-evaluation-result",
+    provenance,
     receipts: Object.freeze(receipts),
     summary,
     version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,

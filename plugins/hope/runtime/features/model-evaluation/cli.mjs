@@ -33,6 +33,30 @@ import {
   validateHopeWriteProductionVerificationReceiptSetFile,
 } from "./index.mjs";
 
+export const HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE =
+  "HOPE_MODEL_EVALUATION_COMMAND";
+
+export class HopeModelEvaluationCommandError extends Error {
+  constructor(cause) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.code = HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE;
+    this.name = "HopeModelEvaluationCommandError";
+  }
+}
+
+export function asHopeModelEvaluationCommandError(error) {
+  return error?.code === HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE
+    ? error
+    : new HopeModelEvaluationCommandError(error);
+}
+
+export function modelEvaluationErrorReport(error) {
+  return Object.freeze({
+    exitCode: 1,
+    message: `hope model-evaluation: ${error.message}\n`,
+  });
+}
+
 function usage() {
   return [
     "Use Hope model evaluations.",
@@ -61,6 +85,9 @@ function usage() {
     "  hope model-evaluation write-production-receipt --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
     "  hope model-evaluation write-production-validate --input <receipt.json>",
     "  hope model-evaluation write-production-validate-set --input <receipts.json>",
+    "",
+    "Receipt commands create synthetic test evidence.",
+    "Release evidence requires a trusted host adapter and complete-attempt ledger.",
   ].join("\n");
 }
 
@@ -299,35 +326,50 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     return writeJson(
       stdout,
       await (dependencies.createFeatureSelectionReceiptFromFile
-        ?? createHopeFeatureSelectionEvaluationReceiptFromFile)(options),
+        ?? createHopeFeatureSelectionEvaluationReceiptFromFile)(
+          options,
+          dependencies,
+        ),
     );
   }
   if (options.command === "polish-preservation-receipt") {
     return writeJson(
       stdout,
       await (dependencies.createPolishPreservationReceiptFromFile
-        ?? createHopePolishPreservationEvaluationReceiptFromFile)(options),
+        ?? createHopePolishPreservationEvaluationReceiptFromFile)(
+          options,
+          dependencies,
+        ),
     );
   }
   if (options.command === "write-example-receipt") {
     return writeJson(
       stdout,
       await (dependencies.createWriteExampleReceiptFromFile
-        ?? createHopeWriteExampleEvaluationReceiptFromFile)(options),
+        ?? createHopeWriteExampleEvaluationReceiptFromFile)(
+          options,
+          dependencies,
+        ),
     );
   }
   if (options.command === "write-production-receipt") {
     return writeJson(
       stdout,
       await (dependencies.createWriteProductionReceiptFromFile
-        ?? createHopeWriteProductionVerificationReceiptFromFile)(options),
+        ?? createHopeWriteProductionVerificationReceiptFromFile)(
+          options,
+          dependencies,
+        ),
     );
   }
   if (options.command === "feature-selection-validate") {
     return writeJson(
       stdout,
       await (dependencies.validateFeatureSelectionReceiptFile
-        ?? validateHopeFeatureSelectionEvaluationReceiptFile)(options.inputPath),
+        ?? validateHopeFeatureSelectionEvaluationReceiptFile)(
+          options.inputPath,
+          dependencies,
+        ),
     );
   }
   if (options.command === "polish-preservation-validate") {
@@ -336,6 +378,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       await (dependencies.validatePolishPreservationReceiptFile
         ?? validateHopePolishPreservationEvaluationReceiptFile)(
           options.inputPath,
+          dependencies,
         ),
     );
   }
@@ -345,6 +388,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       await (dependencies.validatePolishPreservationReceiptSetFile
         ?? validateHopePolishPreservationEvaluationReceiptSetFile)(
           options.inputPath,
+          dependencies,
         ),
     );
   }
@@ -352,7 +396,10 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     return writeJson(
       stdout,
       await (dependencies.validateWriteExampleReceiptFile
-        ?? validateHopeWriteExampleEvaluationReceiptFile)(options.inputPath),
+        ?? validateHopeWriteExampleEvaluationReceiptFile)(
+          options.inputPath,
+          dependencies,
+        ),
     );
   }
   if (options.command === "write-production-validate") {
@@ -361,6 +408,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       await (dependencies.validateWriteProductionReceiptFile
         ?? validateHopeWriteProductionVerificationReceiptFile)(
           options.inputPath,
+          dependencies,
         ),
     );
   }
@@ -370,6 +418,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       await (dependencies.validateWriteProductionReceiptSetFile
         ?? validateHopeWriteProductionVerificationReceiptSetFile)(
           options.inputPath,
+          dependencies,
         ),
     );
   }
@@ -377,19 +426,28 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     return writeJson(
       stdout,
       await (dependencies.validateWriteExampleReceiptSetFile
-        ?? validateHopeWriteExampleEvaluationReceiptSetFile)(options.inputPath),
+        ?? validateHopeWriteExampleEvaluationReceiptSetFile)(
+          options.inputPath,
+          dependencies,
+        ),
     );
   }
   return writeJson(
     stdout,
     await (dependencies.validateFeatureSelectionReceiptSetFile
-      ?? validateHopeFeatureSelectionEvaluationReceiptSetFile)(options.inputPath),
+      ?? validateHopeFeatureSelectionEvaluationReceiptSetFile)(
+        options.inputPath,
+        dependencies,
+      ),
   );
 }
 
 if (isEntrypoint(import.meta.url)) {
   main().catch((error) => {
-    process.stderr.write(`hope model-evaluation: ${error.message}\n`);
-    process.exitCode = 1;
+    const report = modelEvaluationErrorReport(
+      asHopeModelEvaluationCommandError(error),
+    );
+    process.stderr.write(report.message);
+    process.exitCode = report.exitCode;
   });
 }

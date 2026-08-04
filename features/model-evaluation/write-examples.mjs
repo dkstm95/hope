@@ -3,11 +3,16 @@ import { isDeepStrictEqual } from "node:util";
 
 import {
   createWritingBrief,
-  loadWritingStandard,
   WRITE_BRIEF_VERSION,
 } from "../write/index.mjs";
 
-export const HOPE_WRITE_EXAMPLE_EVALUATION_VERSION = 1;
+import {
+  createHopeModelEvaluationProvenance,
+  validateHopeModelEvaluationProvenance,
+  validateHopeModelEvaluationReceiptSetProvenance,
+} from "./evidence.mjs";
+
+export const HOPE_WRITE_EXAMPLE_EVALUATION_VERSION = 2;
 export const HOPE_WRITE_EXAMPLE_VARIANTS = Object.freeze([
   "rules-only",
   "full",
@@ -28,57 +33,12 @@ export const hopeWriteExampleEvaluationLimits = Object.freeze({
   receiptSetBytes: 3 * 1024 * 1024,
 });
 
-const EVALUATED_WRITE_DECISION_EXAMPLES = Object.freeze([
-  Object.freeze({
-    expectedDecision: "Put each independent point in its own paragraph.",
-    id: "separate-independent-points",
-    situation:
-      "A prose paragraph contains two independent points, and the target format supports separate paragraphs.",
-  }),
-  Object.freeze({
-    expectedDecision:
-      "Consolidate the repeated framing, keep the version that best serves the target, and preserve standalone comprehension.",
-    id: "remove-repeated-framing",
-    situation:
-      "The intended reading path always presents a heading, quote, and opening sentence together; they repeat the same problem and add no distinct meaning or voice.",
-  }),
-  Object.freeze({
-    expectedDecision:
-      "Use the least disruptive established semantic structure, and use a callout only when that convention supports one.",
-    id: "surface-important-boundary",
-    situation:
-      "A prerequisite or limitation must be noticed, and the target or project already has an established semantic emphasis convention.",
-  }),
-  Object.freeze({
-    expectedDecision:
-      "Keep the claim or surface the choice instead of silently removing it.",
-    id: "preserve-material-claim",
-    situation:
-      "An edit would delete, demote, or reorder a unique product claim, and the request does not explicitly authorize that content change.",
-  }),
-]);
-
-async function createEvaluatedWritingBrief({ mode }, {
-  loadStandard = loadWritingStandard,
-} = {}) {
-  assertEvaluation(mode === "edit", "evaluated Write mode must be edit");
+function syntheticInput({ artifact, constraints, request }) {
   return Object.freeze({
-    decisionExamples: EVALUATED_WRITE_DECISION_EXAMPLES,
-    feature: "write",
-    mode: "edit",
-    response:
-      "Change the requested target and lead with the completed result.\n\nPreserve a material ambiguity instead of silently choosing a new meaning.",
-    standard: await loadStandard(),
-    standardVersion: 2,
-    version: 2,
-  });
-}
-
-function syntheticInput({ candidateAction, situation }) {
-  return Object.freeze({
-    candidateAction,
+    artifact: Object.freeze(structuredClone(artifact)),
+    constraints: Object.freeze([...constraints]),
     contentIsSynthetic: true,
-    situation,
+    request,
   });
 }
 
@@ -86,10 +46,15 @@ export const hopeWriteExampleEvaluationCases = Object.freeze([
   Object.freeze({
     id: "write-example-01",
     input: syntheticInput({
-      candidateAction:
-        "Split the paragraph so each independent point has its own paragraph.",
-      situation:
-        "A Markdown paragraph explains the release decision and, independently, the support escalation path. The format permits separate paragraphs.",
+      artifact: {
+        format: "Markdown",
+        text: "The release was approved after the rollback check. Escalations go to support@example.test during the published support window.",
+      },
+      constraints: [
+        "Both statements are accurate and must remain.",
+        "The target format supports multiple prose paragraphs.",
+      ],
+      request: "Improve the paragraph structure without changing either fact.",
     }),
     oracle: Object.freeze({ expectedDecision: "separate-independent-points" }),
     suite: "conformance",
@@ -97,10 +62,16 @@ export const hopeWriteExampleEvaluationCases = Object.freeze([
   Object.freeze({
     id: "write-example-02",
     input: syntheticInput({
-      candidateAction:
-        "Consolidate the repeated framing while keeping the version that remains understandable on its own.",
-      situation:
-        "A heading, pull quote, and opening sentence always appear together, repeat the same problem, and add no distinct meaning or voice.",
+      artifact: {
+        heading: "Deployments are hard to audit",
+        opening: "Deployments are hard to audit when ownership is unclear.",
+        pullQuote: "Deployments are hard to audit.",
+      },
+      constraints: [
+        "The three elements always appear together.",
+        "None is reused outside this opening.",
+      ],
+      request: "Tighten the opening while keeping one complete statement.",
     }),
     oracle: Object.freeze({ expectedDecision: "consolidate-repeated-framing" }),
     suite: "conformance",
@@ -108,10 +79,17 @@ export const hopeWriteExampleEvaluationCases = Object.freeze([
   Object.freeze({
     id: "write-example-03",
     input: syntheticInput({
-      candidateAction:
-        "Use the target's existing warning callout for the prerequisite without inventing a new visual convention.",
-      situation:
-        "A prerequisite must be noticed before the reader follows the next step, and the target already uses warning callouts for prerequisites.",
+      artifact: {
+        draft: "Grant the migration role. Then start the import.",
+        establishedExample:
+          "> [!WARNING]\n> Create a backup before resetting the workspace.",
+        format: "Markdown guide",
+      },
+      constraints: [
+        "The migration role is required before the import can start.",
+        "The guide uses warning callouts for blocking prerequisites.",
+      ],
+      request: "Make the prerequisite hard to miss using the guide's structure.",
     }),
     oracle: Object.freeze({
       expectedDecision: "surface-with-established-structure",
@@ -121,10 +99,15 @@ export const hopeWriteExampleEvaluationCases = Object.freeze([
   Object.freeze({
     id: "write-example-04",
     input: syntheticInput({
-      candidateAction:
-        "Keep the unique product claim and surface the unresolved content choice instead of deleting it.",
-      situation:
-        "A clarity edit would delete a unique product claim, but neither the request nor an authoritative source permits that content change.",
+      artifact: {
+        current: "Audit exports include actor, action, and timestamp fields.",
+        proposed: "Audit exports include activity details.",
+      },
+      constraints: [
+        "The current sentence is the only source that names the three fields.",
+        "No product source changes the export fields.",
+      ],
+      request: "Make the sentence shorter and clearer.",
     }),
     oracle: Object.freeze({ expectedDecision: "preserve-material-claim" }),
     suite: "safety",
@@ -132,10 +115,15 @@ export const hopeWriteExampleEvaluationCases = Object.freeze([
   Object.freeze({
     id: "write-example-05",
     input: syntheticInput({
-      candidateAction:
-        "Keep the two related sentences together because separating them would obscure their cause-and-effect relationship.",
-      situation:
-        "Two sentences form one short cause-and-effect explanation. Splitting them into separate paragraphs would harm flow and meaning.",
+      artifact: {
+        format: "Markdown",
+        text: "The cache key excludes locale. As a result, translated pages can reuse the wrong response.",
+      },
+      constraints: [
+        "The target permits multiple paragraphs.",
+        "Keep the stated causal relationship exact.",
+      ],
+      request: "Use shorter paragraphs where that improves the explanation.",
     }),
     oracle: Object.freeze({ expectedDecision: "keep-current-structure" }),
     suite: "safety",
@@ -143,10 +131,126 @@ export const hopeWriteExampleEvaluationCases = Object.freeze([
   Object.freeze({
     id: "write-example-06",
     input: syntheticInput({
-      candidateAction:
-        "Keep the pull quote's self-contained wording because it is also reused outside the surrounding section.",
-      situation:
-        "A heading and nearby pull quote overlap, but the quote is reused alone elsewhere and would lose standalone comprehension if shortened.",
+      artifact: {
+        heading: "Recovery needs an owner",
+        pullQuote: "Every recovery step needs one named owner and one fallback.",
+      },
+      constraints: [
+        "The pull quote is also published alone in the incident template.",
+        "The incident template does not include the heading.",
+      ],
+      request: "Remove unnecessary repetition from this page opening.",
+    }),
+    oracle: Object.freeze({ expectedDecision: "keep-current-structure" }),
+    suite: "safety",
+  }),
+]);
+
+export const hopeWriteProductionVerificationCases = Object.freeze([
+  Object.freeze({
+    id: "write-production-01",
+    input: syntheticInput({
+      artifact: {
+        format: "incident update",
+        text: "At 14:20 UTC, the replica caught up, so customer reads returned to normal. Export jobs remain paused until the 15:00 integrity check finishes. Billing questions go to finance@example.test.",
+      },
+      constraints: [
+        "The first two sentences form one recovery update and must stay together.",
+        "The billing contact is independent and readers look it up separately.",
+        "Keep every time and address exact.",
+      ],
+      request: "Make the update easier to scan without adding headings or lists.",
+    }),
+    oracle: Object.freeze({ expectedDecision: "separate-independent-points" }),
+    suite: "conformance",
+  }),
+  Object.freeze({
+    id: "write-production-02",
+    input: syntheticInput({
+      artifact: {
+        opening: "Teams move safely when every migration has an owner.",
+        quote: "An owner gave us one place to resolve every migration question.",
+        title: "Every safe migration has an owner",
+      },
+      constraints: [
+        "The title, opening, and quote always appear together.",
+        "The customer quote is approved verbatim and has a distinct speaker.",
+      ],
+      request: "Reduce repeated framing while preserving the customer's voice.",
+    }),
+    oracle: Object.freeze({ expectedDecision: "consolidate-repeated-framing" }),
+    suite: "conformance",
+  }),
+  Object.freeze({
+    id: "write-production-03",
+    input: syntheticInput({
+      artifact: {
+        checklist: [
+          "**Before you begin:** Verify the billing owner.",
+          "Tip: Keep the profile page open in another tab.",
+          "Grant the account migration permission.",
+        ],
+      },
+      constraints: [
+        "The permission is required before the next checklist action.",
+        "Blocking prerequisites and optional tips use the shown conventions.",
+      ],
+      request: "Revise the third item so readers recognize its role.",
+    }),
+    oracle: Object.freeze({ expectedDecision: "surface-with-established-structure" }),
+    suite: "conformance",
+  }),
+  Object.freeze({
+    id: "write-production-04",
+    input: syntheticInput({
+      artifact: {
+        currentSetup: "This feature is available only in the us-east region.",
+        proposedSetup: "Enable the feature before continuing.",
+        proposedFaq: "Where is the feature available? Only in us-east.",
+      },
+      constraints: [
+        "The FAQ is collapsed by default.",
+        "No product source changes regional availability.",
+      ],
+      request: "Streamline the setup path and move secondary details to the FAQ.",
+    }),
+    oracle: Object.freeze({ expectedDecision: "preserve-material-claim" }),
+    suite: "safety",
+  }),
+  Object.freeze({
+    id: "write-production-05",
+    input: syntheticInput({
+      artifact: {
+        body: "Your connection was interrupted. Retry after reconnecting.",
+        buttonLabel: "Retry upload",
+        format: "error dialog",
+        title: "Upload paused",
+      },
+      constraints: [
+        "These are exact interface strings.",
+        "The renderer already presents the title, body, and button as separate semantic fields.",
+      ],
+      request: "Apply the paragraph guidance where it improves readability.",
+    }),
+    oracle: Object.freeze({ expectedDecision: "keep-current-structure" }),
+    suite: "safety",
+  }),
+  Object.freeze({
+    id: "write-production-06",
+    input: syntheticInput({
+      artifact: {
+        columns: ["Condition", "Action"],
+        format: "troubleshooting decision table",
+        rows: [
+          ["Token is expired", "Sign in again."],
+          ["Token is valid", "Check the workspace permission."],
+        ],
+      },
+      constraints: [
+        "The rows describe mutually exclusive outcomes.",
+        "The guide uses tables for compact condition-to-action comparisons.",
+      ],
+      request: "Reduce the vertical space used by this troubleshooting section.",
     }),
     oracle: Object.freeze({ expectedDecision: "keep-current-structure" }),
     suite: "safety",
@@ -167,14 +271,16 @@ function plannedRuns() {
 }
 
 export const hopeWriteExampleEvaluationProtocol = Object.freeze({
+  caseDesign:
+    "Each input contains a synthetic artifact, an edit request, and factual constraints. It must not state whether an action is correct or describe the expected harm. Review case neutrality independently before a release campaign.",
   decision:
     "Remove the Write decision examples only when all 24 paired runs pass under one declared host, model, effort, and contract version.",
   hostInput:
     "Give a fresh host only the prepared brief, hostInput, and outputContract. Do not give it the oracle, another case, or the other variant.",
   interpretation:
-    "A complete passing set is smoke evidence for one declared configuration. It does not prove equivalent writing quality outside the checked decisions.",
+    "A synthetic complete set is test-only smoke evidence. Host-attested release evidence still does not prove equivalent writing quality outside the checked decisions.",
   storage:
-    "Keep bounded receipts under ignored test-results/ or equivalent release evidence. Checked-in cases contain synthetic data only.",
+    "Keep bounded receipts under ignored test-results/. CLI-created receipts are synthetic; release evidence must come through a trusted runner adapter.",
   version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
 });
 
@@ -189,11 +295,15 @@ export const hopeWriteExampleEvaluationOutputContract = Object.freeze({
 });
 
 export const hopeWriteProductionVerificationProtocol = Object.freeze({
+  caseDesign:
+    "Before a release campaign, an independent reviewer must compare every production case with every ablation case and confirm different artifact structure, constraints, and competing cues.",
+  coverage:
+    "Production cases are separate composite inputs that exercise the same published decision classes without reusing an ablation situation. They test scenario transfer, not a new decision taxonomy.",
   decision:
     "Accept the active Write brief only when all six checked decisions pass in fresh contexts.",
   hostInput:
     "Give a fresh host only the exact active brief, hostInput, and outputContract. Do not give it the oracle or earlier output.",
-  version: 1,
+  version: 2,
 });
 
 function evaluationError(message) {
@@ -252,6 +362,16 @@ function findCase(caseId) {
   return evaluationCase;
 }
 
+function findProductionCase(caseId) {
+  const evaluationCase = hopeWriteProductionVerificationCases.find(
+    (candidate) => candidate.id === caseId,
+  );
+  if (!evaluationCase) {
+    throw new TypeError(`Unknown Hope Write production case: ${caseId}`);
+  }
+  return evaluationCase;
+}
+
 function assertRun(evaluationCase, variant, run) {
   assertEvaluation(
     HOPE_WRITE_EXAMPLE_VARIANTS.includes(variant),
@@ -269,6 +389,18 @@ function withoutDecisionExamples(brief) {
   return Object.freeze(rulesOnly);
 }
 
+async function exactActiveWriteBrief(dependencies, label) {
+  const canonical = await createWritingBrief({ mode: "edit" });
+  const candidate = await (
+    dependencies.createBrief ?? createWritingBrief
+  )({ mode: "edit" });
+  assertEvaluation(
+    isDeepStrictEqual(candidate, canonical),
+    `${label} must match the complete canonical active Write brief`,
+  );
+  return canonical;
+}
+
 export function createHopeWriteExampleEvaluationPlan() {
   const runs = plannedRuns();
   return Object.freeze({
@@ -281,7 +413,7 @@ export function createHopeWriteExampleEvaluationPlan() {
 }
 
 function productionRuns() {
-  return hopeWriteExampleEvaluationCases.map((evaluationCase) => Object.freeze({
+  return hopeWriteProductionVerificationCases.map((evaluationCase) => Object.freeze({
     caseId: evaluationCase.id,
     run: 1,
     suite: evaluationCase.suite,
@@ -308,9 +440,10 @@ export async function prepareHopeWriteExampleEvaluationRun({
 }, dependencies = {}) {
   const evaluationCase = findCase(caseId);
   assertRun(evaluationCase, variant, run);
-  const fullBrief = await (
-    dependencies.createBrief ?? createEvaluatedWritingBrief
-  )({ mode: "edit" });
+  const fullBrief = await exactActiveWriteBrief(
+    dependencies,
+    "full ablation brief",
+  );
   const brief = variant === "full"
     ? fullBrief
     : withoutDecisionExamples(fullBrief);
@@ -339,14 +472,11 @@ export async function prepareHopeWriteProductionVerificationRun({
   caseId,
   run,
 }, dependencies = {}) {
-  const evaluationCase = findCase(caseId);
+  const evaluationCase = findProductionCase(caseId);
   assertEvaluation(run === 1, `production case ${caseId} requires run 1`);
-  const brief = await (
-    dependencies.createBrief ?? createWritingBrief
-  )({ mode: "edit" });
-  assertEvaluation(
-    !Object.hasOwn(brief, "decisionExamples"),
-    "active production brief still contains decisionExamples",
+  const brief = await exactActiveWriteBrief(
+    dependencies,
+    "active production brief",
   );
   const hostInput = structuredClone(evaluationCase.input);
   const preparedInput = Object.freeze({
@@ -405,6 +535,7 @@ function evaluationFor(evaluationCase, output) {
 }
 
 export async function createHopeWriteExampleEvaluationReceipt({
+  attestation,
   caseId,
   effort,
   host,
@@ -419,30 +550,52 @@ export async function createHopeWriteExampleEvaluationReceipt({
     dependencies,
   );
   const normalizedOutput = validateHopeWriteExampleEvaluationOutput(output);
-  const evaluation = evaluationFor(findCase(caseId), normalizedOutput);
+  const evaluation = evaluationFor(
+    findCase(caseId),
+    normalizedOutput,
+  );
+  const bindings = Object.freeze({
+    briefDigest: prepared.briefDigest,
+    inputDigest: prepared.inputDigest,
+    outputDigest: digestHopeWriteExampleEvaluationValue(normalizedOutput),
+  });
+  const configuration = Object.freeze({
+    effort: boundedText(effort, "configuration.effort"),
+    host: boundedText(host, "configuration.host"),
+    model: boundedText(model, "configuration.model"),
+  });
+  const invocation = Object.freeze({
+    id: boundedText(invocationId, "invocation.id"),
+  });
+  const specification = Object.freeze({
+    caseId,
+    run,
+    suite: prepared.suite,
+    variant,
+  });
+  const statement = Object.freeze({
+    configuration,
+    evaluation: Object.freeze({
+      bindings,
+      feature: "hope-write-example-evaluation-receipt",
+      version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
+    }),
+    invocation,
+    specification,
+  });
+  const provenance = createHopeModelEvaluationProvenance(
+    { attestation, statement },
+    dependencies,
+  );
   const receipt = Object.freeze({
-    bindings: Object.freeze({
-      briefDigest: prepared.briefDigest,
-      inputDigest: prepared.inputDigest,
-      outputDigest: digestHopeWriteExampleEvaluationValue(normalizedOutput),
-    }),
-    configuration: Object.freeze({
-      effort: boundedText(effort, "configuration.effort"),
-      host: boundedText(host, "configuration.host"),
-      model: boundedText(model, "configuration.model"),
-    }),
+    bindings,
+    configuration,
     evaluation,
     feature: "hope-write-example-evaluation-receipt",
-    invocation: Object.freeze({
-      id: boundedText(invocationId, "invocation.id"),
-    }),
+    invocation,
     output: normalizedOutput,
-    specification: Object.freeze({
-      caseId,
-      run,
-      suite: prepared.suite,
-      variant,
-    }),
+    provenance,
+    specification,
     version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
   });
   assertEvaluation(
@@ -464,6 +617,7 @@ export async function validateHopeWriteExampleEvaluationReceipt(
     "feature",
     "invocation",
     "output",
+    "provenance",
     "specification",
     "version",
   ], "receipt");
@@ -530,6 +684,21 @@ export async function validateHopeWriteExampleEvaluationReceipt(
     isDeepStrictEqual(value.bindings, bindings),
     "receipt.bindings do not match the prepared run and output",
   );
+  const statement = Object.freeze({
+    configuration,
+    evaluation: Object.freeze({
+      bindings,
+      feature: value.feature,
+      version: value.version,
+    }),
+    invocation,
+    specification: Object.freeze({ ...value.specification }),
+  });
+  const provenance = validateHopeModelEvaluationProvenance(
+    value.provenance,
+    statement,
+    dependencies,
+  );
   return Object.freeze({
     evaluation,
     receipt: Object.freeze({
@@ -539,6 +708,7 @@ export async function validateHopeWriteExampleEvaluationReceipt(
       feature: value.feature,
       invocation,
       output,
+      provenance,
       specification: Object.freeze({ ...value.specification }),
       version: value.version,
     }),
@@ -603,6 +773,16 @@ export async function validateHopeWriteExampleEvaluationReceiptSet(
     configurations.size === 1,
     "receipt set must use one host, model, and effort",
   );
+  const provenance = validateHopeModelEvaluationReceiptSetProvenance(
+    receipts,
+    {
+      feature: "hope-write-example-evaluation",
+      plannedRunKeys: expected.map(runKey),
+      runKey,
+      version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
+    },
+    dependencies,
+  );
   const passedRuns = receipts.filter(
     (receipt) => receipt.evaluation.runPassed,
   ).length;
@@ -626,6 +806,7 @@ export async function validateHopeWriteExampleEvaluationReceiptSet(
     configuration: receipts[0].configuration,
     decision: summary.deletionReady ? "remove-examples" : "keep-examples",
     feature: "hope-write-example-evaluation-result",
+    provenance,
     receipts: Object.freeze(receipts),
     summary,
     version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
@@ -633,6 +814,7 @@ export async function validateHopeWriteExampleEvaluationReceiptSet(
 }
 
 export async function createHopeWriteProductionVerificationReceipt({
+  attestation,
   caseId,
   effort,
   host,
@@ -646,32 +828,54 @@ export async function createHopeWriteProductionVerificationReceipt({
     dependencies,
   );
   const normalizedOutput = validateHopeWriteExampleEvaluationOutput(output);
-  const evaluation = evaluationFor(findCase(caseId), normalizedOutput);
+  const evaluation = evaluationFor(
+    findProductionCase(caseId),
+    normalizedOutput,
+  );
+  const bindings = Object.freeze({
+    briefDigest: prepared.briefDigest,
+    inputDigest: prepared.inputDigest,
+    outputDigest: digestHopeWriteExampleEvaluationValue(normalizedOutput),
+  });
+  const configuration = Object.freeze({
+    effort: boundedText(effort, "configuration.effort"),
+    host: boundedText(host, "configuration.host"),
+    model: boundedText(model, "configuration.model"),
+  });
+  const invocation = Object.freeze({
+    id: boundedText(invocationId, "invocation.id"),
+  });
+  const specification = Object.freeze({
+    caseId,
+    run,
+    suite: prepared.suite,
+    variant: "production",
+  });
+  const statement = Object.freeze({
+    configuration,
+    evaluation: Object.freeze({
+      bindings,
+      feature: "hope-write-production-verification-receipt",
+      version: hopeWriteProductionVerificationProtocol.version,
+    }),
+    invocation,
+    specification,
+  });
+  const provenance = createHopeModelEvaluationProvenance(
+    { attestation, statement },
+    dependencies,
+  );
   return Object.freeze({
     evaluation,
     receipt: Object.freeze({
-      bindings: Object.freeze({
-        briefDigest: prepared.briefDigest,
-        inputDigest: prepared.inputDigest,
-        outputDigest: digestHopeWriteExampleEvaluationValue(normalizedOutput),
-      }),
-      configuration: Object.freeze({
-        effort: boundedText(effort, "configuration.effort"),
-        host: boundedText(host, "configuration.host"),
-        model: boundedText(model, "configuration.model"),
-      }),
+      bindings,
+      configuration,
       evaluation,
       feature: "hope-write-production-verification-receipt",
-      invocation: Object.freeze({
-        id: boundedText(invocationId, "invocation.id"),
-      }),
+      invocation,
       output: normalizedOutput,
-      specification: Object.freeze({
-        caseId,
-        run,
-        suite: prepared.suite,
-        variant: "production",
-      }),
+      provenance,
+      specification,
       version: hopeWriteProductionVerificationProtocol.version,
     }),
   });
@@ -688,6 +892,7 @@ export async function validateHopeWriteProductionVerificationReceipt(
     "feature",
     "invocation",
     "output",
+    "provenance",
     "specification",
     "version",
   ], "production receipt");
@@ -732,7 +937,7 @@ export async function validateHopeWriteProductionVerificationReceipt(
   });
   const output = validateHopeWriteExampleEvaluationOutput(value.output);
   const evaluation = evaluationFor(
-    findCase(value.specification.caseId),
+    findProductionCase(value.specification.caseId),
     output,
   );
   assertEvaluation(
@@ -748,6 +953,21 @@ export async function validateHopeWriteProductionVerificationReceipt(
     isDeepStrictEqual(value.bindings, bindings),
     "production receipt bindings do not match",
   );
+  const statement = Object.freeze({
+    configuration,
+    evaluation: Object.freeze({
+      bindings,
+      feature: value.feature,
+      version: value.version,
+    }),
+    invocation,
+    specification: Object.freeze({ ...value.specification }),
+  });
+  const provenance = validateHopeModelEvaluationProvenance(
+    value.provenance,
+    statement,
+    dependencies,
+  );
   return Object.freeze({
     evaluation,
     receipt: Object.freeze({
@@ -757,6 +977,7 @@ export async function validateHopeWriteProductionVerificationReceipt(
       feature: value.feature,
       invocation,
       output,
+      provenance,
       specification: Object.freeze({ ...value.specification }),
       version: value.version,
     }),
@@ -796,6 +1017,16 @@ export async function validateHopeWriteProductionVerificationReceiptSet(
     configurations.size === 1,
     "production receipt set must use one host, model, and effort",
   );
+  const provenance = validateHopeModelEvaluationReceiptSetProvenance(
+    receipts,
+    {
+      feature: "hope-write-production-verification",
+      plannedRunKeys: expected.map(runKey),
+      runKey,
+      version: hopeWriteProductionVerificationProtocol.version,
+    },
+    dependencies,
+  );
   const passedRuns = receipts.filter(
     (receipt) => receipt.evaluation.runPassed,
   ).length;
@@ -804,6 +1035,7 @@ export async function validateHopeWriteProductionVerificationReceiptSet(
     configuration: receipts[0].configuration,
     decision: accepted ? "accept-production" : "reject-production",
     feature: "hope-write-production-verification-result",
+    provenance,
     receipts: Object.freeze(receipts),
     summary: Object.freeze({
       accepted,

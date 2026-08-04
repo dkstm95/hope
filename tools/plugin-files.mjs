@@ -118,6 +118,7 @@ export const generatedPluginFiles = Object.freeze([
   ),
   ...[
     "cli.mjs",
+    "evidence.mjs",
     "feature-selection.mjs",
     "index.mjs",
     "polish-preservation.mjs",

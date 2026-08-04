@@ -55,6 +55,7 @@ runtime/features/diff/teaching-aids.mjs
 runtime/features/diff/text.mjs
 runtime/features/diff/validate.mjs
 runtime/features/model-evaluation/cli.mjs
+runtime/features/model-evaluation/evidence.mjs
 runtime/features/model-evaluation/feature-selection.mjs
 runtime/features/model-evaluation/index.mjs
 runtime/features/model-evaluation/polish-preservation.mjs

@@ -1,6 +1,6 @@
 ---
 name: diff
-description: Use to explain a GitHub pull request as an evidence-linked review, including a pending Hope Diff confirmation.
+description: Explain a GitHub pull request as one evidence-linked Hope review. Use when someone invokes $hope:diff in Codex or /hope:diff in Claude Code, asks about Hope Diff or its capabilities, asks to understand a PR, asks Hope to review the current or latest authored PR, or replies to a pending Hope Diff confirmation. A PR URL is optional when the session is inside the intended GitHub repository.
 ---
 
 # Hope diff
@@ -390,8 +390,8 @@ Its remaining checkpoints are paired with Hope-extracted evidence excerpts.
 
 The durable audit ledger still retains every page record.
 
-Also read the complete analysis schema, `writingStandard.text`, and
-`teachingAids` returned by `prepare`.
+Also read the complete analysis schema, `writingStandard.text`,
+`writingStandard.decisionExamples`, and `teachingAids` returned by `prepare`.
 
 Use them with this skill as the authoring contract for the run.
 
@@ -411,10 +411,13 @@ Follow these rules:
 
 - Copy `runId`, `snapshotDigest`, and `locale` from `prepare`.
 - Use only source IDs and line ranges shown in inspection pages.
-- Follow `writingStandard.text` for every user-facing prose field. Apply the
-  standard's final check before writing the analysis. The evidence,
+- Follow `writingStandard.text` and use `writingStandard.decisionExamples` to
+  resolve matching editing decisions for every user-facing prose field. Apply
+  the standard's final check before writing the analysis. The evidence,
   uncertainty, exact-source, and locale rules below are more specific. Keep
   them when simpler wording would change the meaning.
+- The writing decision examples guide matching decisions; they are not
+  evaluation results.
 - Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` short enough
   for the first screen. Use `coreChange.details` for the main explanation.
   Start that explanation with the purpose, previous and new behavior, affected

@@ -22,7 +22,12 @@ import {
   POLISH_MODEL_ADAPTER_CODE,
 } from "../features/polish/index.mjs";
 import { main as runPolishCommand } from "../features/polish/cli.mjs";
-import { main as runModelEvaluationCommand } from "../features/model-evaluation/cli.mjs";
+import {
+  asHopeModelEvaluationCommandError,
+  HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE,
+  main as runModelEvaluationCommand,
+  modelEvaluationErrorReport,
+} from "../features/model-evaluation/cli.mjs";
 import {
   SWEEP_MODEL_ADAPTER_CODE,
 } from "../features/sweep/index.mjs";
@@ -112,9 +117,13 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     );
   }
   if (options.command === "model-evaluation") {
-    return await (
-      dependencies.runModelEvaluationCommand ?? runModelEvaluationCommand
-    )(options.arguments, { ...dependencies, stdout });
+    try {
+      return await (
+        dependencies.runModelEvaluationCommand ?? runModelEvaluationCommand
+      )(options.arguments, { ...dependencies, stdout });
+    } catch (error) {
+      throw asHopeModelEvaluationCommandError(error);
+    }
   }
   const taskDependencies = await withWritingPass(dependencies, stdout);
   if (options.command === "align") {
@@ -150,6 +159,9 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
 }
 
 export function harnessErrorReport(error) {
+  if (error?.code === HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE) {
+    return modelEvaluationErrorReport(error);
+  }
   if ([
     ALIGN_MODEL_ADAPTER_CODE,
     POLISH_MODEL_ADAPTER_CODE,

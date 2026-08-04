@@ -1,6 +1,6 @@
 ---
 name: polish
-description: Use for one bounded cleanup or refactor of a named completed work product while preserving behavior and meaning.
+description: Refine a named completed work product without silently changing its behavior, public contract, or core meaning. Use when someone invokes $hope:polish in Codex or /hope:polish in Claude Code, asks for one bounded cleanup, simplification, deduplication, consolidation, or refactor of code, tests, documentation, comments, examples, errors, or another result, or wants a finalization pass before approval. Use Hope Write for a standalone language-only draft, edit, or review unless the person explicitly requests the full Polish contract.
 ---
 
 # Hope polish
@@ -45,10 +45,13 @@ Follow its `snapshot`, `contract`, `planning`, `editing`, `verification`,
 `resultPreparation`, `stopping`, `writingStandard`, `schemaPath`, and `limits`
 fields.
 
-Use `writingStandard.text` for user-facing language.
+Use `writingStandard.text` for user-facing language and use
+`writingStandard.decisionExamples` only when a situation matches.
 
 Use both `schemaPath` and `receiptSchemaPath` when the run is composed by
 another Hope feature.
+
+The examples guide decisions; they are not evaluation results.
 
 Do not copy those rules into another checklist in this Skill.
 

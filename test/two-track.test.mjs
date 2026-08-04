@@ -32,6 +32,7 @@ import { createToxicReviewBrief } from "../features/toxic-review/index.mjs";
 import {
   loadWritingStandard,
   WRITE_BRIEF_VERSION,
+  WRITE_DECISION_EXAMPLES,
   WRITE_MODEL_ADAPTER_MESSAGE,
   WRITE_STANDARD_VERSION,
   runWrite,
@@ -462,7 +463,7 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(diff, /Add `contextChecks`/u);
   assert.match(diff, /Make each claim no broader than its evidence/u);
   assert.match(diff, /writingStandard\.text/u);
-  assert.doesNotMatch(diff, /writingStandard\.decisionExamples/u);
+  assert.match(diff, /writingStandard\.decisionExamples/u);
   assert.match(diff, /Write generated prose as plain text/u);
   assert.match(diff, /serialized byte count/u);
   assert.match(
@@ -480,12 +481,10 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(sweep, /runtime\/features\/polish\/cli\.mjs/u);
   assert.match(write, /runtime\/features\/write\/cli\.mjs/u);
   assert.match(write, /brief --mode <draft\|edit\|review>/u);
-  assert.match(write, /`standard` and mode-specific `response`/u);
-  assert.doesNotMatch(align, /writingStandard\.decisionExamples/u);
-  assert.doesNotMatch(polish, /writingStandard\.decisionExamples/u);
-  assert.doesNotMatch(sweep, /writingStandard\.decisionExamples/u);
-  assert.doesNotMatch(toxicReview, /writingStandard\.decisionExamples/u);
-  assert.match(toxicReview, /not\s+evaluation\s+results/u);
+  assert.match(write, /`standard`, `decisionExamples`/u);
+  for (const skill of [align, diff, polish, sweep, toxicReview, write]) {
+    assert.match(skill, /not\s+evaluation results/u);
+  }
   assert.doesNotMatch(write, /Prefer a short, familiar word/u);
   assert.equal(pluginWritingStandard, coreWritingStandard);
 });
@@ -536,7 +535,7 @@ test("every Write entry path returns the same brief", async () => {
       assert.equal(brief.standard, expectedStandard);
       assert.equal(brief.standardVersion, WRITE_STANDARD_VERSION);
       assert.equal(brief.version, WRITE_BRIEF_VERSION);
-      assert.equal(Object.hasOwn(brief, "decisionExamples"), false);
+      assert.deepEqual(brief.decisionExamples, WRITE_DECISION_EXAMPLES);
     }
     assert.deepEqual(briefs[1], briefs[0]);
     assert.deepEqual(briefs[2], briefs[0]);
@@ -557,7 +556,15 @@ test("every cross-feature consumer passes through the exact writing standard con
     import("../plugins/hope/runtime/features/sweep/index.mjs"),
     import("../plugins/hope/runtime/features/toxic-review/index.mjs"),
   ]);
+  const decisionExamples = Object.freeze([
+    Object.freeze({
+      expectedDecision: "Keep the sentinel.",
+      id: "sentinel",
+      situation: "A consumer contract test needs a distinguishable example.",
+    }),
+  ]);
   const writingStandard = Object.freeze({
+    decisionExamples,
     text: "sentinel standard\n",
     version: 73,
   });
@@ -639,6 +646,7 @@ test("every cross-feature consumer passes through the exact writing standard con
   ]) {
     assert.strictEqual(consumer.writingStandard, writingStandard);
     assert.deepEqual(consumer.writingStandard, {
+      decisionExamples,
       text: "sentinel standard\n",
       version: 73,
     });

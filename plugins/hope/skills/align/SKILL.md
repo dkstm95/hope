@@ -1,6 +1,6 @@
 ---
 name: align
-description: Use before implementation to resolve material misunderstandings about requirements, scope, design, or expected behavior.
+description: Align a person and AI on a task before implementation by finding important misunderstandings, adapting the interview to risk, and rendering the current shared understanding. Use when someone invokes $hope:align in Codex or /hope:align in Claude Code, asks to align before coding, wants requirements or design clarified before implementation, or needs a pre-implementation shared-understanding check.
 ---
 
 # Hope align
@@ -52,7 +52,10 @@ Follow its `snapshot`, `interview`, `state`, `polishing`, `approval`,
 `rendering`, `response`, `lifecycle`, `writingStandard`, `schemaPath`, and
 `limits` fields.
 
-Use `writingStandard.text` for user-facing language.
+Use `writingStandard.text` for user-facing language and use
+`writingStandard.decisionExamples` only when a situation matches.
+
+The examples guide decisions; they are not evaluation results.
 
 Do not replace those rules with another static interview contract in this Skill.
 

@@ -2,8 +2,14 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import {
+  createHopeModelEvaluationProvenance,
+  validateHopeModelEvaluationProvenance,
+  validateHopeModelEvaluationReceiptSetProvenance,
+} from "./evidence.mjs";
+
 export const HOPE_FEATURE_SELECTION_CONTRACT_VERSION = 2;
-export const HOPE_FEATURE_SELECTION_EVALUATION_VERSION = 2;
+export const HOPE_FEATURE_SELECTION_EVALUATION_VERSION = 3;
 
 export const hopeFeatureSelectionEvaluationLimits = Object.freeze({
   outputBytes: 16 * 1024,
@@ -246,10 +252,10 @@ export const hopeFeatureSelectionEvaluationProtocol = Object.freeze({
   hostInput:
     "Give a fresh host only the prepared brief, hostInput, and outputContract. Do not give it the oracle or another variant.",
   interpretation:
-    "A complete receipt set is smoke evidence for one declared host, model, and effort. It does not prove the host's internal plugin dispatcher made the same choice.",
+    "A synthetic complete set is test-only smoke evidence. Release evidence additionally requires trusted host attestations and complete-attempt verification, and still does not prove an untested plugin dispatcher made the same choice.",
   sameConfiguration: Object.freeze(["host", "model", "effort"]),
   storage:
-    "Keep bounded receipts under ignored test-results/ or equivalent release evidence. Checked-in cases contain synthetic data only.",
+    "Keep bounded receipts under ignored test-results/. CLI-created receipts are synthetic; release evidence must come through a trusted runner adapter.",
   variants: HOPE_FEATURE_SELECTION_VARIANTS,
   version: HOPE_FEATURE_SELECTION_EVALUATION_VERSION,
 });
@@ -434,6 +440,7 @@ function createEvaluation(evaluationCase, output) {
 }
 
 export function createHopeFeatureSelectionEvaluationReceipt({
+  attestation,
   caseId,
   effort,
   host,
@@ -442,7 +449,7 @@ export function createHopeFeatureSelectionEvaluationReceipt({
   output,
   run,
   variant,
-}) {
+}, dependencies = {}) {
   const prepared = prepareHopeFeatureSelectionEvaluationRun({
     caseId,
     run,
@@ -451,36 +458,58 @@ export function createHopeFeatureSelectionEvaluationReceipt({
   const evaluationCase = findCase(caseId);
   const normalizedOutput = validateHopeFeatureSelectionEvaluationOutput(output);
   const evaluation = createEvaluation(evaluationCase, normalizedOutput);
+  const bindings = Object.freeze({
+    briefDigest: prepared.briefDigest,
+    inputDigest: prepared.inputDigest,
+    outputDigest: digestHopeFeatureSelectionEvaluationValue(normalizedOutput),
+  });
+  const configuration = Object.freeze({
+    effort: boundedText(effort, "configuration.effort"),
+    host: boundedText(host, "configuration.host"),
+    model: boundedText(model, "configuration.model"),
+  });
+  const invocation = Object.freeze({
+    id: boundedText(invocationId, "invocation.id"),
+  });
+  const specification = Object.freeze({
+    caseId,
+    contractVersion: prepared.contractVersion,
+    run,
+    suite: prepared.suite,
+    variant,
+  });
+  const statement = Object.freeze({
+    configuration,
+    evaluation: Object.freeze({
+      bindings,
+      feature: "hope-feature-selection-evaluation-receipt",
+      version: HOPE_FEATURE_SELECTION_EVALUATION_VERSION,
+    }),
+    invocation,
+    specification,
+  });
+  const provenance = createHopeModelEvaluationProvenance(
+    { attestation, statement },
+    dependencies,
+  );
   const receipt = Object.freeze({
-    bindings: Object.freeze({
-      briefDigest: prepared.briefDigest,
-      inputDigest: prepared.inputDigest,
-      outputDigest: digestHopeFeatureSelectionEvaluationValue(normalizedOutput),
-    }),
-    configuration: Object.freeze({
-      effort: boundedText(effort, "configuration.effort"),
-      host: boundedText(host, "configuration.host"),
-      model: boundedText(model, "configuration.model"),
-    }),
+    bindings,
+    configuration,
     evaluation,
     feature: "hope-feature-selection-evaluation-receipt",
-    invocation: Object.freeze({
-      id: boundedText(invocationId, "invocation.id"),
-    }),
+    invocation,
     output: normalizedOutput,
-    specification: Object.freeze({
-      caseId,
-      contractVersion: prepared.contractVersion,
-      run,
-      suite: prepared.suite,
-      variant,
-    }),
+    provenance,
+    specification,
     version: HOPE_FEATURE_SELECTION_EVALUATION_VERSION,
   });
   return Object.freeze({ evaluation, receipt });
 }
 
-export function validateHopeFeatureSelectionEvaluationReceipt(value) {
+export function validateHopeFeatureSelectionEvaluationReceipt(
+  value,
+  dependencies = {},
+) {
   exactKeys(value, [
     "bindings",
     "configuration",
@@ -488,6 +517,7 @@ export function validateHopeFeatureSelectionEvaluationReceipt(value) {
     "feature",
     "invocation",
     "output",
+    "provenance",
     "specification",
     "version",
   ], "receipt");
@@ -553,6 +583,21 @@ export function validateHopeFeatureSelectionEvaluationReceipt(value) {
     isDeepStrictEqual(value.bindings, bindings),
     "receipt.bindings do not match the prepared run and output",
   );
+  const statement = Object.freeze({
+    configuration,
+    evaluation: Object.freeze({
+      bindings,
+      feature: value.feature,
+      version: value.version,
+    }),
+    invocation,
+    specification: Object.freeze({ ...value.specification }),
+  });
+  const provenance = validateHopeModelEvaluationProvenance(
+    value.provenance,
+    statement,
+    dependencies,
+  );
   return Object.freeze({
     evaluation,
     receipt: Object.freeze({
@@ -562,6 +607,7 @@ export function validateHopeFeatureSelectionEvaluationReceipt(value) {
       feature: value.feature,
       invocation,
       output,
+      provenance,
       specification: Object.freeze({ ...value.specification }),
       version: value.version,
     }),
@@ -581,7 +627,10 @@ function countBy(receipts, field, values) {
   }));
 }
 
-export function validateHopeFeatureSelectionEvaluationReceiptSet(values) {
+export function validateHopeFeatureSelectionEvaluationReceiptSet(
+  values,
+  dependencies = {},
+) {
   assertEvaluation(Array.isArray(values), "receipt set must be an array");
   const expected = expectedSpecifications();
   assertEvaluation(
@@ -589,7 +638,10 @@ export function validateHopeFeatureSelectionEvaluationReceiptSet(values) {
     `receipt set must contain ${expected.length} runs`,
   );
   const receipts = values.map(
-    (value) => validateHopeFeatureSelectionEvaluationReceipt(value).receipt,
+    (value) => validateHopeFeatureSelectionEvaluationReceipt(
+      value,
+      dependencies,
+    ).receipt,
   );
   const expectedKeys = new Set(expected.map(runKey));
   const actualKeys = receipts.map((receipt) => runKey(receipt.specification));
@@ -612,6 +664,16 @@ export function validateHopeFeatureSelectionEvaluationReceiptSet(values) {
   assertEvaluation(
     configurations.size === 1,
     "receipt set must use one host, model, and effort",
+  );
+  const provenance = validateHopeModelEvaluationReceiptSetProvenance(
+    receipts,
+    {
+      feature: "hope-feature-selection-evaluation",
+      plannedRunKeys: expected.map(runKey),
+      runKey,
+      version: HOPE_FEATURE_SELECTION_EVALUATION_VERSION,
+    },
+    dependencies,
   );
   const passedRuns = receipts.filter(
     (receipt) => receipt.evaluation.runPassed,
@@ -638,6 +700,7 @@ export function validateHopeFeatureSelectionEvaluationReceiptSet(values) {
     configuration: receipts[0].configuration,
     decision: summary.candidateMinimal ? "candidate-minimal" : "keep-full",
     feature: "hope-feature-selection-evaluation-result",
+    provenance,
     receipts: Object.freeze(receipts),
     summary,
     version: HOPE_FEATURE_SELECTION_EVALUATION_VERSION,
