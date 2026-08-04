@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.1 - 2026-08-05
+
+- Correct the feature-selection history to record that version 1.7.0 published
+  the shorter Skill descriptions under an explicit bounded Codex assurance
+  decision, without treating the manual observations as trusted release
+  evidence or verified Claude Code behavior.
+
 ## 1.7.0 - 2026-08-04
 
 - Replace the seven public Hope Skill descriptions with the shorter candidates

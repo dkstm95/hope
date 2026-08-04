@@ -254,18 +254,27 @@ were not issued by the trusted attestation and complete-ledger adapters. Treat
 them as bounded smoke evidence, not release-eligible evidence under the shared
 trust contract.
 
-Those runs are useful historical smoke data, not release authorization.
+The 26-run model-only comparison injected Hope's descriptions and rules into
+isolated contexts.
 
-They also injected Hope's descriptions and rules into isolated contexts rather
-than exercising the installed Codex dispatcher.
+The separate 26-selection dispatcher comparison exercised Codex, but its
+manually observed results still lacked trusted attestations and a complete
+attempt ledger.
 
-Hope therefore retains the full published Skill descriptions.
+Version 1.7.0 published the revised candidate descriptions after the maintainer
+explicitly accepted that bounded Codex evidence for this product decision.
 
-Shortening them requires new trusted evidence from the actual supported
-dispatcher being changed.
+That decision did not turn the observations into trusted release evidence,
+verify Claude Code, or relax the shared evidence gate for later changes.
 
-Adding a public feature or changing a Skill description requires a new contract
+A later public feature or Skill-description change requires a new contract
 version and matching cases.
+
+Under the default policy, it also requires trusted evidence from the actual
+supported dispatcher being changed.
+
+If the maintainer explicitly accepts lower assurance again, the decision record
+must name the evidence used and the guarantees that remain unverified.
 
 The global evaluation has no public Skill because it tests Skill selection
 before one feature adapter is active.
