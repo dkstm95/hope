@@ -273,6 +273,18 @@ effort, and a unique host invocation identity for every run.
 
 It returns `candidate-invariants-only` only when all 24 judgments pass.
 
+The first complete set passed 23 of 24 runs in fresh Codex contexts and
+returned `keep-full`.
+
+The full variant passed all 12 cases. The invariants-only variant passed 11 of
+12 and kept the current target in `polish-preservation-02` because it did not
+find enough evidence that the safe private-helper extraction preserved every
+accepted option and return value.
+
+That result keeps the full Polish preservation guidance. It does not justify
+removing the additional scope, planning, editing, stopping, or verification
+rules.
+
 That decision applies only to the bounded preservation judgment tested here.
 
 It does not prove that a free-form edit preserved semantics or permit removal

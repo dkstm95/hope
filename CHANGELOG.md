@@ -2,8 +2,9 @@
 
 ## 1.6.0 - 2026-08-04
 
-- Add one shared model-evaluation boundary for choosing among Hope features and
-  for testing whether Write still needs its representative decision examples.
+- Add one shared model-evaluation boundary for choosing among Hope features,
+  testing Polish preservation guidance, and deciding whether Write still needs
+  its representative decision examples.
 - Expose the same blinded preparation, receipt, and complete-set validation
   commands through the independent harness and generated plugin runtime.
 - Add feature-selection contract version 2 with Sweep and 13 distinct Korean
@@ -14,6 +15,9 @@
   Codex contexts before removing the four decision examples.
 - Keep the semantic writing standard and every feature-specific product rule
   while removing only evaluated examples and their inactive Skill references.
+- Pass all 12 full-guidance Polish preservation cases and 11 of 12
+  invariants-only cases in fresh Codex contexts, then keep the full guidance as
+  required by the evaluation gate.
 - Keep deterministic contract tests separate from ignored raw model outputs and
   record when the host does not expose its exact model or effort.
 
