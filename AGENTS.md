@@ -67,4 +67,5 @@ are complete.
 - Diff behavior: [docs/diff.md](docs/diff.md)
 - Toxic Review behavior: [docs/toxic-review.md](docs/toxic-review.md)
 - Write behavior: [docs/write.md](docs/write.md)
+- Model behavior evaluation: [docs/model-evaluation.md](docs/model-evaluation.md)
 - Shared design language: [docs/design.md](docs/design.md)

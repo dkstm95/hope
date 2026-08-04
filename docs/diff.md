@@ -183,6 +183,148 @@ is unavailable because it has no model adapter yet.
 When that adapter is added, its natural-language entry must use this same
 contract instead of adding a harness-specific policy.
 
+### Invocation model evaluation
+
+The version 3 evaluation baseline included representative decision cases in
+`invocation-brief`.
+
+Those examples were teaching input, not evidence that a model followed the
+invocation contract.
+
+Version 4 removes them from the active brief after the bounded rules-only
+comparison and follow-up both passed.
+
+The historical version 3 baseline keeps the examples so its receipts remain
+auditable.
+
+Diff therefore owns a separate blinded model-behavior evaluation for invocation
+classification.
+
+The evaluation checks only the model's `answer`, `confirm`, `execute`, or
+`cancel` decision and a bounded reason.
+
+Target resolution, pending-state transitions, and review authorization remain
+separate deterministic boundaries.
+
+The checked-in evaluation uses synthetic Korean and English requests, held-out
+confirmation replies, and explicit non-execution cases.
+
+It compares three instruction variants:
+
+- `minimal` keeps the product boundary, decision vocabulary, confirmation
+  boundary, failure policy, and output contract;
+- `rules-only` adds the complete classification rules without published
+  decision examples; and
+- `full` uses the complete version 3 evaluation baseline with its published
+  decision examples.
+
+The conformance suite runs two complete-contract cases once.
+
+The ablation suite runs three held-out cases twice under every variant.
+
+The safety suite runs three complete-contract cases twice.
+
+This produces 26 runs for one declared host, model, and effort.
+
+List the exact matrix with:
+
+```text
+hope diff invocation-evaluation-plan
+```
+
+Prepare one blinded run with:
+
+```text
+hope diff invocation-evaluation-prepare \
+  --case <id> --variant <minimal|rules-only|full> --run <number>
+```
+
+Give a fresh host only the returned `brief`, `hostInput`, and
+`outputContract`.
+
+Do not read the case oracle or give another variant to that host before it
+returns one JSON object with `decision` and `reason`.
+
+Bind that output to a receipt with:
+
+```text
+hope diff invocation-evaluation-receipt \
+  --case <id> --variant <variant> --run <number> \
+  --input <output.json> --host <id> --model <id> --effort <level> \
+  --invocation <host-invocation-id>
+```
+
+Validate one receipt with `invocation-evaluation-validate` and the complete
+array with `invocation-evaluation-validate-set`.
+
+Receipt validation retains wrong decisions as failed model evidence instead of
+discarding them.
+
+A complete set must cover every planned run, use unique invocation identities,
+and keep one host, model, and effort.
+
+Store receipts under ignored `test-results/` or equivalent release evidence.
+
+The repository's deterministic tests validate the protocol and receipt
+bindings, but they do not claim to execute a host model.
+
+Follow [model-evaluation.md](model-evaluation.md) before changing the production
+invocation contract from these results.
+
+When the first complete set makes `rules-only` a removal candidate, Diff uses a
+separate example-removal follow-up instead of changing the original 26-run
+evidence.
+
+The first follow-up batch adds the eight conformance and safety runs that the
+baseline did not execute under `rules-only`.
+
+The second batch repeats all fourteen conformance, ablation, and safety runs
+under `rules-only` in fresh contexts.
+
+Together with the baseline's six `rules-only` runs, this gives 28 candidate
+runs.
+
+List and prepare the 22 new runs with
+`invocation-example-removal-plan` and
+`invocation-example-removal-prepare`.
+
+Create and validate their receipts with the matching
+`invocation-example-removal-receipt`, `-validate`, and `-validate-set`
+commands.
+
+`invocation-example-removal-validate-evidence` accepts one object containing
+the original `baselineReceipts` and new `followupReceipts` arrays.
+
+It returns `remove-examples` only when all 28 candidate runs pass under the same
+declared host, model, effort, and contract version.
+
+A valid failure returns `keep-examples` and remains part of the evidence.
+
+The accepted Codex evidence covered 28 rules-only candidate runs without a
+failure, so version 4 became the production-verification candidate.
+
+Example-removal evidence does not verify the exact active brief because its
+historical version 3 candidate includes evaluation-only control text.
+
+Before release, list the eight exact-production runs with
+`invocation-production-verification-plan`.
+
+Prepare each run with `invocation-production-verification-prepare`, then create
+and validate its receipt with the matching `-receipt`, `-validate`, and
+`-validate-set` commands.
+
+Each prepared run contains the exact active version 4 brief.
+
+It contains neither published examples nor evaluation-only control text.
+
+Release the active brief only when the complete set returns
+`accept-active-brief`.
+
+A failed decision returns `do-not-release` and remains part of the evidence.
+
+The accepted Codex production evidence passed all eight cases with the exact
+active version 4 brief, so version 4 keeps the rules and omits the examples.
+
 ## Product boundary
 
 Hope reviews one exact change snapshot.

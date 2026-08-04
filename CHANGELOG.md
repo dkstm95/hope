@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.4.0 - 2026-08-04
+
+- Add a blinded multilingual Hope Diff invocation evaluation that compares
+  minimum, rules-only, and complete instruction variants.
+- Bind every evaluation run to its declared host, model, effort, active brief,
+  prepared input, host invocation, and exact model output.
+- Keep wrong decisions as failed evidence, require one complete 26-run receipt
+  set, and report results separately by suite and instruction variant.
+- Expose the same evaluation preparation and validation commands through the
+  independent harness and generated Claude and Codex plugin runtime.
+- Define when Hope requires model-behavior evidence, which product invariants
+  stay outside prompt ablation, and when an evaluation needs harder cases.
+- Keep deterministic repository tests separate from claims that a host model
+  followed the invocation contract.
+- Add a separate 22-run rules-only follow-up that preserves the first baseline
+  and requires 28 passing candidate runs before removing invocation examples.
+- Remove the representative invocation examples from the active version 4
+  candidate after all 28 Codex rules-only runs pass, while retaining the
+  version 3 evaluation baseline for audit.
+- Add a final eight-run gate that evaluates the exact active version 4 brief
+  without examples or evaluation-only control text.
+- Accept the active version 4 brief after all eight exact-production Codex runs
+  pass.
+
 ## 1.3.0 - 2026-08-03
 
 - Add a version 3 Align presentation contract that names primary agreements

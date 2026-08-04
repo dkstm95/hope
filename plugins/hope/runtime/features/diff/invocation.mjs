@@ -175,6 +175,8 @@ const pendingDiff = createDiffPendingConfirmation({
   target: pullRequest123,
 });
 
+// Version 3 is a historical evaluation fixture. Keep these cases unchanged so
+// retained receipts continue to describe the exact brief that produced them.
 export const DIFF_INVOCATION_EVALUATION_CASES = Object.freeze([
   Object.freeze({
     expectedDecision: "execute",
@@ -317,7 +319,7 @@ export const DIFF_INVOCATION_EVALUATION_CASES = Object.freeze([
   }),
 ]);
 
-const contract = Object.freeze({
+const evaluationBaselineRulesV3 = Object.freeze({
   boundary: Object.freeze({
     activation: "Loading the Hope Diff Skill does not by itself authorize a review.",
     harness: "A structured hope diff command explicitly selects its documented operation. A natural-language harness entry may classify only through a real model adapter that uses this contract.",
@@ -357,7 +359,6 @@ const contract = Object.freeze({
     confirm: "Resolve the exact target, bind it to the source request, and ask one short question that names Hope Diff and that pull request.",
     execute: "Start the complete Hope Diff workflow for the selected target.",
   }),
-  evaluationCases: DIFF_INVOCATION_EVALUATION_CASES,
   feature: "diff",
   modelPolicy: Object.freeze({
     failure: "When meaning remains uncertain, choose confirm for a plausible full review and otherwise choose answer or cancel. Do not guess execute.",
@@ -388,9 +389,25 @@ const contract = Object.freeze({
     prepare: "After an affirmative reply, pass the bound canonical URL to prepare so automatic discovery cannot substitute another pull request.",
     retarget: "For an authorized retarget with only a PR number, combine that number with the pending target repository and pass one canonical URL. Do not retry a failed prepare with another selector or repository.",
   }),
+});
+
+const evaluationBaselineContract = Object.freeze({
+  ...evaluationBaselineRulesV3,
+  evaluationCases: DIFF_INVOCATION_EVALUATION_CASES,
+  version: 3,
+});
+
+// The active contract starts from the frozen version 3 rules. Future active
+// changes belong here as explicit overrides, never in the historical fixture.
+const contract = Object.freeze({
+  ...evaluationBaselineRulesV3,
   version: DIFF_INVOCATION_CONTRACT_VERSION,
 });
 
 export function createDiffInvocationContract() {
   return contract;
+}
+
+export function createDiffInvocationEvaluationBaselineContract() {
+  return evaluationBaselineContract;
 }
