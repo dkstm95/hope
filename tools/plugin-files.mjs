@@ -154,6 +154,7 @@ export const generatedPluginFiles = Object.freeze([
     "hash.mjs",
     "index.mjs",
     "invocation.mjs",
+    "invocation-evaluation.mjs",
     "redact.mjs",
     "render.mjs",
     "run.mjs",

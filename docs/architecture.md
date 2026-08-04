@@ -18,6 +18,9 @@ The project definitions are:
 - [write.md](write.md) defines Hope write; and
 - [design.md](design.md) defines the shared visual language.
 
+[model-evaluation.md](model-evaluation.md) defines how Hope tests model-facing
+behavior before changing prompts, tools, or orchestration.
+
 [release.md](release.md) defines how a repository version becomes a verified
 public release.
 
@@ -218,11 +221,44 @@ The shared Diff core also exposes a versioned invocation contract before a host
 starts `prepare`.
 
 The contract owns the possible invocation decisions, confirmation lifecycle,
-target-binding rules, model policy, and representative cases.
+target-binding rules, and model policy.
 
 The active Claude or Codex host interprets natural language against that
 contract, while the Skill remains a thin adapter and does not call another
 classifier model.
+
+The Diff core also owns a blinded invocation-evaluation protocol.
+
+Its historical version 3 baseline retains the removed representative cases for
+receipt validation without returning them in the active version 4 invocation
+brief.
+
+It prepares synthetic Korean and English inputs under minimum, rules-only, and
+complete contract variants.
+
+It binds the declared host, model, effort, exact brief, input, invocation, and
+output into bounded receipts.
+
+The harness and generated plugin runtime expose identical plan, preparation,
+oracle, receipt, and validation commands.
+
+The active Skill coordinates fresh host runs only when a person explicitly asks
+for evaluation or release evidence.
+
+Repository tests validate the evaluation protocol and receipt boundaries
+without claiming that they executed a host model.
+
+The Diff core keeps the first 26-run comparison intact and exposes a separate
+22-run follow-up before removing published invocation examples.
+
+That follow-up completes and repeats `rules-only` coverage, then combines its
+receipts with the original baseline through one deterministic evidence
+decision.
+
+The core then exposes a separate eight-run production verification.
+
+It prepares the exact active contract without evaluation-only text and blocks
+release when any checked decision fails.
 
 The independent harness keeps its structured commands as explicit operation
 selection.

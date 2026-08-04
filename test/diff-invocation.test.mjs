@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   createDiffInvocationContract,
+  createDiffInvocationEvaluationBaselineContract,
   createDiffPendingConfirmation,
   DIFF_INVOCATION_DECISIONS,
   DIFF_INVOCATION_EVALUATION_CASES,
@@ -35,7 +36,7 @@ function runJson(path, prefixArguments = [], arguments_ = ["invocation-brief"]) 
 test("Diff publishes one bounded invocation contract", () => {
   const contract = createDiffInvocationContract();
   assert.equal(contract.feature, "diff");
-  assert.equal(contract.version, 3);
+  assert.equal(contract.version, 4);
   assert.equal(contract.confirmation.maximumQuestions, 1);
   assert.match(contract.confirmation.retarget, /newly authorized target/u);
   assert.match(contract.modelPolicy.plugin, /active Claude or Codex host model/u);
@@ -60,10 +61,13 @@ test("Diff publishes one bounded invocation contract", () => {
   assert.deepEqual(Object.keys(contract.decisions).sort(), [
     ...DIFF_INVOCATION_DECISIONS,
   ].sort());
-  assert.equal(contract.evaluationCases, DIFF_INVOCATION_EVALUATION_CASES);
+  assert.equal(contract.evaluationCases, undefined);
   assert.equal(Object.isFrozen(contract), true);
   assert.equal(Object.isFrozen(contract.confirmation), true);
-  assert.equal(Object.isFrozen(contract.evaluationCases), true);
+  const baseline = createDiffInvocationEvaluationBaselineContract();
+  assert.equal(baseline.version, 3);
+  assert.equal(baseline.evaluationCases, DIFF_INVOCATION_EVALUATION_CASES);
+  assert.equal(Object.isFrozen(baseline.evaluationCases), true);
 });
 
 test("Diff invocation cases preserve execution and non-execution boundaries", () => {

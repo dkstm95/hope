@@ -39,8 +39,8 @@ invocation-brief
 ```
 
 Treat the returned `boundary`, `classification`, `confirmation`, `decisions`,
-`modelPolicy`, `pendingState`, `targetResolution`, and `evaluationCases` as the
-complete invocation contract.
+`modelPolicy`, `pendingState`, and `targetResolution` as the complete invocation
+contract.
 
 Use the relevant conversation state and select `answer`, `confirm`, `execute`,
 or `cancel` before running any review protocol command.
@@ -142,6 +142,62 @@ Do not omit it and allow automatic discovery to select another pull request.
 
 If `prepare` fails, report that failure and stop instead of trying another
 target representation.
+
+## Evaluate invocation behavior
+
+Use this workflow only when the person explicitly asks to evaluate Diff
+invocation behavior or produce its release evidence.
+
+Run `invocation-evaluation-plan` through the same runtime command.
+
+For every listed run, call `invocation-evaluation-prepare` with its case,
+variant, and run number.
+
+Give a fresh host only the returned `brief`, `hostInput`, and `outputContract`.
+
+Do not read the oracle or give that host another variant before it returns one
+JSON object with `decision` and `reason`.
+
+Call `invocation-evaluation-receipt` with that output and the host-owned host,
+model, effort, and invocation identity.
+
+Keep every receipt, including a valid failed run.
+
+Validate each receipt with `invocation-evaluation-validate` and the complete
+array with `invocation-evaluation-validate-set`.
+
+If one complete baseline makes the published examples a removal candidate, run
+`invocation-example-removal-plan` instead of repeating or changing that
+baseline.
+
+Prepare each listed run with `invocation-example-removal-prepare` and keep the
+same fresh-host boundary.
+
+Create and validate the new receipts with the matching example-removal
+commands, then pass the original and follow-up arrays to
+`invocation-example-removal-validate-evidence`.
+
+Remove examples only when that command returns `remove-examples`.
+
+Before treating the active brief as release evidence, run
+`invocation-production-verification-plan`.
+
+Prepare every listed run with
+`invocation-production-verification-prepare` and keep the same fresh-host
+boundary.
+
+Create and validate the receipts with the matching production-verification
+commands.
+
+Continue only when the complete set returns `accept-active-brief`.
+
+Do not use the current context as a fresh evaluation host after it has seen an
+oracle, another variant, or the complete case set.
+
+Do not change the production Skill or invocation contract from a partial
+receipt set.
+
+Deterministic contract tests are not model-behavior evidence.
 
 ## Prepare
 

@@ -111,9 +111,13 @@ test("Diff leaves teaching-aid decisions in its runtime contract", async () => {
 });
 
 test("Diff leaves invocation decisions in its runtime contract", async () => {
-  const [diff, invocation] = await Promise.all([
+  const [diff, invocation, evaluation] = await Promise.all([
     readFile(resolve(skillsRoot, "diff", "SKILL.md"), "utf8"),
     readFile(resolve(root, "features", "diff", "invocation.mjs"), "utf8"),
+    readFile(
+      resolve(root, "features", "diff", "invocation-evaluation.mjs"),
+      "utf8",
+    ),
   ]);
   assert.match(diff, /invocation-brief/u);
   assert.match(diff, /resolve-target/u);
@@ -121,8 +125,9 @@ test("Diff leaves invocation decisions in its runtime contract", async () => {
   assert.match(diff, /confirmation-transition/u);
   assert.match(
     diff,
-    /`boundary`.*`classification`.*`confirmation`.*`decisions`.*`modelPolicy`.*`pendingState`.*`targetResolution`.*`evaluationCases`/su,
+    /`boundary`.*`classification`.*`confirmation`.*`decisions`.*`modelPolicy`.*`pendingState`.*`targetResolution`/su,
   );
+  assert.doesNotMatch(diff, /complete invocation contract.*`evaluationCases`/su);
   assert.doesNotMatch(diff, /PR #123을 Hope Diff로 리뷰해줄 수 있어/u);
   assert.match(invocation, /confirmation-affirmative/u);
   assert.match(invocation, /explicit-non-execution/u);
@@ -130,6 +135,14 @@ test("Diff leaves invocation decisions in its runtime contract", async () => {
   assert.match(invocation, /confirmation-explicit-retarget/u);
   assert.match(invocation, /active Claude or Codex host model/u);
   assert.match(invocation, /source request changed/u);
+  assert.match(diff, /invocation-evaluation-plan/u);
+  assert.match(diff, /invocation-evaluation-prepare/u);
+  assert.match(diff, /invocation-evaluation-receipt/u);
+  assert.match(diff, /invocation-evaluation-validate-set/u);
+  assert.match(diff, /fresh host/u);
+  assert.doesNotMatch(diff, /invocation-0[1-8]/u);
+  assert.match(evaluation, /minimal.*rules-only.*full/su);
+  assert.match(evaluation, /receipt set must use one host, model, and effort/u);
 });
 
 test("project work requires Hope Write wherever clearer language helps", async () => {

@@ -5,7 +5,7 @@ export const RENDERER_VERSION = 5;
 export const RUN_VERSION = 5;
 export const CHECKPOINT_VERSION = 1;
 export const TEACHING_AID_CONTRACT_VERSION = 2;
-export const DIFF_INVOCATION_CONTRACT_VERSION = 3;
+export const DIFF_INVOCATION_CONTRACT_VERSION = 4;
 
 export const LIMITS = Object.freeze({
   analysisProseBytes: 48 * 1024,

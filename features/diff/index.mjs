@@ -32,6 +32,20 @@ import {
   transitionDiffPendingConfirmationInput,
 } from "./invocation.mjs";
 import {
+  createDiffInvocationExampleRemovalReceipt,
+  createDiffInvocationEvaluationReceipt,
+  createDiffInvocationProductionVerificationReceipt,
+  diffInvocationEvaluationLimits,
+  validateDiffInvocationExampleRemovalEvidence,
+  validateDiffInvocationExampleRemovalReceipt,
+  validateDiffInvocationExampleRemovalReceiptSet,
+  validateDiffInvocationEvaluationOutput,
+  validateDiffInvocationEvaluationReceipt,
+  validateDiffInvocationEvaluationReceiptSet,
+  validateDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationProductionVerificationReceiptSet,
+} from "./invocation-evaluation.mjs";
+import {
   appendDiffRunPlan,
   checkpointDiffRun,
   checkpointDiffRunWindow,
@@ -61,6 +75,35 @@ export {
   transitionDiffPendingConfirmation,
   transitionDiffPendingConfirmationInput,
 } from "./invocation.mjs";
+
+export {
+  createDiffInvocationExampleRemovalPlan,
+  createDiffInvocationExampleRemovalReceipt,
+  createDiffInvocationEvaluationPlan,
+  createDiffInvocationEvaluationReceipt,
+  createDiffInvocationProductionVerificationPlan,
+  createDiffInvocationProductionVerificationReceipt,
+  DIFF_INVOCATION_EVALUATED_CONTRACT_VERSION,
+  diffInvocationExampleRemovalProtocol,
+  diffInvocationEvaluationCases,
+  diffInvocationEvaluationLimits,
+  diffInvocationEvaluationOutputContract,
+  diffInvocationEvaluationProtocol,
+  diffInvocationProductionVerificationProtocol,
+  digestDiffInvocationEvaluationValue,
+  getDiffInvocationEvaluationOracle,
+  prepareDiffInvocationExampleRemovalRun,
+  prepareDiffInvocationEvaluationRun,
+  prepareDiffInvocationProductionVerificationRun,
+  validateDiffInvocationExampleRemovalEvidence,
+  validateDiffInvocationExampleRemovalReceipt,
+  validateDiffInvocationExampleRemovalReceiptSet,
+  validateDiffInvocationEvaluationOutput,
+  validateDiffInvocationEvaluationReceipt,
+  validateDiffInvocationEvaluationReceiptSet,
+  validateDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationProductionVerificationReceiptSet,
+} from "./invocation-evaluation.mjs";
 
 export const DIFF_MODEL_ADAPTER_CODE = "HOPE_DIFF_MODEL_ADAPTER_REQUIRED";
 export const DIFF_MODEL_ADAPTER_MESSAGE =
@@ -111,6 +154,134 @@ export async function transitionDiffConfirmationFromFile(
 ) {
   const { value } = await readDiffInvocationInput(inputPath, dependencies);
   return transitionDiffPendingConfirmationInput(value);
+}
+
+export async function createDiffInvocationEvaluationReceiptFromFile(
+  options,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(
+    options.inputPath,
+    {
+      label: "Hope diff invocation evaluation output",
+      maximumBytes: diffInvocationEvaluationLimits.outputBytes,
+    },
+  );
+  const output = (dependencies.validateOutput
+    ?? validateDiffInvocationEvaluationOutput)(input.value);
+  return createDiffInvocationEvaluationReceipt({ ...options, output });
+}
+
+export async function createDiffInvocationExampleRemovalReceiptFromFile(
+  options,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(
+    options.inputPath,
+    {
+      label: "Hope diff invocation example-removal output",
+      maximumBytes: diffInvocationEvaluationLimits.outputBytes,
+    },
+  );
+  const output = (dependencies.validateOutput
+    ?? validateDiffInvocationEvaluationOutput)(input.value);
+  return createDiffInvocationExampleRemovalReceipt({ ...options, output });
+}
+
+export async function createDiffInvocationProductionVerificationReceiptFromFile(
+  options,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(
+    options.inputPath,
+    {
+      label: "Hope diff invocation production-verification output",
+      maximumBytes: diffInvocationEvaluationLimits.outputBytes,
+    },
+  );
+  const output = (dependencies.validateOutput
+    ?? validateDiffInvocationEvaluationOutput)(input.value);
+  return createDiffInvocationProductionVerificationReceipt({
+    ...options,
+    output,
+  });
+}
+
+export async function validateDiffInvocationExampleRemovalReceiptFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff invocation example-removal receipt",
+    maximumBytes: diffInvocationEvaluationLimits.receiptBytes,
+  });
+  return validateDiffInvocationExampleRemovalReceipt(input.value);
+}
+
+export async function validateDiffInvocationExampleRemovalReceiptSetFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff invocation example-removal receipt set",
+    maximumBytes: diffInvocationEvaluationLimits.receiptSetBytes,
+  });
+  return validateDiffInvocationExampleRemovalReceiptSet(input.value);
+}
+
+export async function validateDiffInvocationExampleRemovalEvidenceFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff invocation example-removal evidence",
+    maximumBytes: diffInvocationEvaluationLimits.receiptSetBytes * 2,
+  });
+  return validateDiffInvocationExampleRemovalEvidence(input.value);
+}
+
+export async function validateDiffInvocationProductionVerificationReceiptFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff invocation production-verification receipt",
+    maximumBytes: diffInvocationEvaluationLimits.receiptBytes,
+  });
+  return validateDiffInvocationProductionVerificationReceipt(input.value);
+}
+
+export async function validateDiffInvocationProductionVerificationReceiptSetFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff invocation production-verification receipt set",
+    maximumBytes: diffInvocationEvaluationLimits.receiptSetBytes,
+  });
+  return validateDiffInvocationProductionVerificationReceiptSet(input.value);
+}
+
+export async function validateDiffInvocationEvaluationReceiptFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff invocation evaluation receipt",
+    maximumBytes: diffInvocationEvaluationLimits.receiptBytes,
+  });
+  return validateDiffInvocationEvaluationReceipt(input.value);
+}
+
+export async function validateDiffInvocationEvaluationReceiptSetFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff invocation evaluation receipt set",
+    maximumBytes: diffInvocationEvaluationLimits.receiptSetBytes,
+  });
+  return validateDiffInvocationEvaluationReceiptSet(input.value);
 }
 
 async function readPrivateJson(path, {
