@@ -262,7 +262,10 @@ assert.doesNotMatch(toxicReviewSkill, /partially-accepted/u);
 assert.match(writeSkill, /^---\r?\nname: write\r?\ndescription: /u);
 assert.match(writeSkill, /runtime\/features\/write\/cli\.mjs/u);
 assert.doesNotMatch(writeSkill, /Prefer a short, familiar word/u);
-assert.match(writeSkill, /clearer prompts, instructions, responses/u);
+assert.match(
+  writeSkill,
+  /^description: Use for a standalone language-only draft, edit, or review that must preserve meaning, facts, uncertainty, and voice\.$/mu,
+);
 assert.match(writingStandard, /^# Plain writing standard\r?\n/u);
 assert.match(writingStandard, /Politics and the English Language/u);
 assert.match(architecture, /harness -> features <- host adapters/u);

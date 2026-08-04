@@ -8,7 +8,6 @@ import {
   loadWritingStandard,
   runWrite,
   WRITE_BRIEF_VERSION,
-  WRITE_DECISION_EXAMPLES,
   WRITE_MODEL_ADAPTER_CODE,
   WRITE_MODEL_ADAPTER_MESSAGE,
   WRITE_STANDARD_VERSION,
@@ -94,42 +93,19 @@ test("the writing standard covers document-level information structure", async (
   assert.match(standard, /Did the revision delete, demote, or reorder/u);
 });
 
-test("the writing standard carries representative decision examples", async () => {
-  assert.deepEqual(
-    WRITE_DECISION_EXAMPLES.map((item) => item.id),
-    [
-      "separate-independent-points",
-      "remove-repeated-framing",
-      "surface-important-boundary",
-      "preserve-material-claim",
-    ],
-  );
-  for (const item of WRITE_DECISION_EXAMPLES) {
-    assert.ok(item.situation.length > 0);
-    assert.ok(item.expectedDecision.length > 0);
-    assert.ok(Object.isFrozen(item));
-  }
-
+test("the writing standard keeps semantic rules without decision examples", async () => {
   const standard = await createWritingStandard({
     loadStandard: async () => "shared standard\n",
   });
   assert.deepEqual(standard, {
-    decisionExamples: WRITE_DECISION_EXAMPLES,
     text: "shared standard\n",
     version: WRITE_STANDARD_VERSION,
   });
+  assert.equal(Object.hasOwn(standard, "decisionExamples"), false);
 });
 
 test("a writing brief passes through the standard contract independently of its version", async () => {
-  const decisionExamples = Object.freeze([
-    Object.freeze({
-      expectedDecision: "Keep the sentinel.",
-      id: "sentinel",
-      situation: "A test needs a distinguishable contract.",
-    }),
-  ]);
   const writingStandard = Object.freeze({
-    decisionExamples,
     text: "sentinel standard\n",
     version: 73,
   });
@@ -144,7 +120,6 @@ test("a writing brief passes through the standard contract independently of its 
     },
   );
   assert.deepEqual(brief, {
-    decisionExamples,
     feature: "write",
     mode: "edit",
     response: "Change the requested target and lead with the completed result.\n\nPreserve a material ambiguity instead of silently choosing a new meaning.",
@@ -152,7 +127,7 @@ test("a writing brief passes through the standard contract independently of its 
     standardVersion: 73,
     version: WRITE_BRIEF_VERSION,
   });
-  assert.strictEqual(brief.decisionExamples, writingStandard.decisionExamples);
+  assert.equal(Object.hasOwn(brief, "decisionExamples"), false);
   await assert.rejects(
     createWritingBrief({ mode: "polish" }),
     /Unknown Hope write mode/u,

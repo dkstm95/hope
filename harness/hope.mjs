@@ -22,6 +22,7 @@ import {
   POLISH_MODEL_ADAPTER_CODE,
 } from "../features/polish/index.mjs";
 import { main as runPolishCommand } from "../features/polish/cli.mjs";
+import { main as runModelEvaluationCommand } from "../features/model-evaluation/cli.mjs";
 import {
   SWEEP_MODEL_ADAPTER_CODE,
 } from "../features/sweep/index.mjs";
@@ -44,6 +45,7 @@ function usage() {
     "  hope --version",
     "  hope align",
     "  hope diff",
+    "  hope model-evaluation <command>",
     "  hope polish",
     "  hope sweep",
     "  hope toxic-review",
@@ -66,6 +68,7 @@ export function parseArguments(argv) {
     ![
       "align",
       "diff",
+      "model-evaluation",
       "polish",
       "settings",
       "sweep",
@@ -107,6 +110,11 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       options.arguments,
       { ...dependencies, stdout },
     );
+  }
+  if (options.command === "model-evaluation") {
+    return await (
+      dependencies.runModelEvaluationCommand ?? runModelEvaluationCommand
+    )(options.arguments, { ...dependencies, stdout });
   }
   const taskDependencies = await withWritingPass(dependencies, stdout);
   if (options.command === "align") {

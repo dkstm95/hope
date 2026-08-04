@@ -22,6 +22,15 @@ The project definitions are:
 [model-evaluation.md](model-evaluation.md) defines how Hope tests model-facing
 behavior before changing prompts, tools, or orchestration.
 
+The shared model-evaluation runtime owns cross-feature selection and Write
+decision-example ablation cases, prepared inputs, output bindings, receipts,
+and complete-set validation.
+
+The harness exposes those deterministic commands under `model-evaluation`.
+
+The generated plugin contains the same runtime, but no global evaluation Skill
+is published because that Skill would affect the selection boundary it tests.
+
 [release.md](release.md) defines how a repository version becomes a verified
 public release.
 

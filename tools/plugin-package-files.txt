@@ -8,6 +8,7 @@ assets/hope-protected-light.png
 docs/align.md
 docs/design.md
 docs/diff.md
+docs/model-evaluation.md
 docs/polish.md
 docs/sweep.md
 docs/toxic-review.md
@@ -53,6 +54,10 @@ runtime/features/diff/target.mjs
 runtime/features/diff/teaching-aids.mjs
 runtime/features/diff/text.mjs
 runtime/features/diff/validate.mjs
+runtime/features/model-evaluation/cli.mjs
+runtime/features/model-evaluation/feature-selection.mjs
+runtime/features/model-evaluation/index.mjs
+runtime/features/model-evaluation/write-examples.mjs
 runtime/features/polish/cli.mjs
 runtime/features/polish/constants.mjs
 runtime/features/polish/index.mjs

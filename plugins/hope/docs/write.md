@@ -97,20 +97,15 @@ The standard version changes when shared writing behavior changes.
 The brief version changes when the mode contract or returned brief shape
 changes.
 
-The shared standard contract includes representative decision examples for
-separating independent points, consolidating repeated framing, surfacing an
-important boundary, and preserving a material claim.
+The version 2 brief also returned four representative decision examples.
 
-Each example records a situation and the expected decision without prescribing
-one exact sentence.
+Hope removed them from version 3 after all 24 paired runs in the version 1
+ablation passed under one recorded Codex configuration.
 
-The examples guide an active host when a situation matches.
+The semantic structure and preservation rules remain in the writing standard.
 
-They are not automated evaluation results or evidence that a model followed the
-standard.
-
-The standalone feature returns those examples and the standard with the selected
-mode and matching response contract.
+The standalone feature returns that standard with the selected mode and
+matching response contract.
 
 A host adapter must use the returned brief instead of carrying another copy of
 the rules.

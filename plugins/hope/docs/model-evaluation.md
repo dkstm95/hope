@@ -1,3 +1,5 @@
+<!-- Generated from docs/model-evaluation.md. Do not edit. -->
+
 # Hope model behavior evaluation
 
 Hope evaluates model-dependent behavior before changing the instructions, tools,
@@ -77,12 +79,6 @@ Keep failed runs in the evidence set.
 
 Store bounded receipts under ignored `test-results/` or an equivalent private
 release-evidence location.
-
-Mark receipts created directly by deterministic test factories as synthetic.
-
-When a feature has a release evidence gate, require its trusted runner to bind
-the recorded host events and raw model output before the set can pass that
-gate.
 
 Never put private user content into a checked-in evaluation case or receipt.
 
