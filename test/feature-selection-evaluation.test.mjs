@@ -11,7 +11,9 @@ import {
   createHopeFeatureSelectionEvaluationPlan,
   createHopeFeatureSelectionEvaluationReceipt,
   getHopeFeatureSelectionEvaluationOracle,
+  HOPE_FEATURE_SELECTION_CONTRACT_VERSION,
   HOPE_FEATURE_SELECTION_DECISIONS,
+  HOPE_FEATURE_SELECTION_EVALUATION_VERSION,
   hopeFeatureSelectionDescriptions,
   prepareHopeFeatureSelectionEvaluationRun,
   validateHopeFeatureSelectionEvaluationOutput,
@@ -51,11 +53,17 @@ function receiptFor(specification, overrides = {}) {
   }).receipt;
 }
 
-test("feature selection covers every decision in 26 paired runs", () => {
+test("feature selection covers every decision in 13 unique paired cases", () => {
   const plan = createHopeFeatureSelectionEvaluationPlan();
+  assert.equal(plan.contractVersion, 2);
+  assert.equal(plan.version, 2);
+  assert.equal(HOPE_FEATURE_SELECTION_CONTRACT_VERSION, 2);
+  assert.equal(HOPE_FEATURE_SELECTION_EVALUATION_VERSION, 2);
   assert.equal(plan.totalRuns, 26);
   assert.equal(plan.runs.filter((run) => run.variant === "minimal").length, 13);
   assert.equal(plan.runs.filter((run) => run.variant === "full").length, 13);
+  assert.equal(plan.runs.every((run) => run.run === 1), true);
+  assert.equal(new Set(plan.runs.map((run) => run.caseId)).size, 13);
   const decisions = new Set(plan.runs.map((run) =>
     getHopeFeatureSelectionEvaluationOracle(run.caseId).expectedDecision
   ));
@@ -112,10 +120,20 @@ test("feature-selection outputs stay bounded and exact", () => {
     }),
     /must contain exactly/u,
   );
+  assert.deepEqual(
+    validateHopeFeatureSelectionEvaluationOutput({
+      decision: "sweep",
+      reason: "The request asks for broad approved codebase maintenance.",
+    }),
+    {
+      decision: "sweep",
+      reason: "The request asks for broad approved codebase maintenance.",
+    },
+  );
   assert.throws(
     () => validateHopeFeatureSelectionEvaluationOutput({
-      decision: "sweep",
-      reason: "not in version 1",
+      decision: "review",
+      reason: "not published",
     }),
     /not published/u,
   );
@@ -230,12 +248,12 @@ test("the model-evaluation CLI parses and delegates feature selection", async ()
       "--variant",
       "minimal",
       "--run",
-      "2",
+      "1",
     ]),
     {
       caseId: "selection-01",
       command: "feature-selection-prepare",
-      run: 2,
+      run: 1,
       variant: "minimal",
     },
   );

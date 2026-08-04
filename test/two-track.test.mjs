@@ -483,6 +483,7 @@ test("Codex and Claude Code share the same Hope skills", async () => {
   assert.match(write, /`standard` and mode-specific `response`/u);
   assert.doesNotMatch(align, /writingStandard\.decisionExamples/u);
   assert.doesNotMatch(polish, /writingStandard\.decisionExamples/u);
+  assert.doesNotMatch(sweep, /writingStandard\.decisionExamples/u);
   assert.doesNotMatch(toxicReview, /writingStandard\.decisionExamples/u);
   assert.match(toxicReview, /not\s+evaluation\s+results/u);
   assert.doesNotMatch(write, /Prefer a short, familiar word/u);

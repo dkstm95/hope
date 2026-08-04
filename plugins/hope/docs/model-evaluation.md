@@ -80,6 +80,12 @@ Keep failed runs in the evidence set.
 Store bounded receipts under ignored `test-results/` or an equivalent private
 release-evidence location.
 
+Mark receipts created directly by deterministic test factories as synthetic.
+
+When a feature has a release evidence gate, require its trusted runner to bind
+the recorded host events and raw model output before the set can pass that
+gate.
+
 Never put private user content into a checked-in evaluation case or receipt.
 
 ## Compare variants
@@ -146,8 +152,8 @@ The runtime does not claim that repository tests executed a host model.
 ## Cross-feature selection
 
 Hope owns one versioned feature-selection contract for deciding whether a
-request belongs to Align, Diff, Polish, Settings, Toxic Review, Write, or no
-Hope feature.
+request belongs to Align, Diff, Polish, Settings, Sweep, Toxic Review, Write,
+or no Hope feature.
 
 This contract does not execute the selected feature.
 
@@ -156,15 +162,22 @@ It tests the semantic boundary represented by the installed Skill descriptions.
 The host's internal plugin dispatcher remains outside Hope's deterministic
 control, so a passing set is not proof that the dispatcher made the same choice.
 
-The version 1 evaluation uses seven synthetic Korean and English requests.
+The version 1 evaluation used seven synthetic Korean and English requests.
 
-It compares the complete published descriptions with shorter descriptions that
-preserve each feature's core job.
+It compared the complete published descriptions with shorter descriptions that
+preserved each feature's core job.
 
-Every decision runs once under both variants.
+Every decision ran once under both variants.
 
-All decisions except the fixed Settings preference change run a second time
+All decisions except the fixed Settings preference change ran a second time
 under both variants, producing 26 runs in total.
+
+The version 2 evaluation adds Sweep and replaces repeated inputs with six
+harder boundary, conformance, and safety cases.
+
+It uses 13 distinct synthetic requests under both variants, producing 26 runs.
+
+Each fresh context receives one request and one variant.
 
 List the matrix with:
 
@@ -192,12 +205,17 @@ Create and validate bounded receipts with the matching
 The complete set requires every planned run, one declared host, model, and
 effort, and a unique host invocation identity for every run.
 
-It returns `candidate-minimal` only when all 26 decisions pass.
+It returns `candidate-minimal` only when all 26 version 2 decisions pass.
 
-The first complete set passed all 26 runs in fresh Codex contexts.
+The version 1 complete set passed all 26 runs in fresh Codex contexts.
 
 Hope adopted the exact evaluated `minimal` descriptions for the six published
-Skills in that contract version.
+Skills in version 1.
+
+The version 2 complete set passed all 26 distinct runs in fresh Codex contexts.
+
+Hope then adopted the exact evaluated `minimal` description for Sweep alongside
+the six version 1 descriptions.
 
 This remains direct selection evidence, not proof that a host's internal plugin
 dispatcher makes the same choice.

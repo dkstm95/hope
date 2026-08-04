@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.6.0 - 2026-08-04
+
+- Add one shared model-evaluation boundary for choosing among Hope features and
+  for testing whether Write still needs its representative decision examples.
+- Expose the same blinded preparation, receipt, and complete-set validation
+  commands through the independent harness and generated plugin runtime.
+- Add feature-selection contract version 2 with Sweep and 13 distinct Korean
+  and English boundary, conformance, and safety cases.
+- Pass all 26 version 2 feature-selection runs in fresh Codex contexts and adopt
+  the shorter evaluated descriptions for all seven public Hope Skills.
+- Pass all 24 Write example-ablation runs and six exact-production runs in fresh
+  Codex contexts before removing the four decision examples.
+- Keep the semantic writing standard and every feature-specific product rule
+  while removing only evaluated examples and their inactive Skill references.
+- Keep deterministic contract tests separate from ignored raw model outputs and
+  record when the host does not expose its exact model or effort.
+
 ## 1.5.0 - 2026-08-04
 
 - Add Hope Sweep as one profile-free codebase maintenance task that plans

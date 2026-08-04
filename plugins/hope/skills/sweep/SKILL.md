@@ -1,6 +1,6 @@
 ---
 name: sweep
-description: Inspect one exact codebase snapshot for broad maintenance needs, show a bounded plan, and apply only digest-bound behavior-preserving work that the person approves. Use when someone invokes $hope:sweep in Codex or /hope:sweep in Claude Code, asks for codebase maintenance, wants dead or stale work removed, wants repeated, missing, or premature abstractions corrected, or needs tests, documentation, dependencies, security, licenses, compatibility, performance, packaging, CI, architecture, support, release, or recovery readiness checked without fixed schedule profiles.
+description: Use to inspect a codebase for broad maintenance, show a bounded plan, and apply only exact approved behavior-preserving work.
 ---
 
 # Hope sweep
@@ -48,10 +48,7 @@ Follow its `discovery`, `categories`, `checks`, `categoryContract`,
 `evidenceContract`, `planning`, `approval`, `execution`, `completion`, `composition`,
 `modelEvaluation`, `writingStandard`, schema paths, and limits.
 
-Use `writingStandard.text` for language-bearing work and use a decision example
-only when its situation matches.
-
-The examples guide decisions and are not evaluation results.
+Use `writingStandard.text` for language-bearing work.
 
 Do not copy the runtime contract into another checklist in this Skill.
 

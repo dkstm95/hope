@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
-export const HOPE_FEATURE_SELECTION_CONTRACT_VERSION = 1;
-export const HOPE_FEATURE_SELECTION_EVALUATION_VERSION = 1;
+export const HOPE_FEATURE_SELECTION_CONTRACT_VERSION = 2;
+export const HOPE_FEATURE_SELECTION_EVALUATION_VERSION = 2;
 
 export const hopeFeatureSelectionEvaluationLimits = Object.freeze({
   outputBytes: 16 * 1024,
@@ -16,6 +16,7 @@ export const HOPE_FEATURE_SELECTION_DECISIONS = Object.freeze([
   "diff",
   "polish",
   "settings",
+  "sweep",
   "toxic-review",
   "write",
   "none",
@@ -35,6 +36,8 @@ const fullDescriptions = Object.freeze({
     "Refine a named completed work product without silently changing its behavior, public contract, or core meaning. Use when someone invokes $hope:polish in Codex or /hope:polish in Claude Code, asks for one bounded cleanup, simplification, deduplication, consolidation, or refactor of code, tests, documentation, comments, examples, errors, or another result, or wants a finalization pass before approval. Use Hope Write for a standalone language-only draft, edit, or review unless the person explicitly requests the full Polish contract.",
   settings:
     "Show, set, or reset the global Hope language and theme preferences shared by the harness and plugin. Use when someone invokes $hope:settings in Codex, /hope:settings in Claude Code, or asks to change Hope's default language or light, dark, or system theme.",
+  sweep:
+    "Inspect one exact codebase snapshot for broad maintenance needs, show a bounded plan, and apply only digest-bound behavior-preserving work that the person approves. Use when someone invokes $hope:sweep in Codex or /hope:sweep in Claude Code, asks for codebase maintenance, wants dead or stale work removed, wants repeated, missing, or premature abstractions corrected, or needs tests, documentation, dependencies, security, licenses, compatibility, performance, packaging, CI, architecture, support, release, or recovery readiness checked without fixed schedule profiles.",
   "toxic-review":
     "Strictly review an idea, requirement, UI, prototype, plan, implementation, patch, PR, Align result, Diff result, incident analysis, recovery plan, document, or other work product without attacking people or manufacturing criticism. Use when someone invokes $hope:toxic-review in Codex or /hope:toxic-review in Claude Code, asks for a toxic review, wants a harsh or skeptical review, or needs independent risk-focused reviewers and one adjudicated result.",
   write:
@@ -50,6 +53,8 @@ const minimalDescriptions = Object.freeze({
     "Use for one bounded cleanup or refactor of a named completed work product while preserving behavior and meaning.",
   settings:
     "Use to show, set, or reset Hope's language or theme.",
+  sweep:
+    "Use to inspect a codebase for broad maintenance, show a bounded plan, and apply only exact approved behavior-preserving work.",
   "toxic-review":
     "Use for a strict, skeptical, risk-focused review of a named work product without attacking people or inventing criticism.",
   write:
@@ -66,7 +71,8 @@ const sharedRules = Object.freeze([
   "An explicit $hope:<name> or /hope:<name> invocation selects that feature unless the person cancels or replaces the request.",
   "Choose none when the request is ordinary implementation, testing, Git, research, or another task that does not ask for a Hope feature's job.",
   "Choose Diff for understanding or explaining a pull request. Choose Toxic Review only when the person asks for a harsh, skeptical, adversarial, or explicitly toxic review.",
-  "Choose Write for standalone language work. Choose Polish for bounded cleanup or refactoring of a named completed work product, including code or structural changes.",
+  "Choose Write for standalone language work. Choose Polish for one bounded cleanup or refactor of a named completed work product, including code or structural changes.",
+  "Choose Sweep for broad codebase maintenance discovery that must show a bounded plan and ask for exact work-unit approval before applying behavior-preserving work.",
   "Choose Align only before implementation when a shared-understanding check or material requirement or design clarification is the requested result.",
 ]);
 
@@ -122,7 +128,7 @@ export const hopeFeatureSelectionEvaluationCases = Object.freeze([
       "구현 전에 결제 실패 처리의 범위와 성공 조건부터 나와 맞춰줘.",
     ),
     oracle: Object.freeze({ expectedDecision: "align" }),
-    runs: 2,
+    runs: 1,
     suite: "boundary",
   }),
   Object.freeze({
@@ -131,7 +137,7 @@ export const hopeFeatureSelectionEvaluationCases = Object.freeze([
       "Explain the current pull request and link each conclusion to its evidence.",
     ),
     oracle: Object.freeze({ expectedDecision: "diff" }),
-    runs: 2,
+    runs: 1,
     suite: "boundary",
   }),
   Object.freeze({
@@ -140,7 +146,7 @@ export const hopeFeatureSelectionEvaluationCases = Object.freeze([
       "완성된 인증 모듈을 동작은 바꾸지 말고 한 번만 정리해줘. 중복 테스트와 이름도 함께 다듬어줘.",
     ),
     oracle: Object.freeze({ expectedDecision: "polish" }),
-    runs: 2,
+    runs: 1,
     suite: "boundary",
   }),
   Object.freeze({
@@ -149,7 +155,7 @@ export const hopeFeatureSelectionEvaluationCases = Object.freeze([
       "Edit this error message for clarity only. Keep its meaning and uncertainty unchanged.",
     ),
     oracle: Object.freeze({ expectedDecision: "write" }),
-    runs: 2,
+    runs: 1,
     suite: "boundary",
   }),
   Object.freeze({
@@ -158,7 +164,7 @@ export const hopeFeatureSelectionEvaluationCases = Object.freeze([
       "이 배포 계획을 독하게 검토해줘. 억지 지적은 만들지 말고 위험이 큰 문제만 판정해줘.",
     ),
     oracle: Object.freeze({ expectedDecision: "toxic-review" }),
-    runs: 2,
+    runs: 1,
     suite: "boundary",
   }),
   Object.freeze({
@@ -176,7 +182,61 @@ export const hopeFeatureSelectionEvaluationCases = Object.freeze([
       "실패한 단위 테스트의 원인을 찾아 고치고 검증해줘.",
     ),
     oracle: Object.freeze({ expectedDecision: "none" }),
-    runs: 2,
+    runs: 1,
+    suite: "safety",
+  }),
+  Object.freeze({
+    id: "selection-08",
+    input: syntheticInput(
+      "이 저장소 전체의 죽은 코드, 낡은 문서, 테스트 공백을 점검하고 파일을 바꾸기 전에 승인할 계획을 보여줘.",
+    ),
+    oracle: Object.freeze({ expectedDecision: "sweep" }),
+    runs: 1,
+    suite: "boundary",
+  }),
+  Object.freeze({
+    id: "selection-09",
+    input: syntheticInput(
+      "Use $hope:sweep to find stale abstractions and CI waste, then apply only the exact behavior-preserving work I approve.",
+    ),
+    oracle: Object.freeze({ expectedDecision: "sweep" }),
+    runs: 1,
+    suite: "conformance",
+  }),
+  Object.freeze({
+    id: "selection-10",
+    input: syntheticInput(
+      "Yes, continue with the Hope Diff review for PR #741 that you just asked me to confirm.",
+    ),
+    oracle: Object.freeze({ expectedDecision: "diff" }),
+    runs: 1,
+    suite: "boundary",
+  }),
+  Object.freeze({
+    id: "selection-11",
+    input: syntheticInput(
+      "완성된 README의 구조는 건드리지 말고 문장만 더 명확하게 고쳐줘. 의미와 불확실성은 유지해줘.",
+    ),
+    oracle: Object.freeze({ expectedDecision: "write" }),
+    runs: 1,
+    suite: "boundary",
+  }),
+  Object.freeze({
+    id: "selection-12",
+    input: syntheticInput(
+      "Review this pull request harshly for release risks. Do not invent criticism, and return one adjudicated result.",
+    ),
+    oracle: Object.freeze({ expectedDecision: "toxic-review" }),
+    runs: 1,
+    suite: "boundary",
+  }),
+  Object.freeze({
+    id: "selection-13",
+    input: syntheticInput(
+      "Upgrade the database client to its next major version, fix the breaking API changes, and run the integration tests.",
+    ),
+    oracle: Object.freeze({ expectedDecision: "none" }),
+    runs: 1,
     suite: "safety",
   }),
 ]);
