@@ -1,6 +1,6 @@
 {
   "name": "hope",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Align before implementation, sweep codebase maintenance, polish completed work, challenge it with evidence, understand pull requests, improve writing, and save shared preferences. Requires Node.js 20 or newer.",
   "author": {
     "name": "SeungIl",
