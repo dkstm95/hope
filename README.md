@@ -75,8 +75,6 @@ Start a new Codex or Claude Code session after installation.
 
 Choose the work you need.
 
-Open a feature for its full behavior, limits, and examples.
-
 <details>
 <summary><strong>Align</strong> — Reach shared understanding before implementation</summary>
 

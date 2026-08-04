@@ -76,8 +76,6 @@ claude plugin install hope@hope
 
 필요한 작업을 고르세요.
 
-기능을 펼치면 동작, 제약, 예시를 모두 확인할 수 있습니다.
-
 <details>
 <summary><strong>Align</strong> — 구현 전에 작업 이해를 맞춥니다</summary>
 
