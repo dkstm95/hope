@@ -203,8 +203,10 @@ export function makeSweepPlan() {
 }
 
 export function makeSweepApprovalCandidate(plan = makeSweepPlan()) {
+  const inventory = makeSweepInventory(plan);
   return createSweepApprovalCandidate(plan, "remove-unused-helper", {
-    inventory: makeSweepInventory(plan),
+    inventory,
+    verifyLiveInventory: (candidate) => candidate?.digest === inventory.digest,
   });
 }
 
@@ -219,6 +221,10 @@ export function makeSweepInventory(plan = makeSweepPlan()) {
     fileSourceIds,
     digest: sweepInventoryDigest(plan.snapshot),
   };
+}
+
+export function verifySweepLiveInventory(inventory) {
+  return (candidate) => candidate?.digest === inventory.digest;
 }
 
 export function makeSweepBatchCapabilities() {
@@ -650,11 +656,15 @@ export function makeSweepCompletion() {
 export function makeSweepSessionResult() {
   const plan = makeSweepPlan();
   const completion = makeSweepCompletion();
+  const inventory = makeSweepInventory(plan);
   return {
     version: 1,
     title: "Complete the example Sweep session",
     plan,
-    planDigest: sweepPlanDigest(plan, { inventory: makeSweepInventory(plan) }),
+    planDigest: sweepPlanDigest(plan, {
+      inventory,
+      verifyLiveInventory: verifySweepLiveInventory(inventory),
+    }),
     completions: [completion],
     candidateResults: [
       {

@@ -200,6 +200,7 @@ export async function createSweepBrief({
       "Set maximumFiles and filesInInventory to the exact inventory file count; candidate and change budgets remain independent limits.",
       "Include an exact preview, maximum change count, verification steps, evidence links, and remaining gaps for every candidate.",
       "Count distinct file sources from inspected-check evidence. The runtime derives filesChecked and rejects a caller-authored mismatch; complete coverage requires every inventory file.",
+      "Require a trusted live-worktree verifier in direct plan, digest, session-result, and approval APIs; a supplied inventory digest alone is not current-state proof.",
       "Keep the session blocked while any inventory batch is partial, not-checked, or failed. Do not request approval from incomplete coverage.",
       "Use awaiting-approval only when at least one candidate is executable by Polish.",
       "Use complete-with-findings when complete coverage leaves findings but none can enter Polish, complete-no-change only when every check completed and found no candidate, and blocked whenever coverage or discovery is incomplete.",
@@ -380,6 +381,11 @@ async function readLiveSweepInventory(root, label, dependencies = {}) {
   });
 }
 
+function liveInventoryVerifier(inventory) {
+  const digest = inventory.digest;
+  return (candidate) => candidate?.digest === digest;
+}
+
 async function resolveSweepInventory(label, dependencies = {}) {
   const submitted = dependencies.inventoryPath
     ? await readSweepInventoryFile(dependencies.inventoryPath, dependencies)
@@ -482,6 +488,7 @@ export async function validateSweepPlanFile(inputPath, dependencies = {}) {
   const plan = (dependencies.validatePlan ?? validateSweepPlan)(input.value, {
     inputFileBytes: input.fileBytes,
     inventory: inventoryInput,
+    verifyLiveInventory: liveInventoryVerifier(inventoryInput),
     ...(batchContext
       ? {
         batchMerge: batchContext.merge,
@@ -499,6 +506,7 @@ export async function validateSweepPlanFile(inputPath, dependencies = {}) {
       inputDigest: input.digest,
       planDigest: (dependencies.planDigest ?? sweepPlanDigest)(input.value, {
         inventory: inventoryInput,
+        verifyLiveInventory: liveInventoryVerifier(inventoryInput),
         ...(batchContext
           ? {
             batchMerge: batchContext.merge,
@@ -534,6 +542,7 @@ export async function createSweepApprovalCandidateFile(
   );
   const plan = validateSweepPlan(input.value, {
     inventory: inventoryInput,
+    verifyLiveInventory: liveInventoryVerifier(inventoryInput),
     ...(batchContext
       ? {
         batchMerge: batchContext.merge,
@@ -550,6 +559,7 @@ export async function createSweepApprovalCandidateFile(
     candidateId,
     {
       inventory: inventoryInput,
+      verifyLiveInventory: liveInventoryVerifier(inventoryInput),
       ...(batchContext
         ? {
           batchMerge: batchContext.merge,
@@ -716,6 +726,7 @@ export async function validateSweepSessionResultFile(
       inputFileBytes: input.fileBytes,
       verifyApprovalAttestation: dependencies.verifyApprovalAttestation,
       inventory,
+      verifyLiveInventory: liveInventoryVerifier(inventory),
       ...(batchContext
         ? {
           batchMerge: batchContext.merge,

@@ -940,14 +940,44 @@ export function validateSweepBatchReport(
   if (context.inventory && inventoryDigest !== context.inventory.digest) errors.push("sweep.batchReport.inventoryDigest does not match inventory");
   const manifestDigest = digest(report.manifestDigest, "sweep.batchReport.manifestDigest", errors);
   if (!manifest) errors.push("sweep.batchReport.manifest is required for trusted report validation");
-  if (manifest && manifestDigest !== manifest.digest) errors.push("sweep.batchReport.manifestDigest does not match the pre-dispatch manifest");
+  let normalizedManifest;
+  if (manifest) {
+    try {
+      normalizedManifest = validateSweepBatchManifest(manifest, {
+        inventory: context.inventory,
+        capabilities: normalizedCapabilities,
+        verifyBatchInvocation,
+      });
+    } catch (error) {
+      errors.push(`sweep.batchReport.manifest: ${error.message}`);
+    }
+  }
+  if (normalizedManifest && manifestDigest !== normalizedManifest.digest) {
+    errors.push("sweep.batchReport.manifestDigest does not match the pre-dispatch manifest");
+  }
   const capabilityDigest = digest(report.capabilityDigest, "sweep.batchReport.capabilityDigest", errors);
   if (normalizedCapabilities && capabilityDigest !== normalizedCapabilities.digest) errors.push("sweep.batchReport.capabilityDigest does not match capabilities");
   const batch = normalizeBatch(report.batch, "sweep.batchReport.batch", errors, context.fileSourceIds, new Set());
+  if (normalizedManifest && runId !== normalizedManifest.runId) {
+    errors.push("sweep.batchReport.runId does not match the pre-dispatch manifest");
+  }
+  if (normalizedManifest) {
+    const manifestBatch = normalizedManifest.batches.find((candidate) => (
+      candidate.id === batch.id
+      && candidate.ordinal === batch.ordinal
+      && JSON.stringify(candidate.fileSourceIds) === JSON.stringify(batch.fileSourceIds)
+    ));
+    if (!manifestBatch) {
+      errors.push("sweep.batchReport.batch does not exactly match a pre-dispatch manifest batch");
+    }
+  }
   const bindingDigest = digest(report.bindingDigest, "sweep.batchReport.bindingDigest", errors);
   const expectedBindingDigest = sweepBatchBindingDigest({ runId, inventoryDigest, manifestDigest, batch, capabilityDigest });
   if (bindingDigest !== expectedBindingDigest) errors.push("sweep.batchReport.bindingDigest does not match its batch binding");
   const attempt = batchValidation.integer(report.attempt, "sweep.batchReport.attempt", errors, { minimum: 1 });
+  if (normalizedCapabilities && attempt > normalizedCapabilities.retryBudget + 1) {
+    errors.push("sweep.batchReport.attempt exceeds the declared retry budget");
+  }
   const inputDigest = digest(report.inputDigest, "sweep.batchReport.inputDigest", errors);
   const invocationId = text(report.invocationId, "sweep.batchReport.invocationId", errors);
   const outputDigest = digest(report.outputDigest, "sweep.batchReport.outputDigest", errors);

@@ -10,6 +10,7 @@ import { parseSweepArguments } from "../features/sweep/cli.mjs";
 import { createPolishReceipt } from "../features/polish/validate.mjs";
 import {
   createSweepBatchManifest,
+  createSweepBatchReport,
   createSweepBatchReportSet,
   createSweepCrossBatchSynthesis,
   mergeSweepBatchReports,
@@ -33,6 +34,7 @@ import {
   makeSweepApprovalCandidate,
   makeSweepBatchCapabilities,
   makeSweepBatchReport,
+  makeSweepBatchReportSet,
   makeSweepHybridPlan,
   makeSweepApprovalReceipt,
   makeSweepCompletion,
@@ -42,6 +44,7 @@ import {
   makeSweepSessionResult,
   sweepBatchDependencies,
   sweepApprovalDependencies,
+  verifySweepLiveInventory,
 } from "../test-support/sweep-fixture.mjs";
 import {
   SWEEP_CHECK_CATALOG,
@@ -53,17 +56,26 @@ const validateCompletion = (value) => validateSweepCompletion(
   value,
   sweepApprovalDependencies,
 );
-const validateSessionResult = (value) => validateSweepSessionResult(
-  value,
-  {
-    ...sweepApprovalDependencies,
-    inventory: makeSweepInventory(value.plan),
-  },
-);
-const validateTestPlan = (value, options = {}) => validateSweepPlan(value, {
-  inventory: options.inventory ?? makeSweepInventory(value),
-  ...options,
-});
+const validateSessionResult = (value) => {
+  const inventory = makeSweepInventory(value.plan);
+  return validateSweepSessionResult(
+    value,
+    {
+      ...sweepApprovalDependencies,
+      inventory,
+      verifyLiveInventory: verifySweepLiveInventory(inventory),
+    },
+  );
+};
+const validateTestPlan = (value, options = {}) => {
+  const inventory = options.inventory ?? makeSweepInventory(value);
+  return validateSweepPlan(value, {
+    ...options,
+    inventory,
+    verifyLiveInventory: options.verifyLiveInventory
+      ?? verifySweepLiveInventory(inventory),
+  });
+};
 
 test("sweep validates one full-codebase dead-code plan", () => {
   const plan = validateTestPlan(makeSweepPlan());
@@ -78,6 +90,22 @@ test("sweep direct plan validation requires a verified live inventory", () => {
   assert.throws(
     () => validateSweepPlan(makeSweepPlan()),
     /inventory is required for an entire-codebase plan/u,
+  );
+});
+
+test("sweep direct plan validation requires a trusted live-worktree verifier", () => {
+  const plan = makeSweepPlan();
+  const inventory = makeSweepInventory(plan);
+  assert.throws(
+    () => validateSweepPlan(plan, { inventory }),
+    /trusted live-worktree verifier/u,
+  );
+  assert.throws(
+    () => validateSweepPlan(plan, {
+      inventory,
+      verifyLiveInventory: () => false,
+    }),
+    /current live worktree/u,
   );
 });
 
@@ -99,6 +127,7 @@ test("sweep validates the hybrid batch contract and preserves merge evidence", (
   assert.equal(
     createSweepApprovalCandidate(hybrid.plan, "remove-unused-helper", {
       inventory: hybrid.inventory,
+      verifyLiveInventory: verifySweepLiveInventory(hybrid.inventory),
       batchMerge: hybrid.batchMerge,
       batchReportSet: hybrid.reportSet,
       capabilities: hybrid.capabilities,
@@ -159,6 +188,7 @@ test("sweep validates hybrid session results with their report artifacts", () =>
   const hybrid = makeSweepHybridPlan();
   const dependencies = {
     inventory: hybrid.inventory,
+    verifyLiveInventory: verifySweepLiveInventory(hybrid.inventory),
     batchMerge: hybrid.batchMerge,
     batchReportSet: hybrid.reportSet,
     capabilities: hybrid.capabilities,
@@ -190,6 +220,76 @@ test("sweep validates hybrid session results with their report artifacts", () =>
   assert.throws(
     () => validateSweepSessionResult(result, { inventory: hybrid.inventory }),
     /batchMerge is required|batchReportSet is required/u,
+  );
+});
+
+test("sweep standalone reports remain bound to the manifest run, batch, and retry budget", () => {
+  const inventory = makeSweepInventory();
+  const capabilities = makeSweepBatchCapabilities();
+  const reportSet = makeSweepBatchReportSet(inventory, capabilities);
+  const rebind = (changes) => {
+    const report = {
+      ...clone(reportSet.reports[0]),
+      ...changes,
+    };
+    report.bindingDigest = sweepBatchBindingDigest({
+      runId: report.runId,
+      inventoryDigest: report.inventoryDigest,
+      manifestDigest: report.manifestDigest,
+      batch: report.batch,
+      capabilityDigest: report.capabilityDigest,
+    });
+    report.attemptId = sweepBatchAttemptId({
+      bindingDigest: report.bindingDigest,
+      manifestDigest: report.manifestDigest,
+      attempt: report.attempt,
+      inputDigest: report.inputDigest,
+      invocationId: report.invocationId,
+      outputDigest: report.outputDigest,
+    });
+    delete report.reportDigest;
+    return report;
+  };
+  assert.throws(
+    () => createSweepBatchReport(
+      rebind({ runId: "foreign-sweep-run" }),
+      {
+        inventory,
+        manifest: reportSet.manifest,
+        capabilities,
+        ...sweepBatchDependencies,
+      },
+    ),
+    /runId does not match the pre-dispatch manifest/u,
+  );
+  assert.throws(
+    () => createSweepBatchReport(
+      rebind({
+        batch: {
+          ...reportSet.reports[0].batch,
+          id: "batch-unknown",
+        },
+      }),
+      {
+        inventory,
+        manifest: reportSet.manifest,
+        capabilities,
+        ...sweepBatchDependencies,
+      },
+    ),
+    /does not exactly match a pre-dispatch manifest batch/u,
+  );
+  assert.throws(
+    () => createSweepBatchReport(
+      rebind({ attempt: capabilities.retryBudget + 2 }),
+      {
+        inventory,
+        manifest: reportSet.manifest,
+        capabilities,
+        ...sweepBatchDependencies,
+      },
+    ),
+    /exceeds the declared retry budget/u,
   );
 });
 
@@ -348,20 +448,24 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
   );
 
   const overBudgetReport = makeSweepBatchReport(inventory, capabilities, {
-    attempt: 4,
+    attempt: 1,
     inputDigest: `sha256:${"f".repeat(64)}`,
     invocationId: "over-budget-invocation",
     manifest,
   });
+  const overBudgetAttempt = {
+    ...overBudgetReport,
+    attempt: capabilities.retryBudget + 2,
+  };
   const overBudget = clone(reportSet);
   overBudget.attempts.push({
-    batch: overBudgetReport.batch,
+    batch: overBudgetAttempt.batch,
     manifestDigest: manifest.digest,
-    attempt: overBudgetReport.attempt,
-    attemptId: failedAttemptId(overBudgetReport, "The host exhausted the retry budget."),
+    attempt: overBudgetAttempt.attempt,
+    attemptId: failedAttemptId(overBudgetAttempt, "The host exhausted the retry budget."),
     status: "failed",
-    inputDigest: overBudgetReport.inputDigest,
-    invocationId: overBudgetReport.invocationId,
+    inputDigest: overBudgetAttempt.inputDigest,
+    invocationId: overBudgetAttempt.invocationId,
     outputDigest: sweepBatchAttemptOutputDigest({
       status: "failed",
       error: "The host exhausted the retry budget.",
@@ -649,16 +753,30 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
   const changedCandidate = createSweepApprovalCandidate(
     changed,
     "remove-unused-helper",
-    { inventory: makeSweepInventory(changed) },
+    (() => {
+      const inventory = makeSweepInventory(changed);
+      return {
+        inventory,
+        verifyLiveInventory: verifySweepLiveInventory(inventory),
+      };
+    })(),
   );
   assert.notEqual(changedCandidate.candidateDigest, first.candidateDigest);
 
+  const planInventory = makeSweepInventory(plan);
   assert.equal(first.planDigest, sweepPlanDigest(plan, {
-    inventory: makeSweepInventory(plan),
+    inventory: planInventory,
+    verifyLiveInventory: verifySweepLiveInventory(planInventory),
   }));
   assert.equal(
     createSweepApprovalCandidate(plan, "remove-unused-helper", {
-      inventory: makeSweepInventory(plan),
+      ...(() => {
+        const inventory = makeSweepInventory(plan);
+        return {
+          inventory,
+          verifyLiveInventory: verifySweepLiveInventory(inventory),
+        };
+      })(),
       planDigest: `sha256:${"9".repeat(64)}`,
     }).planDigest,
     first.planDigest,
@@ -706,7 +824,13 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
     const bound = createSweepApprovalCandidate(
       variant,
       "remove-unused-helper",
-      { inventory: makeSweepInventory(variant) },
+      (() => {
+        const inventory = makeSweepInventory(variant);
+        return {
+          inventory,
+          verifyLiveInventory: verifySweepLiveInventory(inventory),
+        };
+      })(),
     );
     assert.notEqual(bound.candidateDigest, first.candidateDigest, label);
   }
@@ -720,7 +844,13 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
     () => createSweepApprovalCandidate(
       handoff,
       "remove-unused-helper",
-      { inventory: makeSweepInventory(handoff) },
+      (() => {
+        const inventory = makeSweepInventory(handoff);
+        return {
+          inventory,
+          verifyLiveInventory: verifySweepLiveInventory(inventory),
+        };
+      })(),
     ),
     /is not executable by Polish/u,
   );
@@ -951,8 +1081,10 @@ test("sweep session result binds every candidate, completion, and gap", () => {
 
   const omittedGap = clone(makeSweepSessionResult());
   omittedGap.plan.summary.remainingGaps = ["One package path was not inspected."];
+  const omittedGapInventory = makeSweepInventory(omittedGap.plan);
   omittedGap.planDigest = sweepPlanDigest(omittedGap.plan, {
-    inventory: makeSweepInventory(omittedGap.plan),
+    inventory: omittedGapInventory,
+    verifyLiveInventory: verifySweepLiveInventory(omittedGapInventory),
   });
   assert.throws(
     () => validateSessionResult(omittedGap),

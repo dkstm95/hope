@@ -704,6 +704,7 @@ function planMetrics(value, normalized, inputFileBytes, inventoryVerified) {
 export function validateSweepPlan(value, {
   inputFileBytes = serializedJsonBytes(value),
   inventory,
+  verifyLiveInventory,
   batchMerge,
   batchReportSet,
   capabilities,
@@ -818,6 +819,25 @@ export function validateSweepPlan(value, {
       normalizedInventory = validateSweepInventory(inventory);
     } catch (error) {
       errors.push(`sweep.inventory: ${error.message}`);
+    }
+  }
+  if (isFullCodebaseScope && normalizedInventory) {
+    if (typeof verifyLiveInventory !== "function") {
+      errors.push(
+        "sweep.inventory requires a trusted live-worktree verifier",
+      );
+    } else {
+      let verified = false;
+      try {
+        verified = verifyLiveInventory(normalizedInventory) === true;
+      } catch (error) {
+        errors.push(`sweep.inventory live-worktree verification failed: ${error.message}`);
+      }
+      if (!verified) {
+        errors.push(
+          "sweep.inventory was not verified against the current live worktree",
+        );
+      }
     }
   }
   if (normalizedInventory && normalizedCoverage) {
@@ -1381,6 +1401,7 @@ export function validateSweepPlan(value, {
 
 export function createSweepApprovalCandidate(value, candidateId, {
   inventory,
+  verifyLiveInventory,
   batchMerge,
   batchReportSet,
   capabilities,
@@ -1394,6 +1415,7 @@ export function createSweepApprovalCandidate(value, candidateId, {
   }
   const plan = validateSweepPlan(value, {
     inventory,
+    verifyLiveInventory,
     batchMerge,
     batchReportSet,
     capabilities,
@@ -2430,6 +2452,7 @@ export function validateSweepSessionResult(value, {
   inputFileBytes = serializedJsonBytes(value),
   verifyApprovalAttestation,
   inventory,
+  verifyLiveInventory,
   batchMerge,
   batchReportSet,
   capabilities,
@@ -2457,6 +2480,7 @@ export function validateSweepSessionResult(value, {
   try {
     plan = validateSweepPlan(input.plan, {
       inventory,
+      verifyLiveInventory,
       batchMerge,
       batchReportSet,
       capabilities,

@@ -11,13 +11,19 @@ import { validateSweepPlan } from "../features/sweep/validate.mjs";
 import {
   makeSweepInventory,
   makeSweepPlan,
+  verifySweepLiveInventory,
 } from "../test-support/sweep-fixture.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const validateTestPlan = (value, options = {}) => validateSweepPlan(value, {
-  inventory: options.inventory ?? makeSweepInventory(value),
-  ...options,
-});
+const validateTestPlan = (value, options = {}) => {
+  const inventory = options.inventory ?? makeSweepInventory(value);
+  return validateSweepPlan(value, {
+    ...options,
+    inventory,
+    verifyLiveInventory: options.verifyLiveInventory
+      ?? verifySweepLiveInventory(inventory),
+  });
+};
 
 test("Sweep inventory captures the complete tracked and unignored codebase", async () => {
   const inventory = await createSweepInventory({ cwd: root });

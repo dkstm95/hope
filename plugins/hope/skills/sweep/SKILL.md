@@ -162,7 +162,7 @@ validate-plan --input <plan.json> --root <repository-root> [--inventory <invento
 For a hybrid plan, also pass the validated report set and capability contract:
 
 ```text
-validate-batch-report --input <report.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]
+validate-batch-report --input <report.json> --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]
 merge-batch-reports --input <reports.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]
 validate-plan --input <plan.json> --root <repository-root> --reports <reports.json> --capabilities <capabilities.json> [--inventory <inventory.json>]
 ```

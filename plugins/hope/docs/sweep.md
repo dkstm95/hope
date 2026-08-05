@@ -212,6 +212,11 @@ evidence.
 The report set also carries a host-verified pre-dispatch manifest, and every
 report and attempt must match its manifest digest and one manifest batch.
 
+The standalone `validate-batch-report` command therefore requires the manifest
+file as well as capabilities; it rejects a report from another run, an
+unlisted batch, or an attempt beyond the declared retry budget before the
+report set is merged.
+
 Each successful report carries an output digest, each attempt carries an output
 or failure-outcome digest, and the trusted adapter verifies those bindings with
 the invocation receipt instead of trusting an invocation ID by itself.
@@ -234,6 +239,11 @@ brief.
 It confirms active-session fallback before dispatch, keeps every trusted retry
 attempt tied to the manifest and batch binding, enforces the retry budget, and
 reruns the live inventory before validation and approval.
+
+The shared plan and approval APIs require a trusted live-worktree verifier in
+addition to the inventory digest; the file entry paths provide that verifier
+only after capturing the current worktree inventory, so a caller-supplied
+snapshot or boolean is not enough.
 
 An incomplete, stale, untrusted, or capability-mismatched report keeps the plan
 blocked.

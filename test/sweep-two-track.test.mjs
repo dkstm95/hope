@@ -37,6 +37,7 @@ import {
   bindSweepPlanToBatchMerge,
   sweepBatchDependencies,
   sweepApprovalDependencies,
+  verifySweepLiveInventory,
 } from "../test-support/sweep-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
@@ -181,9 +182,11 @@ test("core and generated Sweep reach the same contracts", async () => {
   assert.deepEqual(
     pluginValidator.validateSweepPlan(makeSweepPlan(), {
       inventory: makeSweepInventory(),
+      verifyLiveInventory: verifySweepLiveInventory(makeSweepInventory()),
     }),
     validateSweepPlan(makeSweepPlan(), {
       inventory: makeSweepInventory(),
+      verifyLiveInventory: verifySweepLiveInventory(makeSweepInventory()),
     }),
   );
   assert.deepEqual(
@@ -209,6 +212,7 @@ test("core and generated Sweep reach the same contracts", async () => {
       {
         ...sweepApprovalDependencies,
         inventory: makeSweepInventory(),
+        verifyLiveInventory: verifySweepLiveInventory(makeSweepInventory()),
       },
     ),
     validateSweepSessionResult(
@@ -216,6 +220,7 @@ test("core and generated Sweep reach the same contracts", async () => {
       {
         ...sweepApprovalDependencies,
         inventory: makeSweepInventory(),
+        verifyLiveInventory: verifySweepLiveInventory(makeSweepInventory()),
       },
     ),
   );
@@ -305,7 +310,10 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   const approvalCandidate = createSweepApprovalCandidate(
     livePlan,
     "remove-unused-helper",
-    { inventory: liveInventory },
+    {
+      inventory: liveInventory,
+      verifyLiveInventory: verifySweepLiveInventory(liveInventory),
+    },
   );
   const approvalReceipt = makeSweepCompletion().approvalReceipt;
   const invalidPlan = structuredClone(livePlan);
@@ -317,7 +325,10 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     version: 1,
     title: "Complete a no-change Sweep session",
     plan: noCandidatePlan,
-    planDigest: sweepPlanDigest(noCandidatePlan, { inventory: liveInventory }),
+    planDigest: sweepPlanDigest(noCandidatePlan, {
+      inventory: liveInventory,
+      verifyLiveInventory: verifySweepLiveInventory(liveInventory),
+    }),
     completions: [],
     candidateResults: [],
     summary: {
@@ -332,6 +343,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     plan: hybridLivePlan,
     planDigest: sweepPlanDigest(hybridLivePlan, {
       inventory: liveInventory,
+      verifyLiveInventory: verifySweepLiveInventory(liveInventory),
       batchMerge,
       batchReportSet,
       capabilities: batchCapabilities,
