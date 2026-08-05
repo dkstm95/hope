@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -381,6 +382,32 @@ test("sweep negotiates the inspection fallback before dispatch", () => {
     }),
     /trusted host verifier/u,
   );
+});
+
+test("sweep hybrid report schemas accept the negotiated selection receipt", async () => {
+  const hybrid = makeSweepHybridPlan();
+  const schemaTargets = [
+    {
+      schema: new URL("../features/sweep/batch-report-set-v1.schema.json", import.meta.url),
+      modeSelection: hybrid.reportSet.modeSelection,
+    },
+    {
+      schema: new URL("../features/sweep/batch-merge-v1.schema.json", import.meta.url),
+      modeSelection: hybrid.batchMerge.modeSelection,
+    },
+  ];
+  for (const target of schemaTargets) {
+    const schema = JSON.parse(await readFile(target.schema, "utf8"));
+    const definition = schema.$defs.modeSelection;
+    assert.equal(definition.additionalProperties, false);
+    assert.ok(definition.required.includes("selectionDigest"));
+    assert.deepEqual(definition.properties.selectionDigest, {
+      $ref: "#/$defs/digest",
+    });
+    for (const field of Object.keys(target.modeSelection)) {
+      assert.ok(field in definition.properties, `${field} is declared`);
+    }
+  }
 });
 
 test("sweep retains failed retry attempts and rejects stale report bindings", () => {

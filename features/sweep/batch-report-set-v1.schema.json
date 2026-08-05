@@ -128,13 +128,14 @@
     "modeSelection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["feature", "version", "requestedMode", "mode", "fallbackUsed", "runId", "inventoryDigest", "capabilityDigest", "manifestDigest", "invocationId", "digest"],
+      "required": ["feature", "version", "requestedMode", "mode", "fallbackUsed", "selectionDigest", "runId", "inventoryDigest", "capabilityDigest", "manifestDigest", "invocationId", "digest"],
       "properties": {
         "feature": { "const": "sweep-batch-mode-selection" },
         "version": { "const": 1 },
         "requestedMode": { "const": "subagent-hybrid" },
         "mode": { "const": "subagent-hybrid" },
         "fallbackUsed": { "const": false },
+        "selectionDigest": { "$ref": "#/$defs/digest" },
         "runId": { "$ref": "#/$defs/text" },
         "inventoryDigest": { "$ref": "#/$defs/digest" },
         "capabilityDigest": { "$ref": "#/$defs/digest" },
