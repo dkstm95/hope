@@ -4,13 +4,14 @@
   "title": "Hope sweep subagent batch merge version 1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "state", "relationshipInspection", "relationshipEvidenceSourceIds", "batches", "checkResults", "relationships", "observations", "reportDigests", "attempts", "gaps", "digest"],
+  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "crossBatchSynthesis", "state", "relationshipInspection", "relationshipEvidenceSourceIds", "batches", "checkResults", "relationships", "observations", "reportDigests", "attempts", "gaps", "digest"],
   "properties": {
     "feature": { "const": "sweep-batch-merge" },
     "version": { "const": 1 },
     "runId": { "$ref": "#/$defs/text" },
     "inventoryDigest": { "$ref": "#/$defs/digest" },
     "capabilityDigest": { "$ref": "#/$defs/digest" },
+    "crossBatchSynthesis": { "$ref": "#/$defs/crossBatchSynthesis" },
     "state": { "enum": ["complete", "partial", "failed"] },
     "relationshipInspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
     "relationshipEvidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
@@ -96,15 +97,36 @@
     "attempt": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["batch", "attempt", "attemptId", "status", "inputDigest", "invocationId"],
+      "required": ["batch", "manifestDigest", "attempt", "attemptId", "status", "inputDigest", "invocationId", "outputDigest"],
       "properties": {
         "batch": { "$ref": "#/$defs/batch" },
+        "manifestDigest": { "$ref": "#/$defs/digest" },
         "attempt": { "type": "integer", "minimum": 1 },
         "attemptId": { "$ref": "#/$defs/digest" },
         "status": { "enum": ["succeeded", "failed", "cancelled"] },
         "inputDigest": { "$ref": "#/$defs/digest" },
         "invocationId": { "$ref": "#/$defs/text" },
+        "outputDigest": { "$ref": "#/$defs/digest" },
         "error": { "$ref": "#/$defs/text" }
+      }
+    },
+    "crossBatchSynthesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifestDigest", "invocationId", "inspection", "evidenceSourceIds", "relationships", "gaps", "digest"],
+      "properties": {
+        "feature": { "const": "sweep-cross-batch-synthesis" },
+        "version": { "const": 1 },
+        "runId": { "$ref": "#/$defs/text" },
+        "inventoryDigest": { "$ref": "#/$defs/digest" },
+        "capabilityDigest": { "$ref": "#/$defs/digest" },
+        "manifestDigest": { "$ref": "#/$defs/digest" },
+        "invocationId": { "$ref": "#/$defs/text" },
+        "inspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
+        "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "relationships": { "type": "array", "maxItems": 4096, "items": { "$ref": "#/$defs/relationship" } },
+        "gaps": { "$ref": "#/$defs/textList" },
+        "digest": { "$ref": "#/$defs/digest" }
       }
     }
   }

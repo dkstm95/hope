@@ -7,6 +7,7 @@ export const SWEEP_INVENTORY_VERSION = 1;
 export const SWEEP_BATCH_REPORT_VERSION = 1;
 export const SWEEP_BATCH_MERGE_VERSION = 1;
 export const SWEEP_BATCH_CAPABILITY_VERSION = 1;
+export const SWEEP_BATCH_SYNTHESIS_VERSION = 1;
 export const SWEEP_FULL_CODEBASE_SCOPE = "entire-codebase";
 export const SWEEP_COVERAGE_MODE = "full-codebase";
 

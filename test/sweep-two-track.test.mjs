@@ -277,6 +277,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   const planPath = join(temporaryRoot, "plan.json");
   const inventoryPath = join(temporaryRoot, "inventory.json");
   const capabilitiesPath = join(temporaryRoot, "capabilities.json");
+  const manifestPath = join(temporaryRoot, "manifest.json");
   const hostAdapterPath = join(temporaryRoot, "sweep-host-adapter.mjs");
   const batchReportPath = join(temporaryRoot, "batch-report.json");
   const batchReportSetPath = join(temporaryRoot, "batch-reports.json");
@@ -406,6 +407,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     writeFile(planPath, JSON.stringify(livePlan), { mode: 0o600 }),
     writeFile(inventoryPath, JSON.stringify(liveInventory), { mode: 0o600 }),
     writeFile(capabilitiesPath, JSON.stringify(batchCapabilities), { mode: 0o600 }),
+    writeFile(manifestPath, JSON.stringify(batchReportSet.manifest), { mode: 0o600 }),
     writeFile(batchReportPath, JSON.stringify(batchReport), { mode: 0o600 }),
     writeFile(batchReportSetPath, JSON.stringify(batchReportSet), { mode: 0o600 }),
     writeFile(hybridPlanPath, JSON.stringify(hybridLivePlan), { mode: 0o600 }),
@@ -540,6 +542,20 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     ),
     /trusted host adapter/u,
   );
+  assert.match(
+    runFailure(
+      "plugins/hope/runtime/features/sweep/cli.mjs",
+      [
+        "select-inspection-mode",
+        "--mode",
+        "subagent-hybrid",
+        "--capabilities",
+        capabilitiesPath,
+      ],
+      { HOPE_SWEEP_HOST_ADAPTER_MODULE: "relative-adapter.mjs" },
+    ),
+    /absolute host-owned path/u,
+  );
   for (const [command, path] of [
     ["validate-batch-report", batchReportPath],
     ["merge-batch-reports", batchReportSetPath],
@@ -554,6 +570,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       inventoryPath,
       "--capabilities",
       capabilitiesPath,
+      ...(command === "validate-batch-report" ? ["--manifest", manifestPath] : []),
     ];
     assert.deepEqual(
       runWithHostAdapter("plugins/hope/runtime/features/sweep/cli.mjs", arguments_),

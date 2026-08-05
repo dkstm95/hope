@@ -4,7 +4,7 @@
   "title": "Hope sweep subagent batch report set version 1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "reports", "attempts", "digest"],
+  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "crossBatchSynthesis", "reports", "attempts", "digest"],
   "properties": {
     "feature": { "const": "sweep-batch-report-set" },
     "version": { "const": 1 },
@@ -12,9 +12,10 @@
     "inventoryDigest": { "$ref": "#/$defs/digest" },
     "capabilityDigest": { "$ref": "#/$defs/digest" },
     "manifest": { "$ref": "#/$defs/manifest" },
+    "crossBatchSynthesis": { "$ref": "#/$defs/crossBatchSynthesis" },
     "reports": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "maxItems": 256,
       "items": { "$ref": "batch-report-v1.schema.json" }
     },
@@ -49,15 +50,49 @@
     "attempt": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["batch", "attempt", "attemptId", "status", "inputDigest", "invocationId"],
+      "required": ["batch", "manifestDigest", "attempt", "attemptId", "status", "inputDigest", "invocationId", "outputDigest"],
       "properties": {
         "batch": { "$ref": "#/$defs/batch" },
+        "manifestDigest": { "$ref": "#/$defs/digest" },
         "attempt": { "type": "integer", "minimum": 1 },
         "attemptId": { "$ref": "#/$defs/digest" },
         "status": { "enum": ["succeeded", "failed", "cancelled"] },
         "inputDigest": { "$ref": "#/$defs/digest" },
         "invocationId": { "$ref": "#/$defs/text" },
+        "outputDigest": { "$ref": "#/$defs/digest" },
         "error": { "$ref": "#/$defs/text" }
+      }
+    },
+    "crossBatchSynthesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifestDigest", "invocationId", "inspection", "evidenceSourceIds", "relationships", "gaps", "digest"],
+      "properties": {
+        "feature": { "const": "sweep-cross-batch-synthesis" },
+        "version": { "const": 1 },
+        "runId": { "$ref": "#/$defs/text" },
+        "inventoryDigest": { "$ref": "#/$defs/digest" },
+        "capabilityDigest": { "$ref": "#/$defs/digest" },
+        "manifestDigest": { "$ref": "#/$defs/digest" },
+        "invocationId": { "$ref": "#/$defs/text" },
+        "inspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
+        "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "relationships": { "type": "array", "maxItems": 4096, "items": { "$ref": "#/$defs/relationship" } },
+        "gaps": { "$ref": "#/$defs/textList" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceIds", "status", "summary", "evidenceSourceIds", "gaps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "sourceIds": { "allOf": [{ "$ref": "#/$defs/sourceIds" }, { "minItems": 2 }] },
+        "status": { "enum": ["observed", "unresolved"] },
+        "summary": { "$ref": "#/$defs/text" },
+        "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "gaps": { "$ref": "#/$defs/textList" }
       }
     },
     "manifest": {

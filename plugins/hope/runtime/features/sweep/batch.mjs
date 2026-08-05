@@ -8,6 +8,7 @@ import {
   SWEEP_BATCH_CAPABILITY_VERSION,
   SWEEP_BATCH_MERGE_VERSION,
   SWEEP_BATCH_REPORT_VERSION,
+  SWEEP_BATCH_SYNTHESIS_VERSION,
   SWEEP_CATEGORY_CATALOG,
   SWEEP_CHECK_CATALOG,
   SWEEP_INSPECTION_STATES,
@@ -194,7 +195,7 @@ export function selectSweepInspectionMode({
       capabilityDigest: normalized.digest,
     });
   } catch (error) {
-    if (!activeSessionAvailable) {
+    if (activeSessionAvailable !== true) {
       throw new TypeError(
         `Sweep subagent-hybrid capability negotiation failed and active-session fallback is unavailable: ${error.message}`,
       );
@@ -370,6 +371,7 @@ function batchBindingPayload(value) {
   return {
     runId: value.runId,
     inventoryDigest: value.inventoryDigest,
+    manifestDigest: value.manifestDigest,
     batch: value.batch,
     capabilityDigest: value.capabilityDigest,
   };
@@ -382,9 +384,31 @@ export function sweepBatchBindingDigest(value) {
 export function sweepBatchAttemptId(value) {
   return digestValue({
     bindingDigest: value.bindingDigest,
+    manifestDigest: value.manifestDigest,
     attempt: value.attempt,
     inputDigest: value.inputDigest,
     invocationId: value.invocationId,
+    outputDigest: value.outputDigest,
+  });
+}
+
+export function sweepBatchOutputDigest(value) {
+  return digestValue({
+    inspection: value.inspection,
+    relationshipInspection: value.relationshipInspection,
+    relationshipEvidenceSourceIds: value.relationshipEvidenceSourceIds,
+    sourceResults: value.sourceResults,
+    checks: value.checks,
+    relationships: value.relationships,
+    observations: value.observations,
+    gaps: value.gaps,
+  });
+}
+
+export function sweepBatchAttemptOutputDigest(value) {
+  return digestValue({
+    status: value.status,
+    ...(value.error === undefined ? {} : { error: value.error }),
   });
 }
 
@@ -408,12 +432,21 @@ function manifestPayload(value) {
   return payload;
 }
 
+function crossBatchPayload(value) {
+  const { digest: _digest, ...payload } = value;
+  return payload;
+}
+
 export function digestSweepBatchReportSet(value) {
   return digestValue(reportSetPayload(value));
 }
 
 export function digestSweepBatchManifest(value) {
   return digestValue(manifestPayload(value));
+}
+
+export function digestSweepCrossBatchSynthesis(value) {
+  return digestValue(crossBatchPayload(value));
 }
 
 function normalizeBatch(value, path, errors, fileSourceIds, ids) {
@@ -551,6 +584,132 @@ export function createSweepBatchManifest(value, dependencies = {}) {
   return validateSweepBatchManifest(manifest, dependencies);
 }
 
+function batchOwnersForSources(sourceIds, manifest) {
+  return new Set(
+    manifest.batches
+      .filter((batch) => sourceIds.some((sourceId) => batch.fileSourceIds.includes(sourceId)))
+      .map((batch) => batch.id),
+  );
+}
+
+export function validateSweepCrossBatchSynthesis(
+  value,
+  {
+    inventory,
+    capabilities,
+    manifest,
+    verifyBatchInvocation,
+  } = {},
+) {
+  const errors = [];
+  const context = sourceContext(inventory, errors);
+  const synthesis = object(value, "sweep.crossBatchSynthesis", errors);
+  exactKeys(
+    synthesis,
+    [
+      "feature",
+      "version",
+      "runId",
+      "inventoryDigest",
+      "capabilityDigest",
+      "manifestDigest",
+      "invocationId",
+      "inspection",
+      "evidenceSourceIds",
+      "relationships",
+      "gaps",
+      "digest",
+    ],
+    "sweep.crossBatchSynthesis",
+    errors,
+  );
+  const runId = text(synthesis.runId, "sweep.crossBatchSynthesis.runId", errors);
+  const inventoryDigest = digest(synthesis.inventoryDigest, "sweep.crossBatchSynthesis.inventoryDigest", errors);
+  if (context.inventory && inventoryDigest !== context.inventory.digest) {
+    errors.push("sweep.crossBatchSynthesis.inventoryDigest does not match inventory");
+  }
+  const capabilityDigest = digest(synthesis.capabilityDigest, "sweep.crossBatchSynthesis.capabilityDigest", errors);
+  if (capabilities && capabilityDigest !== capabilities.digest) {
+    errors.push("sweep.crossBatchSynthesis.capabilityDigest does not match capabilities");
+  }
+  const manifestDigest = digest(synthesis.manifestDigest, "sweep.crossBatchSynthesis.manifestDigest", errors);
+  if (!manifest) {
+    errors.push("sweep.crossBatchSynthesis.manifest is required");
+  } else if (manifestDigest !== manifest.digest) {
+    errors.push("sweep.crossBatchSynthesis.manifestDigest does not match the pre-dispatch manifest");
+  }
+  if (manifest && runId !== manifest.runId) errors.push("sweep.crossBatchSynthesis.runId does not match the manifest");
+  const invocationId = text(synthesis.invocationId, "sweep.crossBatchSynthesis.invocationId", errors);
+  const inspection = batchValidation.choice(synthesis.inspection, SWEEP_INSPECTION_STATES, "sweep.crossBatchSynthesis.inspection", errors);
+  const evidenceSourceIds = batchValidation.references(
+    synthesis.evidenceSourceIds,
+    "sweep.crossBatchSynthesis.evidenceSourceIds",
+    errors,
+    new Set(context.fileSourceIds),
+  );
+  if (["checked", "partial"].includes(inspection) && evidenceSourceIds.length === 0) {
+    errors.push("sweep.crossBatchSynthesis inspected result must cite file evidence");
+  }
+  if (inspection === "checked" && JSON.stringify(evidenceSourceIds) !== JSON.stringify(context.fileSourceIds)) {
+    errors.push("sweep.crossBatchSynthesis checked evidence must cover every inventory file");
+  }
+  const relationshipsRaw = batchValidation.array(
+    synthesis.relationships,
+    "sweep.crossBatchSynthesis.relationships",
+    errors,
+    SWEEP_LIMITS.batchRelationships,
+  );
+  const relationshipIds = new Set();
+  const relationships = relationshipsRaw.map((item, index) => {
+    const relationship = normalizeRelationship(
+      item,
+      `sweep.crossBatchSynthesis.relationships[${index}]`,
+      errors,
+      new Set(context.fileSourceIds),
+      relationshipIds,
+    );
+    if (manifest && batchOwnersForSources(relationship.sourceIds, manifest).size < 2) {
+      errors.push(`sweep.crossBatchSynthesis.relationships[${index}] must cross two or more manifest batches`);
+    }
+    return relationship;
+  });
+  const gaps = batchValidation.stringList(synthesis.gaps, "sweep.crossBatchSynthesis.gaps", errors);
+  if (inspection === "checked" && gaps.length > 0) errors.push("sweep.crossBatchSynthesis checked result must not keep gaps");
+  if (inspection !== "checked" && gaps.length === 0) errors.push("sweep.crossBatchSynthesis incomplete result must explain its gap");
+  const normalized = {
+    feature: text(synthesis.feature, "sweep.crossBatchSynthesis.feature", errors),
+    version: batchValidation.integer(synthesis.version, "sweep.crossBatchSynthesis.version", errors, { minimum: SWEEP_BATCH_SYNTHESIS_VERSION }),
+    runId,
+    inventoryDigest,
+    capabilityDigest,
+    manifestDigest,
+    invocationId,
+    inspection,
+    evidenceSourceIds,
+    relationships,
+    gaps,
+    digest: digest(synthesis.digest, "sweep.crossBatchSynthesis.digest", errors),
+  };
+  if (normalized.feature !== "sweep-cross-batch-synthesis") errors.push("sweep.crossBatchSynthesis.feature must be sweep-cross-batch-synthesis");
+  if (normalized.version !== SWEEP_BATCH_SYNTHESIS_VERSION) errors.push(`sweep.crossBatchSynthesis.version must be ${SWEEP_BATCH_SYNTHESIS_VERSION}`);
+  if (normalized.digest !== digestSweepCrossBatchSynthesis(normalized)) errors.push("sweep.crossBatchSynthesis.digest does not match its payload");
+  trustedHostCheck(
+    verifyBatchInvocation,
+    normalized,
+    "sweep.crossBatchSynthesis",
+    errors,
+    { kind: "cross-batch-synthesis", manifestDigest },
+  );
+  invalid("Hope sweep cross-batch synthesis", errors);
+  return deepFreeze(normalized);
+}
+
+export function createSweepCrossBatchSynthesis(value, dependencies = {}) {
+  const synthesis = { ...value };
+  if (!synthesis.digest) synthesis.digest = digestSweepCrossBatchSynthesis(synthesis);
+  return validateSweepCrossBatchSynthesis(synthesis, dependencies);
+}
+
 function normalizeSourceResult(value, path, errors, sourceIds, expectedId) {
   const item = object(value, path, errors);
   exactKeys(item, ["sourceId", "inspection", "evidenceSourceIds", "gaps"], path, errors);
@@ -635,36 +794,49 @@ function deriveInspection(states) {
 
 function normalizeAttempt(value, path, errors, fileSourceIds, ids) {
   const item = object(value, path, errors);
-  exactKeys(item, ["batch", "attempt", "attemptId", "status", "inputDigest", "invocationId", "error"], path, errors);
+  exactKeys(item, ["batch", "manifestDigest", "attempt", "attemptId", "status", "inputDigest", "invocationId", "outputDigest", "error"], path, errors);
   const batch = normalizeBatch(item.batch, `${path}.batch`, errors, fileSourceIds, new Set());
+  const manifestDigest = digest(item.manifestDigest, `${path}.manifestDigest`, errors);
   const attempt = batchValidation.integer(item.attempt, `${path}.attempt`, errors, { minimum: 1 });
   const bindingDigest = sweepBatchBindingDigest({
     runId: errors.__runId ?? "invalid-run",
     inventoryDigest: errors.__inventoryDigest ?? "sha256:" + "0".repeat(64),
+    manifestDigest: errors.__manifestDigest ?? manifestDigest,
     batch,
     capabilityDigest: errors.__capabilityDigest ?? "sha256:" + "0".repeat(64),
   });
+  if (errors.__manifestDigest && manifestDigest !== errors.__manifestDigest) {
+    errors.push(`${path}.manifestDigest does not match the pre-dispatch manifest`);
+  }
   const inputDigest = digest(item.inputDigest, `${path}.inputDigest`, errors);
   const invocationId = text(item.invocationId, `${path}.invocationId`, errors);
+  const outputDigest = digest(item.outputDigest, `${path}.outputDigest`, errors);
   const attemptId = digest(item.attemptId, `${path}.attemptId`, errors);
   const status = batchValidation.choice(item.status, ["succeeded", "failed", "cancelled"], `${path}.status`, errors);
   const error = item.error === undefined ? undefined : text(item.error, `${path}.error`, errors);
   if (status !== "succeeded" && !error) errors.push(`${path}.${status} attempt must explain its failure`);
   if (status === "succeeded" && error !== undefined) errors.push(`${path}.succeeded attempt must not contain an error`);
+  if (status !== "succeeded" && outputDigest !== sweepBatchAttemptOutputDigest({ status, error })) {
+    errors.push(`${path}.outputDigest does not match the failed attempt outcome`);
+  }
   const expectedAttemptId = sweepBatchAttemptId({
     bindingDigest,
+    manifestDigest,
     attempt,
     inputDigest,
     invocationId,
+    outputDigest,
   });
   if (attemptId !== expectedAttemptId) errors.push(`${path}.attemptId does not match its binding`);
   return {
     batch,
+    manifestDigest,
     attempt,
     attemptId,
     status,
     inputDigest,
     invocationId,
+    outputDigest,
     ...(error === undefined ? {} : { error }),
   };
 }
@@ -729,6 +901,7 @@ export function validateSweepBatchReport(
   value,
   {
     inventory,
+    manifest,
     capabilities,
     verifyBatchCapabilities,
     verifyBatchInvocation,
@@ -753,8 +926,8 @@ export function validateSweepBatchReport(
     report,
     [
       "feature", "version", "runId", "inventoryDigest", "batch",
-      "capabilityDigest", "bindingDigest", "attempt", "attemptId",
-      "inputDigest", "invocationId", "inspection", "relationshipInspection",
+      "manifestDigest", "capabilityDigest", "bindingDigest", "attempt", "attemptId",
+      "inputDigest", "invocationId", "outputDigest", "inspection", "relationshipInspection",
       "relationshipEvidenceSourceIds", "sourceResults", "checks",
       "relationships", "observations", "gaps",
       "reportDigest",
@@ -765,17 +938,20 @@ export function validateSweepBatchReport(
   const runId = text(report.runId, "sweep.batchReport.runId", errors);
   const inventoryDigest = digest(report.inventoryDigest, "sweep.batchReport.inventoryDigest", errors);
   if (context.inventory && inventoryDigest !== context.inventory.digest) errors.push("sweep.batchReport.inventoryDigest does not match inventory");
+  const manifestDigest = digest(report.manifestDigest, "sweep.batchReport.manifestDigest", errors);
+  if (!manifest) errors.push("sweep.batchReport.manifest is required for trusted report validation");
+  if (manifest && manifestDigest !== manifest.digest) errors.push("sweep.batchReport.manifestDigest does not match the pre-dispatch manifest");
   const capabilityDigest = digest(report.capabilityDigest, "sweep.batchReport.capabilityDigest", errors);
   if (normalizedCapabilities && capabilityDigest !== normalizedCapabilities.digest) errors.push("sweep.batchReport.capabilityDigest does not match capabilities");
   const batch = normalizeBatch(report.batch, "sweep.batchReport.batch", errors, context.fileSourceIds, new Set());
   const bindingDigest = digest(report.bindingDigest, "sweep.batchReport.bindingDigest", errors);
-  const expectedBindingDigest = sweepBatchBindingDigest({ runId, inventoryDigest, batch, capabilityDigest });
+  const expectedBindingDigest = sweepBatchBindingDigest({ runId, inventoryDigest, manifestDigest, batch, capabilityDigest });
   if (bindingDigest !== expectedBindingDigest) errors.push("sweep.batchReport.bindingDigest does not match its batch binding");
   const attempt = batchValidation.integer(report.attempt, "sweep.batchReport.attempt", errors, { minimum: 1 });
   const inputDigest = digest(report.inputDigest, "sweep.batchReport.inputDigest", errors);
   const invocationId = text(report.invocationId, "sweep.batchReport.invocationId", errors);
+  const outputDigest = digest(report.outputDigest, "sweep.batchReport.outputDigest", errors);
   const attemptId = digest(report.attemptId, "sweep.batchReport.attemptId", errors);
-  if (attemptId !== sweepBatchAttemptId({ bindingDigest, attempt, inputDigest, invocationId })) errors.push("sweep.batchReport.attemptId does not match its attempt binding");
   const sourceResultsRaw = batchValidation.array(report.sourceResults, "sweep.batchReport.sourceResults", errors, context.fileSourceIds.length || 1);
   if (sourceResultsRaw.length !== batch.fileSourceIds.length) errors.push("sweep.batchReport.sourceResults must contain exactly one result per batch file");
   const sourceResults = batch.fileSourceIds.map((sourceId, index) => normalizeSourceResult(sourceResultsRaw[index], `sweep.batchReport.sourceResults[${index}]`, errors, new Set(batch.fileSourceIds), sourceId));
@@ -821,12 +997,14 @@ export function validateSweepBatchReport(
     runId,
     inventoryDigest,
     batch,
+    manifestDigest,
     capabilityDigest,
     bindingDigest,
     attempt,
     attemptId,
     inputDigest,
     invocationId,
+    outputDigest,
     inspection,
     relationshipInspection,
     relationshipEvidenceSourceIds,
@@ -837,6 +1015,8 @@ export function validateSweepBatchReport(
     gaps,
     reportDigest: digest(report.reportDigest, "sweep.batchReport.reportDigest", errors),
   };
+  if (normalized.outputDigest !== sweepBatchOutputDigest(normalized)) errors.push("sweep.batchReport.outputDigest does not match its inspection output");
+  if (attemptId !== sweepBatchAttemptId({ bindingDigest, manifestDigest, attempt, inputDigest, invocationId, outputDigest })) errors.push("sweep.batchReport.attemptId does not match its attempt binding");
   if (normalized.feature !== "sweep-batch-report") errors.push("sweep.batchReport.feature must be sweep-batch-report");
   if (normalized.version !== SWEEP_BATCH_REPORT_VERSION) errors.push(`sweep.batchReport.version must be ${SWEEP_BATCH_REPORT_VERSION}`);
   if (normalized.reportDigest !== digestValue(reportPayload(normalized))) errors.push("sweep.batchReport.reportDigest does not match its payload");
@@ -846,7 +1026,11 @@ export function validateSweepBatchReport(
     normalized,
     "sweep.batchReport",
     errors,
-    { kind: "report" },
+    {
+      kind: "report",
+      manifestDigest,
+      outputDigest,
+    },
   );
   invalid("Hope sweep batch report", errors);
   return deepFreeze(normalized);
@@ -891,19 +1075,30 @@ export function validateSweepBatchReportSet(
   } catch (error) {
     errors.push(`sweep.batchReportSet.manifest: ${error.message}`);
   }
+  let normalizedCrossBatchSynthesis;
+  try {
+    normalizedCrossBatchSynthesis = validateSweepCrossBatchSynthesis(value?.crossBatchSynthesis, {
+      inventory: context.inventory,
+      capabilities: normalizedCapabilities,
+      manifest: normalizedManifest,
+      verifyBatchInvocation,
+    });
+  } catch (error) {
+    errors.push(`sweep.batchReportSet.crossBatchSynthesis: ${error.message}`);
+  }
   const valueObject = object(value, "sweep.batchReportSet", errors);
-  exactKeys(valueObject, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "reports", "attempts", "digest"], "sweep.batchReportSet", errors);
+  exactKeys(valueObject, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "crossBatchSynthesis", "reports", "attempts", "digest"], "sweep.batchReportSet", errors);
   const runId = text(valueObject.runId, "sweep.batchReportSet.runId", errors);
   const inventoryDigest = digest(valueObject.inventoryDigest, "sweep.batchReportSet.inventoryDigest", errors);
   const capabilityDigest = digest(valueObject.capabilityDigest, "sweep.batchReportSet.capabilityDigest", errors);
   if (context.inventory && inventoryDigest !== context.inventory.digest) errors.push("sweep.batchReportSet.inventoryDigest does not match inventory");
   if (normalizedCapabilities && capabilityDigest !== normalizedCapabilities.digest) errors.push("sweep.batchReportSet.capabilityDigest does not match capabilities");
   const reportsRaw = batchValidation.array(valueObject.reports, "sweep.batchReportSet.reports", errors, SWEEP_LIMITS.batchReports);
-  if (reportsRaw.length === 0) errors.push("sweep.batchReportSet.reports must not be empty");
   const reports = reportsRaw.map((item, index) => {
     try {
       return validateSweepBatchReport(item, {
         inventory: context.inventory,
+        manifest: normalizedManifest,
         capabilities: normalizedCapabilities,
         verifyBatchCapabilities,
         verifyBatchInvocation,
@@ -932,16 +1127,6 @@ export function validateSweepBatchReportSet(
     const manifestBatchIds = new Set(
       normalizedManifest.batches.map((batch) => batch.id),
     );
-    if (reports.length !== normalizedManifest.batches.length) {
-      errors.push(
-        "sweep.batchReportSet.reports must contain every manifest batch exactly once",
-      );
-    }
-    for (const batchId of manifestBatchIds) {
-      if (!reportBatchIds.has(batchId)) {
-        errors.push(`sweep.batchReportSet is missing manifest batch ${batchId}`);
-      }
-    }
     for (const batchId of reportBatchIds) {
       if (!manifestBatchIds.has(batchId)) {
         errors.push(`sweep.batchReportSet report ${batchId} is absent from the manifest`);
@@ -959,13 +1144,6 @@ export function validateSweepBatchReportSet(
       }
     }
   }
-  const sortedReportOrdinals = [...reportOrdinals].sort((left, right) => left - right);
-  for (let index = 0; index < sortedReportOrdinals.length; index += 1) {
-    if (sortedReportOrdinals[index] !== index + 1) {
-      errors.push("sweep.batchReportSet batch ordinals must be contiguous from 1");
-      break;
-    }
-  }
   const attemptsRaw = batchValidation.array(valueObject.attempts, "sweep.batchReportSet.attempts", errors, SWEEP_LIMITS.batchAttempts);
   if (attemptsRaw.length === 0) errors.push("sweep.batchReportSet.attempts must retain every dispatch attempt");
   const attemptIds = new Set();
@@ -975,6 +1153,7 @@ export function validateSweepBatchReportSet(
     attemptErrors.__runId = runId;
     attemptErrors.__inventoryDigest = inventoryDigest;
     attemptErrors.__capabilityDigest = capabilityDigest;
+    attemptErrors.__manifestDigest = normalizedManifest?.digest;
     const normalized = normalizeAttempt(item, `sweep.batchReportSet.attempts[${index}]`, attemptErrors, context.fileSourceIds, new Set());
     for (const error of attemptErrors) if (typeof error === "string") errors.push(error);
     if (attemptIds.has(normalized.attemptId)) errors.push(`sweep.batchReportSet repeats attempt ${normalized.attemptId}`);
@@ -984,7 +1163,11 @@ export function validateSweepBatchReportSet(
       normalized,
       `sweep.batchReportSet.attempts[${index}]`,
       errors,
-      { kind: "attempt" },
+      {
+        kind: "attempt",
+        manifestDigest: normalized.manifestDigest,
+        outputDigest: normalized.outputDigest,
+      },
     );
     attempts.push(normalized);
   }
@@ -998,10 +1181,14 @@ export function validateSweepBatchReportSet(
   );
   if (normalizedManifest) {
     for (const batch of normalizedManifest.batches) {
-      if (!attempts.some((attempt) => attempt.batch.id === batch.id)) {
+      const batchAttempts = attempts.filter((attempt) => attempt.batch.id === batch.id);
+      if (batchAttempts.length === 0) {
         errors.push(
           `sweep.batchReportSet is missing an attempt for manifest batch ${batch.id}`,
         );
+      } else if (!reports.some((report) => report?.batch?.id === batch.id)
+        && batchAttempts.some((attempt) => attempt.status === "succeeded")) {
+        errors.push(`sweep.batchReportSet is missing the succeeded report for ${batch.id}`);
       }
     }
   }
@@ -1012,8 +1199,10 @@ export function validateSweepBatchReportSet(
       errors.push(`sweep.batchReportSet is missing the succeeded attempt for ${report.batch?.id ?? "unknown"}`);
     } else if (
       success.attempt !== report.attempt
+      || success.manifestDigest !== report.manifestDigest
       || success.inputDigest !== report.inputDigest
       || success.invocationId !== report.invocationId
+      || success.outputDigest !== report.outputDigest
       || !sameBatch(success.batch, report.batch)
     ) {
       errors.push(`sweep.batchReportSet succeeded attempt does not match report ${report.batch?.id ?? "unknown"}`);
@@ -1031,6 +1220,7 @@ export function validateSweepBatchReportSet(
     inventoryDigest,
     capabilityDigest,
     manifest: normalizedManifest,
+    crossBatchSynthesis: normalizedCrossBatchSynthesis,
     reports,
     attempts,
     digest: digest(valueObject.digest, "sweep.batchReportSet.digest", errors),
@@ -1064,6 +1254,58 @@ function normalizedMergeCheck(specification, reports) {
   };
 }
 
+function createFailedBatchReport(reportSet, batch) {
+  const attempts = reportSet.attempts
+    .filter((attempt) => attempt.batch.id === batch.id)
+    .sort((left, right) => left.attempt - right.attempt);
+  const latest = attempts.at(-1);
+  const failure = latest?.error ?? "No successful batch report was produced.";
+  const sourceResults = batch.fileSourceIds.map((sourceId) => ({
+    sourceId,
+    inspection: "failed",
+    evidenceSourceIds: [],
+    gaps: [failure],
+  }));
+  const checks = SWEEP_CHECK_CATALOG.map((check) => ({
+    id: check.id,
+    inspection: "failed",
+    summary: `The batch did not produce a report for ${check.id}.`,
+    evidenceSourceIds: [],
+    gaps: [failure],
+  }));
+  const report = {
+    feature: "sweep-batch-report",
+    version: SWEEP_BATCH_REPORT_VERSION,
+    runId: reportSet.runId,
+    inventoryDigest: reportSet.inventoryDigest,
+    batch,
+    manifestDigest: reportSet.manifest.digest,
+    capabilityDigest: reportSet.capabilityDigest,
+    bindingDigest: sweepBatchBindingDigest({
+      runId: reportSet.runId,
+      inventoryDigest: reportSet.inventoryDigest,
+      manifestDigest: reportSet.manifest.digest,
+      batch,
+      capabilityDigest: reportSet.capabilityDigest,
+    }),
+    attempt: latest?.attempt ?? 1,
+    attemptId: latest?.attemptId ?? digestValue({ batch, failure }),
+    inputDigest: latest?.inputDigest ?? digestValue({ batch, failure }),
+    invocationId: latest?.invocationId ?? `failed-${batch.id}`,
+    inspection: "failed",
+    relationshipInspection: "failed",
+    relationshipEvidenceSourceIds: [],
+    sourceResults,
+    checks,
+    relationships: [],
+    observations: [],
+    gaps: [failure],
+  };
+  report.outputDigest = sweepBatchOutputDigest(report);
+  report.reportDigest = digestValue(reportPayload(report));
+  return deepFreeze(report);
+}
+
 export function mergeSweepBatchReports(
   value,
   {
@@ -1081,7 +1323,10 @@ export function mergeSweepBatchReports(
     verifyBatchInvocation,
   });
   const context = validateSweepInventory(inventory);
-  const reports = [...reportSet.reports].sort((left, right) => left.batch.ordinal - right.batch.ordinal);
+  const reportsByBatchId = new Map(reportSet.reports.map((report) => [report.batch.id, report]));
+  const reports = reportSet.manifest.batches.map((batch) => (
+    reportsByBatchId.get(batch.id) ?? createFailedBatchReport(reportSet, batch)
+  ));
   const covered = reports.flatMap((report) => report.batch.fileSourceIds);
   if (covered.length !== context.fileSourceIds.length || JSON.stringify(covered) !== JSON.stringify(context.fileSourceIds)) {
     throw new TypeError("Hope sweep batch merge requires every inventory file exactly once in ordinal batch order");
@@ -1108,10 +1353,19 @@ export function mergeSweepBatchReports(
       observations.push(observation);
     }
   }
+  for (const relationship of reportSet.crossBatchSynthesis.relationships) {
+    if (relationshipIds.has(relationship.id)) throw new TypeError(`Hope sweep batch merge repeats relationship ${relationship.id}`);
+    relationshipIds.add(relationship.id);
+    relationships.push(relationship);
+  }
   const checkResults = SWEEP_CHECK_CATALOG.map((specification) => normalizedMergeCheck(specification, reports));
-  const relationshipInspection = deriveInspection(reports.map((report) => report.relationshipInspection));
+  const relationshipInspection = deriveInspection([
+    ...reports.map((report) => report.relationshipInspection),
+    reportSet.crossBatchSynthesis.inspection,
+  ]);
   const relationshipEvidenceSourceIds = [...new Set(
-    reports.flatMap((report) => report.relationshipEvidenceSourceIds),
+    reports.flatMap((report) => report.relationshipEvidenceSourceIds)
+      .concat(reportSet.crossBatchSynthesis.evidenceSourceIds),
   )];
   const relationshipEvidenceComplete = JSON.stringify(relationshipEvidenceSourceIds)
     === JSON.stringify(context.fileSourceIds);
@@ -1128,6 +1382,7 @@ export function mergeSweepBatchReports(
     ...reports.flatMap((report) => report.gaps),
     ...checkResults.flatMap((check) => check.gaps),
     ...reports.flatMap((report) => report.relationships.flatMap((relationship) => relationship.gaps)),
+    ...reportSet.crossBatchSynthesis.gaps,
     ...(relationshipEvidenceComplete
       ? []
       : ["Cross-batch relationship evidence does not cover every inventory file."]),
@@ -1138,6 +1393,7 @@ export function mergeSweepBatchReports(
     runId: reportSet.runId,
     inventoryDigest: reportSet.inventoryDigest,
     capabilityDigest: reportSet.capabilityDigest,
+    crossBatchSynthesis: reportSet.crossBatchSynthesis,
     state,
     relationshipInspection,
     relationshipEvidenceSourceIds,
@@ -1194,8 +1450,26 @@ export function validateSweepBatchMerge(
   } else {
     errors.push("sweep.batchMerge.capabilities is required");
   }
+  let normalizedCrossBatchSynthesis;
+  if (reportSet?.crossBatchSynthesis) {
+    try {
+      normalizedCrossBatchSynthesis = validateSweepCrossBatchSynthesis(
+        value?.crossBatchSynthesis,
+        {
+          inventory: context.inventory,
+          capabilities: normalizedCapabilities,
+          manifest: reportSet.manifest,
+          verifyBatchInvocation,
+        },
+      );
+    } catch (error) {
+      errors.push(`sweep.batchMerge.crossBatchSynthesis: ${error.message}`);
+    }
+  } else {
+    errors.push("sweep.batchMerge.crossBatchSynthesis requires a validated report-set synthesis");
+  }
   const merge = object(value, "sweep.batchMerge", errors);
-  exactKeys(merge, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "state", "relationshipInspection", "relationshipEvidenceSourceIds", "batches", "checkResults", "relationships", "observations", "reportDigests", "attempts", "gaps", "digest"], "sweep.batchMerge", errors);
+  exactKeys(merge, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "crossBatchSynthesis", "state", "relationshipInspection", "relationshipEvidenceSourceIds", "batches", "checkResults", "relationships", "observations", "reportDigests", "attempts", "gaps", "digest"], "sweep.batchMerge", errors);
   const runId = text(merge.runId, "sweep.batchMerge.runId", errors);
   const inventoryDigest = digest(merge.inventoryDigest, "sweep.batchMerge.inventoryDigest", errors);
   const capabilityDigest = digest(merge.capabilityDigest, "sweep.batchMerge.capabilityDigest", errors);
@@ -1259,7 +1533,11 @@ export function validateSweepBatchMerge(
       attempt,
       `sweep.batchMerge.attempts[${index}]`,
       errors,
-      { kind: "attempt" },
+      {
+        kind: "attempt",
+        manifestDigest: attempt.manifestDigest,
+        outputDigest: attempt.outputDigest,
+      },
     );
   }
   validateAttemptLedger(
@@ -1301,6 +1579,7 @@ export function validateSweepBatchMerge(
     runId,
     inventoryDigest,
     capabilityDigest,
+    crossBatchSynthesis: normalizedCrossBatchSynthesis,
     state,
     relationshipInspection,
     relationshipEvidenceSourceIds,

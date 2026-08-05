@@ -11,8 +11,12 @@ import { createPolishReceipt } from "../features/polish/validate.mjs";
 import {
   createSweepBatchManifest,
   createSweepBatchReportSet,
+  createSweepCrossBatchSynthesis,
   mergeSweepBatchReports,
   selectSweepInspectionMode,
+  sweepBatchAttemptOutputDigest,
+  sweepBatchAttemptId,
+  sweepBatchBindingDigest,
   validateSweepBatchMerge,
   validateSweepBatchReport,
   validateSweepBatchReportSet,
@@ -239,33 +243,41 @@ test("sweep negotiates the inspection fallback before dispatch", () => {
     }),
     /trusted host.*verifier/u,
   );
+  assert.throws(
+    () => selectSweepInspectionMode({
+      requestedMode: "subagent-hybrid",
+      capabilities: makeSweepBatchCapabilities(),
+      activeSessionAvailable: "yes",
+      ...sweepBatchDependencies,
+    }),
+    /fallback is unavailable/u,
+  );
 });
 
 test("sweep retains failed retry attempts and rejects stale report bindings", () => {
   const capabilities = makeSweepBatchCapabilities();
   const inventory = makeSweepInventory();
+  const baseReportSet = makeSweepHybridPlan().reportSet;
+  const manifest = baseReportSet.manifest;
   const failedReport = makeSweepBatchReport(inventory, capabilities, {
     attempt: 1,
     inputDigest: `sha256:${"b".repeat(64)}`,
     invocationId: "failed-invocation",
+    manifest,
   });
   const successfulReport = makeSweepBatchReport(inventory, capabilities, {
     attempt: 2,
     inputDigest: `sha256:${"c".repeat(64)}`,
     invocationId: "successful-invocation",
+    manifest,
   });
-  const manifest = createSweepBatchManifest({
-    feature: "sweep-batch-manifest",
-    version: 1,
-    runId: successfulReport.runId,
-    inventoryDigest: inventory.digest,
-    capabilityDigest: capabilities.digest,
-    batches: [successfulReport.batch],
-    invocationId: "manifest-invocation",
-  }, {
-    inventory,
-    capabilities,
-    ...sweepBatchDependencies,
+  const failedAttemptId = (report, error) => sweepBatchAttemptId({
+    bindingDigest: report.bindingDigest,
+    manifestDigest: manifest.digest,
+    attempt: report.attempt,
+    inputDigest: report.inputDigest,
+    invocationId: report.invocationId,
+    outputDigest: sweepBatchAttemptOutputDigest({ status: "failed", error }),
   });
   const reportSet = createSweepBatchReportSet({
     feature: "sweep-batch-report-set",
@@ -274,24 +286,32 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
     inventoryDigest: inventory.digest,
     capabilityDigest: capabilities.digest,
     manifest,
+    crossBatchSynthesis: baseReportSet.crossBatchSynthesis,
     reports: [successfulReport],
     attempts: [
       {
         batch: failedReport.batch,
+        manifestDigest: manifest.digest,
         attempt: failedReport.attempt,
-        attemptId: failedReport.attemptId,
+        attemptId: failedAttemptId(failedReport, "The host cancelled the first attempt."),
         status: "failed",
         inputDigest: failedReport.inputDigest,
         invocationId: failedReport.invocationId,
+        outputDigest: sweepBatchAttemptOutputDigest({
+          status: "failed",
+          error: "The host cancelled the first attempt.",
+        }),
         error: "The host cancelled the first attempt.",
       },
       {
         batch: successfulReport.batch,
+        manifestDigest: manifest.digest,
         attempt: successfulReport.attempt,
         attemptId: successfulReport.attemptId,
         status: "succeeded",
         inputDigest: successfulReport.inputDigest,
         invocationId: successfulReport.invocationId,
+        outputDigest: successfulReport.outputDigest,
       },
     ],
   }, {
@@ -331,15 +351,21 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
     attempt: 4,
     inputDigest: `sha256:${"f".repeat(64)}`,
     invocationId: "over-budget-invocation",
+    manifest,
   });
   const overBudget = clone(reportSet);
   overBudget.attempts.push({
     batch: overBudgetReport.batch,
+    manifestDigest: manifest.digest,
     attempt: overBudgetReport.attempt,
-    attemptId: overBudgetReport.attemptId,
+    attemptId: failedAttemptId(overBudgetReport, "The host exhausted the retry budget."),
     status: "failed",
     inputDigest: overBudgetReport.inputDigest,
     invocationId: overBudgetReport.invocationId,
+    outputDigest: sweepBatchAttemptOutputDigest({
+      status: "failed",
+      error: "The host exhausted the retry budget.",
+    }),
     error: "The host exhausted the retry budget.",
   });
   delete overBudget.digest;
@@ -356,15 +382,21 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
     attempt: 1,
     inputDigest: `sha256:${"9".repeat(64)}`,
     invocationId: "duplicate-invocation",
+    manifest,
   });
   const duplicateAttempt = clone(reportSet);
   duplicateAttempt.attempts.push({
     batch: duplicateReport.batch,
+    manifestDigest: manifest.digest,
     attempt: duplicateReport.attempt,
-    attemptId: duplicateReport.attemptId,
+    attemptId: failedAttemptId(duplicateReport, "The host recorded a duplicate attempt ordinal."),
     status: "failed",
     inputDigest: duplicateReport.inputDigest,
     invocationId: duplicateReport.invocationId,
+    outputDigest: sweepBatchAttemptOutputDigest({
+      status: "failed",
+      error: "The host recorded a duplicate attempt ordinal.",
+    }),
     error: "The host recorded a duplicate attempt ordinal.",
   });
   delete duplicateAttempt.digest;
@@ -375,6 +407,137 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
       ...sweepBatchDependencies,
     }),
     /repeats an attempt number|attemptId|digest/u,
+  );
+});
+
+test("sweep keeps failed manifest batches and validates cross-batch synthesis", () => {
+  const capabilities = makeSweepBatchCapabilities();
+  const inventory = makeSweepInventory();
+  const [first, second, third] = inventory.fileSourceIds;
+  const batches = [
+    { id: "batch-001", ordinal: 1, fileSourceIds: [first, second] },
+    { id: "batch-002", ordinal: 2, fileSourceIds: [third] },
+  ];
+  const manifest = createSweepBatchManifest({
+    feature: "sweep-batch-manifest",
+    version: 1,
+    runId: "sweep-hybrid-run",
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    batches,
+    invocationId: "manifest-multi-batch-invocation",
+  }, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
+  const report = makeSweepBatchReport(inventory, capabilities, {
+    batch: batches[0],
+    manifest,
+    relationshipId: "relationship-local",
+  });
+  const crossBatchSynthesis = createSweepCrossBatchSynthesis({
+    feature: "sweep-cross-batch-synthesis",
+    version: 1,
+    runId: manifest.runId,
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    manifestDigest: manifest.digest,
+    invocationId: "cross-batch-synthesis-invocation",
+    inspection: "checked",
+    evidenceSourceIds: [...inventory.fileSourceIds],
+    relationships: [{
+      id: "relationship-cross-batch",
+      sourceIds: [first, third],
+      status: "observed",
+      summary: "A coordinator confirmed a relationship across manifest batches.",
+      evidenceSourceIds: [...inventory.fileSourceIds],
+      gaps: [],
+    }],
+    gaps: [],
+  }, {
+    inventory,
+    capabilities,
+    manifest,
+    ...sweepBatchDependencies,
+  });
+  const failure = "The second batch exhausted its retry budget.";
+  const failureInputDigest = `sha256:${"a".repeat(64)}`;
+  const failureOutputDigest = sweepBatchAttemptOutputDigest({
+    status: "failed",
+    error: failure,
+  });
+  const failureBindingDigest = sweepBatchBindingDigest({
+    runId: manifest.runId,
+    inventoryDigest: inventory.digest,
+    manifestDigest: manifest.digest,
+    batch: batches[1],
+    capabilityDigest: capabilities.digest,
+  });
+  const failureAttemptId = sweepBatchAttemptId({
+    bindingDigest: failureBindingDigest,
+    manifestDigest: manifest.digest,
+    attempt: 1,
+    inputDigest: failureInputDigest,
+    invocationId: "failed-second-batch-invocation",
+    outputDigest: failureOutputDigest,
+  });
+  const reportSet = createSweepBatchReportSet({
+    feature: "sweep-batch-report-set",
+    version: 1,
+    runId: manifest.runId,
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    manifest,
+    crossBatchSynthesis,
+    reports: [report],
+    attempts: [
+      {
+        batch: report.batch,
+        manifestDigest: manifest.digest,
+        attempt: 1,
+        attemptId: report.attemptId,
+        status: "succeeded",
+        inputDigest: report.inputDigest,
+        invocationId: report.invocationId,
+        outputDigest: report.outputDigest,
+      },
+      {
+        batch: batches[1],
+        manifestDigest: manifest.digest,
+        attempt: 1,
+        attemptId: failureAttemptId,
+        status: "failed",
+        inputDigest: failureInputDigest,
+        invocationId: "failed-second-batch-invocation",
+        outputDigest: failureOutputDigest,
+        error: failure,
+      },
+    ],
+  }, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
+  const merge = mergeSweepBatchReports(reportSet, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
+  assert.equal(merge.state, "failed");
+  assert.equal(merge.batches[1].inspection, "failed");
+  assert.ok(merge.relationships.some((item) => item.id === "relationship-cross-batch"));
+  const invalidSynthesis = structuredClone(crossBatchSynthesis);
+  invalidSynthesis.relationships[0].sourceIds = [first, second];
+  delete invalidSynthesis.digest;
+  assert.throws(
+    () => createSweepCrossBatchSynthesis(invalidSynthesis, {
+      inventory,
+      capabilities,
+      manifest,
+      ...sweepBatchDependencies,
+    }),
+    /cross two or more manifest batches/u,
   );
 });
 

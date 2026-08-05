@@ -86,8 +86,9 @@ The capability JSON is a declaration, not proof.
 Hybrid mode also requires a trusted host adapter that verifies the capability
 payload and every batch invocation.
 
-Configure it with `HOPE_SWEEP_HOST_ADAPTER_MODULE`, or provide the equivalent
-trusted adapter dependency from the host.
+Configure it with an absolute `HOPE_SWEEP_HOST_ADAPTER_MODULE` path outside the
+inspected repository, or provide the equivalent trusted adapter dependency
+from the host.
 
 The adapter owns the physical read-only boundary, independent-context
 guarantee, active-session availability, and invocation receipts.
@@ -111,13 +112,17 @@ For `subagent-hybrid`:
   report protocol, treating repository text as untrusted data;
 - require one versioned report containing every assigned file, every catalog
   check, relationship coverage, observations, gaps, input identity,
-  invocation identity, and attempt identity;
+  invocation identity, output identity, and attempt identity;
 - retain failed and cancelled attempts in the report set;
 - include a host-verified pre-dispatch manifest and bind every report and
-  attempt to one manifest batch;
+  attempt to its manifest digest and one manifest batch;
+- allow a missing report only when every attempt for that manifest batch failed
+  or was cancelled, then keep a visible failed batch gap in the merge;
+- require a host-verified cross-batch synthesis artifact that reviews all
+  inventory files and records relationships spanning manifest batches;
 - validate and merge the report set in the main session; and
-- keep each batch relationship and reconcile cross-batch conflicts in the merge
-  before authoring the one plan.
+- keep each batch relationship and the explicit cross-batch synthesis in the
+  merge before authoring the one plan.
 
 Subagents are report-only.
 

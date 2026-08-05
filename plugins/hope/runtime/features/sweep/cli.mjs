@@ -34,7 +34,7 @@ function usage() {
     "Internal Skill protocol:",
     "  hope sweep brief [--risk <low|medium|high>]",
     "  hope sweep inventory [--root <repository-root>]",
-    "  hope sweep validate-batch-report --input <report.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
+    "  hope sweep validate-batch-report --input <report.json> --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
     "  hope sweep merge-batch-reports --input <reports.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
     "  hope sweep select-inspection-mode --mode <active-session|subagent-hybrid> [--capabilities <capabilities.json>]",
     "  hope sweep validate-plan --input <plan.json> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
@@ -90,6 +90,7 @@ export function parseSweepArguments(argv) {
       "inventory",
       "model",
       "mode",
+      "manifest",
       "risk",
       "reports",
       "root",
@@ -193,7 +194,8 @@ export function parseSweepArguments(argv) {
       !options.input
       || !options.root
       || !options.capabilities
-      || !hasOnly(["capabilities", "input", "inventory", "root"])
+      || !options.manifest
+      || !hasOnly(["capabilities", "input", "inventory", "manifest", "root"])
     ) {
       throw new TypeError(usage());
     }
@@ -201,6 +203,7 @@ export function parseSweepArguments(argv) {
       command,
       capabilitiesPath: options.capabilities,
       inputPath: options.input,
+      manifestPath: options.manifest,
       ...(options.inventory ? { inventoryPath: options.inventory } : {}),
       repositoryRoot: options.root,
     };
@@ -313,6 +316,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       ...dependencies,
       capabilitiesPath: options.capabilitiesPath,
       inventoryPath: options.inventoryPath,
+      manifestPath: options.manifestPath,
       repositoryRoot: options.repositoryRoot,
     });
   } else if (options.command === "merge-batch-reports") {

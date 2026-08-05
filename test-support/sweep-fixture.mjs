@@ -3,8 +3,11 @@ import {
   createSweepBatchManifest,
   createSweepBatchReport,
   createSweepBatchReportSet,
+  createSweepCrossBatchSynthesis,
+  sweepBatchAttemptOutputDigest,
   sweepBatchAttemptId,
   sweepBatchBindingDigest,
+  sweepBatchOutputDigest,
   mergeSweepBatchReports,
 } from "../features/sweep/batch.mjs";
 import {
@@ -239,21 +242,30 @@ export function makeSweepBatchReport(
     inputDigest = digest("d"),
     invocationId = "sweep-batch-invocation",
     relationshipId = "relationship-entrypoints-target",
+    manifest,
   } = {},
 ) {
   const sourceIds = [...batch.fileSourceIds];
   const repositorySourceId = batch.fileSourceIds[0];
+  const reportManifest = manifest ?? createSweepBatchManifest({
+    feature: "sweep-batch-manifest",
+    version: 1,
+    runId: "sweep-hybrid-run",
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    batches: [batch],
+    invocationId: "sweep-batch-manifest-invocation",
+  }, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
   const bindingDigest = sweepBatchBindingDigest({
     runId: "sweep-hybrid-run",
     inventoryDigest: inventory.digest,
+    manifestDigest: reportManifest.digest,
     batch,
     capabilityDigest: capabilities.digest,
-  });
-  const attemptId = sweepBatchAttemptId({
-    bindingDigest,
-    attempt,
-    inputDigest,
-    invocationId,
   });
   const report = {
     feature: "sweep-batch-report",
@@ -261,12 +273,13 @@ export function makeSweepBatchReport(
     runId: "sweep-hybrid-run",
     inventoryDigest: inventory.digest,
     batch,
+    manifestDigest: reportManifest.digest,
     capabilityDigest: capabilities.digest,
     bindingDigest,
     attempt,
-    attemptId,
     inputDigest,
     invocationId,
+    outputDigest: undefined,
     inspection: "checked",
     relationshipInspection: "checked",
     relationshipEvidenceSourceIds: [...batch.fileSourceIds],
@@ -283,21 +296,31 @@ export function makeSweepBatchReport(
       evidenceSourceIds: [...sourceIds],
       gaps: [],
     })),
-    relationships: [
-      {
+    relationships: batch.fileSourceIds.length >= 2
+      ? [{
         id: relationshipId,
         sourceIds: batch.fileSourceIds.slice(0, 2),
         status: "observed",
         summary: "The batch preserved a relationship between assigned files.",
         evidenceSourceIds: [repositorySourceId],
         gaps: [],
-      },
-    ],
+      }]
+      : [],
     observations: [],
     gaps: [],
   };
+  report.outputDigest = sweepBatchOutputDigest(report);
+  report.attemptId = sweepBatchAttemptId({
+    bindingDigest,
+    manifestDigest: reportManifest.digest,
+    attempt,
+    inputDigest,
+    invocationId,
+    outputDigest: report.outputDigest,
+  });
   return createSweepBatchReport(report, {
     inventory,
+    manifest: reportManifest,
     capabilities,
     ...sweepBatchDependencies,
   });
@@ -307,18 +330,41 @@ export function makeSweepBatchReportSet(
   inventory = makeSweepInventory(),
   capabilities = makeSweepBatchCapabilities(),
 ) {
-  const report = makeSweepBatchReport(inventory, capabilities);
+  const batch = {
+    id: "batch-001",
+    ordinal: 1,
+    fileSourceIds: [...inventory.fileSourceIds],
+  };
   const manifest = createSweepBatchManifest({
     feature: "sweep-batch-manifest",
     version: 1,
-    runId: report.runId,
+    runId: "sweep-hybrid-run",
     inventoryDigest: inventory.digest,
     capabilityDigest: capabilities.digest,
-    batches: [report.batch],
+    batches: [batch],
     invocationId: "sweep-batch-manifest-invocation",
   }, {
     inventory,
     capabilities,
+    ...sweepBatchDependencies,
+  });
+  const report = makeSweepBatchReport(inventory, capabilities, { manifest });
+  const crossBatchSynthesis = createSweepCrossBatchSynthesis({
+    feature: "sweep-cross-batch-synthesis",
+    version: 1,
+    runId: report.runId,
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    manifestDigest: manifest.digest,
+    invocationId: "sweep-cross-batch-synthesis-invocation",
+    inspection: "checked",
+    evidenceSourceIds: [...inventory.fileSourceIds],
+    relationships: [],
+    gaps: [],
+  }, {
+    inventory,
+    capabilities,
+    manifest,
     ...sweepBatchDependencies,
   });
   return createSweepBatchReportSet({
@@ -328,15 +374,18 @@ export function makeSweepBatchReportSet(
     inventoryDigest: inventory.digest,
     capabilityDigest: capabilities.digest,
     manifest,
+    crossBatchSynthesis,
     reports: [report],
     attempts: [
       {
         batch: report.batch,
+        manifestDigest: manifest.digest,
         attempt: report.attempt,
         attemptId: report.attemptId,
         status: "succeeded",
         inputDigest: report.inputDigest,
         invocationId: report.invocationId,
+        outputDigest: report.outputDigest,
       },
     ],
   }, {

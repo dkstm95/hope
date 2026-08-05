@@ -175,7 +175,7 @@ The JSON capability declaration is not proof of those controls by itself.
 
 Subagent hybrid requires a trusted host adapter that verifies the declared capabilities and every batch invocation.
 
-Configure that adapter through `HOPE_SWEEP_HOST_ADAPTER_MODULE`, or use a host-provided adapter dependency.
+Configure that adapter through an absolute `HOPE_SWEEP_HOST_ADAPTER_MODULE` path outside the inspected repository, or use a host-provided adapter dependency.
 
 The adapter must expose read-only, independent-context, source-allowlist, and bounded-output capabilities, report whether active-session inspection is available, verify the capability payload, and verify every report or attempt invocation.
 
@@ -193,8 +193,8 @@ The shared runtime exposes four versioned boundaries:
 
 - a capability declaration bound to a trusted host adapter that proves the host
   selected the bounded, read-only mode;
-- one batch report that binds its run, inventory, batch, capability, input,
-  invocation, and attempt identities;
+- one batch report that binds its run, inventory, pre-dispatch manifest, batch,
+  capability, input, invocation, output, and attempt identities;
 - one report set that retains every successful, failed, or cancelled attempt;
   and
 - one merge that orders every batch, derives every catalog check, and preserves
@@ -208,10 +208,20 @@ relationship `unresolved`; the merge does not discard that relationship or its
 evidence.
 
 The report set also carries a host-verified pre-dispatch manifest, and every
-report and attempt must match one manifest batch.
+report and attempt must match its manifest digest and one manifest batch.
 
-The main session performs the cross-batch synthesis and writes the one Sweep
-plan.
+Each successful report carries an output digest, each attempt carries an output
+or failure-outcome digest, and the trusted adapter verifies those bindings with
+the invocation receipt instead of trusting an invocation ID by itself.
+
+A manifest batch may have no report only when all of its recorded attempts
+failed or were cancelled; the merge creates a visible failed batch gap for that
+case, so a missing report can never make a hybrid plan complete.
+
+The main session must produce a host-verified cross-batch synthesis artifact
+that reviews all inventory files, records every relationship that crosses two
+or more manifest batches, cites the complete file evidence when checked, and is
+preserved with batch-local relationships before the one Sweep plan is written.
 
 A subagent never edits a repository file, requests approval, or creates a
 Polish receipt.

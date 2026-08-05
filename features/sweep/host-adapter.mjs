@@ -1,9 +1,10 @@
-import { isAbsolute, resolve } from "node:path";
+import { realpath } from "node:fs/promises";
+import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export const SWEEP_HOST_ADAPTER_CODE = "HOPE_SWEEP_HOST_ADAPTER_REQUIRED";
 export const SWEEP_HOST_ADAPTER_MESSAGE =
-  "Sweep subagent-hybrid needs a trusted host adapter. Set HOPE_SWEEP_HOST_ADAPTER_MODULE to a local module or use the active-session path.";
+  "Sweep subagent-hybrid needs a trusted host adapter. Set HOPE_SWEEP_HOST_ADAPTER_MODULE to an absolute host-owned module outside the repository or use the active-session path.";
 
 function missingAdapter() {
   const error = new Error(SWEEP_HOST_ADAPTER_MESSAGE);
@@ -53,7 +54,20 @@ export async function loadSweepHostAdapter({
 } = {}) {
   const configured = environment.HOPE_SWEEP_HOST_ADAPTER_MODULE;
   if (!configured) throw missingAdapter();
-  const path = isAbsolute(configured) ? configured : resolve(cwd, configured);
+  if (!isAbsolute(configured)) {
+    throw invalidAdapter("HOPE_SWEEP_HOST_ADAPTER_MODULE must be an absolute host-owned path");
+  }
+  const repositoryRoot = await realpath(cwd).catch(() => resolve(cwd));
+  const path = await realpath(configured).catch((error) => {
+    throw invalidAdapter(`could not resolve ${configured}: ${error.message}`);
+  });
+  const pathFromRepository = relative(repositoryRoot, path);
+  if (
+    pathFromRepository === ""
+    || (!pathFromRepository.startsWith("..") && !isAbsolute(pathFromRepository))
+  ) {
+    throw invalidAdapter("the host adapter must not be loaded from the inspected repository");
+  }
   let loaded;
   try {
     loaded = await importModule(pathToFileURL(path).href);
