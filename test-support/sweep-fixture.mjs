@@ -1,5 +1,6 @@
 import {
   createSweepBatchCapabilities,
+  createSweepBatchManifest,
   createSweepBatchReport,
   createSweepBatchReportSet,
   sweepBatchAttemptId,
@@ -307,12 +308,26 @@ export function makeSweepBatchReportSet(
   capabilities = makeSweepBatchCapabilities(),
 ) {
   const report = makeSweepBatchReport(inventory, capabilities);
+  const manifest = createSweepBatchManifest({
+    feature: "sweep-batch-manifest",
+    version: 1,
+    runId: report.runId,
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    batches: [report.batch],
+    invocationId: "sweep-batch-manifest-invocation",
+  }, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
   return createSweepBatchReportSet({
     feature: "sweep-batch-report-set",
     version: 1,
     runId: report.runId,
     inventoryDigest: inventory.digest,
     capabilityDigest: capabilities.digest,
+    manifest,
     reports: [report],
     attempts: [
       {

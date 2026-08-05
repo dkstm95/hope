@@ -4,13 +4,14 @@
   "title": "Hope sweep subagent batch report set version 1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "reports", "attempts", "digest"],
+  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "reports", "attempts", "digest"],
   "properties": {
     "feature": { "const": "sweep-batch-report-set" },
     "version": { "const": 1 },
     "runId": { "$ref": "#/$defs/text" },
     "inventoryDigest": { "$ref": "#/$defs/digest" },
     "capabilityDigest": { "$ref": "#/$defs/digest" },
+    "manifest": { "$ref": "#/$defs/manifest" },
     "reports": {
       "type": "array",
       "minItems": 1,
@@ -57,6 +58,26 @@
         "inputDigest": { "$ref": "#/$defs/digest" },
         "invocationId": { "$ref": "#/$defs/text" },
         "error": { "$ref": "#/$defs/text" }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "batches", "invocationId", "digest"],
+      "properties": {
+        "feature": { "const": "sweep-batch-manifest" },
+        "version": { "const": 1 },
+        "runId": { "$ref": "#/$defs/text" },
+        "inventoryDigest": { "$ref": "#/$defs/digest" },
+        "capabilityDigest": { "$ref": "#/$defs/digest" },
+        "batches": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/batch" }
+        },
+        "invocationId": { "$ref": "#/$defs/text" },
+        "digest": { "$ref": "#/$defs/digest" }
       }
     }
   }

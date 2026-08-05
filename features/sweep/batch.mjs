@@ -160,8 +160,9 @@ export function createSweepBatchCapabilities({
 export function selectSweepInspectionMode({
   requestedMode = "active-session",
   capabilities,
-  activeSessionAvailable = true,
+  activeSessionAvailable = false,
   verifyBatchCapabilities,
+  verifyBatchInvocation,
 } = {}) {
   if (requestedMode === "active-session") {
     return Object.freeze({
@@ -173,9 +174,19 @@ export function selectSweepInspectionMode({
     throw new TypeError(`Unknown Sweep inspection mode: ${requestedMode}`);
   }
   try {
+    if (typeof verifyBatchInvocation !== "function") {
+      throw new TypeError(
+        "Sweep subagent-hybrid requires a trusted host invocation verifier",
+      );
+    }
     const normalized = validateSweepBatchCapabilities(capabilities, {
       verifyBatchCapabilities,
     });
+    if (activeSessionAvailable !== true) {
+      throw new TypeError(
+        "Sweep subagent-hybrid requires an active-session fallback",
+      );
+    }
     return Object.freeze({
       mode: "subagent-hybrid",
       fallbackUsed: false,
@@ -391,8 +402,17 @@ function reportSetPayload(value) {
   return payload;
 }
 
+function manifestPayload(value) {
+  const { digest: _digest, ...payload } = value;
+  return payload;
+}
+
 export function digestSweepBatchReportSet(value) {
   return digestValue(reportSetPayload(value));
+}
+
+export function digestSweepBatchManifest(value) {
+  return digestValue(manifestPayload(value));
 }
 
 function normalizeBatch(value, path, errors, fileSourceIds, ids) {
@@ -408,6 +428,126 @@ function normalizeBatch(value, path, errors, fileSourceIds, ids) {
     { minimum: 1 },
   );
   return { id, ordinal, fileSourceIds: files };
+}
+
+export function validateSweepBatchManifest(
+  value,
+  { inventory, capabilities, verifyBatchInvocation } = {},
+) {
+  const errors = [];
+  const context = sourceContext(inventory, errors);
+  const manifest = object(value, "sweep.batchManifest", errors);
+  exactKeys(
+    manifest,
+    [
+      "feature",
+      "version",
+      "runId",
+      "inventoryDigest",
+      "capabilityDigest",
+      "batches",
+      "invocationId",
+      "digest",
+    ],
+    "sweep.batchManifest",
+    errors,
+  );
+  const runId = text(manifest.runId, "sweep.batchManifest.runId", errors);
+  const inventoryDigest = digest(
+    manifest.inventoryDigest,
+    "sweep.batchManifest.inventoryDigest",
+    errors,
+  );
+  const capabilityDigest = digest(
+    manifest.capabilityDigest,
+    "sweep.batchManifest.capabilityDigest",
+    errors,
+  );
+  if (context.inventory && inventoryDigest !== context.inventory.digest) {
+    errors.push("sweep.batchManifest.inventoryDigest does not match inventory");
+  }
+  if (capabilities && capabilityDigest !== capabilities.digest) {
+    errors.push("sweep.batchManifest.capabilityDigest does not match capabilities");
+  }
+  const batchesRaw = batchValidation.array(
+    manifest.batches,
+    "sweep.batchManifest.batches",
+    errors,
+    SWEEP_LIMITS.coverageBatches,
+  );
+  if (batchesRaw.length === 0) {
+    errors.push("sweep.batchManifest.batches must not be empty");
+  }
+  const batchIds = new Set();
+  const batches = batchesRaw.map((item, index) => {
+    const batch = normalizeBatch(
+      item,
+      `sweep.batchManifest.batches[${index}]`,
+      errors,
+      context.fileSourceIds,
+      batchIds,
+    );
+    if (batch.ordinal !== index + 1) {
+      errors.push(
+        `sweep.batchManifest.batches[${index}].ordinal must be ${index + 1}`,
+      );
+    }
+    return batch;
+  });
+  const covered = batches.flatMap((batch) => batch.fileSourceIds);
+  if (JSON.stringify(covered) !== JSON.stringify(context.fileSourceIds)) {
+    errors.push(
+      "sweep.batchManifest.batches must cover every inventory file exactly once in order",
+    );
+  }
+  const invocationId = text(
+    manifest.invocationId,
+    "sweep.batchManifest.invocationId",
+    errors,
+  );
+  const normalized = {
+    feature: text(manifest.feature, "sweep.batchManifest.feature", errors),
+    version: batchValidation.integer(
+      manifest.version,
+      "sweep.batchManifest.version",
+      errors,
+      { minimum: SWEEP_BATCH_REPORT_VERSION },
+    ),
+    runId,
+    inventoryDigest,
+    capabilityDigest,
+    batches,
+    invocationId,
+    digest: digest(manifest.digest, "sweep.batchManifest.digest", errors),
+  };
+  if (normalized.feature !== "sweep-batch-manifest") {
+    errors.push("sweep.batchManifest.feature must be sweep-batch-manifest");
+  }
+  if (normalized.version !== SWEEP_BATCH_REPORT_VERSION) {
+    errors.push(
+      `sweep.batchManifest.version must be ${SWEEP_BATCH_REPORT_VERSION}`,
+    );
+  }
+  if (normalized.digest !== digestSweepBatchManifest(normalized)) {
+    errors.push("sweep.batchManifest.digest does not match its payload");
+  }
+  trustedHostCheck(
+    verifyBatchInvocation,
+    normalized,
+    "sweep.batchManifest",
+    errors,
+    { kind: "manifest" },
+  );
+  invalid("Hope sweep batch manifest", errors);
+  return deepFreeze(normalized);
+}
+
+export function createSweepBatchManifest(value, dependencies = {}) {
+  const manifest = { ...value };
+  if (!manifest.digest) {
+    manifest.digest = digestSweepBatchManifest(manifest);
+  }
+  return validateSweepBatchManifest(manifest, dependencies);
 }
 
 function normalizeSourceResult(value, path, errors, sourceIds, expectedId) {
@@ -569,8 +709,12 @@ function validateAttemptLedger(
     if (batchAttempts.length > maximumAttempts) {
       errors.push(`${path} contains too many attempts for ${batchId}`);
     }
-    const numbers = [...new Set(batchAttempts.map((attempt) => attempt.attempt))]
+    const rawNumbers = batchAttempts.map((attempt) => attempt.attempt);
+    const numbers = [...new Set(rawNumbers)]
       .sort((left, right) => left - right);
+    if (numbers.length !== rawNumbers.length) {
+      errors.push(`${path} repeats an attempt number for ${batchId}`);
+    }
     for (let index = 0; index < numbers.length; index += 1) {
       if (numbers[index] !== index + 1) {
         errors.push(`${path} attempts for ${batchId} must be contiguous from 1`);
@@ -736,8 +880,18 @@ export function validateSweepBatchReportSet(
   } else {
     errors.push("sweep.batchReportSet.capabilities is required");
   }
+  let normalizedManifest;
+  try {
+    normalizedManifest = validateSweepBatchManifest(value?.manifest, {
+      inventory: context.inventory,
+      capabilities: normalizedCapabilities,
+      verifyBatchInvocation,
+    });
+  } catch (error) {
+    errors.push(`sweep.batchReportSet.manifest: ${error.message}`);
+  }
   const valueObject = object(value, "sweep.batchReportSet", errors);
-  exactKeys(valueObject, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "reports", "attempts", "digest"], "sweep.batchReportSet", errors);
+  exactKeys(valueObject, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "reports", "attempts", "digest"], "sweep.batchReportSet", errors);
   const runId = text(valueObject.runId, "sweep.batchReportSet.runId", errors);
   const inventoryDigest = digest(valueObject.inventoryDigest, "sweep.batchReportSet.inventoryDigest", errors);
   const capabilityDigest = digest(valueObject.capabilityDigest, "sweep.batchReportSet.capabilityDigest", errors);
@@ -770,6 +924,40 @@ export function validateSweepBatchReportSet(
     reportBatchIds.add(report.batch.id);
     reportOrdinals.add(report.batch.ordinal);
   }
+  if (normalizedManifest) {
+    if (normalizedManifest.runId !== runId) {
+      errors.push("sweep.batchReportSet.manifest.runId does not match the report set");
+    }
+    const manifestBatchIds = new Set(
+      normalizedManifest.batches.map((batch) => batch.id),
+    );
+    if (reports.length !== normalizedManifest.batches.length) {
+      errors.push(
+        "sweep.batchReportSet.reports must contain every manifest batch exactly once",
+      );
+    }
+    for (const batchId of manifestBatchIds) {
+      if (!reportBatchIds.has(batchId)) {
+        errors.push(`sweep.batchReportSet is missing manifest batch ${batchId}`);
+      }
+    }
+    for (const batchId of reportBatchIds) {
+      if (!manifestBatchIds.has(batchId)) {
+        errors.push(`sweep.batchReportSet report ${batchId} is absent from the manifest`);
+      }
+    }
+    for (const report of reports) {
+      if (!report?.batch) continue;
+      const manifestBatch = normalizedManifest.batches.find(
+        (batch) => batch.id === report.batch.id,
+      );
+      if (manifestBatch && !sameBatch(report.batch, manifestBatch)) {
+        errors.push(
+          `sweep.batchReportSet report ${report.batch.id} does not match the manifest`,
+        );
+      }
+    }
+  }
   const sortedReportOrdinals = [...reportOrdinals].sort((left, right) => left - right);
   for (let index = 0; index < sortedReportOrdinals.length; index += 1) {
     if (sortedReportOrdinals[index] !== index + 1) {
@@ -801,11 +989,21 @@ export function validateSweepBatchReportSet(
   }
   validateAttemptLedger(
     attempts,
-    reports.filter((report) => report?.batch).map((report) => report.batch),
+    normalizedManifest?.batches
+      ?? reports.filter((report) => report?.batch).map((report) => report.batch),
     normalizedCapabilities?.retryBudget ?? 0,
     "sweep.batchReportSet.attempts",
     errors,
   );
+  if (normalizedManifest) {
+    for (const batch of normalizedManifest.batches) {
+      if (!attempts.some((attempt) => attempt.batch.id === batch.id)) {
+        errors.push(
+          `sweep.batchReportSet is missing an attempt for manifest batch ${batch.id}`,
+        );
+      }
+    }
+  }
   for (const report of reports) {
     if (!report?.attemptId) continue;
     const success = attempts.find((attempt) => attempt.attemptId === report.attemptId && attempt.status === "succeeded");
@@ -831,6 +1029,7 @@ export function validateSweepBatchReportSet(
     runId,
     inventoryDigest,
     capabilityDigest,
+    manifest: normalizedManifest,
     reports,
     attempts,
     digest: digest(valueObject.digest, "sweep.batchReportSet.digest", errors),

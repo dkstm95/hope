@@ -107,9 +107,10 @@ function runJson(script, arguments_, environment = {}) {
   return JSON.parse(run.stdout);
 }
 
-function runFailure(script, arguments_) {
+function runFailure(script, arguments_, environment = {}) {
   const run = spawnSync(process.execPath, [resolve(root, script), ...arguments_], {
     encoding: "utf8",
+    env: { ...process.env, ...environment },
   });
   assert.notEqual(run.status, 0, run.stdout);
   return run.stderr.replace(/^hope(?: sweep)?: /u, "");
@@ -280,6 +281,10 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   const batchReportPath = join(temporaryRoot, "batch-report.json");
   const batchReportSetPath = join(temporaryRoot, "batch-reports.json");
   const hybridPlanPath = join(temporaryRoot, "hybrid-plan.json");
+  const hybridSessionResultPath = join(
+    temporaryRoot,
+    "hybrid-session-result.json",
+  );
   const completionPath = join(temporaryRoot, "completion.json");
   const approvalPath = join(temporaryRoot, "approval.json");
   const sessionResultPath = join(temporaryRoot, "session-result.json");
@@ -317,6 +322,31 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     summary: {
       state: "complete",
       assessment: "The checked scope produced no candidate.",
+      remainingGaps: [],
+    },
+  };
+  const hybridSessionResult = {
+    version: 1,
+    title: "Complete a hybrid Sweep session",
+    plan: hybridLivePlan,
+    planDigest: sweepPlanDigest(hybridLivePlan, {
+      inventory: liveInventory,
+      batchMerge,
+      batchReportSet,
+      capabilities: batchCapabilities,
+      ...sweepBatchDependencies,
+    }),
+    completions: [],
+    candidateResults: [{
+      candidateId: "remove-unused-helper",
+      disposition: "polish",
+      status: "pending",
+      completionDigest: null,
+      gaps: [],
+    }],
+    summary: {
+      state: "incomplete",
+      assessment: "The hybrid inspection plan is awaiting exact approval.",
       remainingGaps: [],
     },
   };
@@ -379,6 +409,11 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     writeFile(batchReportPath, JSON.stringify(batchReport), { mode: 0o600 }),
     writeFile(batchReportSetPath, JSON.stringify(batchReportSet), { mode: 0o600 }),
     writeFile(hybridPlanPath, JSON.stringify(hybridLivePlan), { mode: 0o600 }),
+    writeFile(
+      hybridSessionResultPath,
+      JSON.stringify(hybridSessionResult),
+      { mode: 0o600 },
+    ),
     writeFile(completionPath, JSON.stringify(makeSweepCompletion()), {
       mode: 0o600,
     }),
@@ -451,6 +486,27 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       ]),
     );
   }
+  const hybridSessionResultArguments = [
+    "validate-session-result",
+    "--input",
+    hybridSessionResultPath,
+    "--root",
+    repositoryRoot,
+    "--reports",
+    batchReportSetPath,
+    "--capabilities",
+    capabilitiesPath,
+  ];
+  assert.deepEqual(
+    runWithHostAdapter(
+      "plugins/hope/runtime/features/sweep/cli.mjs",
+      hybridSessionResultArguments,
+    ),
+    runWithHostAdapter("harness/hope.mjs", [
+      "sweep",
+      ...hybridSessionResultArguments,
+    ]),
+  );
   for (const arguments_ of [
     ["select-inspection-mode", "--mode", "active-session"],
     [
@@ -470,6 +526,20 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
         : runJson)("harness/hope.mjs", ["sweep", ...arguments_]),
     );
   }
+  assert.match(
+    runFailure(
+      "plugins/hope/runtime/features/sweep/cli.mjs",
+      [
+        "select-inspection-mode",
+        "--mode",
+        "subagent-hybrid",
+        "--capabilities",
+        capabilitiesPath,
+      ],
+      { HOPE_SWEEP_HOST_ADAPTER_MODULE: "" },
+    ),
+    /trusted host adapter/u,
+  );
   for (const [command, path] of [
     ["validate-batch-report", batchReportPath],
     ["merge-batch-reports", batchReportSetPath],

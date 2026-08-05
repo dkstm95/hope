@@ -9,6 +9,7 @@ import {
 import { parseSweepArguments } from "../features/sweep/cli.mjs";
 import { createPolishReceipt } from "../features/polish/validate.mjs";
 import {
+  createSweepBatchManifest,
   createSweepBatchReportSet,
   mergeSweepBatchReports,
   selectSweepInspectionMode,
@@ -150,6 +151,44 @@ test("sweep validates the hybrid batch contract and preserves merge evidence", (
   );
 });
 
+test("sweep validates hybrid session results with their report artifacts", () => {
+  const hybrid = makeSweepHybridPlan();
+  const dependencies = {
+    inventory: hybrid.inventory,
+    batchMerge: hybrid.batchMerge,
+    batchReportSet: hybrid.reportSet,
+    capabilities: hybrid.capabilities,
+    ...sweepBatchDependencies,
+  };
+  const result = {
+    version: 1,
+    title: "Complete a hybrid Sweep session",
+    plan: hybrid.plan,
+    planDigest: sweepPlanDigest(hybrid.plan, dependencies),
+    completions: [],
+    candidateResults: [{
+      candidateId: "remove-unused-helper",
+      disposition: "polish",
+      status: "pending",
+      completionDigest: null,
+      gaps: [],
+    }],
+    summary: {
+      state: "incomplete",
+      assessment: "The hybrid inspection plan is awaiting exact approval.",
+      remainingGaps: [],
+    },
+  };
+  assert.equal(
+    validateSweepSessionResult(result, dependencies).result.state,
+    "incomplete",
+  );
+  assert.throws(
+    () => validateSweepSessionResult(result, { inventory: hybrid.inventory }),
+    /batchMerge is required|batchReportSet is required/u,
+  );
+});
+
 test("sweep cannot downgrade scope or create approval without live inventory", () => {
   const scoped = makeSweepPlan();
   scoped.session.scope = "selected-files";
@@ -172,6 +211,7 @@ test("sweep negotiates the inspection fallback before dispatch", () => {
     selectSweepInspectionMode({
       requestedMode: "subagent-hybrid",
       capabilities: makeSweepBatchCapabilities(),
+      activeSessionAvailable: true,
       ...sweepBatchDependencies,
     }).mode,
     "subagent-hybrid",
@@ -179,6 +219,7 @@ test("sweep negotiates the inspection fallback before dispatch", () => {
   const fallback = selectSweepInspectionMode({
     requestedMode: "subagent-hybrid",
     capabilities: { mode: "subagent-hybrid" },
+    activeSessionAvailable: true,
   });
   assert.equal(fallback.mode, "active-session");
   assert.equal(fallback.fallbackUsed, true);
@@ -196,7 +237,7 @@ test("sweep negotiates the inspection fallback before dispatch", () => {
       capabilities: makeSweepBatchCapabilities(),
       activeSessionAvailable: false,
     }),
-    /trusted host verifier/u,
+    /trusted host.*verifier/u,
   );
 });
 
@@ -213,12 +254,26 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
     inputDigest: `sha256:${"c".repeat(64)}`,
     invocationId: "successful-invocation",
   });
+  const manifest = createSweepBatchManifest({
+    feature: "sweep-batch-manifest",
+    version: 1,
+    runId: successfulReport.runId,
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    batches: [successfulReport.batch],
+    invocationId: "manifest-invocation",
+  }, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
   const reportSet = createSweepBatchReportSet({
     feature: "sweep-batch-report-set",
     version: 1,
     runId: successfulReport.runId,
     inventoryDigest: inventory.digest,
     capabilityDigest: capabilities.digest,
+    manifest,
     reports: [successfulReport],
     attempts: [
       {
@@ -295,6 +350,31 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
       ...sweepBatchDependencies,
     }),
     /retryBudget|too many/u,
+  );
+
+  const duplicateReport = makeSweepBatchReport(inventory, capabilities, {
+    attempt: 1,
+    inputDigest: `sha256:${"9".repeat(64)}`,
+    invocationId: "duplicate-invocation",
+  });
+  const duplicateAttempt = clone(reportSet);
+  duplicateAttempt.attempts.push({
+    batch: duplicateReport.batch,
+    attempt: duplicateReport.attempt,
+    attemptId: duplicateReport.attemptId,
+    status: "failed",
+    inputDigest: duplicateReport.inputDigest,
+    invocationId: duplicateReport.invocationId,
+    error: "The host recorded a duplicate attempt ordinal.",
+  });
+  delete duplicateAttempt.digest;
+  assert.throws(
+    () => createSweepBatchReportSet(duplicateAttempt, {
+      inventory,
+      capabilities,
+      ...sweepBatchDependencies,
+    }),
+    /repeats an attempt number|attemptId|digest/u,
   );
 });
 
@@ -675,6 +755,15 @@ test("sweep derives the file budget from cited file sources", () => {
   assert.throws(
     () => validateTestPlan(overstated),
     /must equal the 3 distinct file sources/u,
+  );
+});
+
+test("sweep full-codebase candidates target only inventory files", () => {
+  const plan = makeSweepPlan();
+  plan.candidates[0].targetSourceIds = ["repo"];
+  assert.throws(
+    () => validateTestPlan(plan),
+    /targetSourceIds must contain only inventory file sources/u,
   );
 });
 

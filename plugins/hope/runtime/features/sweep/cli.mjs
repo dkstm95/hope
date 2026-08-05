@@ -41,7 +41,7 @@ function usage() {
     "  hope sweep approval-candidate --input <plan.json> --candidate <id> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
     "  hope sweep approval-receipt --input <approval.json>",
     "  hope sweep validate-completion --input <completion.json>",
-    "  hope sweep validate-session-result --input <session-result.json> --root <repository-root>",
+    "  hope sweep validate-session-result --input <session-result.json> --root <repository-root> [--reports <reports.json> --capabilities <capabilities.json>]",
     "  hope sweep model-evaluation-plan",
     "  hope sweep model-evaluation-prepare --case <id> --run <number>",
     "  hope sweep model-evaluation-oracle --case <id>",
@@ -172,12 +172,19 @@ export function parseSweepArguments(argv) {
     return { command, root: options.root };
   }
   if (command === "validate-session-result") {
-    if (!options.input || !options.root || !hasOnly(["input", "root"])) {
+    if (
+      !options.input
+      || !options.root
+      || Boolean(options.reports) !== Boolean(options.capabilities)
+      || !hasOnly(["capabilities", "input", "reports", "root"])
+    ) {
       throw new TypeError(usage());
     }
     return {
+      ...(options.capabilities ? { capabilitiesPath: options.capabilities } : {}),
       command,
       inputPath: options.input,
+      ...(options.reports ? { reportsPath: options.reports } : {}),
       repositoryRoot: options.root,
     };
   }
@@ -380,6 +387,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       ?? validateSweepSessionResultFile
     )(options.inputPath, {
       ...dependencies,
+      capabilitiesPath: options.capabilitiesPath,
+      reportsPath: options.reportsPath,
       repositoryRoot: options.repositoryRoot,
     });
   }

@@ -113,6 +113,8 @@ For `subagent-hybrid`:
   check, relationship coverage, observations, gaps, input identity,
   invocation identity, and attempt identity;
 - retain failed and cancelled attempts in the report set;
+- include a host-verified pre-dispatch manifest and bind every report and
+  attempt to one manifest batch;
 - validate and merge the report set in the main session; and
 - keep each batch relationship and reconcile cross-batch conflicts in the merge
   before authoring the one plan.
@@ -266,7 +268,7 @@ visible pending state, write the version 1 session result required by
 Validate it with:
 
 ```text
-validate-session-result --input <session-result.json> --root <repository-root>
+validate-session-result --input <session-result.json> --root <repository-root> [--reports <reports.json> --capabilities <capabilities.json>]
 ```
 
 Use the validated session result to report what was checked, changed, verified,

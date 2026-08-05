@@ -1167,6 +1167,15 @@ export function validateSweepPlan(value, {
     )
   ));
   for (const [index, candidate] of normalizedCandidates.entries()) {
+    if (isFullCodebaseScope) {
+      for (const sourceId of candidate.targetSourceIds) {
+        if (!normalizedCoverage?.fileSourceIds.includes(sourceId)) {
+          errors.push(
+            `sweep.candidates[${index}].targetSourceIds must contain only inventory file sources`,
+          );
+        }
+      }
+    }
     const category = normalizedCategories.find(
       (item) => item.id === candidate.categoryId,
     );
@@ -2420,6 +2429,11 @@ export function validateSweepSessionResult(value, {
   inputFileBytes = serializedJsonBytes(value),
   verifyApprovalAttestation,
   inventory,
+  batchMerge,
+  batchReportSet,
+  capabilities,
+  verifyBatchCapabilities,
+  verifyBatchInvocation,
 } = {}) {
   const errors = [];
   const input = validation.object(value, "sweepSessionResult", errors);
@@ -2440,7 +2454,14 @@ export function validateSweepSessionResult(value, {
 
   let plan;
   try {
-    plan = validateSweepPlan(input.plan, { inventory });
+    plan = validateSweepPlan(input.plan, {
+      inventory,
+      batchMerge,
+      batchReportSet,
+      capabilities,
+      verifyBatchCapabilities,
+      verifyBatchInvocation,
+    });
   } catch (error) {
     errors.push(`sweepSessionResult.plan: ${error.message}`);
     plan = {

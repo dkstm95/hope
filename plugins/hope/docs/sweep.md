@@ -209,6 +209,9 @@ A batch report may cite only its assigned inventory files and may keep a
 relationship `unresolved`; the merge does not discard that relationship or its
 evidence.
 
+The report set also carries a host-verified pre-dispatch manifest, and every
+report and attempt must match one manifest batch.
+
 The main session performs the cross-batch synthesis and writes the one Sweep
 plan.
 
@@ -218,9 +221,9 @@ Polish receipt.
 The host bounds the synthesis input to the report and merge limits in the
 brief.
 
-It chooses the fallback before dispatch, keeps every trusted retry attempt tied
-to the batch binding, enforces the retry budget, and reruns the live inventory
-before validation and approval.
+It confirms active-session fallback before dispatch, keeps every trusted retry
+attempt tied to the manifest and batch binding, enforces the retry budget, and
+reruns the live inventory before validation and approval.
 
 An incomplete, stale, untrusted, or capability-mismatched report keeps the plan
 blocked.
