@@ -74,6 +74,8 @@ runtime/features/sweep/completion-v1.schema.json
 runtime/features/sweep/constants.mjs
 runtime/features/sweep/evaluation-output-v1.schema.json
 runtime/features/sweep/index.mjs
+runtime/features/sweep/inventory-v1.schema.json
+runtime/features/sweep/inventory.mjs
 runtime/features/sweep/model-evaluation.mjs
 runtime/features/sweep/plan-v1.schema.json
 runtime/features/sweep/session-result-v1.schema.json

@@ -20,7 +20,7 @@ const unsupportedCategoryIds = Object.freeze(
     .map((category) => category.id),
 );
 
-export const SWEEP_MODEL_EVALUATION_VERSION = 7;
+export const SWEEP_MODEL_EVALUATION_VERSION = 8;
 
 export const sweepModelEvaluationLimits = Object.freeze({
   outputBytes: 16 * 1024,
@@ -34,7 +34,7 @@ function repositoryInput(id, files) {
   return Object.freeze({
     contentIsSynthetic: true,
     id,
-    request: "Inspect this repository for one bounded Sweep plan. Do not modify any file.",
+    request: "Inspect every file in this repository for one complete-codebase Sweep plan. You may reason in batches, but do not modify any file or stop after a partial inventory.",
     files: Object.freeze(files.map((file) => Object.freeze(file))),
   });
 }
@@ -495,6 +495,8 @@ export const sweepModelEvaluationOutputContract = Object.freeze({
       "Use polish only for fully evidenced maintenance that preserves behavior, public contracts, and dependencies; report-only for uncertain findings; handoff for changing work; and no-candidate when no maintenance work unit remains.",
     impacts:
       "Classify the proposed action's behavior, publicContract, and external dependency impacts separately. Behavior means intended runtime, user-visible, build, test, and release outcomes. Public contract means supported APIs, commands, schemas, configuration, and documented promises; correcting stale wording to an authoritative unchanged contract preserves it. Dependency means declared external package, runtime, platform, and support relationships, not ordinary internal imports. Use changing for a known change, uncertain when evidence cannot decide, preserving only when evidence supports no change, or null for no-candidate.",
+    coverage:
+      "Use complete only when every inventory file was inspected and the merged plan can bind every file source; use incomplete when any file or inspection batch remains uninspected.",
     targetPaths:
       "List the exact repository paths in the work unit. Use an empty array for no-candidate.",
     unsupportedCategoryIds:
@@ -581,6 +583,7 @@ function portableBrief(value) {
   const {
     approvalSchemaPath: _approvalSchemaPath,
     completionSchemaPath: _completionSchemaPath,
+    inventorySchemaPath: _inventorySchemaPath,
     planSchemaPath: _planSchemaPath,
     sessionResultSchemaPath: _sessionResultSchemaPath,
     ...brief
@@ -590,6 +593,7 @@ function portableBrief(value) {
     schemas: Object.freeze({
       approval: "approval-v1.schema.json",
       completion: "completion-v1.schema.json",
+      inventory: "inventory-v1.schema.json",
       plan: "plan-v1.schema.json",
       sessionResult: "session-result-v1.schema.json",
     }),
@@ -682,6 +686,7 @@ export function validateSweepModelEvaluationOutput(value) {
     [
       "categoryId",
       "checkId",
+      "coverage",
       "decision",
       "impacts",
       "targetPaths",
@@ -691,6 +696,16 @@ export function validateSweepModelEvaluationOutput(value) {
     "model output",
   );
   assertEvaluation(decisions.includes(value.decision), "decision is not supported");
+  assertEvaluation(
+    ["complete", "incomplete"].includes(value.coverage),
+    "coverage is not supported",
+  );
+  if (value.coverage === "incomplete") {
+    assertEvaluation(
+      !["polish", "handoff"].includes(value.decision),
+      "incomplete coverage cannot enter Polish or handoff",
+    );
+  }
   const targetPaths = stringList(value.targetPaths, "targetPaths", {
     maximum: sweepModelEvaluationLimits.targetPaths,
   });
@@ -745,6 +760,7 @@ export function validateSweepModelEvaluationOutput(value) {
   return Object.freeze({
     categoryId,
     checkId,
+    coverage: value.coverage,
     decision: value.decision,
     impacts,
     targetPaths,
@@ -829,12 +845,14 @@ function evaluationAgainst(output, expected) {
   const targetsMatched = expected.requiredTargetPaths.every(
     (path) => outputTargets.has(path),
   ) && output.targetPaths.every((path) => allowedTargets.has(path));
+  const coverageMatched = output.coverage === (expected.coverage ?? "complete");
   const score = [
     categoryMatched,
     checkMatched,
     decisionMatched,
     impactsMatched,
     targetsMatched,
+    coverageMatched,
   ].filter(Boolean).length;
   return {
     categoryMatched,
@@ -848,7 +866,8 @@ function evaluationAgainst(output, expected) {
       && checkMatched
       && decisionMatched
       && impactsMatched
-      && targetsMatched,
+      && targetsMatched
+      && coverageMatched,
   };
 }
 

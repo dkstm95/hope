@@ -22,11 +22,12 @@ function expectedOutput(caseId, overrides = {}) {
   return {
     categoryId: oracle.categoryId,
     checkId: oracle.checkId,
+    coverage: "complete",
     decision: oracle.decision,
     impacts: { ...oracle.impacts },
     targetPaths: [...oracle.requiredTargetPaths],
     unsupportedCategoryIds: [],
-    reason: "The repository evidence supports this bounded Sweep disposition.",
+    reason: "The repository evidence supports this full-codebase Sweep disposition.",
     ...overrides,
   };
 }
@@ -127,6 +128,7 @@ test("Sweep model evaluation accepts a safe no-candidate dynamic result", async 
     output: {
       categoryId: null,
       checkId: null,
+      coverage: "complete",
       decision: "no-candidate",
       impacts: null,
       targetPaths: [],
@@ -148,6 +150,7 @@ test("Sweep model evaluation accepts an equivalent public-contract category", as
     output: {
       categoryId: "integrity",
       checkId: "configuration-drift",
+      coverage: "complete",
       decision: "handoff",
       impacts: {
         behavior: "changing",

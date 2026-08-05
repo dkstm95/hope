@@ -28,6 +28,7 @@ import {
 import {
   SWEEP_CHECK_CATALOG,
 } from "../features/sweep/constants.mjs";
+import { sweepInventoryDigest } from "../features/sweep/inventory.mjs";
 
 const clone = (value) => structuredClone(value);
 const validateCompletion = (value) => validateSweepCompletion(
@@ -39,7 +40,7 @@ const validateSessionResult = (value) => validateSweepSessionResult(
   sweepApprovalDependencies,
 );
 
-test("sweep validates one bounded dead-code plan", () => {
+test("sweep validates one full-codebase dead-code plan", () => {
   const plan = validateSweepPlan(makeSweepPlan());
   assert.equal(plan.result.state, "awaiting-approval");
   assert.equal(plan.result.executableCandidates, 1);
@@ -200,6 +201,12 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
   ]) {
     const variant = makeSweepPlan();
     mutate(variant);
+    const fileSourceIds = variant.snapshot.sources
+      .filter((source) => source.kind === "file")
+      .map((source) => source.id);
+    variant.coverage.fileSourceIds = [...fileSourceIds];
+    variant.coverage.batches[0].fileSourceIds = [...fileSourceIds];
+    variant.coverage.inventoryDigest = sweepInventoryDigest(variant.snapshot);
     const bound = createSweepApprovalCandidate(
       variant,
       "remove-unused-helper",
@@ -485,6 +492,8 @@ test("sweep brief and CLI expose the two-stage contract", async () => {
   assert.equal(brief.categories.length, 7);
   assert.equal(brief.composition.dependency, "Sweep -> Polish");
   assert.match(brief.approvalSchemaPath, /approval-v1\.schema\.json$/u);
+  assert.match(brief.inventorySchemaPath, /inventory-v1\.schema\.json$/u);
+  assert.match(brief.discovery.join(" "), /every tracked and unignored/u);
   assert.match(brief.approval.join(" "), /Do not modify repository files/u);
   assert.equal(brief.writingStandard.text, "shared standard\n");
   assert.deepEqual(
@@ -500,6 +509,10 @@ test("sweep brief and CLI expose the two-stage contract", async () => {
       command: "approval-candidate",
       inputPath: "/tmp/plan.json",
     },
+  );
+  assert.deepEqual(
+    parseSweepArguments(["inventory", "--root", "/tmp/repository"]),
+    { command: "inventory", root: "/tmp/repository" },
   );
   assert.deepEqual(
     parseSweepArguments([

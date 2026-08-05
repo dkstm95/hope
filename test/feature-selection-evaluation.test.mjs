@@ -87,10 +87,10 @@ function attestedReceiptFor(specification) {
 
 test("feature selection covers every decision in 13 unique paired cases", () => {
   const plan = createHopeFeatureSelectionEvaluationPlan();
-  assert.equal(plan.contractVersion, 3);
-  assert.equal(plan.version, 4);
-  assert.equal(HOPE_FEATURE_SELECTION_CONTRACT_VERSION, 3);
-  assert.equal(HOPE_FEATURE_SELECTION_EVALUATION_VERSION, 4);
+  assert.equal(plan.contractVersion, 4);
+  assert.equal(plan.version, 5);
+  assert.equal(HOPE_FEATURE_SELECTION_CONTRACT_VERSION, 4);
+  assert.equal(HOPE_FEATURE_SELECTION_EVALUATION_VERSION, 5);
   assert.equal(plan.totalRuns, 26);
   assert.equal(plan.runs.filter((run) => run.variant === "minimal").length, 13);
   assert.equal(plan.runs.filter((run) => run.variant === "full").length, 13);

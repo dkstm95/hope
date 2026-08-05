@@ -24,6 +24,7 @@ import {
   makeSweepCompletion,
   makeSweepApprovalCandidate,
   makeSweepApprovalReceipt,
+  makeSweepInventory,
   makeSweepPlan,
   makeSweepSessionResult,
   sweepApprovalDependencies,
@@ -56,12 +57,14 @@ function withoutSchemaPaths(value) {
     planSchemaPath,
     approvalSchemaPath,
     completionSchemaPath,
+    inventorySchemaPath,
     sessionResultSchemaPath,
     ...rest
   } = value;
   assert.ok(planSchemaPath);
   assert.ok(approvalSchemaPath);
   assert.ok(completionSchemaPath);
+  assert.ok(inventorySchemaPath);
   assert.ok(sessionResultSchemaPath);
   return rest;
 }
@@ -156,6 +159,7 @@ test("harness and generated Sweep report the same missing AI boundary", () => {
 test("exact harness and generated Sweep commands stay equivalent", async () => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-sweep-two-track-");
   const planPath = join(temporaryRoot, "plan.json");
+  const inventoryPath = join(temporaryRoot, "inventory.json");
   const completionPath = join(temporaryRoot, "completion.json");
   const approvalPath = join(temporaryRoot, "approval.json");
   const sessionResultPath = join(temporaryRoot, "session-result.json");
@@ -193,11 +197,12 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     const output = {
       categoryId: oracle.categoryId,
       checkId: oracle.checkId,
+      coverage: "complete",
       decision: oracle.decision,
       impacts: oracle.impacts ? { ...oracle.impacts } : null,
       targetPaths: [...oracle.requiredTargetPaths],
       unsupportedCategoryIds: [],
-      reason: "The synthetic repository supports this bounded result.",
+      reason: "The synthetic repository supports this full-codebase result.",
     };
     const invocationId = `two-track-${specification.caseId}`;
     evaluationReceipts.push((await createSweepModelEvaluationReceipt({
@@ -224,6 +229,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   }
   await Promise.all([
     writeFile(planPath, JSON.stringify(makeSweepPlan()), { mode: 0o600 }),
+    writeFile(inventoryPath, JSON.stringify(makeSweepInventory()), { mode: 0o600 }),
     writeFile(completionPath, JSON.stringify(makeSweepCompletion()), {
       mode: 0o600,
     }),
@@ -238,6 +244,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     writeFile(evaluationOutputPath, JSON.stringify({
       categoryId: "unused-stale",
       checkId: "dead-code",
+      coverage: "complete",
       decision: "polish",
       impacts: {
         behavior: "preserving",
@@ -276,12 +283,14 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
         command,
         "--input",
         path,
+        ...(command === "validate-plan" ? ["--inventory", inventoryPath] : []),
       ]),
       runJson("harness/hope.mjs", [
         "sweep",
         command,
         "--input",
         path,
+        ...(command === "validate-plan" ? ["--inventory", inventoryPath] : []),
       ]),
     );
   }
@@ -305,6 +314,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       planPath,
       "--candidate",
       "remove-unused-helper",
+      "--inventory",
+      inventoryPath,
     ]),
     runJson("harness/hope.mjs", [
       "sweep",
@@ -313,6 +324,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       planPath,
       "--candidate",
       "remove-unused-helper",
+      "--inventory",
+      inventoryPath,
     ]),
   );
   assert.equal(
@@ -333,12 +346,16 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       "validate-plan",
       "--input",
       invalidPlanPath,
+      "--inventory",
+      inventoryPath,
     ]),
     runFailure("harness/hope.mjs", [
       "sweep",
       "validate-plan",
       "--input",
       invalidPlanPath,
+      "--inventory",
+      inventoryPath,
     ]),
   );
   assert.deepEqual(

@@ -7,6 +7,7 @@ import {
   createSweepApprovalCandidateFile,
   createSweepApprovalReceiptFile,
   createSweepBrief,
+  createSweepInventory,
   createSweepModelEvaluationPlan,
   createSweepModelEvaluationReceiptFile,
   getSweepModelEvaluationOracle,
@@ -28,8 +29,9 @@ function usage() {
     "",
     "Internal Skill protocol:",
     "  hope sweep brief [--risk <low|medium|high>]",
-    "  hope sweep validate-plan --input <plan.json>",
-    "  hope sweep approval-candidate --input <plan.json> --candidate <id>",
+    "  hope sweep inventory [--root <repository-root>]",
+    "  hope sweep validate-plan --input <plan.json> [--inventory <inventory.json>]",
+    "  hope sweep approval-candidate --input <plan.json> --candidate <id> [--inventory <inventory.json>]",
     "  hope sweep approval-receipt --input <approval.json>",
     "  hope sweep validate-completion --input <completion.json>",
     "  hope sweep validate-session-result --input <session-result.json>",
@@ -50,6 +52,7 @@ export function parseSweepArguments(argv) {
   if (
     ![
       "brief",
+      "inventory",
       "validate-plan",
       "approval-candidate",
       "approval-receipt",
@@ -73,8 +76,10 @@ export function parseSweepArguments(argv) {
       "host",
       "input",
       "invocation",
+      "inventory",
       "model",
       "risk",
+      "root",
       "run",
     ],
     prefix: "Hope sweep",
@@ -149,19 +154,37 @@ export function parseSweepArguments(argv) {
     if (!hasOnly(["risk"])) throw new TypeError(usage());
     return { command, risk: options.risk };
   }
-  if (evaluationKeys.some((key) => options[key]) || options.risk || !options.input) {
-    throw new TypeError(usage());
+  if (command === "inventory") {
+    if (!hasOnly(["root"])) throw new TypeError(usage());
+    return { command, root: options.root };
   }
   if (command === "approval-candidate") {
-    if (!options.candidate) throw new TypeError(usage());
+    if (
+      !options.candidate
+      || !options.input
+      || !hasOnly(["candidate", "input", "inventory"])
+    ) {
+      throw new TypeError(usage());
+    }
     return {
       candidateId: options.candidate,
       command,
       inputPath: options.input,
+      ...(options.inventory ? { inventoryPath: options.inventory } : {}),
     };
   }
-  if (options.candidate) throw new TypeError(usage());
-  return { command, inputPath: options.input };
+  if (
+    !options.input
+    || options.candidate
+    || !hasOnly(command === "validate-plan" ? ["input", "inventory"] : ["input"])
+  ) {
+    throw new TypeError(usage());
+  }
+  return {
+    command,
+    inputPath: options.input,
+    ...(options.inventory ? { inventoryPath: options.inventory } : {}),
+  };
 }
 
 export async function main(argv = process.argv.slice(2), dependencies = {}) {
@@ -183,15 +206,23 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       options,
       dependencies,
     );
+  } else if (options.command === "inventory") {
+    result = await (dependencies.createSweepInventory ?? createSweepInventory)(
+      { cwd: options.root },
+      dependencies,
+    );
   } else if (options.command === "validate-plan") {
     result = await (
       dependencies.validateSweepPlanFile ?? validateSweepPlanFile
-    )(options.inputPath, dependencies);
+    )(options.inputPath, { ...dependencies, inventoryPath: options.inventoryPath });
   } else if (options.command === "approval-candidate") {
     result = await (
       dependencies.createSweepApprovalCandidateFile
       ?? createSweepApprovalCandidateFile
-    )(options.inputPath, options.candidateId, dependencies);
+    )(options.inputPath, options.candidateId, {
+      ...dependencies,
+      inventoryPath: options.inventoryPath,
+    });
   } else if (options.command === "approval-receipt") {
     result = await (
       dependencies.createSweepApprovalReceiptFile

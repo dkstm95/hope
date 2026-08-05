@@ -1,10 +1,9 @@
 # Hope sweep
 
-Hope sweep starts one bounded codebase maintenance task when a person asks for
-it.
+Hope sweep starts one full-codebase maintenance task when a person asks for it.
 
-It inspects an exact repository snapshot, shows a plan, and changes only the
-work units that the person approves.
+It captures an exact repository inventory, inspects that inventory in batches,
+shows one merged plan, and changes only the work units that the person approves.
 
 Sweep owns discovery, category status, prioritization, approval binding, and
 the final session result.
@@ -16,8 +15,8 @@ cleanup.
 
 ## Product boundary
 
-One invocation starts limited discovery and produces a plan before any
-repository file changes.
+One invocation starts an inventory-backed discovery session and produces one
+plan before any repository file changes.
 
 The person does not choose a daily, weekly, monthly, yearly, or other public
 profile.
@@ -25,14 +24,20 @@ profile.
 Sweep adapts its plan to the repository while keeping the same category,
 evidence, approval, and result contract.
 
-The plan covers production code, tests, documentation, configuration, generated
-sources, package metadata, and other repository content within its stated
-budget.
+The current automatic mode covers every Git-tracked and unignored untracked
+regular file in the repository worktree.
+
+This includes hidden files, production code, tests, documentation, configuration,
+generated sources, package metadata, and other repository content.
+
+Ignored dependencies, ignored build output, and `.git` metadata are outside this
+inventory boundary.
 
 Generated files may be inspected, but Sweep changes their editable source and
 uses the repository build when the generated copy must change.
 
-Sweep version 1 supports every check in the codebase maintenance catalog.
+The current Sweep contract supports every check in the codebase maintenance
+catalog.
 
 The catalog is fixed by the shared runtime so every entry path uses the same
 checks, evidence requirements, and execution boundary.
@@ -79,9 +84,13 @@ than aliases for success.
 
 ## Initial discovery and plan
 
-The initial call has explicit file, candidate, and change budgets.
+The initial call captures an exact inventory before inspection.
 
-The host inspects repository rules and available evidence within those budgets.
+The host inspects every inventory file in deterministic batches and merges the
+batch coverage into one plan.
+
+Candidate and change budgets remain explicit, but the host cannot lower a file
+budget to stop the full-codebase inspection early.
 
 It does not modify the repository during this phase.
 
@@ -89,18 +98,27 @@ The shared runtime validates one version 1 plan with:
 
 - an exact work snapshot;
 - one session ID, scope, state, and budget;
+- an inventory digest, every inventory file source ID, and ordered inspection
+  batches;
 - every versioned category, check, support state, and inspection state;
 - zero or more bounded candidates;
 - exact target and evidence source IDs for each candidate;
 - an exact change preview and maximum change count;
 - the exact evidence contract for each candidate's maintenance check;
 - verification steps and unresolved gaps; and
-- an honest summary of checked scope and remaining gaps.
+- an honest summary of the inventory count, checked scope, and remaining gaps.
 
 `filesChecked` is the number of distinct file sources cited by inspected
 checks.
 
 The runtime derives that number and rejects a smaller or larger claim.
+
+In the current `entire-codebase` scope, `maximumFiles` and `filesInInventory`
+must equal the exact inventory file count, and complete coverage requires every
+inventory file to appear in inspected-check evidence.
+
+The runtime keeps the plan `blocked` while any inventory batch is partial,
+not-checked, or failed.
 
 The plan state is `awaiting-approval` only when at least one candidate is safe
 for Polish.
@@ -110,8 +128,28 @@ It is `complete-with-findings` when findings remain but none can enter Polish.
 It is `complete-no-change` only when every catalog check completed and found no
 candidate.
 
-It is `blocked` only when incomplete discovery produced no finding that the
-person can act on.
+It is `blocked` whenever full-codebase coverage is incomplete or discovery has
+not produced enough evidence for an actionable result.
+
+### Inventory and batches
+
+The shared `inventory` command records one Git worktree source and one content
+identity for every tracked or unignored untracked regular file.
+
+The inventory digest binds the source list and identities without depending on
+the capture time.
+
+The host may divide the file source IDs into as many ordered batches as the
+runtime allows, but every file must occur in exactly one batch.
+
+If the repository exceeds the shared inventory resource limit, Sweep fails
+without truncating the inventory or presenting a partial scan as complete.
+
+The host merges all batch results into one plan instead of starting a separate
+Sweep session for each batch.
+
+If a file changes while the host is reading it, the inventory is stale and the
+host captures a new inventory before continuing.
 
 ## Maintenance evidence
 
@@ -333,12 +371,13 @@ The oracle stays hidden until the fresh host returns its output.
 
 ## Two entry paths
 
-The Claude and Codex Skills use the active host to inspect a repository, author
-the plan, ask for exact approval, invoke Polish, and verify the completion.
+The Claude and Codex Skills use the active host to capture the inventory, inspect
+every file in batches, author the merged plan, ask for exact approval, invoke
+Polish, and verify the completion.
 
-They call the generated Sweep runtime for the brief, plan validation, approval
-candidate, approval receipt, completion validation, and session-result
-validation.
+They call the generated Sweep runtime for inventory capture, the brief, plan
+validation, approval candidate, approval receipt, completion validation, and
+session-result validation.
 
 Approval receipt creation and validation require the active host's trusted
 attestation verifier.

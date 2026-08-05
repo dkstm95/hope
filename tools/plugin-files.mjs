@@ -152,6 +152,8 @@ export const generatedPluginFiles = Object.freeze([
     "constants.mjs",
     "evaluation-output-v1.schema.json",
     "index.mjs",
+    "inventory-v1.schema.json",
+    "inventory.mjs",
     "model-evaluation.mjs",
     "plan-v1.schema.json",
     "session-result-v1.schema.json",

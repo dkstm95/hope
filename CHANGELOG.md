@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.8.0 - 2026-08-05
+
+- Make automatic Sweep inspect the complete tracked and unignored codebase
+  through one inventory-backed plan instead of an arbitrary file subset.
+- Add exact file identities, ordered inspection batches, inventory digests, and
+  full-coverage validation that blocks approval while any batch is incomplete.
+- Expose the same inventory command and coverage contract through the harness,
+  generated plugin runtime, and Sweep Skill.
+- Update the Sweep model-evaluation contract to test full-codebase coverage and
+  keep the new generated package synchronized with its source.
+- Update feature selection and its evaluation contract so the published Sweep
+  description names inventory-backed full-codebase inspection.
+
 ## 1.7.1 - 2026-08-05
 
 - Correct the feature-selection history to record that version 1.7.0 published

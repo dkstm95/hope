@@ -1,6 +1,6 @@
 ---
 name: sweep
-description: Use to inspect a codebase for broad maintenance, show a bounded plan, and apply only exact approved behavior-preserving work.
+description: Use to inspect an entire codebase in inventory-backed batches, show one merged plan, and apply only exact approved behavior-preserving work.
 ---
 
 # Hope sweep
@@ -9,7 +9,8 @@ Use the active Claude or Codex session to inspect the repository, show the plan,
 wait for exact approval, and verify approved work.
 
 Let the Hope runtime own categories, support disclosure, evidence checks,
-budgets, approval binding, states, and results.
+inventory coverage, candidate and change budgets, approval binding, states, and
+results.
 
 ## Locate the commands
 
@@ -45,8 +46,9 @@ brief --risk <risk>
 The returned JSON is the complete Sweep workflow.
 
 Follow its `discovery`, `categories`, `checks`, `categoryContract`,
-`evidenceContract`, `planning`, `approval`, `execution`, `completion`, `composition`,
-`modelEvaluation`, `writingStandard`, schema paths, and limits.
+`evidenceContract`, `planning`, `inventory`, `approval`, `execution`,
+`completion`, `composition`, `modelEvaluation`, `writingStandard`, schema paths,
+and limits.
 
 Use `writingStandard.text` for language-bearing work and use a decision example
 only when its situation matches.
@@ -57,33 +59,50 @@ Do not copy the runtime contract into another checklist in this Skill.
 
 ## Prepare the plan
 
-Capture the exact repository and relevant file identities before inspection.
+Run `inventory` from the repository root and save its JSON to a private temporary
+file with restricted permissions.
 
-Choose explicit file, candidate, and change budgets for this session.
+```text
+inventory --root <repository-root>
+```
 
-Inspect only within those budgets and record every runtime category and check
-honestly.
+The inventory is the complete file scope: it includes tracked and unignored
+untracked regular files, including hidden and generated files, while excluding
+ignored dependencies, ignored build output, and `.git` metadata.
+
+Inspect every inventory file in ordered batches, and merge the batches into one
+`entire-codebase` plan.
+
+If `inventory` reports that the repository exceeds the shared resource limit,
+stop and report that failure; never lower the scope or claim full coverage.
+
+Choose explicit candidate and change budgets for this session, but never lower
+the file count below the inventory count.
 
 Do not modify repository files during discovery or plan authoring.
 
 Write the version 1 plan required by `planSchemaPath` to a private temporary
 JSON file with restricted permissions.
 
+Set `session.scope` to `entire-codebase`, set `maximumFiles` and
+`summary.filesInInventory` to the inventory file count, and copy the inventory
+digest, every file source ID, and the ordered batch records into `coverage`.
+
 Validate it with:
 
 ```text
-validate-plan --input <plan.json>
+validate-plan --input <plan.json> --inventory <inventory.json>
 ```
 
-A no-change, findings-only, or blocked plan is valid when it accurately reports
-the checked scope and gaps.
+A plan with incomplete inventory coverage is `blocked` and cannot produce an
+approval candidate, even when an early batch found a possible cleanup.
 
 ## Ask for exact approval
 
 For each executable candidate, prepare its exact approval identity with:
 
 ```text
-approval-candidate --input <plan.json> --candidate <candidate-id>
+approval-candidate --input <plan.json> --candidate <candidate-id> --inventory <inventory.json>
 ```
 
 Show the candidate digest, target and evidence identities, exact preview,
@@ -117,10 +136,11 @@ or prose claim.
 
 ## Execute approved work
 
-Recheck every bound source before editing.
+Re-run `inventory` and validate it against the plan before approval-candidate
+creation and before editing.
 
-If any source, preview, or budget changed, record the stale result and prepare a
-new plan instead of reusing the approval.
+If the inventory digest, any bound source, preview, or budget changed, record the
+stale result and prepare a new plan instead of reusing the approval.
 
 For an unchanged approved candidate, ask the Polish runtime for its brief and
 run one normal Polish workflow against the exact target.

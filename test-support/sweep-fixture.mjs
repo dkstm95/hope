@@ -5,6 +5,7 @@ import {
   sweepPlanDigest,
   sweepApprovalStatementDigest,
 } from "../features/sweep/validate.mjs";
+import { sweepInventoryDigest } from "../features/sweep/inventory.mjs";
 import { createPolishReceipt } from "../features/polish/validate.mjs";
 import { SWEEP_CATEGORY_CATALOG } from "../features/sweep/constants.mjs";
 
@@ -54,6 +55,9 @@ export function makeSweepPlan() {
     ],
   };
   const sourceIds = snapshot.sources.map((source) => source.id);
+  const fileSourceIds = snapshot.sources
+    .filter((source) => source.kind === "file")
+    .map((source) => source.id);
   const categories = SWEEP_CATEGORY_CATALOG.map((category) => ({
     id: category.id,
     support: category.support,
@@ -76,14 +80,28 @@ export function makeSweepPlan() {
     snapshot,
     session: {
       id: "sweep-example-session",
-      scope: "Inspect the example codebase for bounded maintenance work.",
+      scope: "entire-codebase",
       state: "awaiting-approval",
       budget: {
-        maximumFiles: 20,
+        maximumFiles: fileSourceIds.length,
         maximumCandidates: 4,
         maximumChanges: 4,
       },
       consideredCategoryIds: SWEEP_CATEGORY_CATALOG.map((item) => item.id),
+    },
+    coverage: {
+      mode: "full-codebase",
+      inventoryDigest: sweepInventoryDigest(snapshot),
+      fileSourceIds: [...fileSourceIds],
+      batches: [
+        {
+          id: "batch-001",
+          ordinal: 1,
+          fileSourceIds: [...fileSourceIds],
+          inspection: "checked",
+          gaps: [],
+        },
+      ],
     },
     categories,
     candidates: [
@@ -147,6 +165,7 @@ export function makeSweepPlan() {
     summary: {
       assessment: "One behavior-preserving dead-code candidate needs approval.",
       filesChecked: 3,
+      filesInInventory: 3,
       checkedScope: ["Every codebase maintenance category and check"],
       remainingGaps: [],
     },
@@ -155,6 +174,19 @@ export function makeSweepPlan() {
 
 export function makeSweepApprovalCandidate(plan = makeSweepPlan()) {
   return createSweepApprovalCandidate(plan, "remove-unused-helper");
+}
+
+export function makeSweepInventory(plan = makeSweepPlan()) {
+  const fileSourceIds = plan.snapshot.sources
+    .filter((source) => source.kind === "file")
+    .map((source) => source.id);
+  return {
+    feature: "sweep-inventory",
+    version: 1,
+    snapshot: structuredClone(plan.snapshot),
+    fileSourceIds,
+    digest: sweepInventoryDigest(plan.snapshot),
+  };
 }
 
 export function makeSweepApprovalReceipt(

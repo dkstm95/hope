@@ -370,13 +370,14 @@ Align.
 
 The current sweep implementation starts from [sweep.md](sweep.md).
 
-One invocation performs bounded discovery and produces a validated plan before
-any repository file changes.
+One invocation captures an exact repository inventory, inspects it in batches,
+and produces one validated plan before any repository file changes.
 
 The shared core owns the versioned category catalog, supported-check disclosure,
 plan, approval-receipt, completion, and session-result schemas, source and
-evidence links, derived file budgets, session states, approval and execution
-contract digests, stale-identity checks, and terminal result rules.
+evidence links, inventory digests, batch coverage, derived file counts, session
+states, approval and execution contract digests, stale-identity checks, and
+terminal result rules.
 
 Version 1 exposes all 21 checks across the seven codebase maintenance
 categories.
@@ -384,8 +385,9 @@ categories.
 Each category records its ordered check results, and each candidate uses the
 exact evidence contract declared for its check.
 
-The active Claude or Codex host inspects the repository, authors the bounded
-plan, shows an exact candidate, and waits for the person's approval.
+The active Claude or Codex host captures the inventory, inspects every file in
+ordered batches, authors the merged plan, shows an exact candidate, and waits
+for the person's approval.
 
 The independent harness exposes the same brief, plan validation, approval
 candidate, approval receipt, and completion validation.

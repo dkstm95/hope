@@ -10,6 +10,10 @@ import {
   validateWorkSnapshot,
 } from "../work-snapshot/index.mjs";
 import {
+  sweepInventoryDigest,
+  validateSweepInventory,
+} from "./inventory.mjs";
+import {
   SWEEP_APPROVAL_STATUSES,
   SWEEP_APPROVAL_RECEIPT_VERSION,
   SWEEP_BEHAVIOR_IMPACTS,
@@ -21,8 +25,10 @@ import {
   SWEEP_COMPLETION_STATUSES,
   SWEEP_COMPLETION_VERSION,
   SWEEP_CONTRACT_VERSION,
+  SWEEP_FULL_CODEBASE_SCOPE,
   SWEEP_EVIDENCE_STATUSES,
   SWEEP_INSPECTION_STATES,
+  SWEEP_COVERAGE_MODE,
   SWEEP_LIMITS,
   SWEEP_PLAN_STATES,
   SWEEP_PLAN_VERSION,
@@ -88,6 +94,138 @@ function sameSourceIdentity(left, right) {
     && sourceIdentity(left) === sourceIdentity(right);
 }
 
+function sameSourceList(left, right) {
+  return left.length === right.length
+    && left.every((source, index) => sameSourceIdentity(source, right[index]));
+}
+
+function normalizeCoverage(value, path, errors, normalizedSnapshot) {
+  if (value === undefined) return undefined;
+  const coverage = validation.object(value, path, errors);
+  validation.unknownKeys(
+    coverage,
+    ["mode", "inventoryDigest", "fileSourceIds", "batches"],
+    path,
+    errors,
+  );
+  const snapshotSources = new Map(
+    normalizedSnapshot.sources.map((source) => [source.id, source]),
+  );
+  const snapshotFileSourceIds = normalizedSnapshot.sources
+    .filter((source) => source.kind === "file")
+    .map((source) => source.id);
+  const fileSourceIds = validation.references(
+    coverage.fileSourceIds,
+    `${path}.fileSourceIds`,
+    errors,
+    new Set(snapshotSources.keys()),
+  );
+  if (JSON.stringify(fileSourceIds) !== JSON.stringify(snapshotFileSourceIds)) {
+    errors.push(
+      `${path}.fileSourceIds must list every file source in the inventory order`,
+    );
+  }
+  for (const sourceId of fileSourceIds) {
+    if (snapshotSources.get(sourceId)?.kind !== "file") {
+      errors.push(`${path}.fileSourceIds may contain only file sources`);
+    }
+  }
+  const inventoryDigest = digest(
+    coverage.inventoryDigest,
+    `${path}.inventoryDigest`,
+    errors,
+  );
+  let expectedInventoryDigest;
+  try {
+    expectedInventoryDigest = sweepInventoryDigest(normalizedSnapshot);
+  } catch (error) {
+    errors.push(`${path}.inventoryDigest could not be derived: ${error.message}`);
+  }
+  if (inventoryDigest && expectedInventoryDigest && inventoryDigest !== expectedInventoryDigest) {
+    errors.push(`${path}.inventoryDigest must match the complete snapshot`);
+  }
+
+  const rawBatches = validation.array(
+    coverage.batches,
+    `${path}.batches`,
+    errors,
+    SWEEP_LIMITS.coverageBatches,
+  );
+  if (rawBatches.length === 0) {
+    errors.push(`${path}.batches must contain at least one inspection batch`);
+  }
+  const batchIds = new Set();
+  const batches = rawBatches.map((rawBatch, index) => {
+    const batchPath = `${path}.batches[${index}]`;
+    const batch = validation.object(rawBatch, batchPath, errors);
+    validation.unknownKeys(
+      batch,
+      ["id", "ordinal", "fileSourceIds", "inspection", "gaps"],
+      batchPath,
+      errors,
+    );
+    const id = validation.identifier(batch.id, `${batchPath}.id`, errors, batchIds);
+    const ordinal = validation.integer(
+      batch.ordinal,
+      `${batchPath}.ordinal`,
+      errors,
+      { minimum: 1 },
+    );
+    const batchSourceIds = validation.references(
+      batch.fileSourceIds,
+      `${batchPath}.fileSourceIds`,
+      errors,
+      new Set(fileSourceIds),
+    );
+    if (batchSourceIds.length === 0) {
+      errors.push(`${batchPath}.fileSourceIds must contain at least one file`);
+    }
+    const inspection = validation.choice(
+      batch.inspection,
+      SWEEP_INSPECTION_STATES,
+      `${batchPath}.inspection`,
+      errors,
+    );
+    const gaps = validation.stringList(batch.gaps, `${batchPath}.gaps`, errors);
+    if (ordinal !== index + 1) {
+      errors.push(`${batchPath}.ordinal must be ${index + 1}`);
+    }
+    if (
+      ["partial", "not-checked", "failed"].includes(inspection)
+      && gaps.length === 0
+    ) {
+      errors.push(`${batchPath} incomplete inspection must explain its gap`);
+    }
+    if (inspection === "checked" && gaps.length > 0) {
+      errors.push(`${batchPath} checked inspection must not keep gaps`);
+    }
+    return { id, ordinal, fileSourceIds: batchSourceIds, inspection, gaps };
+  });
+  const coveredSourceIds = batches.flatMap((batch) => batch.fileSourceIds);
+  if (new Set(coveredSourceIds).size !== coveredSourceIds.length) {
+    errors.push(`${path}.batches must not inspect a file in more than one batch`);
+  }
+  if (JSON.stringify(coveredSourceIds) !== JSON.stringify(fileSourceIds)) {
+    errors.push(`${path}.batches must cover every inventory file exactly once in order`);
+  }
+  const state = batches.some((batch) => batch.inspection === "failed")
+    ? "failed"
+    : batches.every((batch) => batch.inspection === "checked")
+      ? "complete"
+      : "partial";
+  const mode = validation.text(coverage.mode, `${path}.mode`, errors);
+  if (mode !== SWEEP_COVERAGE_MODE) {
+    errors.push(`${path}.mode must be ${SWEEP_COVERAGE_MODE}`);
+  }
+  return {
+    mode,
+    inventoryDigest,
+    fileSourceIds,
+    batches,
+    state,
+  };
+}
+
 function canonicalValue(value) {
   if (Array.isArray(value)) return value.map(canonicalValue);
   if (!value || typeof value !== "object") return value;
@@ -111,6 +249,7 @@ function planPayload(value) {
     risk: value.risk,
     snapshot: value.snapshot,
     session: value.session,
+    coverage: value.coverage,
     categories: value.categories,
     candidates: value.candidates,
     summary: value.summary,
@@ -470,7 +609,7 @@ function normalizeCandidate(raw, path, errors, snapshotSourceIds, candidateIds) 
   return normalized;
 }
 
-function planMetrics(value, normalized, inputFileBytes) {
+function planMetrics(value, normalized, inputFileBytes, inventoryVerified) {
   return {
     authoredStringBytes: stringBytes(value),
     candidates: normalized.candidates.length,
@@ -483,6 +622,9 @@ function planMetrics(value, normalized, inputFileBytes) {
       (candidate) => candidate.disposition === "polish",
     ).length,
     filesChecked: normalized.summary.filesChecked,
+    filesInInventory: normalized.summary.filesInInventory,
+    coverageState: normalized.coverage?.state ?? "legacy",
+    inventoryVerified,
     inputFileBytes,
     jsonBytes: serializedJsonBytes(normalized),
     sources: normalized.snapshot.sources.length,
@@ -491,6 +633,7 @@ function planMetrics(value, normalized, inputFileBytes) {
 
 export function validateSweepPlan(value, {
   inputFileBytes = serializedJsonBytes(value),
+  inventory,
 } = {}) {
   const errors = [];
   const plan = validation.object(value, "sweep", errors);
@@ -502,6 +645,7 @@ export function validateSweepPlan(value, {
       "risk",
       "snapshot",
       "session",
+      "coverage",
       "categories",
       "candidates",
       "summary",
@@ -512,6 +656,12 @@ export function validateSweepPlan(value, {
   const normalizedSnapshot = snapshot(plan.snapshot, "sweep.snapshot", errors);
   const snapshotSourceIds = new Set(
     normalizedSnapshot.sources.map((source) => source.id),
+  );
+  const normalizedCoverage = normalizeCoverage(
+    plan.coverage,
+    "sweep.coverage",
+    errors,
+    normalizedSnapshot,
   );
   const session = validation.object(plan.session, "sweep.session", errors);
   validation.unknownKeys(
@@ -568,6 +718,40 @@ export function validateSweepPlan(value, {
       categoryIds,
     ),
   };
+  const isFullCodebaseScope = normalizedSession.scope === SWEEP_FULL_CODEBASE_SCOPE;
+  if (isFullCodebaseScope && !normalizedCoverage) {
+    errors.push(
+      `sweep.coverage is required when sweep.session.scope is ${SWEEP_FULL_CODEBASE_SCOPE}`,
+    );
+  }
+  if (!isFullCodebaseScope && normalizedCoverage) {
+    errors.push(
+      `sweep.coverage requires sweep.session.scope to be ${SWEEP_FULL_CODEBASE_SCOPE}`,
+    );
+  }
+  let normalizedInventory;
+  if (inventory !== undefined) {
+    try {
+      normalizedInventory = validateSweepInventory(inventory);
+    } catch (error) {
+      errors.push(`sweep.inventory: ${error.message}`);
+    }
+  }
+  if (normalizedInventory && normalizedCoverage) {
+    if (normalizedInventory.digest !== normalizedCoverage.inventoryDigest) {
+      errors.push("sweep.inventory digest does not match sweep.coverage.inventoryDigest");
+    }
+    if (!sameSourceList(
+      normalizedInventory.snapshot.sources,
+      normalizedSnapshot.sources,
+    )) {
+      errors.push("sweep.inventory sources do not match sweep.snapshot");
+    }
+    if (JSON.stringify(normalizedInventory.fileSourceIds)
+      !== JSON.stringify(normalizedCoverage.fileSourceIds)) {
+      errors.push("sweep.inventory fileSourceIds do not match sweep.coverage");
+    }
+  }
   if (normalizedSession.budget.maximumCandidates > SWEEP_LIMITS.candidates) {
     errors.push(
       `sweep.session.budget.maximumCandidates must not exceed ${SWEEP_LIMITS.candidates}`,
@@ -576,6 +760,16 @@ export function validateSweepPlan(value, {
   if (normalizedSession.budget.maximumChanges > SWEEP_LIMITS.changes) {
     errors.push(
       `sweep.session.budget.maximumChanges must not exceed ${SWEEP_LIMITS.changes}`,
+    );
+  }
+  if (
+    isFullCodebaseScope
+    && normalizedCoverage
+    && normalizedSession.budget.maximumFiles
+      !== normalizedCoverage.fileSourceIds.length
+  ) {
+    errors.push(
+      "sweep.session.budget.maximumFiles must equal the complete inventory file count",
     );
   }
   if (
@@ -825,6 +1019,15 @@ export function validateSweepPlan(value, {
         );
       }
     }
+    if (
+      isFullCodebaseScope
+      && normalizedCoverage?.state !== "complete"
+      && candidate.disposition === "polish"
+    ) {
+      errors.push(
+        `sweep.candidates[${index}] cannot enter Polish before full-codebase coverage is complete`,
+      );
+    }
   }
   if (
     normalizedCandidates.length > normalizedSession.budget.maximumCandidates
@@ -842,7 +1045,13 @@ export function validateSweepPlan(value, {
   const summary = validation.object(plan.summary, "sweep.summary", errors);
   validation.unknownKeys(
     summary,
-    ["assessment", "filesChecked", "checkedScope", "remainingGaps"],
+    [
+      "assessment",
+      "filesChecked",
+      "filesInInventory",
+      "checkedScope",
+      "remainingGaps",
+    ],
     "sweep.summary",
     errors,
   );
@@ -857,6 +1066,13 @@ export function validateSweepPlan(value, {
       "sweep.summary.filesChecked",
       errors,
     ),
+    filesInInventory: summary.filesInInventory === undefined
+      ? normalizedSnapshot.sources.filter((source) => source.kind === "file").length
+      : validation.integer(
+        summary.filesInInventory,
+        "sweep.summary.filesInInventory",
+        errors,
+      ),
     checkedScope: validation.stringList(
       summary.checkedScope,
       "sweep.summary.checkedScope",
@@ -868,6 +1084,9 @@ export function validateSweepPlan(value, {
       errors,
     ),
   };
+  if (isFullCodebaseScope && summary.filesInInventory === undefined) {
+    errors.push("sweep.summary.filesInInventory is required for full-codebase coverage");
+  }
   const inspectedFileSourceIds = new Set(
     normalizedCategories
       .flatMap((category) => category.checks)
@@ -877,6 +1096,16 @@ export function validateSweepPlan(value, {
           ?.kind === "file"
       )),
   );
+  const inventoryFileSourceIds = new Set(
+    normalizedSnapshot.sources
+      .filter((source) => source.kind === "file")
+      .map((source) => source.id),
+  );
+  if (normalizedSummary.filesInInventory !== inventoryFileSourceIds.size) {
+    errors.push(
+      `sweep.summary.filesInInventory must equal the ${inventoryFileSourceIds.size} file sources in the inventory`,
+    );
+  }
   if (normalizedSummary.filesChecked !== inspectedFileSourceIds.size) {
     errors.push(
       `sweep.summary.filesChecked must equal the ${inspectedFileSourceIds.size} distinct file sources cited by inspected checks`,
@@ -885,6 +1114,26 @@ export function validateSweepPlan(value, {
   if (normalizedSummary.filesChecked > normalizedSession.budget.maximumFiles) {
     errors.push("sweep.summary.filesChecked exceeds the session file budget");
   }
+  if (isFullCodebaseScope && normalizedCoverage?.state === "complete") {
+    if (normalizedSummary.filesChecked !== normalizedSummary.filesInInventory) {
+      errors.push(
+        "sweep.summary.filesChecked must equal filesInInventory after complete coverage",
+      );
+    }
+    for (const sourceId of inventoryFileSourceIds) {
+      if (!inspectedFileSourceIds.has(sourceId)) {
+        errors.push(`sweep full-codebase coverage is missing evidence for ${sourceId}`);
+      }
+    }
+  }
+  if (
+    isFullCodebaseScope
+    && normalizedCoverage
+    && normalizedCoverage.state !== "complete"
+    && normalizedSummary.remainingGaps.length === 0
+  ) {
+    errors.push("sweep.summary.remainingGaps must explain incomplete full-codebase coverage");
+  }
 
   const executable = normalizedCandidates.filter(
     (candidate) => candidate.disposition === "polish",
@@ -892,13 +1141,17 @@ export function validateSweepPlan(value, {
   const allChecksCompleted = normalizedCategories.every(
     (category) => category.inspection === "checked",
   );
-  const expectedState = executable.length > 0
-    ? "awaiting-approval"
-    : normalizedCandidates.length > 0
-      ? "complete-with-findings"
-      : allChecksCompleted
-      ? "complete-no-change"
-      : "blocked";
+  const coverageIncomplete = isFullCodebaseScope
+    && normalizedCoverage?.state !== "complete";
+  const expectedState = coverageIncomplete
+    ? "blocked"
+    : executable.length > 0
+      ? "awaiting-approval"
+      : normalizedCandidates.length > 0
+        ? "complete-with-findings"
+        : allChecksCompleted
+          ? "complete-no-change"
+          : "blocked";
   if (normalizedSession.state !== expectedState) {
     errors.push(
       `sweep.session.state must be ${expectedState} for this plan`,
@@ -913,6 +1166,7 @@ export function validateSweepPlan(value, {
     risk: validation.choice(plan.risk, SWEEP_RISKS, "sweep.risk", errors),
     snapshot: normalizedSnapshot,
     session: normalizedSession,
+    coverage: normalizedCoverage,
     categories: normalizedCategories,
     candidates: normalizedCandidates,
     summary: normalizedSummary,
@@ -928,7 +1182,12 @@ export function validateSweepPlan(value, {
   }
   invalid("Hope sweep plan", errors);
 
-  const resources = planMetrics(value, normalized, inputFileBytes);
+  const resources = planMetrics(
+    value,
+    normalized,
+    inputFileBytes,
+    !isFullCodebaseScope || normalizedInventory !== undefined,
+  );
   return deepFreeze({
     ...normalized,
     result: {
@@ -945,8 +1204,18 @@ export function validateSweepPlan(value, {
   });
 }
 
-export function createSweepApprovalCandidate(value, candidateId) {
-  const plan = validateSweepPlan(value);
+export function createSweepApprovalCandidate(value, candidateId, {
+  inventory,
+} = {}) {
+  const plan = validateSweepPlan(value, { inventory });
+  if (
+    plan.session.scope === SWEEP_FULL_CODEBASE_SCOPE
+    && plan.coverage?.state !== "complete"
+  ) {
+    throw new TypeError(
+      "Hope sweep approval requires complete full-codebase coverage",
+    );
+  }
   const planDigest = normalizedSweepPlanDigest(plan);
   const candidate = plan.candidates.find((item) => item.id === candidateId);
   if (!candidate) {

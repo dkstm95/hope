@@ -8,8 +8,8 @@ import {
   validateHopeModelEvaluationReceiptSetProvenance,
 } from "./evidence.mjs";
 
-export const HOPE_FEATURE_SELECTION_CONTRACT_VERSION = 3;
-export const HOPE_FEATURE_SELECTION_EVALUATION_VERSION = 4;
+export const HOPE_FEATURE_SELECTION_CONTRACT_VERSION = 4;
+export const HOPE_FEATURE_SELECTION_EVALUATION_VERSION = 5;
 
 export const hopeFeatureSelectionEvaluationLimits = Object.freeze({
   outputBytes: 16 * 1024,
@@ -44,7 +44,7 @@ const fullDescriptions = Object.freeze({
   settings:
     "Show, set, or reset the global Hope language and theme preferences shared by the harness and plugin. Use when someone invokes $hope:settings in Codex, /hope:settings in Claude Code, or asks to change Hope's default language or light, dark, or system theme.",
   sweep:
-    "Inspect one exact codebase snapshot for broad maintenance needs, show a bounded plan, and apply only digest-bound behavior-preserving work that the person approves. Use when someone invokes $hope:sweep in Codex or /hope:sweep in Claude Code, asks for codebase maintenance, wants dead or stale work removed, wants repeated, missing, or premature abstractions corrected, or needs tests, documentation, dependencies, security, licenses, compatibility, performance, packaging, CI, architecture, support, release, or recovery readiness checked without fixed schedule profiles.",
+    "Inspect every file in one exact codebase inventory, merge batch evidence into one maintenance plan, and apply only digest-bound behavior-preserving work that the person approves. Use when someone invokes $hope:sweep in Codex or /hope:sweep in Claude Code, asks for codebase maintenance, wants dead or stale work removed, wants repeated, missing, or premature abstractions corrected, or needs tests, documentation, dependencies, security, licenses, compatibility, performance, packaging, CI, architecture, support, release, or recovery readiness checked without fixed schedule profiles.",
   "toxic-review":
     "Strictly review an idea, requirement, UI, prototype, plan, implementation, patch, PR, Align result, Diff result, incident analysis, recovery plan, document, or other work product without attacking people or manufacturing criticism. Use when someone invokes $hope:toxic-review in Codex or /hope:toxic-review in Claude Code, asks for a toxic review, wants a harsh or skeptical review, or needs independent risk-focused reviewers and one adjudicated result.",
   write:
@@ -61,7 +61,7 @@ const minimalDescriptions = Object.freeze({
   settings:
     "Use to show, set, or reset Hope's language or theme.",
   sweep:
-    "Use to inspect a codebase for broad maintenance, show a bounded plan, and apply only exact approved behavior-preserving work.",
+    "Use to inspect an entire codebase in inventory-backed batches, show one merged plan, and apply only exact approved behavior-preserving work.",
   "toxic-review":
     "Use for a strict, skeptical, risk-focused review of a named work product without attacking people or inventing criticism.",
   write:
@@ -79,7 +79,7 @@ const sharedRules = Object.freeze([
   "Choose none when the request is ordinary implementation, testing, Git, research, or another task that does not ask for a Hope feature's job.",
   "Choose Diff for understanding or explaining a pull request. Choose Toxic Review only when the person asks for a harsh, skeptical, adversarial, or explicitly toxic review.",
   "Choose Write for standalone language work. Choose Polish for one bounded cleanup or refactor of a named completed work product, including code or structural changes.",
-  "Choose Sweep for broad codebase maintenance discovery that must show a bounded plan and ask for exact work-unit approval before applying behavior-preserving work.",
+  "Choose Sweep for full-codebase maintenance discovery that must inspect every inventory file, show one merged plan, and ask for exact work-unit approval before applying behavior-preserving work.",
   "Choose Align only before implementation when a shared-understanding check or material requirement or design clarification is the requested result.",
 ]);
 

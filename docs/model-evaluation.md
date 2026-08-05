@@ -243,6 +243,12 @@ ask for a shared-understanding check or clarification before coding. Two fresh
 Codex dispatcher attempts with the earlier candidate incorrectly selected Align
 for an ordinary database-client upgrade after finding an empty workspace.
 
+Version 5 updates the active Sweep selection description to require complete
+inventory-backed codebase coverage and one merged plan across inspection batches.
+
+The updated selection contract needs fresh host evidence before it can support a
+release decision.
+
 The revised candidate retained the shorter descriptions for the other six
 features. A fresh `gpt-5.6-sol` high-effort dispatcher comparison reported 13 of
 13 correct selections for the complete descriptions and 13 of 13 for the

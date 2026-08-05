@@ -7,6 +7,7 @@
   "required": [
     "categoryId",
     "checkId",
+    "coverage",
     "decision",
     "impacts",
     "targetPaths",
@@ -21,6 +22,9 @@
     "checkId": {
       "type": ["string", "null"],
       "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "coverage": {
+      "enum": ["complete", "incomplete"]
     },
     "decision": {
       "enum": ["polish", "report-only", "handoff", "no-candidate"]
