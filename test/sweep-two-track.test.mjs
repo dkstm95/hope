@@ -1,18 +1,23 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
   createSweepBrief,
+  createSweepInventory,
   createSweepModelEvaluationPlan,
   createSweepModelEvaluationReceipt,
   getSweepModelEvaluationOracle,
   SWEEP_MODEL_ADAPTER_MESSAGE,
 } from "../features/sweep/index.mjs";
 import {
+  mergeSweepBatchReports,
+} from "../features/sweep/batch.mjs";
+import {
+  createSweepApprovalCandidate,
   validateSweepApprovalReceipt,
   validateSweepCompletion,
   validateSweepPlan,
@@ -22,8 +27,10 @@ import {
 import { main, parseArguments } from "../harness/hope.mjs";
 import {
   makeSweepCompletion,
-  makeSweepApprovalCandidate,
   makeSweepApprovalReceipt,
+  makeSweepBatchCapabilities,
+  makeSweepBatchReport,
+  makeSweepBatchReportSet,
   makeSweepInventory,
   makeSweepPlan,
   makeSweepSessionResult,
@@ -35,6 +42,59 @@ import {
 
 const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+async function createFixtureRepository(parent) {
+  const repositoryRoot = join(parent, "repository");
+  await mkdir(join(repositoryRoot, "src"), { recursive: true });
+  await Promise.all([
+    writeFile(join(repositoryRoot, "AGENTS.md"), "# Fixture rules\n"),
+    writeFile(join(repositoryRoot, "package.json"), "{\"name\":\"sweep-fixture\"}\n"),
+    writeFile(join(repositoryRoot, "src", "unused-helper.mjs"), "export const unused = true;\n"),
+  ]);
+  for (const arguments_ of [
+    ["init", "-q"],
+    ["config", "user.email", "hope-tests@example.invalid"],
+    ["config", "user.name", "Hope Tests"],
+    ["add", "."],
+    ["commit", "-qm", "fixture"],
+  ]) {
+    const result = spawnSync("git", arguments_, {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+  }
+  return repositoryRoot;
+}
+
+function makeLivePlan(inventory) {
+  const plan = makeSweepPlan();
+  plan.snapshot = structuredClone(inventory.snapshot);
+  const sourceIds = inventory.snapshot.sources.map((source) => source.id);
+  const fileSourceIds = [...inventory.fileSourceIds];
+  const targetSourceId = fileSourceIds.find((sourceId) => (
+    inventory.snapshot.sources.find((source) => source.id === sourceId)
+      ?.locator === "src/unused-helper.mjs"
+  ));
+  plan.session.budget.maximumFiles = fileSourceIds.length;
+  plan.coverage.inventoryDigest = inventory.digest;
+  plan.coverage.fileSourceIds = [...fileSourceIds];
+  plan.coverage.batches[0].fileSourceIds = [...fileSourceIds];
+  for (const category of plan.categories) {
+    category.evidenceSourceIds = [...sourceIds];
+    for (const check of category.checks) {
+      check.evidenceSourceIds = [...sourceIds];
+    }
+  }
+  const candidate = plan.candidates[0];
+  candidate.targetSourceIds = [targetSourceId];
+  candidate.evidenceSourceIds = [...sourceIds];
+  for (const check of candidate.evidenceChecks) check.sourceIds = [...sourceIds];
+  plan.summary.filesChecked = fileSourceIds.length;
+  plan.summary.filesInInventory = fileSourceIds.length;
+  plan.candidates[0].preview.patch = "*** Delete File: src/unused-helper.mjs";
+  return plan;
+}
 
 function runJson(script, arguments_) {
   const run = spawnSync(process.execPath, [resolve(root, script), ...arguments_], {
@@ -59,6 +119,10 @@ function withoutSchemaPaths(value) {
     completionSchemaPath,
     inventorySchemaPath,
     sessionResultSchemaPath,
+    batchReportSchemaPath,
+    batchReportSetSchemaPath,
+    batchMergeSchemaPath,
+    batchCapabilitiesSchemaPath,
     ...rest
   } = value;
   assert.ok(planSchemaPath);
@@ -66,6 +130,10 @@ function withoutSchemaPaths(value) {
   assert.ok(completionSchemaPath);
   assert.ok(inventorySchemaPath);
   assert.ok(sessionResultSchemaPath);
+  assert.ok(batchReportSchemaPath);
+  assert.ok(batchReportSetSchemaPath);
+  assert.ok(batchMergeSchemaPath);
+  assert.ok(batchCapabilitiesSchemaPath);
   return rest;
 }
 
@@ -158,8 +226,44 @@ test("harness and generated Sweep report the same missing AI boundary", () => {
 
 test("exact harness and generated Sweep commands stay equivalent", async () => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-sweep-two-track-");
+  const repositoryRoot = await createFixtureRepository(temporaryRoot);
+  const liveInventory = await createSweepInventory({ cwd: repositoryRoot });
+  const livePlan = makeLivePlan(liveInventory);
+  const batchCapabilities = makeSweepBatchCapabilities();
+  const batchReport = makeSweepBatchReport(liveInventory, batchCapabilities);
+  const batchReportSet = makeSweepBatchReportSet(
+    liveInventory,
+    batchCapabilities,
+  );
+  const batchMerge = mergeSweepBatchReports(batchReportSet, {
+    inventory: liveInventory,
+    capabilities: batchCapabilities,
+  });
+  const hybridLivePlan = structuredClone(livePlan);
+  hybridLivePlan.coverage.inspectionMode = "subagent-hybrid";
+  hybridLivePlan.coverage.batchMergeDigest = batchMerge.digest;
+  hybridLivePlan.coverage.relationshipEvidenceSourceIds = [
+    ...batchMerge.relationshipEvidenceSourceIds,
+  ];
+  hybridLivePlan.coverage.relationshipIds = batchMerge.relationships.map(
+    (item) => item.id,
+  );
+  hybridLivePlan.coverage.observationIds = batchMerge.observations.map(
+    (item) => item.id,
+  );
+  hybridLivePlan.coverage.batches = batchMerge.batches.map((batch) => ({
+    id: batch.id,
+    ordinal: batch.ordinal,
+    fileSourceIds: [...batch.fileSourceIds],
+    inspection: batch.inspection,
+    gaps: [...batch.gaps],
+  }));
   const planPath = join(temporaryRoot, "plan.json");
   const inventoryPath = join(temporaryRoot, "inventory.json");
+  const capabilitiesPath = join(temporaryRoot, "capabilities.json");
+  const batchReportPath = join(temporaryRoot, "batch-report.json");
+  const batchReportSetPath = join(temporaryRoot, "batch-reports.json");
+  const hybridPlanPath = join(temporaryRoot, "hybrid-plan.json");
   const completionPath = join(temporaryRoot, "completion.json");
   const approvalPath = join(temporaryRoot, "approval.json");
   const sessionResultPath = join(temporaryRoot, "session-result.json");
@@ -170,11 +274,15 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     temporaryRoot,
     "invalid-evaluation-receipts.json",
   );
-  const approvalCandidate = makeSweepApprovalCandidate();
+  const approvalCandidate = createSweepApprovalCandidate(
+    livePlan,
+    "remove-unused-helper",
+    { inventory: liveInventory },
+  );
   const approvalReceipt = makeSweepCompletion().approvalReceipt;
-  const invalidPlan = makeSweepPlan();
+  const invalidPlan = structuredClone(livePlan);
   invalidPlan.candidates[0].evidenceChecks[0].sourceIds = [];
-  const noCandidatePlan = makeSweepPlan();
+  const noCandidatePlan = structuredClone(livePlan);
   noCandidatePlan.candidates = [];
   noCandidatePlan.session.state = "complete-no-change";
   const sessionResult = {
@@ -228,8 +336,12 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     })).receipt);
   }
   await Promise.all([
-    writeFile(planPath, JSON.stringify(makeSweepPlan()), { mode: 0o600 }),
-    writeFile(inventoryPath, JSON.stringify(makeSweepInventory()), { mode: 0o600 }),
+    writeFile(planPath, JSON.stringify(livePlan), { mode: 0o600 }),
+    writeFile(inventoryPath, JSON.stringify(liveInventory), { mode: 0o600 }),
+    writeFile(capabilitiesPath, JSON.stringify(batchCapabilities), { mode: 0o600 }),
+    writeFile(batchReportPath, JSON.stringify(batchReport), { mode: 0o600 }),
+    writeFile(batchReportSetPath, JSON.stringify(batchReportSet), { mode: 0o600 }),
+    writeFile(hybridPlanPath, JSON.stringify(hybridLivePlan), { mode: 0o600 }),
     writeFile(completionPath, JSON.stringify(makeSweepCompletion()), {
       mode: 0o600,
     }),
@@ -283,15 +395,89 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
         command,
         "--input",
         path,
-        ...(command === "validate-plan" ? ["--inventory", inventoryPath] : []),
+        ...(command === "validate-plan"
+          ? ["--root", repositoryRoot, "--inventory", inventoryPath]
+          : []),
       ]),
       runJson("harness/hope.mjs", [
         "sweep",
         command,
         "--input",
         path,
-        ...(command === "validate-plan" ? ["--inventory", inventoryPath] : []),
+        ...(command === "validate-plan"
+          ? ["--root", repositoryRoot, "--inventory", inventoryPath]
+          : []),
       ]),
+    );
+  }
+  for (const arguments_ of [
+    ["select-inspection-mode", "--mode", "active-session"],
+    [
+      "select-inspection-mode",
+      "--mode",
+      "subagent-hybrid",
+      "--capabilities",
+      capabilitiesPath,
+    ],
+  ]) {
+    assert.deepEqual(
+      runJson("plugins/hope/runtime/features/sweep/cli.mjs", arguments_),
+      runJson("harness/hope.mjs", ["sweep", ...arguments_]),
+    );
+  }
+  for (const [command, path] of [
+    ["validate-batch-report", batchReportPath],
+    ["merge-batch-reports", batchReportSetPath],
+  ]) {
+    const arguments_ = [
+      command,
+      "--input",
+      path,
+      "--root",
+      repositoryRoot,
+      "--inventory",
+      inventoryPath,
+      "--capabilities",
+      capabilitiesPath,
+    ];
+    assert.deepEqual(
+      runJson("plugins/hope/runtime/features/sweep/cli.mjs", arguments_),
+      runJson("harness/hope.mjs", ["sweep", ...arguments_]),
+    );
+  }
+  for (const commandArguments of [
+    [
+      "validate-plan",
+      "--input",
+      hybridPlanPath,
+      "--root",
+      repositoryRoot,
+      "--inventory",
+      inventoryPath,
+      "--reports",
+      batchReportSetPath,
+      "--capabilities",
+      capabilitiesPath,
+    ],
+    [
+      "approval-candidate",
+      "--input",
+      hybridPlanPath,
+      "--candidate",
+      "remove-unused-helper",
+      "--root",
+      repositoryRoot,
+      "--inventory",
+      inventoryPath,
+      "--reports",
+      batchReportSetPath,
+      "--capabilities",
+      capabilitiesPath,
+    ],
+  ]) {
+    assert.deepEqual(
+      runJson("plugins/hope/runtime/features/sweep/cli.mjs", commandArguments),
+      runJson("harness/hope.mjs", ["sweep", ...commandArguments]),
     );
   }
   assert.equal(
@@ -314,6 +500,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       planPath,
       "--candidate",
       "remove-unused-helper",
+      "--root",
+      repositoryRoot,
       "--inventory",
       inventoryPath,
     ]),
@@ -324,6 +512,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       planPath,
       "--candidate",
       "remove-unused-helper",
+      "--root",
+      repositoryRoot,
       "--inventory",
       inventoryPath,
     ]),
@@ -346,6 +536,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       "validate-plan",
       "--input",
       invalidPlanPath,
+      "--root",
+      repositoryRoot,
       "--inventory",
       inventoryPath,
     ]),
@@ -354,6 +546,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       "validate-plan",
       "--input",
       invalidPlanPath,
+      "--root",
+      repositoryRoot,
       "--inventory",
       inventoryPath,
     ]),
@@ -447,4 +641,35 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       invalidEvaluationReceiptsPath,
     ]),
   );
+  await writeFile(
+    join(repositoryRoot, "src", "unused-helper.mjs"),
+    "export const changedAfterInventory = true;\n",
+  );
+  const stalePluginError = runFailure(
+    "plugins/hope/runtime/features/sweep/cli.mjs",
+    [
+      "validate-plan",
+      "--input",
+      planPath,
+      "--root",
+      repositoryRoot,
+      "--inventory",
+      inventoryPath,
+    ],
+  );
+  const staleHarnessError = runFailure(
+    "harness/hope.mjs",
+    [
+      "sweep",
+      "validate-plan",
+      "--input",
+      planPath,
+      "--root",
+      repositoryRoot,
+      "--inventory",
+      inventoryPath,
+    ],
+  );
+  assert.equal(stalePluginError, staleHarnessError);
+  assert.match(stalePluginError, /stale|does not match/u);
 });

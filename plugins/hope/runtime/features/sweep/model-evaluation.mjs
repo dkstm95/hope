@@ -194,6 +194,23 @@ export const sweepModelEvaluationCases = Object.freeze([
             "src/legacy-api.mjs",
           ]),
         }),
+        Object.freeze({
+          categoryId: "unused-stale",
+          checkId: "stale-content",
+          decision: "handoff",
+          impacts: Object.freeze({
+            behavior: "changing",
+            publicContract: "changing",
+            dependency: "preserving",
+          }),
+          requiredTargetPaths: Object.freeze(["src/legacy-api.mjs"]),
+          allowedTargetPaths: Object.freeze([
+            "MAINTENANCE.md",
+            "README.md",
+            "package.json",
+            "src/legacy-api.mjs",
+          ]),
+        }),
       ]),
     }),
   }),
@@ -333,7 +350,7 @@ export const sweepModelEvaluationCases = Object.freeze([
       },
       {
         path: "SECURITY.md",
-        content: "The trusted project advisory records example-parser 1.0.0 as vulnerable for external input. The fixed major version changes parse errors, which are part of parseExternal's supported public contract, and needs compatibility review.",
+        content: "The trusted project advisory records example-parser 1.0.0 as vulnerable for external input. The fixed major version is known to change parse errors, which are part of parseExternal's supported public contract. This is a known behavior and public-contract change, not an uncertainty; compatibility tests remain follow-up work.",
       },
       {
         path: "test/parse.test.mjs",
@@ -587,6 +604,10 @@ function portableBrief(value) {
     inventorySchemaPath: _inventorySchemaPath,
     planSchemaPath: _planSchemaPath,
     sessionResultSchemaPath: _sessionResultSchemaPath,
+    batchCapabilitiesSchemaPath: _batchCapabilitiesSchemaPath,
+    batchMergeSchemaPath: _batchMergeSchemaPath,
+    batchReportSchemaPath: _batchReportSchemaPath,
+    batchReportSetSchemaPath: _batchReportSetSchemaPath,
     ...brief
   } = value;
   return Object.freeze({
@@ -597,6 +618,10 @@ function portableBrief(value) {
       inventory: "inventory-v1.schema.json",
       plan: "plan-v1.schema.json",
       sessionResult: "session-result-v1.schema.json",
+      batchCapabilities: "batch-capabilities-v1.schema.json",
+      batchMerge: "batch-merge-v1.schema.json",
+      batchReport: "batch-report-v1.schema.json",
+      batchReportSet: "batch-report-set-v1.schema.json",
     }),
   });
 }

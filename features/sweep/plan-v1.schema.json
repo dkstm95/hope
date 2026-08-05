@@ -32,7 +32,7 @@
       ],
       "properties": {
         "id": { "$ref": "#/$defs/text" },
-        "scope": { "$ref": "#/$defs/text" },
+        "scope": { "const": "entire-codebase" },
         "state": {
           "enum": [
             "awaiting-approval",
@@ -266,11 +266,18 @@
     "coverage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "inventoryDigest", "fileSourceIds", "batches"],
+      "required": ["mode", "inspectionMode", "inventoryDigest", "fileSourceIds", "batches"],
       "properties": {
         "mode": { "const": "full-codebase" },
+        "inspectionMode": {
+          "enum": ["active-session", "subagent-hybrid"]
+        },
         "inventoryDigest": { "$ref": "#/$defs/digest" },
         "fileSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "batchMergeDigest": { "$ref": "#/$defs/digest" },
+        "relationshipEvidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "relationshipIds": { "$ref": "#/$defs/sourceIds" },
+        "observationIds": { "$ref": "#/$defs/sourceIds" },
         "batches": {
           "type": "array",
           "minItems": 1,
@@ -356,6 +363,31 @@
         "required": ["session"]
       },
       "then": { "required": ["coverage"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "coverage": {
+            "required": ["inspectionMode"],
+            "properties": {
+              "inspectionMode": { "const": "subagent-hybrid" }
+            }
+          }
+        },
+        "required": ["coverage"]
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "required": [
+              "batchMergeDigest",
+              "relationshipEvidenceSourceIds",
+              "relationshipIds",
+              "observationIds"
+            ]
+          }
+        }
+      }
     }
   ]
 }

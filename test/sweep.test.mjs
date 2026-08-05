@@ -9,6 +9,12 @@ import {
 import { parseSweepArguments } from "../features/sweep/cli.mjs";
 import { createPolishReceipt } from "../features/polish/validate.mjs";
 import {
+  createSweepBatchReportSet,
+  mergeSweepBatchReports,
+  selectSweepInspectionMode,
+  validateSweepBatchReportSet,
+} from "../features/sweep/batch.mjs";
+import {
   createSweepApprovalCandidate,
   sweepPlanDigest,
   validateSweepApprovalReceipt,
@@ -18,8 +24,12 @@ import {
 } from "../features/sweep/validate.mjs";
 import {
   makeSweepApprovalCandidate,
+  makeSweepBatchCapabilities,
+  makeSweepBatchReport,
+  makeSweepHybridPlan,
   makeSweepApprovalReceipt,
   makeSweepCompletion,
+  makeSweepInventory,
   makeSweepPlan,
   makeSweepPolishRun,
   makeSweepSessionResult,
@@ -47,6 +57,145 @@ test("sweep validates one full-codebase dead-code plan", () => {
   assert.equal(plan.resources.categories, 7);
   assert.equal(plan.resources.checks, 21);
   assert.equal(plan.resources.filesChecked, 3);
+});
+
+test("sweep validates the hybrid batch contract and preserves merge evidence", () => {
+  const hybrid = makeSweepHybridPlan();
+  const plan = validateSweepPlan(hybrid.plan, {
+    inventory: hybrid.inventory,
+    batchMerge: hybrid.batchMerge,
+    capabilities: hybrid.capabilities,
+  });
+  assert.equal(plan.coverage.inspectionMode, "subagent-hybrid");
+  assert.equal(plan.coverage.batchMergeDigest, hybrid.batchMerge.digest);
+  assert.deepEqual(
+    plan.coverage.relationshipIds,
+    hybrid.batchMerge.relationships.map((item) => item.id),
+  );
+  assert.equal(
+    createSweepApprovalCandidate(hybrid.plan, "remove-unused-helper", {
+      inventory: hybrid.inventory,
+      batchMerge: hybrid.batchMerge,
+      capabilities: hybrid.capabilities,
+    }).candidate.id,
+    "remove-unused-helper",
+  );
+
+  assert.throws(
+    () => validateSweepPlan(hybrid.plan, {
+      inventory: hybrid.inventory,
+      capabilities: hybrid.capabilities,
+    }),
+    /batchMerge is required/u,
+  );
+  const changedMerge = structuredClone(hybrid.batchMerge);
+  changedMerge.relationships[0].summary = "A conflicting relationship claim.";
+  assert.throws(
+    () => validateSweepPlan(hybrid.plan, {
+      inventory: hybrid.inventory,
+      batchMerge: changedMerge,
+      capabilities: hybrid.capabilities,
+    }),
+    /batchMerge|digest/u,
+  );
+});
+
+test("sweep cannot downgrade scope or create approval without live inventory", () => {
+  const scoped = makeSweepPlan();
+  scoped.session.scope = "selected-files";
+  assert.throws(
+    () => validateSweepPlan(scoped),
+    /session\.scope must be entire-codebase/u,
+  );
+  assert.throws(
+    () => createSweepApprovalCandidate(makeSweepPlan(), "remove-unused-helper"),
+    /verified live inventory/u,
+  );
+});
+
+test("sweep negotiates the inspection fallback before dispatch", () => {
+  assert.deepEqual(
+    selectSweepInspectionMode({ requestedMode: "active-session" }),
+    { mode: "active-session", fallbackUsed: false },
+  );
+  assert.equal(
+    selectSweepInspectionMode({
+      requestedMode: "subagent-hybrid",
+      capabilities: makeSweepBatchCapabilities(),
+    }).mode,
+    "subagent-hybrid",
+  );
+  const fallback = selectSweepInspectionMode({
+    requestedMode: "subagent-hybrid",
+    capabilities: { mode: "subagent-hybrid" },
+  });
+  assert.equal(fallback.mode, "active-session");
+  assert.equal(fallback.fallbackUsed, true);
+  assert.throws(
+    () => selectSweepInspectionMode({
+      requestedMode: "subagent-hybrid",
+      capabilities: { mode: "subagent-hybrid" },
+      activeSessionAvailable: false,
+    }),
+    /fallback is unavailable/u,
+  );
+});
+
+test("sweep retains failed retry attempts and rejects stale report bindings", () => {
+  const capabilities = makeSweepBatchCapabilities();
+  const inventory = makeSweepInventory();
+  const failedReport = makeSweepBatchReport(inventory, capabilities, {
+    attempt: 1,
+    inputDigest: `sha256:${"b".repeat(64)}`,
+    invocationId: "failed-invocation",
+  });
+  const successfulReport = makeSweepBatchReport(inventory, capabilities, {
+    attempt: 2,
+    inputDigest: `sha256:${"c".repeat(64)}`,
+    invocationId: "successful-invocation",
+  });
+  const reportSet = createSweepBatchReportSet({
+    feature: "sweep-batch-report-set",
+    version: 1,
+    runId: successfulReport.runId,
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    reports: [successfulReport],
+    attempts: [
+      {
+        batch: failedReport.batch,
+        attempt: failedReport.attempt,
+        attemptId: failedReport.attemptId,
+        status: "failed",
+        inputDigest: failedReport.inputDigest,
+        invocationId: failedReport.invocationId,
+        error: "The host cancelled the first attempt.",
+      },
+      {
+        batch: successfulReport.batch,
+        attempt: successfulReport.attempt,
+        attemptId: successfulReport.attemptId,
+        status: "succeeded",
+        inputDigest: successfulReport.inputDigest,
+        invocationId: successfulReport.invocationId,
+      },
+    ],
+  }, { inventory, capabilities });
+  assert.equal(
+    validateSweepBatchReportSet(reportSet, { inventory, capabilities }).attempts.length,
+    2,
+  );
+  assert.equal(mergeSweepBatchReports(reportSet, { inventory, capabilities }).state, "complete");
+
+  const stale = structuredClone(successfulReport);
+  stale.inputDigest = `sha256:${"e".repeat(64)}`;
+  assert.throws(
+    () => validateSweepBatchReportSet({
+      ...reportSet,
+      reports: [stale],
+    }, { inventory, capabilities }),
+    /batchReport|binding|digest/u,
+  );
 });
 
 test("sweep binds every category to its exact maintenance checks", () => {
@@ -157,12 +306,14 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
   const changedCandidate = createSweepApprovalCandidate(
     changed,
     "remove-unused-helper",
+    { inventory: makeSweepInventory(changed) },
   );
   assert.notEqual(changedCandidate.candidateDigest, first.candidateDigest);
 
   assert.equal(first.planDigest, sweepPlanDigest(plan));
   assert.equal(
     createSweepApprovalCandidate(plan, "remove-unused-helper", {
+      inventory: makeSweepInventory(plan),
       planDigest: `sha256:${"9".repeat(64)}`,
     }).planDigest,
     first.planDigest,
@@ -210,6 +361,7 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
     const bound = createSweepApprovalCandidate(
       variant,
       "remove-unused-helper",
+      { inventory: makeSweepInventory(variant) },
     );
     assert.notEqual(bound.candidateDigest, first.candidateDigest, label);
   }
@@ -223,6 +375,7 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
     () => createSweepApprovalCandidate(
       handoff,
       "remove-unused-helper",
+      { inventory: makeSweepInventory(handoff) },
     ),
     /is not executable by Polish/u,
   );
@@ -503,11 +656,14 @@ test("sweep brief and CLI expose the two-stage contract", async () => {
       "/tmp/plan.json",
       "--candidate",
       "candidate-1",
+      "--root",
+      "/tmp/repository",
     ]),
     {
       candidateId: "candidate-1",
       command: "approval-candidate",
       inputPath: "/tmp/plan.json",
+      repositoryRoot: "/tmp/repository",
     },
   );
   assert.deepEqual(

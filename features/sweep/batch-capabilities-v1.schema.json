@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/sweep/batch-capabilities-v1.schema.json",
+  "title": "Hope sweep subagent capability contract version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "feature",
+    "version",
+    "mode",
+    "readOnly",
+    "independentContexts",
+    "sourceAllowlist",
+    "boundedOutput",
+    "untrustedRepositoryContent",
+    "sourcePolicy",
+    "outputPolicy",
+    "maxConcurrency",
+    "timeoutMs",
+    "retryBudget",
+    "maxReportBytes",
+    "fallback",
+    "digest"
+  ],
+  "properties": {
+    "feature": { "const": "sweep-batch-capabilities" },
+    "version": { "const": 1 },
+    "mode": { "const": "subagent-hybrid" },
+    "readOnly": { "const": true },
+    "independentContexts": { "const": true },
+    "sourceAllowlist": { "const": true },
+    "boundedOutput": { "const": true },
+    "untrustedRepositoryContent": { "const": true },
+    "sourcePolicy": { "const": "assigned-inventory-files-only" },
+    "outputPolicy": { "const": "structured-report-only" },
+    "maxConcurrency": { "type": "integer", "minimum": 1, "maximum": 32 },
+    "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 300000 },
+    "retryBudget": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "maxReportBytes": { "type": "integer", "minimum": 1, "maximum": 524288 },
+    "fallback": { "const": "active-session" },
+    "digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

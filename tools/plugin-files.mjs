@@ -147,6 +147,11 @@ export const generatedPluginFiles = Object.freeze([
   )),
   ...[
     "approval-v1.schema.json",
+    "batch-capabilities-v1.schema.json",
+    "batch-merge-v1.schema.json",
+    "batch-report-set-v1.schema.json",
+    "batch-report-v1.schema.json",
+    "batch.mjs",
     "cli.mjs",
     "completion-v1.schema.json",
     "constants.mjs",

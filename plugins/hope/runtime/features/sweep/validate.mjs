@@ -14,6 +14,10 @@ import {
   validateSweepInventory,
 } from "./inventory.mjs";
 import {
+  validateSweepBatchCapabilities,
+  validateSweepBatchMerge,
+} from "./batch.mjs";
+import {
   SWEEP_APPROVAL_STATUSES,
   SWEEP_APPROVAL_RECEIPT_VERSION,
   SWEEP_BEHAVIOR_IMPACTS,
@@ -104,7 +108,17 @@ function normalizeCoverage(value, path, errors, normalizedSnapshot) {
   const coverage = validation.object(value, path, errors);
   validation.unknownKeys(
     coverage,
-    ["mode", "inventoryDigest", "fileSourceIds", "batches"],
+    [
+      "mode",
+      "inspectionMode",
+      "inventoryDigest",
+      "fileSourceIds",
+      "batches",
+      "batchMergeDigest",
+      "relationshipEvidenceSourceIds",
+      "relationshipIds",
+      "observationIds",
+    ],
     path,
     errors,
   );
@@ -217,11 +231,66 @@ function normalizeCoverage(value, path, errors, normalizedSnapshot) {
   if (mode !== SWEEP_COVERAGE_MODE) {
     errors.push(`${path}.mode must be ${SWEEP_COVERAGE_MODE}`);
   }
+  const inspectionMode = validation.choice(
+    coverage.inspectionMode,
+    ["active-session", "subagent-hybrid"],
+    `${path}.inspectionMode`,
+    errors,
+  );
+  const batchMergeDigest = coverage.batchMergeDigest === undefined
+    ? undefined
+    : digest(coverage.batchMergeDigest, `${path}.batchMergeDigest`, errors);
+  const relationshipIds = coverage.relationshipIds === undefined
+    ? undefined
+    : validation.stringList(
+      coverage.relationshipIds,
+      `${path}.relationshipIds`,
+      errors,
+      { maximum: SWEEP_LIMITS.batchRelationships },
+    );
+  const relationshipEvidenceSourceIds = coverage.relationshipEvidenceSourceIds === undefined
+    ? undefined
+    : validation.references(
+      coverage.relationshipEvidenceSourceIds,
+      `${path}.relationshipEvidenceSourceIds`,
+      errors,
+      new Set(fileSourceIds),
+    );
+  const observationIds = coverage.observationIds === undefined
+    ? undefined
+    : validation.stringList(
+      coverage.observationIds,
+      `${path}.observationIds`,
+      errors,
+      { maximum: SWEEP_LIMITS.batchObservations },
+    );
+  for (const [label, values] of [
+    ["relationshipIds", relationshipIds],
+    ["observationIds", observationIds],
+  ]) {
+    if (!values) continue;
+    if (new Set(values).size !== values.length) {
+      errors.push(`${path}.${label} must not repeat IDs`);
+    }
+  }
+  if (inspectionMode === "subagent-hybrid") {
+    if (!batchMergeDigest) errors.push(`${path}.batchMergeDigest is required for subagent-hybrid inspection`);
+    if (!relationshipIds) errors.push(`${path}.relationshipIds is required for subagent-hybrid inspection`);
+    if (!observationIds) errors.push(`${path}.observationIds is required for subagent-hybrid inspection`);
+    if (!relationshipEvidenceSourceIds) errors.push(`${path}.relationshipEvidenceSourceIds is required for subagent-hybrid inspection`);
+  } else if (batchMergeDigest || relationshipEvidenceSourceIds || relationshipIds || observationIds) {
+    errors.push(`${path} batch merge fields require subagent-hybrid inspection`);
+  }
   return {
     mode,
+    inspectionMode,
     inventoryDigest,
     fileSourceIds,
     batches,
+    ...(batchMergeDigest === undefined ? {} : { batchMergeDigest }),
+    ...(relationshipEvidenceSourceIds === undefined ? {} : { relationshipEvidenceSourceIds }),
+    ...(relationshipIds === undefined ? {} : { relationshipIds }),
+    ...(observationIds === undefined ? {} : { observationIds }),
     state,
   };
 }
@@ -260,8 +329,8 @@ function normalizedSweepPlanDigest(value) {
   return hashCanonicalValue(planPayload(value));
 }
 
-export function sweepPlanDigest(value) {
-  return normalizedSweepPlanDigest(validateSweepPlan(value));
+export function sweepPlanDigest(value, options = {}) {
+  return normalizedSweepPlanDigest(validateSweepPlan(value, options));
 }
 
 function approvalPayload(value) {
@@ -634,6 +703,9 @@ function planMetrics(value, normalized, inputFileBytes, inventoryVerified) {
 export function validateSweepPlan(value, {
   inputFileBytes = serializedJsonBytes(value),
   inventory,
+  batchMerge,
+  batchReportSet,
+  capabilities,
 } = {}) {
   const errors = [];
   const plan = validation.object(value, "sweep", errors);
@@ -718,6 +790,11 @@ export function validateSweepPlan(value, {
       categoryIds,
     ),
   };
+  if (normalizedSession.scope !== SWEEP_FULL_CODEBASE_SCOPE) {
+    errors.push(
+      `sweep.session.scope must be ${SWEEP_FULL_CODEBASE_SCOPE}`,
+    );
+  }
   const isFullCodebaseScope = normalizedSession.scope === SWEEP_FULL_CODEBASE_SCOPE;
   if (isFullCodebaseScope && !normalizedCoverage) {
     errors.push(
@@ -750,6 +827,25 @@ export function validateSweepPlan(value, {
     if (JSON.stringify(normalizedInventory.fileSourceIds)
       !== JSON.stringify(normalizedCoverage.fileSourceIds)) {
       errors.push("sweep.inventory fileSourceIds do not match sweep.coverage");
+    }
+  }
+  let normalizedBatchMerge;
+  if (normalizedCoverage?.inspectionMode === "subagent-hybrid") {
+    if (batchMerge === undefined) {
+      errors.push("sweep.batchMerge is required for subagent-hybrid inspection");
+    } else {
+      try {
+        const normalizedCapabilities = capabilities === undefined
+          ? undefined
+          : validateSweepBatchCapabilities(capabilities);
+        normalizedBatchMerge = validateSweepBatchMerge(batchMerge, {
+          inventory: normalizedInventory,
+          capabilities: normalizedCapabilities,
+          reportSet: batchReportSet,
+        });
+      } catch (error) {
+        errors.push(`sweep.batchMerge: ${error.message}`);
+      }
     }
   }
   if (normalizedSession.budget.maximumCandidates > SWEEP_LIMITS.candidates) {
@@ -984,6 +1080,58 @@ export function validateSweepPlan(value, {
     }
     return normalized;
   });
+  if (normalizedBatchMerge && normalizedCoverage) {
+    if (normalizedCoverage.batchMergeDigest !== normalizedBatchMerge.digest) {
+      errors.push("sweep.coverage.batchMergeDigest does not match the validated batch merge");
+    }
+    const mergeBatches = normalizedBatchMerge.batches.map((batch) => ({
+      id: batch.id,
+      ordinal: batch.ordinal,
+      fileSourceIds: batch.fileSourceIds,
+      inspection: batch.inspection,
+      gaps: batch.gaps,
+    }));
+    if (JSON.stringify(mergeBatches) !== JSON.stringify(normalizedCoverage.batches)) {
+      errors.push("sweep.coverage.batches must match the validated batch merge");
+    }
+    if (JSON.stringify(normalizedCoverage.relationshipIds)
+      !== JSON.stringify(normalizedBatchMerge.relationships.map((item) => item.id))) {
+      errors.push("sweep.coverage.relationshipIds must preserve every merged relationship");
+    }
+    if (JSON.stringify(normalizedCoverage.relationshipEvidenceSourceIds)
+      !== JSON.stringify(normalizedBatchMerge.relationshipEvidenceSourceIds)) {
+      errors.push("sweep.coverage.relationshipEvidenceSourceIds must preserve merged relationship evidence");
+    }
+    if (JSON.stringify(normalizedCoverage.observationIds)
+      !== JSON.stringify(normalizedBatchMerge.observations.map((item) => item.id))) {
+      errors.push("sweep.coverage.observationIds must preserve every merged observation");
+    }
+    for (const category of normalizedCategories) {
+      for (const check of category.checks) {
+        const merged = normalizedBatchMerge.checkResults.find((item) => item.id === check.id);
+        if (!merged) continue;
+        if (check.inspection !== merged.inspection) {
+          errors.push(`sweep category check ${check.id} must match the merged inspection state`);
+        }
+        if (JSON.stringify(check.evidenceSourceIds)
+          !== JSON.stringify(merged.evidenceSourceIds)) {
+          errors.push(`sweep category check ${check.id} must preserve merged evidence sources`);
+        }
+      }
+    }
+    if (
+      normalizedBatchMerge.state === "complete"
+      && normalizedCoverage.state !== "complete"
+    ) {
+      errors.push("sweep.coverage cannot weaken a complete validated batch merge");
+    }
+    if (
+      normalizedBatchMerge.state !== "complete"
+      && normalizedCoverage.state === "complete"
+    ) {
+      errors.push("sweep.coverage cannot claim complete inspection for an incomplete batch merge");
+    }
+  }
 
   const rawCandidates = validation.array(
     plan.candidates,
@@ -1206,14 +1354,29 @@ export function validateSweepPlan(value, {
 
 export function createSweepApprovalCandidate(value, candidateId, {
   inventory,
+  batchMerge,
+  batchReportSet,
+  capabilities,
 } = {}) {
-  const plan = validateSweepPlan(value, { inventory });
-  if (
-    plan.session.scope === SWEEP_FULL_CODEBASE_SCOPE
-    && plan.coverage?.state !== "complete"
-  ) {
+  if (inventory === undefined) {
+    throw new TypeError(
+      "Hope sweep approval requires a verified live inventory",
+    );
+  }
+  const plan = validateSweepPlan(value, {
+    inventory,
+    batchMerge,
+    batchReportSet,
+    capabilities,
+  });
+  if (plan.coverage?.state !== "complete") {
     throw new TypeError(
       "Hope sweep approval requires complete full-codebase coverage",
+    );
+  }
+  if (plan.coverage?.inspectionMode === "subagent-hybrid" && batchMerge === undefined) {
+    throw new TypeError(
+      "Hope sweep approval requires a validated subagent batch merge",
     );
   }
   const planDigest = normalizedSweepPlanDigest(plan);

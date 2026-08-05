@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/sweep/batch-merge-v1.schema.json",
+  "title": "Hope sweep subagent batch merge version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "state", "relationshipInspection", "relationshipEvidenceSourceIds", "batches", "checkResults", "relationships", "observations", "reportDigests", "attempts", "gaps", "digest"],
+  "properties": {
+    "feature": { "const": "sweep-batch-merge" },
+    "version": { "const": 1 },
+    "runId": { "$ref": "#/$defs/text" },
+    "inventoryDigest": { "$ref": "#/$defs/digest" },
+    "capabilityDigest": { "$ref": "#/$defs/digest" },
+    "state": { "enum": ["complete", "partial", "failed"] },
+    "relationshipInspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
+    "relationshipEvidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+    "batches": { "type": "array", "minItems": 1, "maxItems": 256, "items": { "$ref": "#/$defs/mergedBatch" } },
+    "checkResults": { "type": "array", "minItems": 21, "maxItems": 21, "items": { "$ref": "#/$defs/checkResult" } },
+    "relationships": { "type": "array", "maxItems": 4096, "items": { "$ref": "#/$defs/relationship" } },
+    "observations": { "type": "array", "maxItems": 1024, "items": { "$ref": "#/$defs/observation" } },
+    "reportDigests": { "type": "array", "maxItems": 256, "items": { "$ref": "#/$defs/digest" } },
+    "attempts": { "type": "array", "maxItems": 1024, "items": { "$ref": "#/$defs/attempt" } },
+    "gaps": { "$ref": "#/$defs/textList" },
+    "digest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "textList": { "type": "array", "maxItems": 256, "items": { "$ref": "#/$defs/text" } },
+    "sourceIds": { "type": "array", "uniqueItems": true, "maxItems": 4096, "items": { "$ref": "#/$defs/id" } },
+    "mergedBatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ordinal", "fileSourceIds", "inspection", "gaps", "reportDigest"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "fileSourceIds": { "allOf": [{ "$ref": "#/$defs/sourceIds" }, { "minItems": 1 }] },
+        "inspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
+        "gaps": { "$ref": "#/$defs/textList" },
+        "reportDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "checkResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["categoryId", "id", "inspection", "summary", "summaries", "evidenceSourceIds", "gaps"],
+      "properties": {
+        "categoryId": { "$ref": "#/$defs/id" },
+        "id": { "$ref": "#/$defs/id" },
+        "inspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
+        "summary": { "$ref": "#/$defs/text" },
+        "summaries": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } },
+        "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceIds", "status", "summary", "evidenceSourceIds", "gaps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "sourceIds": { "allOf": [{ "$ref": "#/$defs/sourceIds" }, { "minItems": 2 }] },
+        "status": { "enum": ["observed", "unresolved"] },
+        "summary": { "$ref": "#/$defs/text" },
+        "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "categoryId", "checkId", "summary", "sourceIds", "disposition", "gaps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "categoryId": { "$ref": "#/$defs/id" },
+        "checkId": { "$ref": "#/$defs/id" },
+        "summary": { "$ref": "#/$defs/text" },
+        "sourceIds": { "allOf": [{ "$ref": "#/$defs/sourceIds" }, { "minItems": 1 }] },
+        "disposition": { "enum": ["candidate", "report-only"] },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ordinal", "fileSourceIds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "fileSourceIds": { "allOf": [{ "$ref": "#/$defs/sourceIds" }, { "minItems": 1 }] }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["batch", "attempt", "attemptId", "status", "inputDigest", "invocationId"],
+      "properties": {
+        "batch": { "$ref": "#/$defs/batch" },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "attemptId": { "$ref": "#/$defs/digest" },
+        "status": { "enum": ["succeeded", "failed", "cancelled"] },
+        "inputDigest": { "$ref": "#/$defs/digest" },
+        "invocationId": { "$ref": "#/$defs/text" },
+        "error": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}

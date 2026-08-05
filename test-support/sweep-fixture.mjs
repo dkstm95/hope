@@ -1,4 +1,12 @@
 import {
+  createSweepBatchCapabilities,
+  createSweepBatchReport,
+  createSweepBatchReportSet,
+  sweepBatchAttemptId,
+  sweepBatchBindingDigest,
+  mergeSweepBatchReports,
+} from "../features/sweep/batch.mjs";
+import {
   createSweepApprovalCandidate,
   createSweepApprovalReceipt,
   sweepCompletionDigest,
@@ -7,7 +15,10 @@ import {
 } from "../features/sweep/validate.mjs";
 import { sweepInventoryDigest } from "../features/sweep/inventory.mjs";
 import { createPolishReceipt } from "../features/polish/validate.mjs";
-import { SWEEP_CATEGORY_CATALOG } from "../features/sweep/constants.mjs";
+import {
+  SWEEP_CATEGORY_CATALOG,
+  SWEEP_CHECK_CATALOG,
+} from "../features/sweep/constants.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 
@@ -91,6 +102,7 @@ export function makeSweepPlan() {
     },
     coverage: {
       mode: "full-codebase",
+      inspectionMode: "active-session",
       inventoryDigest: sweepInventoryDigest(snapshot),
       fileSourceIds: [...fileSourceIds],
       batches: [
@@ -173,7 +185,9 @@ export function makeSweepPlan() {
 }
 
 export function makeSweepApprovalCandidate(plan = makeSweepPlan()) {
-  return createSweepApprovalCandidate(plan, "remove-unused-helper");
+  return createSweepApprovalCandidate(plan, "remove-unused-helper", {
+    inventory: makeSweepInventory(plan),
+  });
 }
 
 export function makeSweepInventory(plan = makeSweepPlan()) {
@@ -187,6 +201,141 @@ export function makeSweepInventory(plan = makeSweepPlan()) {
     fileSourceIds,
     digest: sweepInventoryDigest(plan.snapshot),
   };
+}
+
+export function makeSweepBatchCapabilities() {
+  return createSweepBatchCapabilities({
+    maxConcurrency: 2,
+    timeoutMs: 60000,
+    retryBudget: 2,
+  });
+}
+
+export function makeSweepBatchReport(
+  inventory = makeSweepInventory(),
+  capabilities = makeSweepBatchCapabilities(),
+  {
+    batch = {
+      id: "batch-001",
+      ordinal: 1,
+      fileSourceIds: [...inventory.fileSourceIds],
+    },
+    attempt = 1,
+    inputDigest = digest("d"),
+    invocationId = "sweep-batch-invocation",
+    relationshipId = "relationship-entrypoints-target",
+  } = {},
+) {
+  const sourceIds = inventory.snapshot.sources.map((source) => source.id);
+  const repositorySourceId = inventory.snapshot.sources.find(
+    (source) => source.kind === "git",
+  )?.id;
+  const bindingDigest = sweepBatchBindingDigest({
+    runId: "sweep-hybrid-run",
+    inventoryDigest: inventory.digest,
+    batch,
+    capabilityDigest: capabilities.digest,
+  });
+  const attemptId = sweepBatchAttemptId({
+    bindingDigest,
+    attempt,
+    inputDigest,
+    invocationId,
+  });
+  const report = {
+    feature: "sweep-batch-report",
+    version: 1,
+    runId: "sweep-hybrid-run",
+    inventoryDigest: inventory.digest,
+    batch,
+    capabilityDigest: capabilities.digest,
+    bindingDigest,
+    attempt,
+    attemptId,
+    inputDigest,
+    invocationId,
+    inspection: "checked",
+    relationshipInspection: "checked",
+    relationshipEvidenceSourceIds: [...batch.fileSourceIds],
+    sourceResults: batch.fileSourceIds.map((sourceId) => ({
+      sourceId,
+      inspection: "checked",
+      evidenceSourceIds: [...sourceIds],
+      gaps: [],
+    })),
+    checks: SWEEP_CHECK_CATALOG.map((check) => ({
+      id: check.id,
+      inspection: "checked",
+      summary: `${check.id} completed in the assigned batch.`,
+      evidenceSourceIds: [...sourceIds],
+      gaps: [],
+    })),
+    relationships: [
+      {
+        id: relationshipId,
+        sourceIds: batch.fileSourceIds.slice(0, 2),
+        status: "observed",
+        summary: "The batch preserved a relationship between assigned files.",
+        evidenceSourceIds: [repositorySourceId],
+        gaps: [],
+      },
+    ],
+    observations: [],
+    gaps: [],
+  };
+  return createSweepBatchReport(report, { inventory, capabilities });
+}
+
+export function makeSweepBatchReportSet(
+  inventory = makeSweepInventory(),
+  capabilities = makeSweepBatchCapabilities(),
+) {
+  const report = makeSweepBatchReport(inventory, capabilities);
+  return createSweepBatchReportSet({
+    feature: "sweep-batch-report-set",
+    version: 1,
+    runId: report.runId,
+    inventoryDigest: inventory.digest,
+    capabilityDigest: capabilities.digest,
+    reports: [report],
+    attempts: [
+      {
+        batch: report.batch,
+        attempt: report.attempt,
+        attemptId: report.attemptId,
+        status: "succeeded",
+        inputDigest: report.inputDigest,
+        invocationId: report.invocationId,
+      },
+    ],
+  }, { inventory, capabilities });
+}
+
+export function makeSweepHybridPlan(
+  plan = makeSweepPlan(),
+  inventory = makeSweepInventory(plan),
+  capabilities = makeSweepBatchCapabilities(),
+) {
+  const reportSet = makeSweepBatchReportSet(inventory, capabilities);
+  const batchMerge = mergeSweepBatchReports(reportSet, {
+    inventory,
+    capabilities,
+  });
+  plan.coverage.inspectionMode = "subagent-hybrid";
+  plan.coverage.batchMergeDigest = batchMerge.digest;
+  plan.coverage.relationshipEvidenceSourceIds = [
+    ...batchMerge.relationshipEvidenceSourceIds,
+  ];
+  plan.coverage.relationshipIds = batchMerge.relationships.map((item) => item.id);
+  plan.coverage.observationIds = batchMerge.observations.map((item) => item.id);
+  plan.coverage.batches = batchMerge.batches.map((batch) => ({
+    id: batch.id,
+    ordinal: batch.ordinal,
+    fileSourceIds: [...batch.fileSourceIds],
+    inspection: batch.inspection,
+    gaps: [...batch.gaps],
+  }));
+  return { capabilities, inventory, batchMerge, plan, reportSet };
 }
 
 export function makeSweepApprovalReceipt(

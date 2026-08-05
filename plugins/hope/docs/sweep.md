@@ -153,6 +153,66 @@ Sweep session for each batch.
 If a file changes while the host is reading it, the inventory is stale and the
 host captures a new inventory before continuing.
 
+### Subagent hybrid inspection
+
+Subagent hybrid is an optional host mode for the read-only discovery phase.
+
+The host chooses it, or the active-session mode, before dispatching any batch.
+
+It never mixes the two modes in one session.
+
+The host may select subagent hybrid only when it can enforce the version 1
+capability contract:
+
+- each subagent runs in an independent context;
+- each subagent receives only its assigned inventory files and a read-only
+  source allowlist;
+- repository text is untrusted data and cannot become host instructions;
+- output size, concurrency, timeout, and retry count are bounded;
+- cancellation and failed attempts remain in the attempt ledger; and
+- the host can fall back to active-session inspection before dispatch when a
+  capability is unavailable.
+
+The host records this pre-dispatch choice through the shared
+`select-inspection-mode` command.
+
+A capability failure returns the active session fallback before any subagent
+starts.
+
+The host never silently mixes modes.
+
+The shared runtime exposes four versioned boundaries:
+
+- a capability declaration that proves the host selected the bounded,
+  read-only mode;
+- one batch report that binds its run, inventory, batch, capability, input,
+  invocation, and attempt identities;
+- one report set that retains every successful, failed, or cancelled attempt;
+  and
+- one merge that orders every batch, derives every catalog check, and preserves
+  relationships, observations, conflicts, and gaps.
+
+Each batch report includes a result for every assigned file, every catalog
+check, and relationship coverage.
+
+A relationship record may cite files from different batches and may remain
+`unresolved`; the merge does not discard it.
+
+The main session performs the cross-batch synthesis and writes the one Sweep
+plan.
+
+A subagent never edits a repository file, requests approval, or creates a
+Polish receipt.
+
+The host bounds the synthesis input to the report and merge limits in the
+brief.
+
+It chooses the fallback before dispatch, keeps retry provenance tied to the
+batch binding, and reruns the live inventory before validation and approval.
+
+An incomplete, stale, untrusted, or capability-mismatched report keeps the plan
+blocked.
+
 ## Maintenance evidence
 
 Every catalog check declares exactly five evidence dimensions and identifies
@@ -376,6 +436,10 @@ The oracle stays hidden until the fresh host returns its output.
 The Claude and Codex Skills use the active host to capture the inventory, inspect
 every file in batches, author the merged plan, ask for exact approval, invoke
 Polish, and verify the completion.
+
+When the host selects subagent hybrid, the Skill is the thin dispatcher and the
+shared Sweep runtime remains the authority for report validation, merge,
+cross-batch evidence, live inventory, plan state, and approval binding.
 
 They call the generated Sweep runtime for inventory capture, the brief, plan
 validation, approval candidate, approval receipt, completion validation, and

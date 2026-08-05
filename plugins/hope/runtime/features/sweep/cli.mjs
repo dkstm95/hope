@@ -8,6 +8,8 @@ import {
   createSweepApprovalReceiptFile,
   createSweepBrief,
   createSweepInventory,
+  mergeSweepBatchReportsFile,
+  selectSweepInspectionModeFile,
   createSweepModelEvaluationPlan,
   createSweepModelEvaluationReceiptFile,
   getSweepModelEvaluationOracle,
@@ -17,6 +19,7 @@ import {
   validateSweepCompletionFile,
   validateSweepModelEvaluationReceiptFile,
   validateSweepModelEvaluationReceiptSetFile,
+  validateSweepBatchReportFile,
   validateSweepPlanFile,
   validateSweepSessionResultFile,
 } from "./index.mjs";
@@ -30,8 +33,11 @@ function usage() {
     "Internal Skill protocol:",
     "  hope sweep brief [--risk <low|medium|high>]",
     "  hope sweep inventory [--root <repository-root>]",
-    "  hope sweep validate-plan --input <plan.json> [--inventory <inventory.json>]",
-    "  hope sweep approval-candidate --input <plan.json> --candidate <id> [--inventory <inventory.json>]",
+    "  hope sweep validate-batch-report --input <report.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
+    "  hope sweep merge-batch-reports --input <reports.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
+    "  hope sweep select-inspection-mode --mode <active-session|subagent-hybrid> [--capabilities <capabilities.json>]",
+    "  hope sweep validate-plan --input <plan.json> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
+    "  hope sweep approval-candidate --input <plan.json> --candidate <id> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
     "  hope sweep approval-receipt --input <approval.json>",
     "  hope sweep validate-completion --input <completion.json>",
     "  hope sweep validate-session-result --input <session-result.json>",
@@ -53,6 +59,9 @@ export function parseSweepArguments(argv) {
     ![
       "brief",
       "inventory",
+      "validate-batch-report",
+      "merge-batch-reports",
+      "select-inspection-mode",
       "validate-plan",
       "approval-candidate",
       "approval-receipt",
@@ -72,13 +81,16 @@ export function parseSweepArguments(argv) {
     allowed: [
       "candidate",
       "case",
+      "capabilities",
       "effort",
       "host",
       "input",
       "invocation",
       "inventory",
       "model",
+      "mode",
       "risk",
+      "reports",
       "root",
       "run",
     ],
@@ -158,11 +170,67 @@ export function parseSweepArguments(argv) {
     if (!hasOnly(["root"])) throw new TypeError(usage());
     return { command, root: options.root };
   }
+  if (command === "validate-batch-report") {
+    if (
+      !options.input
+      || !options.root
+      || !options.capabilities
+      || !hasOnly(["capabilities", "input", "inventory", "root"])
+    ) {
+      throw new TypeError(usage());
+    }
+    return {
+      command,
+      capabilitiesPath: options.capabilities,
+      inputPath: options.input,
+      ...(options.inventory ? { inventoryPath: options.inventory } : {}),
+      repositoryRoot: options.root,
+    };
+  }
+  if (command === "merge-batch-reports") {
+    if (
+      !options.input
+      || !options.root
+      || !options.capabilities
+      || !hasOnly(["capabilities", "input", "inventory", "root"])
+    ) {
+      throw new TypeError(usage());
+    }
+    return {
+      command,
+      capabilitiesPath: options.capabilities,
+      inputPath: options.input,
+      ...(options.inventory ? { inventoryPath: options.inventory } : {}),
+      repositoryRoot: options.root,
+    };
+  }
+  if (command === "select-inspection-mode") {
+    if (
+      !options.mode
+      || !["active-session", "subagent-hybrid"].includes(options.mode)
+      || !hasOnly(["capabilities", "mode"])
+    ) {
+      throw new TypeError(usage());
+    }
+    return {
+      capabilitiesPath: options.capabilities,
+      command,
+      requestedMode: options.mode,
+    };
+  }
   if (command === "approval-candidate") {
     if (
       !options.candidate
       || !options.input
-      || !hasOnly(["candidate", "input", "inventory"])
+      || !options.root
+      || !hasOnly([
+        "candidate",
+        "capabilities",
+        "input",
+        "inventory",
+        "reports",
+        "root",
+      ])
     ) {
       throw new TypeError(usage());
     }
@@ -171,12 +239,18 @@ export function parseSweepArguments(argv) {
       command,
       inputPath: options.input,
       ...(options.inventory ? { inventoryPath: options.inventory } : {}),
+      ...(options.capabilities ? { capabilitiesPath: options.capabilities } : {}),
+      ...(options.reports ? { reportsPath: options.reports } : {}),
+      repositoryRoot: options.root,
     };
   }
   if (
     !options.input
     || options.candidate
-    || !hasOnly(command === "validate-plan" ? ["input", "inventory"] : ["input"])
+    || (command === "validate-plan" && !options.root)
+    || !hasOnly(command === "validate-plan"
+      ? ["capabilities", "input", "inventory", "reports", "root"]
+      : ["input"])
   ) {
     throw new TypeError(usage());
   }
@@ -184,6 +258,9 @@ export function parseSweepArguments(argv) {
     command,
     inputPath: options.input,
     ...(options.inventory ? { inventoryPath: options.inventory } : {}),
+    ...(options.capabilities ? { capabilitiesPath: options.capabilities } : {}),
+    ...(options.reports ? { reportsPath: options.reports } : {}),
+    ...(command === "validate-plan" ? { repositoryRoot: options.root } : {}),
   };
 }
 
@@ -211,10 +288,42 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       { cwd: options.root },
       dependencies,
     );
+  } else if (options.command === "validate-batch-report") {
+    result = await (
+      dependencies.validateSweepBatchReportFile ?? validateSweepBatchReportFile
+    )(options.inputPath, {
+      ...dependencies,
+      capabilitiesPath: options.capabilitiesPath,
+      inventoryPath: options.inventoryPath,
+      repositoryRoot: options.repositoryRoot,
+    });
+  } else if (options.command === "merge-batch-reports") {
+    result = await (
+      dependencies.mergeSweepBatchReportsFile ?? mergeSweepBatchReportsFile
+    )(options.inputPath, {
+      ...dependencies,
+      capabilitiesPath: options.capabilitiesPath,
+      inventoryPath: options.inventoryPath,
+      repositoryRoot: options.repositoryRoot,
+    });
+  } else if (options.command === "select-inspection-mode") {
+    result = await (
+      dependencies.selectSweepInspectionModeFile
+      ?? selectSweepInspectionModeFile
+    )(options.requestedMode, {
+      ...dependencies,
+      capabilitiesPath: options.capabilitiesPath,
+    });
   } else if (options.command === "validate-plan") {
     result = await (
       dependencies.validateSweepPlanFile ?? validateSweepPlanFile
-    )(options.inputPath, { ...dependencies, inventoryPath: options.inventoryPath });
+    )(options.inputPath, {
+      ...dependencies,
+      inventoryPath: options.inventoryPath,
+      capabilitiesPath: options.capabilitiesPath,
+      reportsPath: options.reportsPath,
+      repositoryRoot: options.repositoryRoot,
+    });
   } else if (options.command === "approval-candidate") {
     result = await (
       dependencies.createSweepApprovalCandidateFile
@@ -222,6 +331,9 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     )(options.inputPath, options.candidateId, {
       ...dependencies,
       inventoryPath: options.inventoryPath,
+      capabilitiesPath: options.capabilitiesPath,
+      reportsPath: options.reportsPath,
+      repositoryRoot: options.repositoryRoot,
     });
   } else if (options.command === "approval-receipt") {
     result = await (

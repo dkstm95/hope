@@ -73,6 +73,15 @@ The dependency direction is:
 harness -> features <- host adapters
 ```
 
+For Sweep subagent hybrid inspection, the host adapter owns dispatch,
+cancellation, and the physical read-only boundary.
+
+The shared `features/sweep/batch.mjs` contract owns capability validation,
+attempt and input binding, report validation, deterministic merge, cross-batch
+evidence, and the fallback decision recorded before dispatch.
+
+Subagents cannot become a second feature implementation or an approval path.
+
 Feature code never imports a Skill, plugin manifest, or host adapter.
 
 ## Folders

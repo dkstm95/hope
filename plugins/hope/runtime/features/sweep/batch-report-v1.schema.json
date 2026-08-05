@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/sweep/batch-report-v1.schema.json",
+  "title": "Hope sweep subagent batch report version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "feature",
+    "version",
+    "runId",
+    "inventoryDigest",
+    "batch",
+    "capabilityDigest",
+    "bindingDigest",
+    "attempt",
+    "attemptId",
+    "inputDigest",
+    "invocationId",
+    "inspection",
+    "relationshipInspection",
+    "relationshipEvidenceSourceIds",
+    "sourceResults",
+    "checks",
+    "relationships",
+    "observations",
+    "gaps",
+    "reportDigest"
+  ],
+  "properties": {
+    "feature": { "const": "sweep-batch-report" },
+    "version": { "const": 1 },
+    "runId": { "$ref": "#/$defs/text" },
+    "inventoryDigest": { "$ref": "#/$defs/digest" },
+    "batch": { "$ref": "#/$defs/batch" },
+    "capabilityDigest": { "$ref": "#/$defs/digest" },
+    "bindingDigest": { "$ref": "#/$defs/digest" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "attemptId": { "$ref": "#/$defs/digest" },
+    "inputDigest": { "$ref": "#/$defs/digest" },
+    "invocationId": { "$ref": "#/$defs/text" },
+    "inspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
+    "relationshipInspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
+    "relationshipEvidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+    "sourceResults": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/sourceResult" }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 21,
+      "maxItems": 21,
+      "items": { "$ref": "#/$defs/check" }
+    },
+    "relationships": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/relationship" }
+    },
+    "observations": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": { "$ref": "#/$defs/observation" }
+    },
+    "gaps": { "$ref": "#/$defs/textList" },
+    "reportDigest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "textList": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "sourceIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ordinal", "fileSourceIds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "fileSourceIds": {
+          "allOf": [
+            { "$ref": "#/$defs/sourceIds" },
+            { "minItems": 1 }
+          ]
+        }
+      }
+    },
+    "inspection": {
+      "enum": ["checked", "partial", "not-checked", "failed"]
+    },
+    "sourceResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceId", "inspection", "evidenceSourceIds", "gaps"],
+      "properties": {
+        "sourceId": { "$ref": "#/$defs/id" },
+        "inspection": { "$ref": "#/$defs/inspection" },
+        "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "inspection", "summary", "evidenceSourceIds", "gaps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "inspection": { "$ref": "#/$defs/inspection" },
+        "summary": { "$ref": "#/$defs/text" },
+        "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceIds", "status", "summary", "evidenceSourceIds", "gaps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "sourceIds": { "minItems": 2, "$ref": "#/$defs/sourceIds" },
+        "status": { "enum": ["observed", "unresolved"] },
+        "summary": { "$ref": "#/$defs/text" },
+        "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "categoryId", "checkId", "summary", "sourceIds", "disposition", "gaps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "categoryId": { "$ref": "#/$defs/id" },
+        "checkId": { "$ref": "#/$defs/id" },
+        "summary": { "$ref": "#/$defs/text" },
+        "sourceIds": { "allOf": [{ "$ref": "#/$defs/sourceIds" }, { "minItems": 1 }] },
+        "disposition": { "enum": ["candidate", "report-only"] },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    }
+  }
+}

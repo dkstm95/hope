@@ -1,9 +1,12 @@
-export const SWEEP_CONTRACT_VERSION = 2;
+export const SWEEP_CONTRACT_VERSION = 3;
 export const SWEEP_PLAN_VERSION = 1;
 export const SWEEP_COMPLETION_VERSION = 1;
 export const SWEEP_APPROVAL_RECEIPT_VERSION = 1;
 export const SWEEP_SESSION_RESULT_VERSION = 1;
 export const SWEEP_INVENTORY_VERSION = 1;
+export const SWEEP_BATCH_REPORT_VERSION = 1;
+export const SWEEP_BATCH_MERGE_VERSION = 1;
+export const SWEEP_BATCH_CAPABILITY_VERSION = 1;
 export const SWEEP_FULL_CODEBASE_SCOPE = "entire-codebase";
 export const SWEEP_COVERAGE_MODE = "full-codebase";
 
@@ -13,6 +16,12 @@ export const SWEEP_LIMITS = Object.freeze({
   checks: 21,
   changes: 96,
   coverageBatches: 256,
+  batchReports: 256,
+  batchAttempts: 1024,
+  batchRelationships: 4096,
+  batchObservations: 1024,
+  batchReportBytes: 512 * 1024,
+  batchMergeBytes: 4 * 1024 * 1024,
   evidenceChecks: 5,
   groupItems: 256,
   inputBytes: 2 * 1024 * 1024,
