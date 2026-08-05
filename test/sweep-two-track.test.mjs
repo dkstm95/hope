@@ -283,6 +283,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   const inventoryPath = join(temporaryRoot, "inventory.json");
   const capabilitiesPath = join(temporaryRoot, "capabilities.json");
   const manifestPath = join(temporaryRoot, "manifest.json");
+  const modeSelectionPath = join(temporaryRoot, "mode-selection.json");
   const hostAdapterPath = join(temporaryRoot, "sweep-host-adapter.mjs");
   const batchReportPath = join(temporaryRoot, "batch-report.json");
   const batchReportSetPath = join(temporaryRoot, "batch-reports.json");
@@ -420,6 +421,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     writeFile(inventoryPath, JSON.stringify(liveInventory), { mode: 0o600 }),
     writeFile(capabilitiesPath, JSON.stringify(batchCapabilities), { mode: 0o600 }),
     writeFile(manifestPath, JSON.stringify(batchReportSet.manifest), { mode: 0o600 }),
+    writeFile(modeSelectionPath, JSON.stringify(batchReportSet.modeSelection), { mode: 0o600 }),
     writeFile(batchReportPath, JSON.stringify(batchReport), { mode: 0o600 }),
     writeFile(batchReportSetPath, JSON.stringify(batchReportSet), { mode: 0o600 }),
     writeFile(hybridPlanPath, JSON.stringify(hybridLivePlan), { mode: 0o600 }),
@@ -540,6 +542,27 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
         : runJson)("harness/hope.mjs", ["sweep", ...arguments_]),
     );
   }
+  const createModeSelectionArguments = [
+    "create-mode-selection",
+    "--manifest",
+    manifestPath,
+    "--root",
+    repositoryRoot,
+    "--capabilities",
+    capabilitiesPath,
+    "--invocation",
+    "two-track-mode-selection",
+  ];
+  assert.deepEqual(
+    runWithHostAdapter(
+      "plugins/hope/runtime/features/sweep/cli.mjs",
+      createModeSelectionArguments,
+    ),
+    runWithHostAdapter("harness/hope.mjs", [
+      "sweep",
+      ...createModeSelectionArguments,
+    ]),
+  );
   assert.match(
     runFailure(
       "plugins/hope/runtime/features/sweep/cli.mjs",
@@ -582,7 +605,9 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       inventoryPath,
       "--capabilities",
       capabilitiesPath,
-      ...(command === "validate-batch-report" ? ["--manifest", manifestPath] : []),
+      ...(command === "validate-batch-report"
+        ? ["--manifest", manifestPath, "--mode-selection", modeSelectionPath]
+        : []),
     ];
     assert.deepEqual(
       runWithHostAdapter("plugins/hope/runtime/features/sweep/cli.mjs", arguments_),

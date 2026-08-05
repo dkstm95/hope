@@ -102,6 +102,20 @@ select-inspection-mode --mode <active-session|subagent-hybrid> [--capabilities <
 If capability negotiation returns `active-session` with `fallbackUsed: true`,
 continue in that mode and do not launch subagents.
 
+For a hybrid run, create a host-verified mode-selection receipt after the
+ordered pre-dispatch manifest exists.
+
+Bind it to the run ID, live inventory digest, capability digest, and manifest
+digest.
+
+A fallback decision is not a valid hybrid receipt.
+
+The shared runtime command is:
+
+```text
+create-mode-selection --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> --invocation <id>
+```
+
 For `subagent-hybrid`:
 
 - create one capability declaration with bounded concurrency, timeout, report
@@ -116,10 +130,14 @@ For `subagent-hybrid`:
 - retain failed and cancelled attempts in the report set;
 - include a host-verified pre-dispatch manifest and bind every report and
   attempt to its manifest digest and one manifest batch;
+- include the host-verified mode-selection receipt in the report set and merge;
 - allow a missing report only when every attempt for that manifest batch failed
   or was cancelled, then keep a visible failed batch gap in the merge;
 - require a host-verified cross-batch synthesis artifact that reviews all
   inventory files and records relationships spanning manifest batches;
+- bind that synthesis to its producer, bounded attempt, output digest, exact
+  report-set and merge inputs, mode-selection digest, and complete attempt
+  ledger;
 - validate and merge the report set in the main session; and
 - keep each batch relationship and the explicit cross-batch synthesis in the
   merge before authoring the one plan.
@@ -162,7 +180,7 @@ validate-plan --input <plan.json> --root <repository-root> [--inventory <invento
 For a hybrid plan, also pass the validated report set and capability contract:
 
 ```text
-validate-batch-report --input <report.json> --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]
+validate-batch-report --input <report.json> --manifest <manifest.json> --mode-selection <mode-selection.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]
 merge-batch-reports --input <reports.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]
 validate-plan --input <plan.json> --root <repository-root> --reports <reports.json> --capabilities <capabilities.json> [--inventory <inventory.json>]
 ```

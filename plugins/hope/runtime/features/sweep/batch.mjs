@@ -7,6 +7,7 @@ import { validateSweepInventory } from "./inventory.mjs";
 import {
   SWEEP_BATCH_CAPABILITY_VERSION,
   SWEEP_BATCH_MERGE_VERSION,
+  SWEEP_BATCH_MODE_SELECTION_VERSION,
   SWEEP_BATCH_REPORT_VERSION,
   SWEEP_BATCH_SYNTHESIS_VERSION,
   SWEEP_CATEGORY_CATALOG,
@@ -206,6 +207,155 @@ export function selectSweepInspectionMode({
       reason: error.message,
     });
   }
+}
+
+function modeSelectionPayload(value) {
+  const { digest: _digest, ...payload } = value;
+  return payload;
+}
+
+export function digestSweepBatchModeSelection(value) {
+  return digestValue(modeSelectionPayload(value));
+}
+
+export function validateSweepBatchModeSelection(
+  value,
+  {
+    inventory,
+    capabilities,
+    manifest,
+    verifyBatchInvocation,
+  } = {},
+) {
+  const errors = [];
+  const context = sourceContext(inventory, errors);
+  const selection = object(value, "sweep.batchModeSelection", errors);
+  exactKeys(
+    selection,
+    [
+      "feature",
+      "version",
+      "requestedMode",
+      "mode",
+      "fallbackUsed",
+      "runId",
+      "inventoryDigest",
+      "capabilityDigest",
+      "manifestDigest",
+      "invocationId",
+      "digest",
+    ],
+    "sweep.batchModeSelection",
+    errors,
+  );
+  const requestedMode = batchValidation.choice(
+    selection.requestedMode,
+    ["subagent-hybrid"],
+    "sweep.batchModeSelection.requestedMode",
+    errors,
+  );
+  const mode = batchValidation.choice(
+    selection.mode,
+    ["subagent-hybrid"],
+    "sweep.batchModeSelection.mode",
+    errors,
+  );
+  const fallbackUsed = batchValidation.boolean(
+    selection.fallbackUsed,
+    "sweep.batchModeSelection.fallbackUsed",
+    errors,
+  );
+  if (fallbackUsed) {
+    errors.push("sweep.batchModeSelection cannot use an active-session fallback for hybrid dispatch");
+  }
+  const runId = text(selection.runId, "sweep.batchModeSelection.runId", errors);
+  const inventoryDigest = digest(
+    selection.inventoryDigest,
+    "sweep.batchModeSelection.inventoryDigest",
+    errors,
+  );
+  if (context.inventory && inventoryDigest !== context.inventory.digest) {
+    errors.push("sweep.batchModeSelection.inventoryDigest does not match inventory");
+  }
+  const capabilityDigest = digest(
+    selection.capabilityDigest,
+    "sweep.batchModeSelection.capabilityDigest",
+    errors,
+  );
+  if (!capabilities) {
+    errors.push("sweep.batchModeSelection.capabilities is required");
+  } else if (capabilityDigest !== capabilities.digest) {
+    errors.push("sweep.batchModeSelection.capabilityDigest does not match capabilities");
+  }
+  const manifestDigest = digest(
+    selection.manifestDigest,
+    "sweep.batchModeSelection.manifestDigest",
+    errors,
+  );
+  if (!manifest) {
+    errors.push("sweep.batchModeSelection.manifest is required");
+  } else {
+    if (manifestDigest !== manifest.digest) {
+      errors.push("sweep.batchModeSelection.manifestDigest does not match the pre-dispatch manifest");
+    }
+    if (runId !== manifest.runId) {
+      errors.push("sweep.batchModeSelection.runId does not match the pre-dispatch manifest");
+    }
+  }
+  const invocationId = text(
+    selection.invocationId,
+    "sweep.batchModeSelection.invocationId",
+    errors,
+  );
+  const normalized = {
+    feature: text(selection.feature, "sweep.batchModeSelection.feature", errors),
+    version: batchValidation.integer(
+      selection.version,
+      "sweep.batchModeSelection.version",
+      errors,
+      { minimum: SWEEP_BATCH_MODE_SELECTION_VERSION },
+    ),
+    requestedMode,
+    mode,
+    fallbackUsed,
+    runId,
+    inventoryDigest,
+    capabilityDigest,
+    manifestDigest,
+    invocationId,
+    digest: digest(selection.digest, "sweep.batchModeSelection.digest", errors),
+  };
+  if (normalized.feature !== "sweep-batch-mode-selection") {
+    errors.push("sweep.batchModeSelection.feature must be sweep-batch-mode-selection");
+  }
+  if (normalized.version !== SWEEP_BATCH_MODE_SELECTION_VERSION) {
+    errors.push(`sweep.batchModeSelection.version must be ${SWEEP_BATCH_MODE_SELECTION_VERSION}`);
+  }
+  if (normalized.digest !== digestSweepBatchModeSelection(normalized)) {
+    errors.push("sweep.batchModeSelection.digest does not match its payload");
+  }
+  trustedHostCheck(
+    verifyBatchInvocation,
+    normalized,
+    "sweep.batchModeSelection",
+    errors,
+    {
+      kind: "mode-selection",
+      inventoryDigest,
+      capabilityDigest,
+      manifestDigest,
+    },
+  );
+  invalid("Hope sweep batch mode selection", errors);
+  return deepFreeze(normalized);
+}
+
+export function createSweepBatchModeSelection(value, dependencies = {}) {
+  const selection = { ...value };
+  if (!selection.digest) {
+    selection.digest = digestSweepBatchModeSelection(selection);
+  }
+  return validateSweepBatchModeSelection(selection, dependencies);
 }
 
 export function validateSweepBatchCapabilities(
@@ -437,6 +587,109 @@ function crossBatchPayload(value) {
   return payload;
 }
 
+function crossBatchSynthesisOutputPayload(value) {
+  return {
+    inspection: value.inspection,
+    evidenceSourceIds: value.evidenceSourceIds,
+    relationships: value.relationships,
+    gaps: value.gaps,
+  };
+}
+
+export function sweepCrossBatchSynthesisOutputDigest(value) {
+  return digestValue(crossBatchSynthesisOutputPayload(value));
+}
+
+function crossBatchSynthesisInputPayload({
+  feature,
+  version,
+  runId,
+  inventoryDigest,
+  capabilityDigest,
+  manifest,
+  modeSelection,
+  reports,
+  attempts,
+}) {
+  return {
+    feature,
+    version,
+    runId,
+    inventoryDigest,
+    capabilityDigest,
+    manifest,
+    modeSelection,
+    reports,
+    attempts,
+  };
+}
+
+export function sweepCrossBatchSynthesisInputDigests({
+  runId,
+  inventoryDigest,
+  capabilityDigest,
+  manifest,
+  modeSelection,
+  reports,
+  attempts,
+}) {
+  const attemptsDigest = digestValue(attempts);
+  const reportSetInputDigest = digestValue(crossBatchSynthesisInputPayload({
+    feature: "sweep-batch-report-set-input",
+    version: SWEEP_BATCH_REPORT_VERSION,
+    runId,
+    inventoryDigest,
+    capabilityDigest,
+    manifest,
+    modeSelection,
+    reports,
+    attempts,
+  }));
+  const mergeInputDigest = digestValue(crossBatchSynthesisInputPayload({
+    feature: "sweep-batch-merge-input",
+    version: SWEEP_BATCH_MERGE_VERSION,
+    runId,
+    inventoryDigest,
+    capabilityDigest,
+    manifest,
+    modeSelection,
+    reports,
+    attempts,
+  }));
+  const modeSelectionDigest = modeSelection?.digest;
+  const inputDigest = digestValue({
+    modeSelectionDigest,
+    reportSetInputDigest,
+    mergeInputDigest,
+    attemptsDigest,
+  });
+  return {
+    modeSelectionDigest,
+    reportSetInputDigest,
+    mergeInputDigest,
+    attemptsDigest,
+    inputDigest,
+  };
+}
+
+export function sweepCrossBatchSynthesisAttemptId({
+  manifestDigest,
+  inputDigest,
+  producerId,
+  attempt,
+  invocationId,
+  outputDigest,
+}) {
+  return digestValue({
+    manifestDigest,
+    inputDigest,
+    producerId,
+    attempt,
+    invocationId,
+    outputDigest,
+  });
+}
+
 export function digestSweepBatchReportSet(value) {
   return digestValue(reportSetPayload(value));
 }
@@ -466,7 +719,7 @@ function normalizeBatch(value, path, errors, fileSourceIds, ids) {
 
 export function validateSweepBatchManifest(
   value,
-  { inventory, capabilities, verifyBatchInvocation } = {},
+  { inventory, capabilities, modeSelection, verifyBatchInvocation } = {},
 ) {
   const errors = [];
   const context = sourceContext(inventory, errors);
@@ -565,6 +818,16 @@ export function validateSweepBatchManifest(
   if (normalized.digest !== digestSweepBatchManifest(normalized)) {
     errors.push("sweep.batchManifest.digest does not match its payload");
   }
+  try {
+    validateSweepBatchModeSelection(modeSelection, {
+      inventory: context.inventory,
+      capabilities,
+      manifest: normalized,
+      verifyBatchInvocation,
+    });
+  } catch (error) {
+    errors.push(`sweep.batchManifest.modeSelection: ${error.message}`);
+  }
   trustedHostCheck(
     verifyBatchInvocation,
     normalized,
@@ -598,6 +861,9 @@ export function validateSweepCrossBatchSynthesis(
     inventory,
     capabilities,
     manifest,
+    modeSelection,
+    reports,
+    attempts,
     verifyBatchInvocation,
   } = {},
 ) {
@@ -613,7 +879,16 @@ export function validateSweepCrossBatchSynthesis(
       "inventoryDigest",
       "capabilityDigest",
       "manifestDigest",
+      "modeSelectionDigest",
+      "reportSetInputDigest",
+      "mergeInputDigest",
+      "attemptsDigest",
+      "inputDigest",
+      "producerId",
+      "attempt",
+      "attemptId",
       "invocationId",
+      "outputDigest",
       "inspection",
       "evidenceSourceIds",
       "relationships",
@@ -639,7 +914,65 @@ export function validateSweepCrossBatchSynthesis(
     errors.push("sweep.crossBatchSynthesis.manifestDigest does not match the pre-dispatch manifest");
   }
   if (manifest && runId !== manifest.runId) errors.push("sweep.crossBatchSynthesis.runId does not match the manifest");
+  let normalizedModeSelection;
+  try {
+    normalizedModeSelection = validateSweepBatchModeSelection(modeSelection, {
+      inventory: context.inventory,
+      capabilities,
+      manifest,
+      verifyBatchInvocation,
+    });
+  } catch (error) {
+    errors.push(`sweep.crossBatchSynthesis.modeSelection: ${error.message}`);
+  }
+  if (!Array.isArray(reports)) {
+    errors.push("sweep.crossBatchSynthesis.reports are required from the validated report set");
+  }
+  if (!Array.isArray(attempts)) {
+    errors.push("sweep.crossBatchSynthesis.attempts are required from the validated attempt ledger");
+  }
+  const inputDigests = Array.isArray(reports) && Array.isArray(attempts) && manifest
+    ? sweepCrossBatchSynthesisInputDigests({
+      runId,
+      inventoryDigest,
+      capabilityDigest,
+      manifest,
+      modeSelection: normalizedModeSelection,
+      reports,
+      attempts,
+    })
+    : {};
+  const modeSelectionDigest = digest(
+    synthesis.modeSelectionDigest,
+    "sweep.crossBatchSynthesis.modeSelectionDigest",
+    errors,
+  );
+  if (normalizedModeSelection && modeSelectionDigest !== normalizedModeSelection.digest) {
+    errors.push("sweep.crossBatchSynthesis.modeSelectionDigest does not match the validated mode selection");
+  }
+  for (const key of ["reportSetInputDigest", "mergeInputDigest", "attemptsDigest", "inputDigest"]) {
+    const valueDigest = digest(
+      synthesis[key],
+      `sweep.crossBatchSynthesis.${key}`,
+      errors,
+    );
+    if (inputDigests[key] && valueDigest !== inputDigests[key]) {
+      errors.push(`sweep.crossBatchSynthesis.${key} does not match the validated report-set inputs`);
+    }
+  }
+  const producerId = text(synthesis.producerId, "sweep.crossBatchSynthesis.producerId", errors);
+  const attempt = batchValidation.integer(
+    synthesis.attempt,
+    "sweep.crossBatchSynthesis.attempt",
+    errors,
+    { minimum: 1, maximum: SWEEP_LIMITS.synthesisAttempts },
+  );
+  if (attempt > SWEEP_LIMITS.synthesisAttempts) {
+    errors.push(`sweep.crossBatchSynthesis.attempt exceeds ${SWEEP_LIMITS.synthesisAttempts}`);
+  }
+  const attemptId = digest(synthesis.attemptId, "sweep.crossBatchSynthesis.attemptId", errors);
   const invocationId = text(synthesis.invocationId, "sweep.crossBatchSynthesis.invocationId", errors);
+  const outputDigest = digest(synthesis.outputDigest, "sweep.crossBatchSynthesis.outputDigest", errors);
   const inspection = batchValidation.choice(synthesis.inspection, SWEEP_INSPECTION_STATES, "sweep.crossBatchSynthesis.inspection", errors);
   const evidenceSourceIds = batchValidation.references(
     synthesis.evidenceSourceIds,
@@ -683,7 +1016,16 @@ export function validateSweepCrossBatchSynthesis(
     inventoryDigest,
     capabilityDigest,
     manifestDigest,
+    modeSelectionDigest,
+    reportSetInputDigest: digest(synthesis.reportSetInputDigest, "sweep.crossBatchSynthesis.reportSetInputDigest", errors),
+    mergeInputDigest: digest(synthesis.mergeInputDigest, "sweep.crossBatchSynthesis.mergeInputDigest", errors),
+    attemptsDigest: digest(synthesis.attemptsDigest, "sweep.crossBatchSynthesis.attemptsDigest", errors),
+    inputDigest: digest(synthesis.inputDigest, "sweep.crossBatchSynthesis.inputDigest", errors),
+    producerId,
+    attempt,
+    attemptId,
     invocationId,
+    outputDigest,
     inspection,
     evidenceSourceIds,
     relationships,
@@ -692,13 +1034,34 @@ export function validateSweepCrossBatchSynthesis(
   };
   if (normalized.feature !== "sweep-cross-batch-synthesis") errors.push("sweep.crossBatchSynthesis.feature must be sweep-cross-batch-synthesis");
   if (normalized.version !== SWEEP_BATCH_SYNTHESIS_VERSION) errors.push(`sweep.crossBatchSynthesis.version must be ${SWEEP_BATCH_SYNTHESIS_VERSION}`);
+  if (normalized.outputDigest !== sweepCrossBatchSynthesisOutputDigest(normalized)) errors.push("sweep.crossBatchSynthesis.outputDigest does not match its synthesis output");
+  if (normalizedModeSelection && normalized.inputDigest && normalized.attemptId !== sweepCrossBatchSynthesisAttemptId({
+    manifestDigest,
+    inputDigest: normalized.inputDigest,
+    producerId,
+    attempt,
+    invocationId,
+    outputDigest,
+  })) errors.push("sweep.crossBatchSynthesis.attemptId does not match its bounded attempt receipt");
   if (normalized.digest !== digestSweepCrossBatchSynthesis(normalized)) errors.push("sweep.crossBatchSynthesis.digest does not match its payload");
   trustedHostCheck(
     verifyBatchInvocation,
     normalized,
     "sweep.crossBatchSynthesis",
     errors,
-    { kind: "cross-batch-synthesis", manifestDigest },
+    {
+      kind: "cross-batch-synthesis",
+      manifestDigest,
+      modeSelectionDigest,
+      reportSetInputDigest: normalized.reportSetInputDigest,
+      mergeInputDigest: normalized.mergeInputDigest,
+      attemptsDigest: normalized.attemptsDigest,
+      inputDigest: normalized.inputDigest,
+      outputDigest,
+      attemptId,
+      producerId,
+      attempt,
+    },
   );
   invalid("Hope sweep cross-batch synthesis", errors);
   return deepFreeze(normalized);
@@ -706,6 +1069,49 @@ export function validateSweepCrossBatchSynthesis(
 
 export function createSweepCrossBatchSynthesis(value, dependencies = {}) {
   const synthesis = { ...value };
+  const inputDigests = dependencies.manifest
+    && dependencies.modeSelection
+    && Array.isArray(dependencies.reports)
+    && Array.isArray(dependencies.attempts)
+    ? sweepCrossBatchSynthesisInputDigests({
+      runId: synthesis.runId,
+      inventoryDigest: synthesis.inventoryDigest,
+      capabilityDigest: synthesis.capabilityDigest,
+      manifest: dependencies.manifest,
+      modeSelection: dependencies.modeSelection,
+      reports: dependencies.reports,
+      attempts: dependencies.attempts,
+    })
+    : undefined;
+  if (inputDigests) {
+    for (const key of [
+      "modeSelectionDigest",
+      "reportSetInputDigest",
+      "mergeInputDigest",
+      "attemptsDigest",
+      "inputDigest",
+    ]) {
+      if (synthesis[key] === undefined) synthesis[key] = inputDigests[key];
+    }
+  }
+  if (synthesis.producerId === undefined) {
+    synthesis.producerId = dependencies.producerId ?? "host-sweep-coordinator";
+  }
+  if (synthesis.attempt === undefined) synthesis.attempt = 1;
+  if (synthesis.outputDigest === undefined) {
+    synthesis.outputDigest = sweepCrossBatchSynthesisOutputDigest(synthesis);
+  }
+  if (
+    synthesis.attemptId === undefined
+    && synthesis.manifestDigest
+    && synthesis.inputDigest
+    && synthesis.producerId
+    && synthesis.attempt
+    && synthesis.invocationId
+    && synthesis.outputDigest
+  ) {
+    synthesis.attemptId = sweepCrossBatchSynthesisAttemptId(synthesis);
+  }
   if (!synthesis.digest) synthesis.digest = digestSweepCrossBatchSynthesis(synthesis);
   return validateSweepCrossBatchSynthesis(synthesis, dependencies);
 }
@@ -902,6 +1308,7 @@ export function validateSweepBatchReport(
   {
     inventory,
     manifest,
+    modeSelection,
     capabilities,
     verifyBatchCapabilities,
     verifyBatchInvocation,
@@ -946,6 +1353,7 @@ export function validateSweepBatchReport(
       normalizedManifest = validateSweepBatchManifest(manifest, {
         inventory: context.inventory,
         capabilities: normalizedCapabilities,
+        modeSelection,
         verifyBatchInvocation,
       });
     } catch (error) {
@@ -1100,24 +1508,25 @@ export function validateSweepBatchReportSet(
     normalizedManifest = validateSweepBatchManifest(value?.manifest, {
       inventory: context.inventory,
       capabilities: normalizedCapabilities,
+      modeSelection: value?.modeSelection,
       verifyBatchInvocation,
     });
   } catch (error) {
     errors.push(`sweep.batchReportSet.manifest: ${error.message}`);
   }
-  let normalizedCrossBatchSynthesis;
+  let normalizedModeSelection;
   try {
-    normalizedCrossBatchSynthesis = validateSweepCrossBatchSynthesis(value?.crossBatchSynthesis, {
+    normalizedModeSelection = validateSweepBatchModeSelection(value?.modeSelection, {
       inventory: context.inventory,
       capabilities: normalizedCapabilities,
       manifest: normalizedManifest,
       verifyBatchInvocation,
     });
   } catch (error) {
-    errors.push(`sweep.batchReportSet.crossBatchSynthesis: ${error.message}`);
+    errors.push(`sweep.batchReportSet.modeSelection: ${error.message}`);
   }
   const valueObject = object(value, "sweep.batchReportSet", errors);
-  exactKeys(valueObject, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "crossBatchSynthesis", "reports", "attempts", "digest"], "sweep.batchReportSet", errors);
+  exactKeys(valueObject, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "modeSelection", "crossBatchSynthesis", "reports", "attempts", "digest"], "sweep.batchReportSet", errors);
   const runId = text(valueObject.runId, "sweep.batchReportSet.runId", errors);
   const inventoryDigest = digest(valueObject.inventoryDigest, "sweep.batchReportSet.inventoryDigest", errors);
   const capabilityDigest = digest(valueObject.capabilityDigest, "sweep.batchReportSet.capabilityDigest", errors);
@@ -1129,6 +1538,7 @@ export function validateSweepBatchReportSet(
       return validateSweepBatchReport(item, {
         inventory: context.inventory,
         manifest: normalizedManifest,
+        modeSelection: normalizedModeSelection,
         capabilities: normalizedCapabilities,
         verifyBatchCapabilities,
         verifyBatchInvocation,
@@ -1243,6 +1653,20 @@ export function validateSweepBatchReportSet(
       errors.push(`sweep.batchReportSet succeeded attempt ${attempt.attemptId} has no report`);
     }
   }
+  let normalizedCrossBatchSynthesis;
+  try {
+    normalizedCrossBatchSynthesis = validateSweepCrossBatchSynthesis(valueObject.crossBatchSynthesis, {
+      inventory: context.inventory,
+      capabilities: normalizedCapabilities,
+      manifest: normalizedManifest,
+      modeSelection: normalizedModeSelection,
+      reports,
+      attempts,
+      verifyBatchInvocation,
+    });
+  } catch (error) {
+    errors.push(`sweep.batchReportSet.crossBatchSynthesis: ${error.message}`);
+  }
   const normalized = {
     feature: text(valueObject.feature, "sweep.batchReportSet.feature", errors),
     version: batchValidation.integer(valueObject.version, "sweep.batchReportSet.version", errors, { minimum: SWEEP_BATCH_REPORT_VERSION }),
@@ -1250,6 +1674,7 @@ export function validateSweepBatchReportSet(
     inventoryDigest,
     capabilityDigest,
     manifest: normalizedManifest,
+    modeSelection: normalizedModeSelection,
     crossBatchSynthesis: normalizedCrossBatchSynthesis,
     reports,
     attempts,
@@ -1423,6 +1848,7 @@ export function mergeSweepBatchReports(
     runId: reportSet.runId,
     inventoryDigest: reportSet.inventoryDigest,
     capabilityDigest: reportSet.capabilityDigest,
+    modeSelection: reportSet.modeSelection,
     crossBatchSynthesis: reportSet.crossBatchSynthesis,
     state,
     relationshipInspection,
@@ -1481,6 +1907,27 @@ export function validateSweepBatchMerge(
     errors.push("sweep.batchMerge.capabilities is required");
   }
   let normalizedCrossBatchSynthesis;
+  let normalizedModeSelection;
+  if (reportSet?.modeSelection) {
+    try {
+      normalizedModeSelection = validateSweepBatchModeSelection(
+        value?.modeSelection,
+        {
+          inventory: context.inventory,
+          capabilities: normalizedCapabilities,
+          manifest: reportSet.manifest,
+          verifyBatchInvocation,
+        },
+      );
+      if (normalizedModeSelection.digest !== reportSet.modeSelection.digest) {
+        errors.push("sweep.batchMerge.modeSelection does not match the validated report set");
+      }
+    } catch (error) {
+      errors.push(`sweep.batchMerge.modeSelection: ${error.message}`);
+    }
+  } else {
+    errors.push("sweep.batchMerge.modeSelection requires a validated report-set selection");
+  }
   if (reportSet?.crossBatchSynthesis) {
     try {
       normalizedCrossBatchSynthesis = validateSweepCrossBatchSynthesis(
@@ -1489,6 +1936,9 @@ export function validateSweepBatchMerge(
           inventory: context.inventory,
           capabilities: normalizedCapabilities,
           manifest: reportSet.manifest,
+          modeSelection: normalizedModeSelection,
+          reports: reportSet.reports,
+          attempts: reportSet.attempts,
           verifyBatchInvocation,
         },
       );
@@ -1499,7 +1949,7 @@ export function validateSweepBatchMerge(
     errors.push("sweep.batchMerge.crossBatchSynthesis requires a validated report-set synthesis");
   }
   const merge = object(value, "sweep.batchMerge", errors);
-  exactKeys(merge, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "crossBatchSynthesis", "state", "relationshipInspection", "relationshipEvidenceSourceIds", "batches", "checkResults", "relationships", "observations", "reportDigests", "attempts", "gaps", "digest"], "sweep.batchMerge", errors);
+  exactKeys(merge, ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "modeSelection", "crossBatchSynthesis", "state", "relationshipInspection", "relationshipEvidenceSourceIds", "batches", "checkResults", "relationships", "observations", "reportDigests", "attempts", "gaps", "digest"], "sweep.batchMerge", errors);
   const runId = text(merge.runId, "sweep.batchMerge.runId", errors);
   const inventoryDigest = digest(merge.inventoryDigest, "sweep.batchMerge.inventoryDigest", errors);
   const capabilityDigest = digest(merge.capabilityDigest, "sweep.batchMerge.capabilityDigest", errors);
@@ -1609,6 +2059,7 @@ export function validateSweepBatchMerge(
     runId,
     inventoryDigest,
     capabilityDigest,
+    modeSelection: normalizedModeSelection,
     crossBatchSynthesis: normalizedCrossBatchSynthesis,
     state,
     relationshipInspection,

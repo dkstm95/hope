@@ -71,6 +71,7 @@ runtime/features/result-validation/index.mjs
 runtime/features/sweep/approval-v1.schema.json
 runtime/features/sweep/batch-capabilities-v1.schema.json
 runtime/features/sweep/batch-merge-v1.schema.json
+runtime/features/sweep/batch-mode-selection-v1.schema.json
 runtime/features/sweep/batch-report-set-v1.schema.json
 runtime/features/sweep/batch-report-v1.schema.json
 runtime/features/sweep/batch.mjs

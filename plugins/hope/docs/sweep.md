@@ -184,17 +184,33 @@ The adapter must expose read-only, independent-context, source-allowlist, and bo
 The runtime fails closed for hybrid reports, merges, and plans when that adapter is absent or rejects a record.
 
 The host records this pre-dispatch choice through the shared
-`select-inspection-mode` command.
+`select-inspection-mode` command, then creates a mode-selection receipt after
+the run, inventory, capabilities, and ordered manifest are known.
+
+That receipt is host-verified and binds the selected hybrid mode to those exact
+digests.
+
+An active-session fallback never produces a receipt that can validate hybrid
+artifacts.
+
+The shared runtime can create that receipt with
+`create-mode-selection --manifest <manifest.json> --root <repository-root>
+--capabilities <capabilities.json> --invocation <id>`.
+
+The command captures a fresh live inventory before it signs the binding through
+the trusted host adapter.
 
 A capability failure returns the active session fallback before any subagent
 starts.
 
 The host never silently mixes modes.
 
-The shared runtime exposes four versioned boundaries:
+The shared runtime exposes five versioned boundaries:
 
 - a capability declaration bound to a trusted host adapter that proves the host
   selected the bounded, read-only mode;
+- a mode-selection receipt bound to the run, live inventory, capabilities, and
+  pre-dispatch manifest;
 - one batch report that binds its run, inventory, pre-dispatch manifest, batch,
   capability, input, invocation, output, and attempt identities;
 - one report set that retains every successful, failed, or cancelled attempt;
@@ -212,9 +228,9 @@ evidence.
 The report set also carries a host-verified pre-dispatch manifest, and every
 report and attempt must match its manifest digest and one manifest batch.
 
-The standalone `validate-batch-report` command therefore requires the manifest
-file as well as capabilities; it rejects a report from another run, an
-unlisted batch, or an attempt beyond the declared retry budget before the
+The standalone `validate-batch-report` command therefore requires the manifest,
+mode-selection receipt, and capabilities; it rejects a report from another run,
+an unlisted batch, or an attempt beyond the declared retry budget before the
 report set is merged.
 
 Each successful report carries an output digest, each attempt carries an output
@@ -229,6 +245,12 @@ The main session must produce a host-verified cross-batch synthesis artifact
 that reviews all inventory files, records every relationship that crosses two
 or more manifest batches, cites the complete file evidence when checked, and is
 preserved with batch-local relationships before the one Sweep plan is written.
+
+The synthesis receipt also binds its producer, bounded attempt, output digest,
+mode-selection digest, report-set input digest, merge input digest, and complete
+attempt-ledger digest.
+
+Replayed or edited reports cannot be reused with an old synthesis result.
 
 A subagent never edits a repository file, requests approval, or creates a
 Polish receipt.

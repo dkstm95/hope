@@ -8,6 +8,7 @@ export const SWEEP_INVENTORY_VERSION = 1;
 export const SWEEP_BATCH_REPORT_VERSION = 1;
 export const SWEEP_BATCH_MERGE_VERSION = 1;
 export const SWEEP_BATCH_CAPABILITY_VERSION = 1;
+export const SWEEP_BATCH_MODE_SELECTION_VERSION = 1;
 export const SWEEP_BATCH_SYNTHESIS_VERSION = 1;
 export const SWEEP_FULL_CODEBASE_SCOPE = "entire-codebase";
 export const SWEEP_COVERAGE_MODE = "full-codebase";
@@ -22,6 +23,7 @@ export const SWEEP_LIMITS = Object.freeze({
   batchAttempts: 1024,
   batchRelationships: 4096,
   batchObservations: 1024,
+  synthesisAttempts: 4,
   batchReportBytes: 512 * 1024,
   batchMergeBytes: 4 * 1024 * 1024,
   evidenceChecks: 5,

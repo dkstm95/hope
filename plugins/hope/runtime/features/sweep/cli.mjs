@@ -7,6 +7,7 @@ import {
   createSweepApprovalCandidateFile,
   createSweepApprovalReceiptFile,
   createSweepBrief,
+  createSweepBatchModeSelectionFile,
   createSweepInventory,
   mergeSweepBatchReportsFile,
   selectSweepInspectionModeFile,
@@ -34,9 +35,10 @@ function usage() {
     "Internal Skill protocol:",
     "  hope sweep brief [--risk <low|medium|high>]",
     "  hope sweep inventory [--root <repository-root>]",
-    "  hope sweep validate-batch-report --input <report.json> --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
+    "  hope sweep validate-batch-report --input <report.json> --manifest <manifest.json> --mode-selection <mode-selection.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
     "  hope sweep merge-batch-reports --input <reports.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
     "  hope sweep select-inspection-mode --mode <active-session|subagent-hybrid> [--capabilities <capabilities.json>]",
+    "  hope sweep create-mode-selection --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> --invocation <id> [--inventory <inventory.json>]",
     "  hope sweep validate-plan --input <plan.json> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
     "  hope sweep approval-candidate --input <plan.json> --candidate <id> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
     "  hope sweep approval-receipt --input <approval.json>",
@@ -63,6 +65,7 @@ export function parseSweepArguments(argv) {
       "validate-batch-report",
       "merge-batch-reports",
       "select-inspection-mode",
+      "create-mode-selection",
       "validate-plan",
       "approval-candidate",
       "approval-receipt",
@@ -91,6 +94,7 @@ export function parseSweepArguments(argv) {
       "model",
       "mode",
       "manifest",
+      "mode-selection",
       "risk",
       "reports",
       "root",
@@ -195,7 +199,8 @@ export function parseSweepArguments(argv) {
       || !options.root
       || !options.capabilities
       || !options.manifest
-      || !hasOnly(["capabilities", "input", "inventory", "manifest", "root"])
+      || !options["mode-selection"]
+      || !hasOnly(["capabilities", "input", "inventory", "manifest", "mode-selection", "root"])
     ) {
       throw new TypeError(usage());
     }
@@ -204,6 +209,7 @@ export function parseSweepArguments(argv) {
       capabilitiesPath: options.capabilities,
       inputPath: options.input,
       manifestPath: options.manifest,
+      modeSelectionPath: options["mode-selection"],
       ...(options.inventory ? { inventoryPath: options.inventory } : {}),
       repositoryRoot: options.root,
     };
@@ -237,6 +243,25 @@ export function parseSweepArguments(argv) {
       capabilitiesPath: options.capabilities,
       command,
       requestedMode: options.mode,
+    };
+  }
+  if (command === "create-mode-selection") {
+    if (
+      !options.manifest
+      || !options.root
+      || !options.capabilities
+      || !options.invocation
+      || !hasOnly(["capabilities", "invocation", "inventory", "manifest", "root"])
+    ) {
+      throw new TypeError(usage());
+    }
+    return {
+      capabilitiesPath: options.capabilities,
+      command,
+      ...(options.inventory ? { inventoryPath: options.inventory } : {}),
+      invocationId: options.invocation,
+      manifestPath: options.manifest,
+      repositoryRoot: options.root,
     };
   }
   if (command === "approval-candidate") {
@@ -317,6 +342,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       capabilitiesPath: options.capabilitiesPath,
       inventoryPath: options.inventoryPath,
       manifestPath: options.manifestPath,
+      modeSelectionPath: options.modeSelectionPath,
       repositoryRoot: options.repositoryRoot,
     });
   } else if (options.command === "merge-batch-reports") {
@@ -335,6 +361,18 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     )(options.requestedMode, {
       ...dependencies,
       capabilitiesPath: options.capabilitiesPath,
+    });
+  } else if (options.command === "create-mode-selection") {
+    result = await (
+      dependencies.createSweepBatchModeSelectionFile
+      ?? createSweepBatchModeSelectionFile
+    )({
+      ...dependencies,
+      capabilitiesPath: options.capabilitiesPath,
+      invocationId: options.invocationId,
+      inventoryPath: options.inventoryPath,
+      manifestPath: options.manifestPath,
+      repositoryRoot: options.repositoryRoot,
     });
   } else if (options.command === "validate-plan") {
     result = await (

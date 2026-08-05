@@ -4,7 +4,7 @@
   "title": "Hope sweep subagent batch report set version 1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "crossBatchSynthesis", "reports", "attempts", "digest"],
+  "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifest", "modeSelection", "crossBatchSynthesis", "reports", "attempts", "digest"],
   "properties": {
     "feature": { "const": "sweep-batch-report-set" },
     "version": { "const": 1 },
@@ -12,6 +12,7 @@
     "inventoryDigest": { "$ref": "#/$defs/digest" },
     "capabilityDigest": { "$ref": "#/$defs/digest" },
     "manifest": { "$ref": "#/$defs/manifest" },
+    "modeSelection": { "$ref": "#/$defs/modeSelection" },
     "crossBatchSynthesis": { "$ref": "#/$defs/crossBatchSynthesis" },
     "reports": {
       "type": "array",
@@ -66,7 +67,7 @@
     "crossBatchSynthesis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifestDigest", "invocationId", "inspection", "evidenceSourceIds", "relationships", "gaps", "digest"],
+      "required": ["feature", "version", "runId", "inventoryDigest", "capabilityDigest", "manifestDigest", "modeSelectionDigest", "reportSetInputDigest", "mergeInputDigest", "attemptsDigest", "inputDigest", "producerId", "attempt", "attemptId", "invocationId", "outputDigest", "inspection", "evidenceSourceIds", "relationships", "gaps", "digest"],
       "properties": {
         "feature": { "const": "sweep-cross-batch-synthesis" },
         "version": { "const": 1 },
@@ -74,7 +75,16 @@
         "inventoryDigest": { "$ref": "#/$defs/digest" },
         "capabilityDigest": { "$ref": "#/$defs/digest" },
         "manifestDigest": { "$ref": "#/$defs/digest" },
+        "modeSelectionDigest": { "$ref": "#/$defs/digest" },
+        "reportSetInputDigest": { "$ref": "#/$defs/digest" },
+        "mergeInputDigest": { "$ref": "#/$defs/digest" },
+        "attemptsDigest": { "$ref": "#/$defs/digest" },
+        "inputDigest": { "$ref": "#/$defs/digest" },
+        "producerId": { "$ref": "#/$defs/text" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "attemptId": { "$ref": "#/$defs/digest" },
         "invocationId": { "$ref": "#/$defs/text" },
+        "outputDigest": { "$ref": "#/$defs/digest" },
         "inspection": { "enum": ["checked", "partial", "not-checked", "failed"] },
         "evidenceSourceIds": { "$ref": "#/$defs/sourceIds" },
         "relationships": { "type": "array", "maxItems": 4096, "items": { "$ref": "#/$defs/relationship" } },
@@ -111,6 +121,24 @@
           "maxItems": 256,
           "items": { "$ref": "#/$defs/batch" }
         },
+        "invocationId": { "$ref": "#/$defs/text" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "modeSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature", "version", "requestedMode", "mode", "fallbackUsed", "runId", "inventoryDigest", "capabilityDigest", "manifestDigest", "invocationId", "digest"],
+      "properties": {
+        "feature": { "const": "sweep-batch-mode-selection" },
+        "version": { "const": 1 },
+        "requestedMode": { "const": "subagent-hybrid" },
+        "mode": { "const": "subagent-hybrid" },
+        "fallbackUsed": { "const": false },
+        "runId": { "$ref": "#/$defs/text" },
+        "inventoryDigest": { "$ref": "#/$defs/digest" },
+        "capabilityDigest": { "$ref": "#/$defs/digest" },
+        "manifestDigest": { "$ref": "#/$defs/digest" },
         "invocationId": { "$ref": "#/$defs/text" },
         "digest": { "$ref": "#/$defs/digest" }
       }
