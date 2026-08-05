@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   createSweepInventory,
@@ -10,7 +10,7 @@ import {
 import { validateSweepPlan } from "../features/sweep/validate.mjs";
 import { makeSweepPlan } from "../test-support/sweep-fixture.mjs";
 
-const root = resolve(new URL("..", import.meta.url).pathname);
+const root = fileURLToPath(new URL("..", import.meta.url));
 
 test("Sweep inventory captures the complete tracked and unignored codebase", async () => {
   const inventory = await createSweepInventory({ cwd: root });
