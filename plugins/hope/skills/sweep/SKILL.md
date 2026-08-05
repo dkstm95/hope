@@ -81,6 +81,17 @@ from `batchInspection`.
 
 Otherwise choose `active-session` before dispatch and do not mix modes later.
 
+The capability JSON is a declaration, not proof.
+
+Hybrid mode also requires a trusted host adapter that verifies the capability
+payload and every batch invocation.
+
+Configure it with `HOPE_SWEEP_HOST_ADAPTER_MODULE`, or provide the equivalent
+trusted adapter dependency from the host.
+
+The adapter owns the physical read-only boundary, independent-context
+guarantee, active-session availability, and invocation receipts.
+
 Record that choice through the shared runtime before dispatch:
 
 ```text
@@ -103,8 +114,8 @@ For `subagent-hybrid`:
   invocation identity, and attempt identity;
 - retain failed and cancelled attempts in the report set;
 - validate and merge the report set in the main session; and
-- keep cross-batch relationships and unresolved conflicts in the merge before
-  authoring the one plan.
+- keep each batch relationship and reconcile cross-batch conflicts in the merge
+  before authoring the one plan.
 
 Subagents are report-only.
 
@@ -115,6 +126,10 @@ approval.
 
 If any required capability is missing, use the active-session fallback before
 starting subagents.
+
+If the trusted host adapter is missing or rejects a report, attempt, or merge,
+keep the hybrid plan blocked and use the active-session path only when the host
+confirms that path is available.
 
 If `inventory` reports that the repository exceeds the shared resource limit,
 stop and report that failure; never lower the scope or claim full coverage.
@@ -251,7 +266,7 @@ visible pending state, write the version 1 session result required by
 Validate it with:
 
 ```text
-validate-session-result --input <session-result.json>
+validate-session-result --input <session-result.json> --root <repository-root>
 ```
 
 Use the validated session result to report what was checked, changed, verified,

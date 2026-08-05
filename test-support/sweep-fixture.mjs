@@ -31,6 +31,20 @@ export const sweepApprovalDependencies = Object.freeze({
   },
 });
 
+export const sweepBatchDependencies = Object.freeze({
+  verifyBatchCapabilities(capabilities) {
+    return capabilities.mode === "subagent-hybrid"
+      && capabilities.readOnly === true
+      && capabilities.independentContexts === true
+      && capabilities.sourceAllowlist === true
+      && capabilities.boundedOutput === true;
+  },
+  verifyBatchInvocation(value) {
+    return typeof value.invocationId === "string"
+      && value.invocationId.length > 0;
+  },
+});
+
 export function makeSweepPlan() {
   const snapshot = {
     capturedAt: "2026-08-04T00:00:00.000Z",
@@ -226,10 +240,8 @@ export function makeSweepBatchReport(
     relationshipId = "relationship-entrypoints-target",
   } = {},
 ) {
-  const sourceIds = inventory.snapshot.sources.map((source) => source.id);
-  const repositorySourceId = inventory.snapshot.sources.find(
-    (source) => source.kind === "git",
-  )?.id;
+  const sourceIds = [...batch.fileSourceIds];
+  const repositorySourceId = batch.fileSourceIds[0];
   const bindingDigest = sweepBatchBindingDigest({
     runId: "sweep-hybrid-run",
     inventoryDigest: inventory.digest,
@@ -283,7 +295,11 @@ export function makeSweepBatchReport(
     observations: [],
     gaps: [],
   };
-  return createSweepBatchReport(report, { inventory, capabilities });
+  return createSweepBatchReport(report, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
 }
 
 export function makeSweepBatchReportSet(
@@ -308,7 +324,48 @@ export function makeSweepBatchReportSet(
         invocationId: report.invocationId,
       },
     ],
-  }, { inventory, capabilities });
+  }, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
+}
+
+export function bindSweepPlanToBatchMerge(plan, batchMerge) {
+  const mergedEvidenceSourceIds = [...new Set(
+    batchMerge.checkResults.flatMap((check) => check.evidenceSourceIds),
+  )];
+  const deriveInspection = (states) => states.includes("failed")
+    ? "failed"
+    : states.every((state) => state === "checked")
+      ? "checked"
+      : states.every((state) => state === "not-checked")
+        ? "not-checked"
+        : "partial";
+  for (const category of plan.categories) {
+    category.checks = category.checks.map((check) => {
+      const merged = batchMerge.checkResults.find((item) => item.id === check.id);
+      return merged
+        ? {
+          ...check,
+          inspection: merged.inspection,
+          evidenceSourceIds: [...merged.evidenceSourceIds],
+          gaps: [...merged.gaps],
+        }
+        : check;
+    });
+    category.inspection = deriveInspection(
+      category.checks.map((check) => check.inspection),
+    );
+    category.evidenceSourceIds = [...new Set(
+      category.checks.flatMap((check) => check.evidenceSourceIds),
+    )];
+  }
+  plan.candidates[0].evidenceSourceIds = [...mergedEvidenceSourceIds];
+  for (const check of plan.candidates[0].evidenceChecks) {
+    check.sourceIds = [...mergedEvidenceSourceIds];
+  }
+  return plan;
 }
 
 export function makeSweepHybridPlan(
@@ -320,6 +377,7 @@ export function makeSweepHybridPlan(
   const batchMerge = mergeSweepBatchReports(reportSet, {
     inventory,
     capabilities,
+    ...sweepBatchDependencies,
   });
   plan.coverage.inspectionMode = "subagent-hybrid";
   plan.coverage.batchMergeDigest = batchMerge.digest;
@@ -335,6 +393,7 @@ export function makeSweepHybridPlan(
     inspection: batch.inspection,
     gaps: [...batch.gaps],
   }));
+  bindSweepPlanToBatchMerge(plan, batchMerge);
   return { capabilities, inventory, batchMerge, plan, reportSet };
 }
 
@@ -531,7 +590,7 @@ export function makeSweepSessionResult() {
     version: 1,
     title: "Complete the example Sweep session",
     plan,
-    planDigest: sweepPlanDigest(plan),
+    planDigest: sweepPlanDigest(plan, { inventory: makeSweepInventory(plan) }),
     completions: [completion],
     candidateResults: [
       {

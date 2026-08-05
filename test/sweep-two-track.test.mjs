@@ -34,6 +34,8 @@ import {
   makeSweepInventory,
   makeSweepPlan,
   makeSweepSessionResult,
+  bindSweepPlanToBatchMerge,
+  sweepBatchDependencies,
   sweepApprovalDependencies,
 } from "../test-support/sweep-fixture.mjs";
 import {
@@ -96,9 +98,10 @@ function makeLivePlan(inventory) {
   return plan;
 }
 
-function runJson(script, arguments_) {
+function runJson(script, arguments_, environment = {}) {
   const run = spawnSync(process.execPath, [resolve(root, script), ...arguments_], {
     encoding: "utf8",
+    env: { ...process.env, ...environment },
   });
   assert.equal(run.status, 0, run.stderr || run.stdout);
   return JSON.parse(run.stdout);
@@ -175,8 +178,12 @@ test("core and generated Sweep reach the same contracts", async () => {
     withoutSchemaPaths(coreBrief),
   );
   assert.deepEqual(
-    pluginValidator.validateSweepPlan(makeSweepPlan()),
-    validateSweepPlan(makeSweepPlan()),
+    pluginValidator.validateSweepPlan(makeSweepPlan(), {
+      inventory: makeSweepInventory(),
+    }),
+    validateSweepPlan(makeSweepPlan(), {
+      inventory: makeSweepInventory(),
+    }),
   );
   assert.deepEqual(
     pluginValidator.validateSweepApprovalReceipt(
@@ -198,11 +205,17 @@ test("core and generated Sweep reach the same contracts", async () => {
   assert.deepEqual(
     pluginValidator.validateSweepSessionResult(
       makeSweepSessionResult(),
-      sweepApprovalDependencies,
+      {
+        ...sweepApprovalDependencies,
+        inventory: makeSweepInventory(),
+      },
     ),
     validateSweepSessionResult(
       makeSweepSessionResult(),
-      sweepApprovalDependencies,
+      {
+        ...sweepApprovalDependencies,
+        inventory: makeSweepInventory(),
+      },
     ),
   );
 });
@@ -238,6 +251,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   const batchMerge = mergeSweepBatchReports(batchReportSet, {
     inventory: liveInventory,
     capabilities: batchCapabilities,
+    ...sweepBatchDependencies,
   });
   const hybridLivePlan = structuredClone(livePlan);
   hybridLivePlan.coverage.inspectionMode = "subagent-hybrid";
@@ -258,9 +272,11 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     inspection: batch.inspection,
     gaps: [...batch.gaps],
   }));
+  bindSweepPlanToBatchMerge(hybridLivePlan, batchMerge);
   const planPath = join(temporaryRoot, "plan.json");
   const inventoryPath = join(temporaryRoot, "inventory.json");
   const capabilitiesPath = join(temporaryRoot, "capabilities.json");
+  const hostAdapterPath = join(temporaryRoot, "sweep-host-adapter.mjs");
   const batchReportPath = join(temporaryRoot, "batch-report.json");
   const batchReportSetPath = join(temporaryRoot, "batch-reports.json");
   const hybridPlanPath = join(temporaryRoot, "hybrid-plan.json");
@@ -273,6 +289,12 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   const invalidEvaluationReceiptsPath = join(
     temporaryRoot,
     "invalid-evaluation-receipts.json",
+  );
+  const hostAdapterEnvironment = {
+    HOPE_SWEEP_HOST_ADAPTER_MODULE: hostAdapterPath,
+  };
+  const runWithHostAdapter = (script, arguments_) => (
+    runJson(script, arguments_, hostAdapterEnvironment)
   );
   const approvalCandidate = createSweepApprovalCandidate(
     livePlan,
@@ -289,7 +311,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     version: 1,
     title: "Complete a no-change Sweep session",
     plan: noCandidatePlan,
-    planDigest: sweepPlanDigest(noCandidatePlan),
+    planDigest: sweepPlanDigest(noCandidatePlan, { inventory: liveInventory }),
     completions: [],
     candidateResults: [],
     summary: {
@@ -336,6 +358,21 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     })).receipt);
   }
   await Promise.all([
+    writeFile(hostAdapterPath, `export default {
+  activeSessionAvailable: true,
+  capabilities: {
+    boundedOutput: true,
+    independentContexts: true,
+    readOnly: true,
+    sourceAllowlist: true,
+  },
+  verifyCapabilities(capabilities) {
+    return capabilities.mode === "subagent-hybrid";
+  },
+  verifyInvocation(value) {
+    return typeof value.invocationId === "string";
+  },
+};\n`),
     writeFile(planPath, JSON.stringify(livePlan), { mode: 0o600 }),
     writeFile(inventoryPath, JSON.stringify(liveInventory), { mode: 0o600 }),
     writeFile(capabilitiesPath, JSON.stringify(batchCapabilities), { mode: 0o600 }),
@@ -397,6 +434,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
         path,
         ...(command === "validate-plan"
           ? ["--root", repositoryRoot, "--inventory", inventoryPath]
+          : command === "validate-session-result"
+            ? ["--root", repositoryRoot]
           : []),
       ]),
       runJson("harness/hope.mjs", [
@@ -406,6 +445,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
         path,
         ...(command === "validate-plan"
           ? ["--root", repositoryRoot, "--inventory", inventoryPath]
+          : command === "validate-session-result"
+            ? ["--root", repositoryRoot]
           : []),
       ]),
     );
@@ -421,8 +462,12 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     ],
   ]) {
     assert.deepEqual(
-      runJson("plugins/hope/runtime/features/sweep/cli.mjs", arguments_),
-      runJson("harness/hope.mjs", ["sweep", ...arguments_]),
+      (arguments_.includes("subagent-hybrid")
+        ? runWithHostAdapter
+        : runJson)("plugins/hope/runtime/features/sweep/cli.mjs", arguments_),
+      (arguments_.includes("subagent-hybrid")
+        ? runWithHostAdapter
+        : runJson)("harness/hope.mjs", ["sweep", ...arguments_]),
     );
   }
   for (const [command, path] of [
@@ -441,8 +486,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       capabilitiesPath,
     ];
     assert.deepEqual(
-      runJson("plugins/hope/runtime/features/sweep/cli.mjs", arguments_),
-      runJson("harness/hope.mjs", ["sweep", ...arguments_]),
+      runWithHostAdapter("plugins/hope/runtime/features/sweep/cli.mjs", arguments_),
+      runWithHostAdapter("harness/hope.mjs", ["sweep", ...arguments_]),
     );
   }
   for (const commandArguments of [
@@ -476,8 +521,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     ],
   ]) {
     assert.deepEqual(
-      runJson("plugins/hope/runtime/features/sweep/cli.mjs", commandArguments),
-      runJson("harness/hope.mjs", ["sweep", ...commandArguments]),
+      runWithHostAdapter("plugins/hope/runtime/features/sweep/cli.mjs", commandArguments),
+      runWithHostAdapter("harness/hope.mjs", ["sweep", ...commandArguments]),
     );
   }
   assert.equal(

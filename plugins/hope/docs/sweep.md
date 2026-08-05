@@ -173,6 +173,16 @@ capability contract:
 - the host can fall back to active-session inspection before dispatch when a
   capability is unavailable.
 
+The JSON capability declaration is not proof of those controls by itself.
+
+Subagent hybrid requires a trusted host adapter that verifies the declared capabilities and every batch invocation.
+
+Configure that adapter through `HOPE_SWEEP_HOST_ADAPTER_MODULE`, or use a host-provided adapter dependency.
+
+The adapter must expose read-only, independent-context, source-allowlist, and bounded-output capabilities, report whether active-session inspection is available, verify the capability payload, and verify every report or attempt invocation.
+
+The runtime fails closed for hybrid reports, merges, and plans when that adapter is absent or rejects a record.
+
 The host records this pre-dispatch choice through the shared
 `select-inspection-mode` command.
 
@@ -183,8 +193,8 @@ The host never silently mixes modes.
 
 The shared runtime exposes four versioned boundaries:
 
-- a capability declaration that proves the host selected the bounded,
-  read-only mode;
+- a capability declaration bound to a trusted host adapter that proves the host
+  selected the bounded, read-only mode;
 - one batch report that binds its run, inventory, batch, capability, input,
   invocation, and attempt identities;
 - one report set that retains every successful, failed, or cancelled attempt;
@@ -195,8 +205,9 @@ The shared runtime exposes four versioned boundaries:
 Each batch report includes a result for every assigned file, every catalog
 check, and relationship coverage.
 
-A relationship record may cite files from different batches and may remain
-`unresolved`; the merge does not discard it.
+A batch report may cite only its assigned inventory files and may keep a
+relationship `unresolved`; the merge does not discard that relationship or its
+evidence.
 
 The main session performs the cross-batch synthesis and writes the one Sweep
 plan.
@@ -207,8 +218,9 @@ Polish receipt.
 The host bounds the synthesis input to the report and merge limits in the
 brief.
 
-It chooses the fallback before dispatch, keeps retry provenance tied to the
-batch binding, and reruns the live inventory before validation and approval.
+It chooses the fallback before dispatch, keeps every trusted retry attempt tied
+to the batch binding, enforces the retry budget, and reruns the live inventory
+before validation and approval.
 
 An incomplete, stale, untrusted, or capability-mismatched report keeps the plan
 blocked.

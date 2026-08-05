@@ -76,6 +76,12 @@ harness -> features <- host adapters
 For Sweep subagent hybrid inspection, the host adapter owns dispatch,
 cancellation, and the physical read-only boundary.
 
+The trusted adapter is configured outside model-authored JSON through
+`HOPE_SWEEP_HOST_ADAPTER_MODULE` or an equivalent host dependency.
+
+It verifies declared capabilities, active-session availability, and every batch
+invocation receipt.
+
 The shared `features/sweep/batch.mjs` contract owns capability validation,
 attempt and input binding, report validation, deterministic merge, cross-batch
 evidence, and the fallback decision recorded before dispatch.

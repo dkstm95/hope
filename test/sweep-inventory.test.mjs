@@ -8,9 +8,16 @@ import {
   validateSweepInventory,
 } from "../features/sweep/inventory.mjs";
 import { validateSweepPlan } from "../features/sweep/validate.mjs";
-import { makeSweepPlan } from "../test-support/sweep-fixture.mjs";
+import {
+  makeSweepInventory,
+  makeSweepPlan,
+} from "../test-support/sweep-fixture.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+const validateTestPlan = (value, options = {}) => validateSweepPlan(value, {
+  inventory: options.inventory ?? makeSweepInventory(value),
+  ...options,
+});
 
 test("Sweep inventory captures the complete tracked and unignored codebase", async () => {
   const inventory = await createSweepInventory({ cwd: root });
@@ -32,7 +39,7 @@ test("full-codebase plans cannot hide an incomplete inventory batch", () => {
   const missingCoverage = makeSweepPlan();
   delete missingCoverage.coverage;
   assert.throws(
-    () => validateSweepPlan(missingCoverage),
+    () => validateTestPlan(missingCoverage),
     /coverage is required/u,
   );
 
@@ -44,11 +51,11 @@ test("full-codebase plans cannot hide an incomplete inventory batch", () => {
   plan.coverage.batches[0].gaps = ["The remaining inventory batch needs inspection."];
   plan.summary.remainingGaps = ["The remaining inventory batch needs inspection."];
   plan.session.state = "blocked";
-  const result = validateSweepPlan(plan);
+  const result = validateTestPlan(plan);
   assert.equal(result.result.state, "blocked");
   assert.equal(result.resources.coverageState, "partial");
   assert.throws(
-    () => validateSweepPlan({
+    () => validateTestPlan({
       ...plan,
       coverage: {
         ...plan.coverage,

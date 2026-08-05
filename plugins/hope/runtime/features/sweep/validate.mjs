@@ -16,6 +16,7 @@ import {
 import {
   validateSweepBatchCapabilities,
   validateSweepBatchMerge,
+  validateSweepBatchReportSet,
 } from "./batch.mjs";
 import {
   SWEEP_APPROVAL_STATUSES,
@@ -706,6 +707,8 @@ export function validateSweepPlan(value, {
   batchMerge,
   batchReportSet,
   capabilities,
+  verifyBatchCapabilities,
+  verifyBatchInvocation,
 } = {}) {
   const errors = [];
   const plan = validation.object(value, "sweep", errors);
@@ -796,6 +799,9 @@ export function validateSweepPlan(value, {
     );
   }
   const isFullCodebaseScope = normalizedSession.scope === SWEEP_FULL_CODEBASE_SCOPE;
+  if (isFullCodebaseScope && inventory === undefined) {
+    errors.push("sweep.inventory is required for an entire-codebase plan");
+  }
   if (isFullCodebaseScope && !normalizedCoverage) {
     errors.push(
       `sweep.coverage is required when sweep.session.scope is ${SWEEP_FULL_CODEBASE_SCOPE}`,
@@ -833,15 +839,27 @@ export function validateSweepPlan(value, {
   if (normalizedCoverage?.inspectionMode === "subagent-hybrid") {
     if (batchMerge === undefined) {
       errors.push("sweep.batchMerge is required for subagent-hybrid inspection");
+    } else if (batchReportSet === undefined) {
+      errors.push("sweep.batchReportSet is required for subagent-hybrid inspection");
     } else {
       try {
         const normalizedCapabilities = capabilities === undefined
           ? undefined
-          : validateSweepBatchCapabilities(capabilities);
+          : validateSweepBatchCapabilities(capabilities, {
+            verifyBatchCapabilities,
+          });
+        const normalizedReportSet = validateSweepBatchReportSet(batchReportSet, {
+          inventory: normalizedInventory,
+          capabilities: normalizedCapabilities,
+          verifyBatchCapabilities,
+          verifyBatchInvocation,
+        });
         normalizedBatchMerge = validateSweepBatchMerge(batchMerge, {
           inventory: normalizedInventory,
           capabilities: normalizedCapabilities,
-          reportSet: batchReportSet,
+          reportSet: normalizedReportSet,
+          verifyBatchCapabilities,
+          verifyBatchInvocation,
         });
       } catch (error) {
         errors.push(`sweep.batchMerge: ${error.message}`);
@@ -1357,6 +1375,8 @@ export function createSweepApprovalCandidate(value, candidateId, {
   batchMerge,
   batchReportSet,
   capabilities,
+  verifyBatchCapabilities,
+  verifyBatchInvocation,
 } = {}) {
   if (inventory === undefined) {
     throw new TypeError(
@@ -1368,15 +1388,20 @@ export function createSweepApprovalCandidate(value, candidateId, {
     batchMerge,
     batchReportSet,
     capabilities,
+    verifyBatchCapabilities,
+    verifyBatchInvocation,
   });
   if (plan.coverage?.state !== "complete") {
     throw new TypeError(
       "Hope sweep approval requires complete full-codebase coverage",
     );
   }
-  if (plan.coverage?.inspectionMode === "subagent-hybrid" && batchMerge === undefined) {
+  if (
+    plan.coverage?.inspectionMode === "subagent-hybrid"
+    && (batchMerge === undefined || batchReportSet === undefined)
+  ) {
     throw new TypeError(
-      "Hope sweep approval requires a validated subagent batch merge",
+      "Hope sweep approval requires a validated subagent batch report set and merge",
     );
   }
   const planDigest = normalizedSweepPlanDigest(plan);
@@ -2395,6 +2420,7 @@ function orderedUnique(values) {
 export function validateSweepSessionResult(value, {
   inputFileBytes = serializedJsonBytes(value),
   verifyApprovalAttestation,
+  inventory,
 } = {}) {
   const errors = [];
   const input = validation.object(value, "sweepSessionResult", errors);
@@ -2415,7 +2441,7 @@ export function validateSweepSessionResult(value, {
 
   let plan;
   try {
-    plan = validateSweepPlan(input.plan);
+    plan = validateSweepPlan(input.plan, { inventory });
   } catch (error) {
     errors.push(`sweepSessionResult.plan: ${error.message}`);
     plan = {

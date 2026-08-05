@@ -52,6 +52,20 @@ function invalid(label, errors) {
   }
 }
 
+function trustedHostCheck(verifier, value, path, errors, context) {
+  if (typeof verifier !== "function") {
+    errors.push(`${path} requires a trusted host verifier`);
+    return;
+  }
+  try {
+    if (verifier(value, context) !== true) {
+      errors.push(`${path} was rejected by the trusted host verifier`);
+    }
+  } catch (error) {
+    errors.push(`${path} trusted host verification failed: ${error.message}`);
+  }
+}
+
 function object(value, path, errors) {
   return batchValidation.object(value, path, errors);
 }
@@ -147,6 +161,7 @@ export function selectSweepInspectionMode({
   requestedMode = "active-session",
   capabilities,
   activeSessionAvailable = true,
+  verifyBatchCapabilities,
 } = {}) {
   if (requestedMode === "active-session") {
     return Object.freeze({
@@ -158,7 +173,9 @@ export function selectSweepInspectionMode({
     throw new TypeError(`Unknown Sweep inspection mode: ${requestedMode}`);
   }
   try {
-    const normalized = validateSweepBatchCapabilities(capabilities);
+    const normalized = validateSweepBatchCapabilities(capabilities, {
+      verifyBatchCapabilities,
+    });
     return Object.freeze({
       mode: "subagent-hybrid",
       fallbackUsed: false,
@@ -178,7 +195,10 @@ export function selectSweepInspectionMode({
   }
 }
 
-export function validateSweepBatchCapabilities(value) {
+export function validateSweepBatchCapabilities(
+  value,
+  { verifyBatchCapabilities } = {},
+) {
   const errors = [];
   const capabilities = object(value, "sweep.batchCapabilities", errors);
   exactKeys(
@@ -323,6 +343,13 @@ export function validateSweepBatchCapabilities(value) {
   if (normalized.digest !== digestSweepBatchCapabilities(normalized)) {
     errors.push("sweep.batchCapabilities.digest does not match its payload");
   }
+  trustedHostCheck(
+    verifyBatchCapabilities,
+    normalized,
+    "sweep.batchCapabilities",
+    errors,
+    { kind: "capabilities" },
+  );
   invalid("Hope sweep batch capabilities", errors);
   return deepFreeze(normalized);
 }
@@ -501,13 +528,75 @@ function normalizeAttempt(value, path, errors, fileSourceIds, ids) {
   };
 }
 
-export function validateSweepBatchReport(value, { inventory, capabilities } = {}) {
+function sameBatch(left, right) {
+  const binding = (batch) => ({
+    id: batch?.id,
+    ordinal: batch?.ordinal,
+    fileSourceIds: batch?.fileSourceIds,
+  });
+  return JSON.stringify(canonicalValue(binding(left)))
+    === JSON.stringify(canonicalValue(binding(right)));
+}
+
+function validateAttemptLedger(
+  attempts,
+  batches,
+  retryBudget,
+  path,
+  errors,
+) {
+  const knownBatches = new Map(batches.map((batch) => [batch.id, batch]));
+  const byBatch = new Map();
+  const maximumAttempts = retryBudget + 1;
+  for (const [index, attempt] of attempts.entries()) {
+    const attemptPath = `${path}[${index}]`;
+    const expectedBatch = knownBatches.get(attempt.batch.id);
+    if (!expectedBatch) {
+      errors.push(`${attemptPath}.batch.id must identify a report batch`);
+      continue;
+    }
+    if (!sameBatch(attempt.batch, expectedBatch)) {
+      errors.push(`${attemptPath}.batch must match its report batch`);
+    }
+    const batchAttempts = byBatch.get(attempt.batch.id) ?? [];
+    batchAttempts.push(attempt);
+    byBatch.set(attempt.batch.id, batchAttempts);
+    if (attempt.attempt > maximumAttempts) {
+      errors.push(`${attemptPath}.attempt exceeds retryBudget plus the initial attempt`);
+    }
+  }
+  for (const [batchId, batchAttempts] of byBatch.entries()) {
+    if (batchAttempts.length > maximumAttempts) {
+      errors.push(`${path} contains too many attempts for ${batchId}`);
+    }
+    const numbers = [...new Set(batchAttempts.map((attempt) => attempt.attempt))]
+      .sort((left, right) => left - right);
+    for (let index = 0; index < numbers.length; index += 1) {
+      if (numbers[index] !== index + 1) {
+        errors.push(`${path} attempts for ${batchId} must be contiguous from 1`);
+        break;
+      }
+    }
+  }
+}
+
+export function validateSweepBatchReport(
+  value,
+  {
+    inventory,
+    capabilities,
+    verifyBatchCapabilities,
+    verifyBatchInvocation,
+  } = {},
+) {
   const errors = [];
   const context = sourceContext(inventory, errors);
   let normalizedCapabilities;
   if (capabilities) {
     try {
-      normalizedCapabilities = validateSweepBatchCapabilities(capabilities);
+      normalizedCapabilities = validateSweepBatchCapabilities(capabilities, {
+        verifyBatchCapabilities,
+      });
     } catch (error) {
       errors.push(`sweep.batchReport.capabilities: ${error.message}`);
     }
@@ -544,16 +633,16 @@ export function validateSweepBatchReport(value, { inventory, capabilities } = {}
   if (attemptId !== sweepBatchAttemptId({ bindingDigest, attempt, inputDigest, invocationId })) errors.push("sweep.batchReport.attemptId does not match its attempt binding");
   const sourceResultsRaw = batchValidation.array(report.sourceResults, "sweep.batchReport.sourceResults", errors, context.fileSourceIds.length || 1);
   if (sourceResultsRaw.length !== batch.fileSourceIds.length) errors.push("sweep.batchReport.sourceResults must contain exactly one result per batch file");
-  const sourceResults = batch.fileSourceIds.map((sourceId, index) => normalizeSourceResult(sourceResultsRaw[index], `sweep.batchReport.sourceResults[${index}]`, errors, context.sourceIds, sourceId));
+  const sourceResults = batch.fileSourceIds.map((sourceId, index) => normalizeSourceResult(sourceResultsRaw[index], `sweep.batchReport.sourceResults[${index}]`, errors, new Set(batch.fileSourceIds), sourceId));
   const checksRaw = batchValidation.array(report.checks, "sweep.batchReport.checks", errors, SWEEP_CHECK_CATALOG.length);
   if (checksRaw.length !== SWEEP_CHECK_CATALOG.length) errors.push(`sweep.batchReport.checks must contain exactly ${SWEEP_CHECK_CATALOG.length} checks`);
-  const checks = SWEEP_CHECK_CATALOG.map((specification, index) => normalizeCheck(checksRaw[index], `sweep.batchReport.checks[${index}]`, errors, context.sourceIds, specification));
+  const checks = SWEEP_CHECK_CATALOG.map((specification, index) => normalizeCheck(checksRaw[index], `sweep.batchReport.checks[${index}]`, errors, new Set(batch.fileSourceIds), specification));
   const relationshipInspection = batchValidation.choice(report.relationshipInspection, SWEEP_INSPECTION_STATES, "sweep.batchReport.relationshipInspection", errors);
   const relationshipEvidenceSourceIds = batchValidation.references(
     report.relationshipEvidenceSourceIds,
     "sweep.batchReport.relationshipEvidenceSourceIds",
     errors,
-    context.sourceIds,
+    new Set(batch.fileSourceIds),
   );
   if (["checked", "partial"].includes(relationshipInspection) && relationshipEvidenceSourceIds.length === 0) {
     errors.push("sweep.batchReport relationship inspection must cite source evidence");
@@ -567,10 +656,10 @@ export function validateSweepBatchReport(value, { inventory, capabilities } = {}
   }
   const relationshipsRaw = batchValidation.array(report.relationships, "sweep.batchReport.relationships", errors, SWEEP_LIMITS.batchRelationships);
   const relationshipIds = new Set();
-  const relationships = relationshipsRaw.map((item, index) => normalizeRelationship(item, `sweep.batchReport.relationships[${index}]`, errors, context.sourceIds, relationshipIds));
+  const relationships = relationshipsRaw.map((item, index) => normalizeRelationship(item, `sweep.batchReport.relationships[${index}]`, errors, new Set(batch.fileSourceIds), relationshipIds));
   const observationsRaw = batchValidation.array(report.observations, "sweep.batchReport.observations", errors, SWEEP_LIMITS.batchObservations);
   const observationIds = new Set();
-  const observations = observationsRaw.map((item, index) => normalizeObservation(item, `sweep.batchReport.observations[${index}]`, errors, context.sourceIds, observationIds));
+  const observations = observationsRaw.map((item, index) => normalizeObservation(item, `sweep.batchReport.observations[${index}]`, errors, new Set(batch.fileSourceIds), observationIds));
   const gaps = batchValidation.stringList(report.gaps, "sweep.batchReport.gaps", errors);
   const inspection = batchValidation.choice(report.inspection, SWEEP_INSPECTION_STATES, "sweep.batchReport.inspection", errors);
   const expectedInspection = deriveInspection([
@@ -607,6 +696,13 @@ export function validateSweepBatchReport(value, { inventory, capabilities } = {}
   if (normalized.version !== SWEEP_BATCH_REPORT_VERSION) errors.push(`sweep.batchReport.version must be ${SWEEP_BATCH_REPORT_VERSION}`);
   if (normalized.reportDigest !== digestValue(reportPayload(normalized))) errors.push("sweep.batchReport.reportDigest does not match its payload");
   if (normalizedCapabilities && serializedJsonBytes(normalized) > normalizedCapabilities.maxReportBytes) errors.push("sweep.batchReport exceeds the declared maxReportBytes");
+  trustedHostCheck(
+    verifyBatchInvocation,
+    normalized,
+    "sweep.batchReport",
+    errors,
+    { kind: "report" },
+  );
   invalid("Hope sweep batch report", errors);
   return deepFreeze(normalized);
 }
@@ -617,13 +713,23 @@ export function createSweepBatchReport(value, dependencies = {}) {
   return validateSweepBatchReport(report, dependencies);
 }
 
-export function validateSweepBatchReportSet(value, { inventory, capabilities } = {}) {
+export function validateSweepBatchReportSet(
+  value,
+  {
+    inventory,
+    capabilities,
+    verifyBatchCapabilities,
+    verifyBatchInvocation,
+  } = {},
+) {
   const errors = [];
   const context = sourceContext(inventory, errors);
   let normalizedCapabilities;
   if (capabilities) {
     try {
-      normalizedCapabilities = validateSweepBatchCapabilities(capabilities);
+      normalizedCapabilities = validateSweepBatchCapabilities(capabilities, {
+        verifyBatchCapabilities,
+      });
     } catch (error) {
       errors.push(`sweep.batchReportSet.capabilities: ${error.message}`);
     }
@@ -641,7 +747,12 @@ export function validateSweepBatchReportSet(value, { inventory, capabilities } =
   if (reportsRaw.length === 0) errors.push("sweep.batchReportSet.reports must not be empty");
   const reports = reportsRaw.map((item, index) => {
     try {
-      return validateSweepBatchReport(item, { inventory: context.inventory, capabilities: normalizedCapabilities });
+      return validateSweepBatchReport(item, {
+        inventory: context.inventory,
+        capabilities: normalizedCapabilities,
+        verifyBatchCapabilities,
+        verifyBatchInvocation,
+      });
     } catch (error) {
       errors.push(`sweep.batchReportSet.reports[${index}]: ${error.message}`);
       return item;
@@ -655,8 +766,16 @@ export function validateSweepBatchReportSet(value, { inventory, capabilities } =
     if (report.inventoryDigest !== inventoryDigest) errors.push(`sweep.batchReportSet.reports[${index}] has a different inventoryDigest`);
     if (report.capabilityDigest !== capabilityDigest) errors.push(`sweep.batchReportSet.reports[${index}] has a different capabilityDigest`);
     if (reportBatchIds.has(report.batch.id)) errors.push(`sweep.batchReportSet repeats batch ${report.batch.id}`);
+    if (reportOrdinals.has(report.batch.ordinal)) errors.push(`sweep.batchReportSet repeats batch ordinal ${report.batch.ordinal}`);
     reportBatchIds.add(report.batch.id);
     reportOrdinals.add(report.batch.ordinal);
+  }
+  const sortedReportOrdinals = [...reportOrdinals].sort((left, right) => left - right);
+  for (let index = 0; index < sortedReportOrdinals.length; index += 1) {
+    if (sortedReportOrdinals[index] !== index + 1) {
+      errors.push("sweep.batchReportSet batch ordinals must be contiguous from 1");
+      break;
+    }
   }
   const attemptsRaw = batchValidation.array(valueObject.attempts, "sweep.batchReportSet.attempts", errors, SWEEP_LIMITS.batchAttempts);
   if (attemptsRaw.length === 0) errors.push("sweep.batchReportSet.attempts must retain every dispatch attempt");
@@ -671,12 +790,35 @@ export function validateSweepBatchReportSet(value, { inventory, capabilities } =
     for (const error of attemptErrors) if (typeof error === "string") errors.push(error);
     if (attemptIds.has(normalized.attemptId)) errors.push(`sweep.batchReportSet repeats attempt ${normalized.attemptId}`);
     attemptIds.add(normalized.attemptId);
+    trustedHostCheck(
+      verifyBatchInvocation,
+      normalized,
+      `sweep.batchReportSet.attempts[${index}]`,
+      errors,
+      { kind: "attempt" },
+    );
     attempts.push(normalized);
   }
+  validateAttemptLedger(
+    attempts,
+    reports.filter((report) => report?.batch).map((report) => report.batch),
+    normalizedCapabilities?.retryBudget ?? 0,
+    "sweep.batchReportSet.attempts",
+    errors,
+  );
   for (const report of reports) {
     if (!report?.attemptId) continue;
     const success = attempts.find((attempt) => attempt.attemptId === report.attemptId && attempt.status === "succeeded");
-    if (!success) errors.push(`sweep.batchReportSet is missing the succeeded attempt for ${report.batch?.id ?? "unknown"}`);
+    if (!success) {
+      errors.push(`sweep.batchReportSet is missing the succeeded attempt for ${report.batch?.id ?? "unknown"}`);
+    } else if (
+      success.attempt !== report.attempt
+      || success.inputDigest !== report.inputDigest
+      || success.invocationId !== report.invocationId
+      || !sameBatch(success.batch, report.batch)
+    ) {
+      errors.push(`sweep.batchReportSet succeeded attempt does not match report ${report.batch?.id ?? "unknown"}`);
+    }
   }
   for (const attempt of attempts) {
     if (attempt.status === "succeeded" && !reports.some((report) => report?.attemptId === attempt.attemptId)) {
@@ -722,8 +864,22 @@ function normalizedMergeCheck(specification, reports) {
   };
 }
 
-export function mergeSweepBatchReports(value, { inventory, capabilities } = {}) {
-  const reportSet = validateSweepBatchReportSet(value, { inventory, capabilities });
+export function mergeSweepBatchReports(
+  value,
+  {
+    inventory,
+    capabilities,
+    verifyBatchCapabilities,
+    verifyBatchInvocation,
+    skipValidation = false,
+  } = {},
+) {
+  const reportSet = validateSweepBatchReportSet(value, {
+    inventory,
+    capabilities,
+    verifyBatchCapabilities,
+    verifyBatchInvocation,
+  });
   const context = validateSweepInventory(inventory);
   const reports = [...reportSet.reports].sort((left, right) => left.batch.ordinal - right.batch.ordinal);
   const covered = reports.flatMap((report) => report.batch.fileSourceIds);
@@ -801,19 +957,37 @@ export function mergeSweepBatchReports(value, { inventory, capabilities } = {}) 
     gaps,
   };
   const normalized = { ...merge, digest: digestValue(mergePayload(merge)) };
-  return validateSweepBatchMerge(normalized, { inventory: context, capabilities });
+  if (skipValidation) return deepFreeze(normalized);
+  return validateSweepBatchMerge(normalized, {
+    inventory: context,
+    capabilities,
+    reportSet,
+    verifyBatchCapabilities,
+    verifyBatchInvocation,
+  });
 }
 
 export function validateSweepBatchMerge(
   value,
-  { inventory, capabilities, reportSet } = {},
+  {
+    inventory,
+    capabilities,
+    reportSet,
+    verifyBatchCapabilities,
+    verifyBatchInvocation,
+  } = {},
 ) {
   const errors = [];
+  if (!reportSet) {
+    errors.push("sweep.batchMerge.reportSet is required for trusted merge validation");
+  }
   const context = sourceContext(inventory, errors);
   let normalizedCapabilities;
   if (capabilities) {
     try {
-      normalizedCapabilities = validateSweepBatchCapabilities(capabilities);
+      normalizedCapabilities = validateSweepBatchCapabilities(capabilities, {
+        verifyBatchCapabilities,
+      });
     } catch (error) {
       errors.push(`sweep.batchMerge.capabilities: ${error.message}`);
     }
@@ -879,6 +1053,22 @@ export function validateSweepBatchMerge(
     for (const error of attemptErrors) if (typeof error === "string") errors.push(error);
     return normalized;
   });
+  for (const [index, attempt] of attempts.entries()) {
+    trustedHostCheck(
+      verifyBatchInvocation,
+      attempt,
+      `sweep.batchMerge.attempts[${index}]`,
+      errors,
+      { kind: "attempt" },
+    );
+  }
+  validateAttemptLedger(
+    attempts,
+    batches,
+    normalizedCapabilities?.retryBudget ?? 0,
+    "sweep.batchMerge.attempts",
+    errors,
+  );
   const state = batchValidation.choice(merge.state, ["complete", "partial", "failed"], "sweep.batchMerge.state", errors);
   const relationshipInspection = batchValidation.choice(merge.relationshipInspection, SWEEP_INSPECTION_STATES, "sweep.batchMerge.relationshipInspection", errors);
   const relationshipEvidenceSourceIds = batchValidation.references(
@@ -932,6 +1122,9 @@ export function validateSweepBatchMerge(
       const expected = mergeSweepBatchReports(reportSet, {
         inventory: context.inventory,
         capabilities: normalizedCapabilities,
+        verifyBatchCapabilities,
+        verifyBatchInvocation,
+        skipValidation: true,
       });
       if (
         JSON.stringify(canonicalValue(expected))

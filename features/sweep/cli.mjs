@@ -15,6 +15,7 @@ import {
   prepareSweepModelEvaluationRun,
   runSweep,
   SWEEP_MODEL_ADAPTER_CODE,
+  SWEEP_HOST_ADAPTER_CODE,
   validateSweepCompletionFile,
   validateSweepModelEvaluationReceiptFile,
   validateSweepModelEvaluationReceiptSetFile,
@@ -39,7 +40,7 @@ function usage() {
     "  hope sweep approval-candidate --input <plan.json> --candidate <id> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
     "  hope sweep approval-receipt --input <approval.json>",
     "  hope sweep validate-completion --input <completion.json>",
-    "  hope sweep validate-session-result --input <session-result.json>",
+    "  hope sweep validate-session-result --input <session-result.json> --root <repository-root>",
     "  hope sweep model-evaluation-plan",
     "  hope sweep model-evaluation-prepare --case <id> --run <number>",
     "  hope sweep model-evaluation-oracle --case <id>",
@@ -168,6 +169,16 @@ export function parseSweepArguments(argv) {
   if (command === "inventory") {
     if (!hasOnly(["root"])) throw new TypeError(usage());
     return { command, root: options.root };
+  }
+  if (command === "validate-session-result") {
+    if (!options.input || !options.root || !hasOnly(["input", "root"])) {
+      throw new TypeError(usage());
+    }
+    return {
+      command,
+      inputPath: options.input,
+      repositoryRoot: options.root,
+    };
   }
   if (command === "validate-batch-report") {
     if (
@@ -366,7 +377,10 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     result = await (
       dependencies.validateSweepSessionResultFile
       ?? validateSweepSessionResultFile
-    )(options.inputPath, dependencies);
+    )(options.inputPath, {
+      ...dependencies,
+      repositoryRoot: options.repositoryRoot,
+    });
   }
   stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   return result;
@@ -375,6 +389,9 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
 if (isEntrypoint(import.meta.url)) {
   main().catch((error) => {
     process.stderr.write(`hope sweep: ${error.message}\n`);
-    process.exitCode = error.code === SWEEP_MODEL_ADAPTER_CODE ? 2 : 1;
+    process.exitCode = [SWEEP_MODEL_ADAPTER_CODE, SWEEP_HOST_ADAPTER_CODE]
+      .includes(error.code)
+      ? 2
+      : 1;
   });
 }

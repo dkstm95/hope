@@ -12,6 +12,8 @@ import {
   createSweepBatchReportSet,
   mergeSweepBatchReports,
   selectSweepInspectionMode,
+  validateSweepBatchMerge,
+  validateSweepBatchReport,
   validateSweepBatchReportSet,
 } from "../features/sweep/batch.mjs";
 import {
@@ -33,6 +35,7 @@ import {
   makeSweepPlan,
   makeSweepPolishRun,
   makeSweepSessionResult,
+  sweepBatchDependencies,
   sweepApprovalDependencies,
 } from "../test-support/sweep-fixture.mjs";
 import {
@@ -47,11 +50,18 @@ const validateCompletion = (value) => validateSweepCompletion(
 );
 const validateSessionResult = (value) => validateSweepSessionResult(
   value,
-  sweepApprovalDependencies,
+  {
+    ...sweepApprovalDependencies,
+    inventory: makeSweepInventory(value.plan),
+  },
 );
+const validateTestPlan = (value, options = {}) => validateSweepPlan(value, {
+  inventory: options.inventory ?? makeSweepInventory(value),
+  ...options,
+});
 
 test("sweep validates one full-codebase dead-code plan", () => {
-  const plan = validateSweepPlan(makeSweepPlan());
+  const plan = validateTestPlan(makeSweepPlan());
   assert.equal(plan.result.state, "awaiting-approval");
   assert.equal(plan.result.executableCandidates, 1);
   assert.equal(plan.resources.categories, 7);
@@ -59,12 +69,21 @@ test("sweep validates one full-codebase dead-code plan", () => {
   assert.equal(plan.resources.filesChecked, 3);
 });
 
+test("sweep direct plan validation requires a verified live inventory", () => {
+  assert.throws(
+    () => validateSweepPlan(makeSweepPlan()),
+    /inventory is required for an entire-codebase plan/u,
+  );
+});
+
 test("sweep validates the hybrid batch contract and preserves merge evidence", () => {
   const hybrid = makeSweepHybridPlan();
-  const plan = validateSweepPlan(hybrid.plan, {
+  const plan = validateTestPlan(hybrid.plan, {
     inventory: hybrid.inventory,
     batchMerge: hybrid.batchMerge,
+    batchReportSet: hybrid.reportSet,
     capabilities: hybrid.capabilities,
+    ...sweepBatchDependencies,
   });
   assert.equal(plan.coverage.inspectionMode, "subagent-hybrid");
   assert.equal(plan.coverage.batchMergeDigest, hybrid.batchMerge.digest);
@@ -76,27 +95,58 @@ test("sweep validates the hybrid batch contract and preserves merge evidence", (
     createSweepApprovalCandidate(hybrid.plan, "remove-unused-helper", {
       inventory: hybrid.inventory,
       batchMerge: hybrid.batchMerge,
+      batchReportSet: hybrid.reportSet,
       capabilities: hybrid.capabilities,
+      ...sweepBatchDependencies,
     }).candidate.id,
     "remove-unused-helper",
   );
 
   assert.throws(
-    () => validateSweepPlan(hybrid.plan, {
+    () => validateTestPlan(hybrid.plan, {
       inventory: hybrid.inventory,
       capabilities: hybrid.capabilities,
+      batchReportSet: hybrid.reportSet,
+      ...sweepBatchDependencies,
     }),
     /batchMerge is required/u,
   );
   const changedMerge = structuredClone(hybrid.batchMerge);
   changedMerge.relationships[0].summary = "A conflicting relationship claim.";
   assert.throws(
-    () => validateSweepPlan(hybrid.plan, {
+    () => validateTestPlan(hybrid.plan, {
       inventory: hybrid.inventory,
       batchMerge: changedMerge,
+      batchReportSet: hybrid.reportSet,
       capabilities: hybrid.capabilities,
+      ...sweepBatchDependencies,
     }),
     /batchMerge|digest/u,
+  );
+  assert.throws(
+    () => validateSweepBatchReportSet(hybrid.reportSet, {
+      inventory: hybrid.inventory,
+      capabilities: hybrid.capabilities,
+    }),
+    /trusted host verifier/u,
+  );
+  assert.throws(
+    () => validateSweepBatchMerge(hybrid.batchMerge, {
+      inventory: hybrid.inventory,
+      capabilities: hybrid.capabilities,
+      ...sweepBatchDependencies,
+    }),
+    /reportSet is required/u,
+  );
+  const unassignedEvidence = clone(hybrid.reportSet.reports[0]);
+  unassignedEvidence.checks[0].evidenceSourceIds = ["repo"];
+  assert.throws(
+    () => validateSweepBatchReport(unassignedEvidence, {
+      inventory: hybrid.inventory,
+      capabilities: hybrid.capabilities,
+      ...sweepBatchDependencies,
+    }),
+    /source ID|assigned/u,
   );
 });
 
@@ -104,7 +154,7 @@ test("sweep cannot downgrade scope or create approval without live inventory", (
   const scoped = makeSweepPlan();
   scoped.session.scope = "selected-files";
   assert.throws(
-    () => validateSweepPlan(scoped),
+    () => validateTestPlan(scoped),
     /session\.scope must be entire-codebase/u,
   );
   assert.throws(
@@ -122,6 +172,7 @@ test("sweep negotiates the inspection fallback before dispatch", () => {
     selectSweepInspectionMode({
       requestedMode: "subagent-hybrid",
       capabilities: makeSweepBatchCapabilities(),
+      ...sweepBatchDependencies,
     }).mode,
     "subagent-hybrid",
   );
@@ -138,6 +189,14 @@ test("sweep negotiates the inspection fallback before dispatch", () => {
       activeSessionAvailable: false,
     }),
     /fallback is unavailable/u,
+  );
+  assert.throws(
+    () => selectSweepInspectionMode({
+      requestedMode: "subagent-hybrid",
+      capabilities: makeSweepBatchCapabilities(),
+      activeSessionAvailable: false,
+    }),
+    /trusted host verifier/u,
   );
 });
 
@@ -180,12 +239,24 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
         invocationId: successfulReport.invocationId,
       },
     ],
-  }, { inventory, capabilities });
+  }, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  });
   assert.equal(
-    validateSweepBatchReportSet(reportSet, { inventory, capabilities }).attempts.length,
+    validateSweepBatchReportSet(reportSet, {
+      inventory,
+      capabilities,
+      ...sweepBatchDependencies,
+    }).attempts.length,
     2,
   );
-  assert.equal(mergeSweepBatchReports(reportSet, { inventory, capabilities }).state, "complete");
+  assert.equal(mergeSweepBatchReports(reportSet, {
+    inventory,
+    capabilities,
+    ...sweepBatchDependencies,
+  }).state, "complete");
 
   const stale = structuredClone(successfulReport);
   stale.inputDigest = `sha256:${"e".repeat(64)}`;
@@ -193,8 +264,37 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
     () => validateSweepBatchReportSet({
       ...reportSet,
       reports: [stale],
-    }, { inventory, capabilities }),
+    }, {
+      inventory,
+      capabilities,
+      ...sweepBatchDependencies,
+    }),
     /batchReport|binding|digest/u,
+  );
+
+  const overBudgetReport = makeSweepBatchReport(inventory, capabilities, {
+    attempt: 4,
+    inputDigest: `sha256:${"f".repeat(64)}`,
+    invocationId: "over-budget-invocation",
+  });
+  const overBudget = clone(reportSet);
+  overBudget.attempts.push({
+    batch: overBudgetReport.batch,
+    attempt: overBudgetReport.attempt,
+    attemptId: overBudgetReport.attemptId,
+    status: "failed",
+    inputDigest: overBudgetReport.inputDigest,
+    invocationId: overBudgetReport.invocationId,
+    error: "The host exhausted the retry budget.",
+  });
+  delete overBudget.digest;
+  assert.throws(
+    () => createSweepBatchReportSet(overBudget, {
+      inventory,
+      capabilities,
+      ...sweepBatchDependencies,
+    }),
+    /retryBudget|too many/u,
   );
 });
 
@@ -202,7 +302,7 @@ test("sweep binds every category to its exact maintenance checks", () => {
   const wrongCheck = makeSweepPlan();
   wrongCheck.categories[0].checks[0].id = "dead-code";
   assert.throws(
-    () => validateSweepPlan(wrongCheck),
+    () => validateTestPlan(wrongCheck),
     /checks\[0\]\.id must be broken-references/u,
   );
 
@@ -210,21 +310,21 @@ test("sweep binds every category to its exact maintenance checks", () => {
   wrongState.categories[0].checks[0].inspection = "partial";
   wrongState.categories[0].checks[0].gaps = ["One path could not be resolved."];
   assert.throws(
-    () => validateSweepPlan(wrongState),
+    () => validateTestPlan(wrongState),
     /category.*inspection must be partial|inspection must be partial/u,
   );
 
   const emptyEvidence = makeSweepPlan();
   emptyEvidence.candidates[0].evidenceChecks[0].sourceIds = [];
   assert.throws(
-    () => validateSweepPlan(emptyEvidence),
+    () => validateTestPlan(emptyEvidence),
     /passed must cite at least one evidence source/u,
   );
 
   const incomplete = makeSweepPlan();
   incomplete.candidates[0].evidenceChecks[0].status = "inconclusive";
   assert.throws(
-    () => validateSweepPlan(incomplete),
+    () => validateTestPlan(incomplete),
     /Polish evidence references is incomplete|must pass/u,
   );
 });
@@ -243,7 +343,7 @@ test("sweep supports every declared maintenance check", () => {
       detail: `${id} was checked at the captured codebase identity.`,
       sourceIds: ["repo"],
     }));
-    const plan = validateSweepPlan(input);
+    const plan = validateTestPlan(input);
     assert.equal(plan.candidates[0].checkId, check.id);
     assert.equal(plan.result.executableCandidates, 1);
   }
@@ -253,7 +353,7 @@ test("sweep routes work from three separate impact decisions", () => {
   const dependencyChange = makeSweepPlan();
   dependencyChange.candidates[0].dependencyImpact = "changing";
   assert.throws(
-    () => validateSweepPlan(dependencyChange),
+    () => validateTestPlan(dependencyChange),
     /Polish work must preserve dependencies/u,
   );
 
@@ -261,13 +361,13 @@ test("sweep routes work from three separate impact decisions", () => {
   publicHandoff.candidates[0].disposition = "handoff";
   publicHandoff.candidates[0].publicContractImpact = "changing";
   publicHandoff.session.state = "complete-with-findings";
-  assert.equal(validateSweepPlan(publicHandoff).result.handoffs, 1);
+  assert.equal(validateTestPlan(publicHandoff).result.handoffs, 1);
 
   const unnecessaryReport = makeSweepPlan();
   unnecessaryReport.candidates[0].disposition = "report-only";
   unnecessaryReport.session.state = "complete-with-findings";
   assert.throws(
-    () => validateSweepPlan(unnecessaryReport),
+    () => validateTestPlan(unnecessaryReport),
     /report-only work must record an uncertain impact|fully supported preserving work must use Polish/u,
   );
 });
@@ -276,14 +376,14 @@ test("sweep derives no-change, findings-only, and blocked plan states", () => {
   const noChange = makeSweepPlan();
   noChange.candidates = [];
   noChange.session.state = "complete-no-change";
-  assert.equal(validateSweepPlan(noChange).result.state, "complete-no-change");
+  assert.equal(validateTestPlan(noChange).result.state, "complete-no-change");
 
   const findings = makeSweepPlan();
   findings.candidates[0].disposition = "report-only";
   findings.candidates[0].behaviorImpact = "uncertain";
   findings.candidates[0].gaps = ["A dynamic caller may exist."];
   findings.session.state = "complete-with-findings";
-  assert.equal(validateSweepPlan(findings).result.reportOnly, 1);
+  assert.equal(validateTestPlan(findings).result.reportOnly, 1);
 
   const blocked = makeSweepPlan();
   blocked.candidates = [];
@@ -292,7 +392,7 @@ test("sweep derives no-change, findings-only, and blocked plan states", () => {
   blocked.categories[0].inspection = "partial";
   blocked.categories[0].gaps = ["Integrity inspection was incomplete."];
   blocked.session.state = "blocked";
-  assert.equal(validateSweepPlan(blocked).result.state, "blocked");
+  assert.equal(validateTestPlan(blocked).result.state, "blocked");
 });
 
 test("sweep binds approval to the exact plan, candidate, sources, and preview", () => {
@@ -310,7 +410,9 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
   );
   assert.notEqual(changedCandidate.candidateDigest, first.candidateDigest);
 
-  assert.equal(first.planDigest, sweepPlanDigest(plan));
+  assert.equal(first.planDigest, sweepPlanDigest(plan, {
+    inventory: makeSweepInventory(plan),
+  }));
   assert.equal(
     createSweepApprovalCandidate(plan, "remove-unused-helper", {
       inventory: makeSweepInventory(plan),
@@ -564,14 +666,14 @@ test("sweep derives the file budget from cited file sources", () => {
   const understated = makeSweepPlan();
   understated.summary.filesChecked = 2;
   assert.throws(
-    () => validateSweepPlan(understated),
+    () => validateTestPlan(understated),
     /must equal the 3 distinct file sources/u,
   );
 
   const overstated = makeSweepPlan();
   overstated.summary.filesChecked = 4;
   assert.throws(
-    () => validateSweepPlan(overstated),
+    () => validateTestPlan(overstated),
     /must equal the 3 distinct file sources/u,
   );
 });
@@ -597,7 +699,9 @@ test("sweep session result binds every candidate, completion, and gap", () => {
 
   const omittedGap = clone(makeSweepSessionResult());
   omittedGap.plan.summary.remainingGaps = ["One package path was not inspected."];
-  omittedGap.planDigest = sweepPlanDigest(omittedGap.plan);
+  omittedGap.planDigest = sweepPlanDigest(omittedGap.plan, {
+    inventory: makeSweepInventory(omittedGap.plan),
+  });
   assert.throws(
     () => validateSessionResult(omittedGap),
     /remainingGaps must keep every unresolved/u,

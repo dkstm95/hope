@@ -78,6 +78,7 @@ runtime/features/sweep/cli.mjs
 runtime/features/sweep/completion-v1.schema.json
 runtime/features/sweep/constants.mjs
 runtime/features/sweep/evaluation-output-v1.schema.json
+runtime/features/sweep/host-adapter.mjs
 runtime/features/sweep/index.mjs
 runtime/features/sweep/inventory-v1.schema.json
 runtime/features/sweep/inventory.mjs
