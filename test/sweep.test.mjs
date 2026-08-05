@@ -23,6 +23,7 @@ import {
   sweepBatchAttemptId,
   sweepBatchBindingDigest,
   validateSweepBatchMerge,
+  validateSweepBatchModeSelection,
   validateSweepBatchReport,
   validateSweepBatchReportSet,
 } from "../features/sweep/batch.mjs";
@@ -354,10 +355,31 @@ test("sweep negotiates the inspection fallback before dispatch", () => {
     () => selectSweepInspectionMode({
       requestedMode: "subagent-hybrid",
       capabilities: makeSweepBatchCapabilities(),
-      activeSessionAvailable: "yes",
       ...sweepBatchDependencies,
+      activeSessionAvailable: "yes",
     }),
     /fallback is unavailable/u,
+  );
+  const hybrid = makeSweepHybridPlan();
+  assert.throws(
+    () => validateSweepBatchModeSelection(hybrid.reportSet.modeSelection, {
+      inventory: hybrid.inventory,
+      capabilities: hybrid.capabilities,
+      manifest: hybrid.reportSet.manifest,
+      ...sweepBatchDependencies,
+      activeSessionAvailable: false,
+    }),
+    /active-session fallback/u,
+  );
+  assert.throws(
+    () => validateSweepBatchModeSelection(hybrid.reportSet.modeSelection, {
+      inventory: hybrid.inventory,
+      capabilities: hybrid.capabilities,
+      manifest: hybrid.reportSet.manifest,
+      ...sweepBatchDependencies,
+      verifyBatchCapabilities: undefined,
+    }),
+    /trusted host verifier/u,
   );
 });
 
@@ -461,6 +483,65 @@ test("sweep retains failed retry attempts and rejects stale report bindings", ()
     capabilities,
     ...sweepBatchDependencies,
   }).state, "complete");
+
+  const successThenFailureError = "The host failed the terminal retry.";
+  const successThenFailureAttempts = [
+    {
+      ...retryAttempts[0],
+      status: "succeeded",
+      attemptId: failedReport.attemptId,
+      outputDigest: failedReport.outputDigest,
+    },
+    {
+      ...retryAttempts[1],
+      status: "failed",
+      attemptId: failedAttemptId(successfulReport, successThenFailureError),
+      outputDigest: sweepBatchAttemptOutputDigest({
+        status: "failed",
+        error: successThenFailureError,
+      }),
+      error: successThenFailureError,
+    },
+  ];
+  const successThenFailureSynthesisInput = structuredClone(
+    baseReportSet.crossBatchSynthesis,
+  );
+  for (const key of [
+    "modeSelectionDigest",
+    "reportSetInputDigest",
+    "mergeInputDigest",
+    "attemptsDigest",
+    "inputDigest",
+    "attemptId",
+    "outputDigest",
+    "digest",
+  ]) delete successThenFailureSynthesisInput[key];
+  const successThenFailureSynthesis = createSweepCrossBatchSynthesis(
+    successThenFailureSynthesisInput,
+    {
+      inventory,
+      capabilities,
+      manifest,
+      modeSelection: baseReportSet.modeSelection,
+      reports: [failedReport],
+      attempts: successThenFailureAttempts,
+      ...sweepBatchDependencies,
+    },
+  );
+  assert.throws(
+    () => createSweepBatchReportSet({
+      ...reportSet,
+      crossBatchSynthesis: successThenFailureSynthesis,
+      reports: [failedReport],
+      attempts: successThenFailureAttempts,
+      digest: undefined,
+    }, {
+      inventory,
+      capabilities,
+      ...sweepBatchDependencies,
+    }),
+    /after succeeded attempt/u,
+  );
 
   const replayedSynthesisSet = {
     ...reportSet,

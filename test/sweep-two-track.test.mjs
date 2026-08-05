@@ -542,6 +542,16 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
         : runJson)("harness/hope.mjs", ["sweep", ...arguments_]),
     );
   }
+  const selectedHybridMode = runWithHostAdapter(
+    "plugins/hope/runtime/features/sweep/cli.mjs",
+    [
+      "select-inspection-mode",
+      "--mode",
+      "subagent-hybrid",
+      "--capabilities",
+      capabilitiesPath,
+    ],
+  );
   const createModeSelectionArguments = [
     "create-mode-selection",
     "--manifest",
@@ -550,6 +560,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     repositoryRoot,
     "--capabilities",
     capabilitiesPath,
+    "--selection-digest",
+    selectedHybridMode.selectionDigest,
     "--invocation",
     "two-track-mode-selection",
   ];

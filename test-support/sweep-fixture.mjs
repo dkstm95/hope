@@ -38,6 +38,7 @@ export const sweepApprovalDependencies = Object.freeze({
 });
 
 export const sweepBatchDependencies = Object.freeze({
+  activeSessionAvailable: true,
   verifyBatchCapabilities(capabilities) {
     return capabilities.mode === "subagent-hybrid"
       && capabilities.readOnly === true

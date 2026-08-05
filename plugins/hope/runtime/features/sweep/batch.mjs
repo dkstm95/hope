@@ -160,6 +160,19 @@ export function createSweepBatchCapabilities({
   return deepFreeze({ ...value, digest: digestSweepBatchCapabilities(value) });
 }
 
+function modeSelectionNegotiationPayload(value) {
+  return {
+    requestedMode: value.requestedMode,
+    mode: value.mode,
+    fallbackUsed: value.fallbackUsed,
+    capabilityDigest: value.capabilityDigest,
+  };
+}
+
+export function digestSweepBatchModeNegotiation(value) {
+  return digestValue(modeSelectionNegotiationPayload(value));
+}
+
 export function selectSweepInspectionMode({
   requestedMode = "active-session",
   capabilities,
@@ -194,6 +207,12 @@ export function selectSweepInspectionMode({
       mode: "subagent-hybrid",
       fallbackUsed: false,
       capabilityDigest: normalized.digest,
+      selectionDigest: digestSweepBatchModeNegotiation({
+        requestedMode,
+        mode: "subagent-hybrid",
+        fallbackUsed: false,
+        capabilityDigest: normalized.digest,
+      }),
     });
   } catch (error) {
     if (activeSessionAvailable !== true) {
@@ -224,6 +243,8 @@ export function validateSweepBatchModeSelection(
     inventory,
     capabilities,
     manifest,
+    activeSessionAvailable = false,
+    verifyBatchCapabilities,
     verifyBatchInvocation,
   } = {},
 ) {
@@ -238,6 +259,7 @@ export function validateSweepBatchModeSelection(
       "requestedMode",
       "mode",
       "fallbackUsed",
+      "selectionDigest",
       "runId",
       "inventoryDigest",
       "capabilityDigest",
@@ -268,6 +290,21 @@ export function validateSweepBatchModeSelection(
   if (fallbackUsed) {
     errors.push("sweep.batchModeSelection cannot use an active-session fallback for hybrid dispatch");
   }
+  if (activeSessionAvailable !== true) {
+    errors.push("sweep.batchModeSelection requires a host-confirmed active-session fallback");
+  }
+  let normalizedCapabilities;
+  if (!capabilities) {
+    errors.push("sweep.batchModeSelection.capabilities is required");
+  } else {
+    try {
+      normalizedCapabilities = validateSweepBatchCapabilities(capabilities, {
+        verifyBatchCapabilities,
+      });
+    } catch (error) {
+      errors.push(`sweep.batchModeSelection.capabilities: ${error.message}`);
+    }
+  }
   const runId = text(selection.runId, "sweep.batchModeSelection.runId", errors);
   const inventoryDigest = digest(
     selection.inventoryDigest,
@@ -284,7 +321,7 @@ export function validateSweepBatchModeSelection(
   );
   if (!capabilities) {
     errors.push("sweep.batchModeSelection.capabilities is required");
-  } else if (capabilityDigest !== capabilities.digest) {
+  } else if (normalizedCapabilities && capabilityDigest !== normalizedCapabilities.digest) {
     errors.push("sweep.batchModeSelection.capabilityDigest does not match capabilities");
   }
   const manifestDigest = digest(
@@ -307,6 +344,21 @@ export function validateSweepBatchModeSelection(
     "sweep.batchModeSelection.invocationId",
     errors,
   );
+  const selectionDigest = digest(
+    selection.selectionDigest,
+    "sweep.batchModeSelection.selectionDigest",
+    errors,
+  );
+  if (
+    selectionDigest !== digestSweepBatchModeNegotiation({
+      requestedMode,
+      mode,
+      fallbackUsed,
+      capabilityDigest,
+    })
+  ) {
+    errors.push("sweep.batchModeSelection.selectionDigest does not match the negotiated mode");
+  }
   const normalized = {
     feature: text(selection.feature, "sweep.batchModeSelection.feature", errors),
     version: batchValidation.integer(
@@ -318,6 +370,7 @@ export function validateSweepBatchModeSelection(
     requestedMode,
     mode,
     fallbackUsed,
+    selectionDigest,
     runId,
     inventoryDigest,
     capabilityDigest,
@@ -344,6 +397,8 @@ export function validateSweepBatchModeSelection(
       inventoryDigest,
       capabilityDigest,
       manifestDigest,
+      selectionDigest,
+      activeSessionAvailable,
     },
   );
   invalid("Hope sweep batch mode selection", errors);
@@ -352,6 +407,9 @@ export function validateSweepBatchModeSelection(
 
 export function createSweepBatchModeSelection(value, dependencies = {}) {
   const selection = { ...value };
+  if (!selection.selectionDigest) {
+    selection.selectionDigest = digestSweepBatchModeNegotiation(selection);
+  }
   if (!selection.digest) {
     selection.digest = digestSweepBatchModeSelection(selection);
   }
@@ -719,10 +777,29 @@ function normalizeBatch(value, path, errors, fileSourceIds, ids) {
 
 export function validateSweepBatchManifest(
   value,
-  { inventory, capabilities, modeSelection, verifyBatchInvocation } = {},
+  {
+    inventory,
+    capabilities,
+    modeSelection,
+    activeSessionAvailable = false,
+    verifyBatchCapabilities,
+    verifyBatchInvocation,
+  } = {},
 ) {
   const errors = [];
   const context = sourceContext(inventory, errors);
+  let normalizedCapabilities;
+  if (capabilities) {
+    try {
+      normalizedCapabilities = validateSweepBatchCapabilities(capabilities, {
+        verifyBatchCapabilities,
+      });
+    } catch (error) {
+      errors.push(`sweep.batchManifest.capabilities: ${error.message}`);
+    }
+  } else {
+    errors.push("sweep.batchManifest.capabilities is required");
+  }
   const manifest = object(value, "sweep.batchManifest", errors);
   exactKeys(
     manifest,
@@ -753,7 +830,7 @@ export function validateSweepBatchManifest(
   if (context.inventory && inventoryDigest !== context.inventory.digest) {
     errors.push("sweep.batchManifest.inventoryDigest does not match inventory");
   }
-  if (capabilities && capabilityDigest !== capabilities.digest) {
+  if (normalizedCapabilities && capabilityDigest !== normalizedCapabilities.digest) {
     errors.push("sweep.batchManifest.capabilityDigest does not match capabilities");
   }
   const batchesRaw = batchValidation.array(
@@ -821,8 +898,10 @@ export function validateSweepBatchManifest(
   try {
     validateSweepBatchModeSelection(modeSelection, {
       inventory: context.inventory,
-      capabilities,
+      capabilities: normalizedCapabilities,
       manifest: normalized,
+      activeSessionAvailable,
+      verifyBatchCapabilities,
       verifyBatchInvocation,
     });
   } catch (error) {
@@ -864,11 +943,25 @@ export function validateSweepCrossBatchSynthesis(
     modeSelection,
     reports,
     attempts,
+    activeSessionAvailable = false,
+    verifyBatchCapabilities,
     verifyBatchInvocation,
   } = {},
 ) {
   const errors = [];
   const context = sourceContext(inventory, errors);
+  let normalizedCapabilities;
+  if (capabilities) {
+    try {
+      normalizedCapabilities = validateSweepBatchCapabilities(capabilities, {
+        verifyBatchCapabilities,
+      });
+    } catch (error) {
+      errors.push(`sweep.crossBatchSynthesis.capabilities: ${error.message}`);
+    }
+  } else {
+    errors.push("sweep.crossBatchSynthesis.capabilities is required");
+  }
   const synthesis = object(value, "sweep.crossBatchSynthesis", errors);
   exactKeys(
     synthesis,
@@ -904,7 +997,7 @@ export function validateSweepCrossBatchSynthesis(
     errors.push("sweep.crossBatchSynthesis.inventoryDigest does not match inventory");
   }
   const capabilityDigest = digest(synthesis.capabilityDigest, "sweep.crossBatchSynthesis.capabilityDigest", errors);
-  if (capabilities && capabilityDigest !== capabilities.digest) {
+  if (normalizedCapabilities && capabilityDigest !== normalizedCapabilities.digest) {
     errors.push("sweep.crossBatchSynthesis.capabilityDigest does not match capabilities");
   }
   const manifestDigest = digest(synthesis.manifestDigest, "sweep.crossBatchSynthesis.manifestDigest", errors);
@@ -918,8 +1011,10 @@ export function validateSweepCrossBatchSynthesis(
   try {
     normalizedModeSelection = validateSweepBatchModeSelection(modeSelection, {
       inventory: context.inventory,
-      capabilities,
+      capabilities: normalizedCapabilities,
       manifest,
+      activeSessionAvailable,
+      verifyBatchCapabilities,
       verifyBatchInvocation,
     });
   } catch (error) {
@@ -1300,6 +1395,20 @@ function validateAttemptLedger(
         break;
       }
     }
+    const orderedAttempts = [...batchAttempts]
+      .sort((left, right) => left.attempt - right.attempt);
+    const succeededAttempt = orderedAttempts.find(
+      (attempt) => attempt.status === "succeeded",
+    );
+    if (succeededAttempt) {
+      for (const laterAttempt of orderedAttempts) {
+        if (laterAttempt.attempt > succeededAttempt.attempt) {
+          errors.push(
+            `${path} cannot record attempt ${laterAttempt.attempt} after succeeded attempt ${succeededAttempt.attempt} for ${batchId}`,
+          );
+        }
+      }
+    }
   }
 }
 
@@ -1310,6 +1419,7 @@ export function validateSweepBatchReport(
     manifest,
     modeSelection,
     capabilities,
+    activeSessionAvailable = false,
     verifyBatchCapabilities,
     verifyBatchInvocation,
   } = {},
@@ -1354,6 +1464,8 @@ export function validateSweepBatchReport(
         inventory: context.inventory,
         capabilities: normalizedCapabilities,
         modeSelection,
+        activeSessionAvailable,
+        verifyBatchCapabilities,
         verifyBatchInvocation,
       });
     } catch (error) {
@@ -1485,6 +1597,7 @@ export function validateSweepBatchReportSet(
   {
     inventory,
     capabilities,
+    activeSessionAvailable = false,
     verifyBatchCapabilities,
     verifyBatchInvocation,
   } = {},
@@ -1509,6 +1622,8 @@ export function validateSweepBatchReportSet(
       inventory: context.inventory,
       capabilities: normalizedCapabilities,
       modeSelection: value?.modeSelection,
+      activeSessionAvailable,
+      verifyBatchCapabilities,
       verifyBatchInvocation,
     });
   } catch (error) {
@@ -1520,6 +1635,8 @@ export function validateSweepBatchReportSet(
       inventory: context.inventory,
       capabilities: normalizedCapabilities,
       manifest: normalizedManifest,
+      activeSessionAvailable,
+      verifyBatchCapabilities,
       verifyBatchInvocation,
     });
   } catch (error) {
@@ -1541,6 +1658,7 @@ export function validateSweepBatchReportSet(
         modeSelection: normalizedModeSelection,
         capabilities: normalizedCapabilities,
         verifyBatchCapabilities,
+        activeSessionAvailable,
         verifyBatchInvocation,
       });
     } catch (error) {
@@ -1662,6 +1780,8 @@ export function validateSweepBatchReportSet(
       modeSelection: normalizedModeSelection,
       reports,
       attempts,
+      activeSessionAvailable,
+      verifyBatchCapabilities,
       verifyBatchInvocation,
     });
   } catch (error) {
@@ -1766,6 +1886,7 @@ export function mergeSweepBatchReports(
   {
     inventory,
     capabilities,
+    activeSessionAvailable = false,
     verifyBatchCapabilities,
     verifyBatchInvocation,
     skipValidation = false,
@@ -1774,6 +1895,7 @@ export function mergeSweepBatchReports(
   const reportSet = validateSweepBatchReportSet(value, {
     inventory,
     capabilities,
+    activeSessionAvailable,
     verifyBatchCapabilities,
     verifyBatchInvocation,
   });
@@ -1874,6 +1996,7 @@ export function mergeSweepBatchReports(
     inventory: context,
     capabilities,
     reportSet,
+    activeSessionAvailable,
     verifyBatchCapabilities,
     verifyBatchInvocation,
   });
@@ -1885,6 +2008,7 @@ export function validateSweepBatchMerge(
     inventory,
     capabilities,
     reportSet,
+    activeSessionAvailable = false,
     verifyBatchCapabilities,
     verifyBatchInvocation,
   } = {},
@@ -1916,6 +2040,8 @@ export function validateSweepBatchMerge(
           inventory: context.inventory,
           capabilities: normalizedCapabilities,
           manifest: reportSet.manifest,
+          activeSessionAvailable,
+          verifyBatchCapabilities,
           verifyBatchInvocation,
         },
       );
@@ -1939,6 +2065,8 @@ export function validateSweepBatchMerge(
           modeSelection: normalizedModeSelection,
           reports: reportSet.reports,
           attempts: reportSet.attempts,
+          activeSessionAvailable,
+          verifyBatchCapabilities,
           verifyBatchInvocation,
         },
       );
@@ -2082,6 +2210,7 @@ export function validateSweepBatchMerge(
       const expected = mergeSweepBatchReports(reportSet, {
         inventory: context.inventory,
         capabilities: normalizedCapabilities,
+        activeSessionAvailable,
         verifyBatchCapabilities,
         verifyBatchInvocation,
         skipValidation: true,

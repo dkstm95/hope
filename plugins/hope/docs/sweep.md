@@ -184,8 +184,9 @@ The adapter must expose read-only, independent-context, source-allowlist, and bo
 The runtime fails closed for hybrid reports, merges, and plans when that adapter is absent or rejects a record.
 
 The host records this pre-dispatch choice through the shared
-`select-inspection-mode` command, then creates a mode-selection receipt after
-the run, inventory, capabilities, and ordered manifest are known.
+`select-inspection-mode` command, then passes its returned selection digest when
+creating a mode-selection receipt after the run, inventory, capabilities, and
+ordered manifest are known.
 
 That receipt is host-verified and binds the selected hybrid mode to those exact
 digests.
@@ -195,10 +196,10 @@ artifacts.
 
 The shared runtime can create that receipt with
 `create-mode-selection --manifest <manifest.json> --root <repository-root>
---capabilities <capabilities.json> --invocation <id>`.
+--capabilities <capabilities.json> --selection-digest <digest> --invocation <id>`.
 
-The command captures a fresh live inventory before it signs the binding through
-the trusted host adapter.
+The command captures a fresh live inventory, rechecks hybrid capability and
+active-session fallback, and signs the binding through the trusted host adapter.
 
 A capability failure returns the active session fallback before any subagent
 starts.
@@ -234,8 +235,9 @@ an unlisted batch, or an attempt beyond the declared retry budget before the
 report set is merged.
 
 Each successful report carries an output digest, each attempt carries an output
-or failure-outcome digest, and the trusted adapter verifies those bindings with
-the invocation receipt instead of trusting an invocation ID by itself.
+or failure-outcome digest, and every capability-dependent boundary revalidates
+the capability payload through the trusted verifier instead of trusting its
+digest by itself.
 
 A manifest batch may have no report only when all of its recorded attempts
 failed or were cancelled; the merge creates a visible failed batch gap for that
@@ -259,8 +261,9 @@ The host bounds the synthesis input to the report and merge limits in the
 brief.
 
 It confirms active-session fallback before dispatch, keeps every trusted retry
-attempt tied to the manifest and batch binding, enforces the retry budget, and
-reruns the live inventory before validation and approval.
+attempt tied to the manifest and batch binding, rejects attempts after a
+successful terminal attempt, enforces the retry budget, and reruns the live
+inventory before validation and approval.
 
 The shared plan and approval APIs require a trusted live-worktree verifier in
 addition to the inventory digest; the file entry paths provide that verifier

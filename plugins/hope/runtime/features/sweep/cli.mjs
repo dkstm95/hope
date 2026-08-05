@@ -38,7 +38,7 @@ function usage() {
     "  hope sweep validate-batch-report --input <report.json> --manifest <manifest.json> --mode-selection <mode-selection.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
     "  hope sweep merge-batch-reports --input <reports.json> --root <repository-root> --capabilities <capabilities.json> [--inventory <inventory.json>]",
     "  hope sweep select-inspection-mode --mode <active-session|subagent-hybrid> [--capabilities <capabilities.json>]",
-    "  hope sweep create-mode-selection --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> --invocation <id> [--inventory <inventory.json>]",
+    "  hope sweep create-mode-selection --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> --selection-digest <digest> --invocation <id> [--inventory <inventory.json>]",
     "  hope sweep validate-plan --input <plan.json> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
     "  hope sweep approval-candidate --input <plan.json> --candidate <id> --root <repository-root> [--inventory <inventory.json>] [--reports <reports.json> --capabilities <capabilities.json>]",
     "  hope sweep approval-receipt --input <approval.json>",
@@ -99,6 +99,7 @@ export function parseSweepArguments(argv) {
       "reports",
       "root",
       "run",
+      "selection-digest",
     ],
     prefix: "Hope sweep",
   });
@@ -250,8 +251,9 @@ export function parseSweepArguments(argv) {
       !options.manifest
       || !options.root
       || !options.capabilities
+      || !options["selection-digest"]
       || !options.invocation
-      || !hasOnly(["capabilities", "invocation", "inventory", "manifest", "root"])
+      || !hasOnly(["capabilities", "invocation", "inventory", "manifest", "root", "selection-digest"])
     ) {
       throw new TypeError(usage());
     }
@@ -262,6 +264,7 @@ export function parseSweepArguments(argv) {
       invocationId: options.invocation,
       manifestPath: options.manifest,
       repositoryRoot: options.root,
+      selectionDigest: options["selection-digest"],
     };
   }
   if (command === "approval-candidate") {
@@ -373,6 +376,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       inventoryPath: options.inventoryPath,
       manifestPath: options.manifestPath,
       repositoryRoot: options.repositoryRoot,
+      selectionDigest: options.selectionDigest,
     });
   } else if (options.command === "validate-plan") {
     result = await (

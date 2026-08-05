@@ -28,6 +28,7 @@ import {
   createSweepCrossBatchSynthesis,
   digestSweepBatchCapabilities,
   digestSweepBatchManifest,
+  digestSweepBatchModeNegotiation,
   digestSweepBatchModeSelection,
   digestSweepBatchReportSet,
   digestSweepCrossBatchSynthesis,
@@ -81,6 +82,7 @@ export {
   createSweepCrossBatchSynthesis,
   digestSweepBatchCapabilities,
   digestSweepBatchManifest,
+  digestSweepBatchModeNegotiation,
   digestSweepBatchModeSelection,
   digestSweepBatchReportSet,
   digestSweepCrossBatchSynthesis,
@@ -507,6 +509,7 @@ export async function validateSweepPlanFile(inputPath, dependencies = {}) {
         batchMerge: batchContext.merge,
         batchReportSet: batchContext.reportSet,
         capabilities: batchContext.capabilities,
+        activeSessionAvailable: batchContext.activeSessionAvailable,
         verifyBatchCapabilities: batchContext.verifyBatchCapabilities,
         verifyBatchInvocation: batchContext.verifyBatchInvocation,
       }
@@ -525,6 +528,7 @@ export async function validateSweepPlanFile(inputPath, dependencies = {}) {
             batchMerge: batchContext.merge,
             batchReportSet: batchContext.reportSet,
             capabilities: batchContext.capabilities,
+            activeSessionAvailable: batchContext.activeSessionAvailable,
             verifyBatchCapabilities: batchContext.verifyBatchCapabilities,
             verifyBatchInvocation: batchContext.verifyBatchInvocation,
           }
@@ -561,6 +565,7 @@ export async function createSweepApprovalCandidateFile(
         batchMerge: batchContext.merge,
         batchReportSet: batchContext.reportSet,
         capabilities: batchContext.capabilities,
+        activeSessionAvailable: batchContext.activeSessionAvailable,
         verifyBatchCapabilities: batchContext.verifyBatchCapabilities,
         verifyBatchInvocation: batchContext.verifyBatchInvocation,
       }
@@ -578,6 +583,7 @@ export async function createSweepApprovalCandidateFile(
           batchMerge: batchContext.merge,
           batchReportSet: batchContext.reportSet,
           capabilities: batchContext.capabilities,
+          activeSessionAvailable: batchContext.activeSessionAvailable,
           verifyBatchCapabilities: batchContext.verifyBatchCapabilities,
           verifyBatchInvocation: batchContext.verifyBatchInvocation,
         }
@@ -713,6 +719,11 @@ export async function createSweepBatchModeSelectionFile(dependencies = {}) {
       "Hope sweep mode-selection creation requires --invocation",
     );
   }
+  if (!dependencies.selectionDigest) {
+    throw new TypeError(
+      "Hope sweep mode-selection creation requires --selection-digest from pre-dispatch negotiation",
+    );
+  }
   const inventory = await resolveSweepInventory(
     "Hope sweep mode-selection creation",
     dependencies,
@@ -722,6 +733,21 @@ export async function createSweepBatchModeSelectionFile(dependencies = {}) {
     dependencies.capabilitiesPath,
     { ...dependencies, ...hostAdapter },
   );
+  const negotiation = selectSweepInspectionMode({
+    requestedMode: "subagent-hybrid",
+    capabilities: capabilitiesInput.value,
+    activeSessionAvailable: hostAdapter.activeSessionAvailable,
+    ...hostAdapter,
+  });
+  if (
+    negotiation.mode !== "subagent-hybrid"
+    || negotiation.fallbackUsed
+    || negotiation.selectionDigest !== dependencies.selectionDigest
+  ) {
+    throw new TypeError(
+      "Hope sweep mode-selection creation requires a current host-confirmed hybrid negotiation with active-session fallback",
+    );
+  }
   const manifestInput = await readSweepFile(
     dependencies.manifestPath,
     "Hope sweep batch manifest",
@@ -734,6 +760,7 @@ export async function createSweepBatchModeSelectionFile(dependencies = {}) {
     requestedMode: "subagent-hybrid",
     mode: "subagent-hybrid",
     fallbackUsed: false,
+    selectionDigest: dependencies.selectionDigest,
     runId: manifestInput.value.runId,
     inventoryDigest: inventory.digest,
     capabilityDigest: capabilitiesInput.value.digest,
@@ -819,6 +846,7 @@ export async function validateSweepSessionResultFile(
           batchMerge: batchContext.merge,
           batchReportSet: batchContext.reportSet,
           capabilities: batchContext.capabilities,
+          activeSessionAvailable: batchContext.activeSessionAvailable,
           verifyBatchCapabilities: batchContext.verifyBatchCapabilities,
           verifyBatchInvocation: batchContext.verifyBatchInvocation,
         }

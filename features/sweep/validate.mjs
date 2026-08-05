@@ -707,6 +707,7 @@ export function validateSweepPlan(value, {
   batchMerge,
   batchReportSet,
   capabilities,
+  activeSessionAvailable,
   verifyBatchCapabilities,
   verifyBatchInvocation,
 } = {}) {
@@ -870,6 +871,7 @@ export function validateSweepPlan(value, {
         const normalizedReportSet = validateSweepBatchReportSet(batchReportSet, {
           inventory: normalizedInventory,
           capabilities: normalizedCapabilities,
+          activeSessionAvailable,
           verifyBatchCapabilities,
           verifyBatchInvocation,
         });
@@ -877,6 +879,7 @@ export function validateSweepPlan(value, {
           inventory: normalizedInventory,
           capabilities: normalizedCapabilities,
           reportSet: normalizedReportSet,
+          activeSessionAvailable,
           verifyBatchCapabilities,
           verifyBatchInvocation,
         });
@@ -1404,6 +1407,7 @@ export function createSweepApprovalCandidate(value, candidateId, {
   batchMerge,
   batchReportSet,
   capabilities,
+  activeSessionAvailable,
   verifyBatchCapabilities,
   verifyBatchInvocation,
 } = {}) {
@@ -1418,6 +1422,7 @@ export function createSweepApprovalCandidate(value, candidateId, {
     batchMerge,
     batchReportSet,
     capabilities,
+    activeSessionAvailable,
     verifyBatchCapabilities,
     verifyBatchInvocation,
   });
@@ -2455,6 +2460,7 @@ export function validateSweepSessionResult(value, {
   batchMerge,
   batchReportSet,
   capabilities,
+  activeSessionAvailable,
   verifyBatchCapabilities,
   verifyBatchInvocation,
 } = {}) {
@@ -2483,6 +2489,7 @@ export function validateSweepSessionResult(value, {
       batchMerge,
       batchReportSet,
       capabilities,
+      activeSessionAvailable,
       verifyBatchCapabilities,
       verifyBatchInvocation,
     });

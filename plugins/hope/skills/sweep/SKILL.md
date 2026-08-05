@@ -102,8 +102,9 @@ select-inspection-mode --mode <active-session|subagent-hybrid> [--capabilities <
 If capability negotiation returns `active-session` with `fallbackUsed: true`,
 continue in that mode and do not launch subagents.
 
-For a hybrid run, create a host-verified mode-selection receipt after the
-ordered pre-dispatch manifest exists.
+For a hybrid run, pass the selection digest returned by that negotiation when
+creating a host-verified mode-selection receipt after the ordered pre-dispatch
+manifest exists.
 
 Bind it to the run ID, live inventory digest, capability digest, and manifest
 digest.
@@ -113,7 +114,7 @@ A fallback decision is not a valid hybrid receipt.
 The shared runtime command is:
 
 ```text
-create-mode-selection --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> --invocation <id>
+create-mode-selection --manifest <manifest.json> --root <repository-root> --capabilities <capabilities.json> --selection-digest <digest> --invocation <id>
 ```
 
 For `subagent-hybrid`:
@@ -142,6 +143,12 @@ For `subagent-hybrid`:
 - keep each batch relationship and the explicit cross-batch synthesis in the
   merge before authoring the one plan.
 
+The create-mode-selection command repeats the host capability and fallback
+check and rejects a stale or mismatched selection digest.
+
+The capability verifier must run at every public boundary that accepts a
+capability-dependent artifact.
+
 Subagents are report-only.
 
 They must not edit files, choose approval, or create Polish receipts.
@@ -152,7 +159,8 @@ approval.
 If any required capability is missing, use the active-session fallback before
 starting subagents.
 
-If the trusted host adapter is missing or rejects a report, attempt, or merge,
+If the trusted host adapter is missing or rejects a capability, report, attempt,
+or merge,
 keep the hybrid plan blocked and use the active-session path only when the host
 confirms that path is available.
 
