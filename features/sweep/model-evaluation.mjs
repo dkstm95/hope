@@ -34,7 +34,7 @@ function repositoryInput(id, files) {
   return Object.freeze({
     contentIsSynthetic: true,
     id,
-    request: "Inspect this repository for one bounded Sweep plan. Do not modify any file.",
+    request: "Inspect this repository for one whole-project Sweep plan. Do not modify any file.",
     files: Object.freeze(files.map((file) => Object.freeze(file))),
   });
 }
@@ -580,7 +580,9 @@ function expectedRuns() {
 function portableBrief(value) {
   const {
     approvalSchemaPath: _approvalSchemaPath,
+    batchResultSchemaPath: _batchResultSchemaPath,
     completionSchemaPath: _completionSchemaPath,
+    inventorySchemaPath: _inventorySchemaPath,
     planSchemaPath: _planSchemaPath,
     sessionResultSchemaPath: _sessionResultSchemaPath,
     ...brief
@@ -589,7 +591,9 @@ function portableBrief(value) {
     ...brief,
     schemas: Object.freeze({
       approval: "approval-v1.schema.json",
+      batchResult: "batch-result-v1.schema.json",
       completion: "completion-v1.schema.json",
+      inventory: "inventory-v1.schema.json",
       plan: "plan-v1.schema.json",
       sessionResult: "session-result-v1.schema.json",
     }),

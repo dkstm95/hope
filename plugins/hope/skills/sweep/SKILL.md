@@ -1,6 +1,6 @@
 ---
 name: sweep
-description: Use to inspect a codebase for broad maintenance, show a bounded plan, and apply only exact approved behavior-preserving work.
+description: Use to inventory a project for broad maintenance, show a whole-project plan, and apply only exact approved behavior-preserving work.
 ---
 
 # Hope sweep
@@ -55,14 +55,87 @@ The examples guide decisions and are not evaluation results.
 
 Do not copy the runtime contract into another checklist in this Skill.
 
+## Inventory the project
+
+Capture the exact repository identity before inspection.
+
+Run `discover-inventory` against the repository root to build one verified
+inventory of all tracked files and relevant untracked files owned by the
+project:
+
+```text
+discover-inventory --root <repository> --session <session-id> --title <title> --scope <scope>
+```
+
+Exclude only ignored cache, dependency, build-output, outside-project, or other
+non-owned paths.
+
+Record every exclusion with its reason.
+
+Write the returned inventory required by `inventorySchemaPath` to a private
+temporary JSON file with restricted permissions.
+
+Validate it with:
+
+```text
+validate-inventory --input <inventory.json> --root <repository>
+```
+
+The runtime assigns every in-scope file to exactly one batch.
+
+The source limit applies to one batch, not to the project total.
+
+For each batch, create its exact pending worker input and retain its digest:
+
+```text
+batch-input --input <inventory.json> --batch <batch-id>
+```
+
+Use `start-batch --mode parallel --workers <id,id,...>` only when the host can
+provide independent contexts.
+
+Save the returned inventory over the previous inventory file before completing
+the batch.
+
+Otherwise use `start-batch --mode sequential` and let the runtime assign the
+host worker.
+
+Give each worker only the source IDs in its validated assignment.
+
+Each worker returns one receipt for that assignment, including processed source
+IDs and gaps.
+
+Workers inspect and return evidence; they do not edit files or redefine scope.
+
+Merge the worker receipts through:
+
+```text
+complete-batch --input <started-inventory.json> --batch <batch-id> --result <result.json>
+```
+
+The result must include the original inventory digest, the prepared batch-input
+digest, the unchanged execution identity, every worker receipt, and the runtime
+receipt digest.
+
+Do not author a complete whole-project plan until every batch is complete.
+
+A partial or failed batch remains visible as an inventory gap.
+
 ## Prepare the plan
 
-Capture the exact repository and relevant file identities before inspection.
+Use the completed inventory and its digest as the source of truth for project
+coverage.
+
+Capture exact target and evidence identities before category inspection.
 
 Choose explicit file, candidate, and change budgets for this session.
 
-Inspect only within those budgets and record every runtime category and check
+Inspect every inventory batch and record every runtime category and check
 honestly.
+
+The plan's `filesChecked` metric counts distinct file evidence sources.
+
+The inventory summary counts project-wide coverage.
 
 Do not modify repository files during discovery or plan authoring.
 
@@ -72,11 +145,17 @@ JSON file with restricted permissions.
 Validate it with:
 
 ```text
-validate-plan --input <plan.json>
+validate-plan --input <plan.json> --root <repository>
 ```
 
 A no-change, findings-only, or blocked plan is valid when it accurately reports
 the checked scope and gaps.
+
+Set `session.discoveryMode` to `whole-project`, include the complete `inventory`,
+and bind `session.inventoryDigest` to the normalized inventory.
+
+The plan must remain `blocked` while the inventory or category discovery is
+incomplete.
 
 ## Ask for exact approval
 

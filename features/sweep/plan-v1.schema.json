@@ -20,6 +20,7 @@
     "title": { "$ref": "#/$defs/text" },
     "risk": { "enum": ["low", "medium", "high"] },
     "snapshot": { "$ref": "#/$defs/snapshot" },
+    "inventory": { "$ref": "./inventory-v1.schema.json" },
     "session": {
       "type": "object",
       "additionalProperties": false,
@@ -33,6 +34,10 @@
       "properties": {
         "id": { "$ref": "#/$defs/text" },
         "scope": { "$ref": "#/$defs/text" },
+        "discoveryMode": {
+          "enum": ["bounded", "whole-project"]
+        },
+        "inventoryDigest": { "$ref": "#/$defs/digest" },
         "state": {
           "enum": [
             "awaiting-approval",
@@ -252,6 +257,10 @@
       "maxItems": 128,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/id" }
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
     },
     "maintenanceCheckResult": {
       "type": "object",

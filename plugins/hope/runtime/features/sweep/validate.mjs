@@ -21,6 +21,7 @@ import {
   SWEEP_COMPLETION_STATUSES,
   SWEEP_COMPLETION_VERSION,
   SWEEP_CONTRACT_VERSION,
+  SWEEP_DISCOVERY_MODES,
   SWEEP_EVIDENCE_STATUSES,
   SWEEP_INSPECTION_STATES,
   SWEEP_LIMITS,
@@ -31,6 +32,10 @@ import {
   SWEEP_SESSION_STATES,
   SWEEP_VERIFICATION_STATUSES,
 } from "./constants.mjs";
+import {
+  sweepInventoryDigest,
+  validateSweepInventory,
+} from "./inventory.mjs";
 
 const digestPattern = /^sha256:[a-f0-9]{64}$/u;
 
@@ -65,7 +70,8 @@ function snapshot(value, path, errors) {
   }
 }
 
-function digest(value, path, errors) {
+function digest(value, path, errors, { optional = false } = {}) {
+  if (value === undefined && optional) return undefined;
   const result = validation.text(value, path, errors);
   if (result && !digestPattern.test(result)) {
     errors.push(`${path} must use the sha256: format`);
@@ -114,6 +120,7 @@ function planPayload(value) {
     categories: value.categories,
     candidates: value.candidates,
     summary: value.summary,
+    ...(value.inventory ? { inventory: value.inventory } : {}),
   };
 }
 
@@ -483,6 +490,9 @@ function planMetrics(value, normalized, inputFileBytes) {
       (candidate) => candidate.disposition === "polish",
     ).length,
     filesChecked: normalized.summary.filesChecked,
+    inventoryFiles: normalized.inventory?.summary.totalFiles ?? 0,
+    inventoryBatches: normalized.inventory?.batches.length ?? 0,
+    inventoryState: normalized.inventory?.state ?? null,
     inputFileBytes,
     jsonBytes: serializedJsonBytes(normalized),
     sources: normalized.snapshot.sources.length,
@@ -502,6 +512,7 @@ export function validateSweepPlan(value, {
       "risk",
       "snapshot",
       "session",
+      "inventory",
       "categories",
       "candidates",
       "summary",
@@ -513,10 +524,26 @@ export function validateSweepPlan(value, {
   const snapshotSourceIds = new Set(
     normalizedSnapshot.sources.map((source) => source.id),
   );
+  let normalizedInventory;
+  if (plan.inventory !== undefined) {
+    try {
+      normalizedInventory = validateSweepInventory(plan.inventory);
+    } catch (error) {
+      errors.push(`sweep.inventory: ${error.message}`);
+    }
+  }
   const session = validation.object(plan.session, "sweep.session", errors);
   validation.unknownKeys(
     session,
-    ["id", "scope", "state", "budget", "consideredCategoryIds"],
+    [
+      "id",
+      "scope",
+      "state",
+      "budget",
+      "consideredCategoryIds",
+      "discoveryMode",
+      "inventoryDigest",
+    ],
     "sweep.session",
     errors,
   );
@@ -535,6 +562,22 @@ export function validateSweepPlan(value, {
   const normalizedSession = {
     id: validation.text(session.id, "sweep.session.id", errors),
     scope: validation.text(session.scope, "sweep.session.scope", errors),
+    discoveryMode: validation.choice(
+      session.discoveryMode ?? "bounded",
+      SWEEP_DISCOVERY_MODES,
+      "sweep.session.discoveryMode",
+      errors,
+    ),
+    ...(session.inventoryDigest === undefined
+      ? {}
+      : {
+        inventoryDigest: digest(
+          session.inventoryDigest,
+          "sweep.session.inventoryDigest",
+          errors,
+          { optional: true },
+        ),
+      }),
     state: validation.choice(
       session.state,
       SWEEP_PLAN_STATES,
@@ -568,6 +611,22 @@ export function validateSweepPlan(value, {
       categoryIds,
     ),
   };
+  if (normalizedInventory) {
+    if (!normalizedSession.inventoryDigest) {
+      errors.push("sweep.session.inventoryDigest is required when inventory is present");
+    } else if (
+      sweepInventoryDigest(normalizedInventory)
+      !== normalizedSession.inventoryDigest
+    ) {
+      errors.push("sweep.session.inventoryDigest must match sweep.inventory");
+    }
+    if (normalizedInventory.sessionId !== normalizedSession.id) {
+      errors.push("sweep.inventory.sessionId must match sweep.session.id");
+    }
+  }
+  if (normalizedSession.discoveryMode === "whole-project" && !normalizedInventory) {
+    errors.push("sweep.session.discoveryMode whole-project requires sweep.inventory");
+  }
   if (normalizedSession.budget.maximumCandidates > SWEEP_LIMITS.candidates) {
     errors.push(
       `sweep.session.budget.maximumCandidates must not exceed ${SWEEP_LIMITS.candidates}`,
@@ -899,9 +958,15 @@ export function validateSweepPlan(value, {
       : allChecksCompleted
       ? "complete-no-change"
       : "blocked";
-  if (normalizedSession.state !== expectedState) {
+  const inventoryIncomplete = normalizedSession.discoveryMode === "whole-project"
+    && normalizedInventory?.state !== "complete";
+  const expectedDiscoveryState = inventoryIncomplete ? "blocked" : expectedState;
+  if (inventoryIncomplete && normalizedSummary.remainingGaps.length === 0) {
+    errors.push("whole-project discovery with an incomplete inventory must record a remaining gap");
+  }
+  if (normalizedSession.state !== expectedDiscoveryState) {
     errors.push(
-      `sweep.session.state must be ${expectedState} for this plan`,
+      `sweep.session.state must be ${expectedDiscoveryState} for this plan`,
     );
   }
 
@@ -912,6 +977,7 @@ export function validateSweepPlan(value, {
     title: validation.text(plan.title, "sweep.title", errors),
     risk: validation.choice(plan.risk, SWEEP_RISKS, "sweep.risk", errors),
     snapshot: normalizedSnapshot,
+    ...(normalizedInventory ? { inventory: normalizedInventory } : {}),
     session: normalizedSession,
     categories: normalizedCategories,
     candidates: normalizedCandidates,
@@ -920,11 +986,17 @@ export function validateSweepPlan(value, {
   if (normalized.version !== SWEEP_PLAN_VERSION) {
     errors.push(`sweep.version must be ${SWEEP_PLAN_VERSION}`);
   }
-  if (inputFileBytes > SWEEP_LIMITS.inputBytes) {
-    errors.push(`sweep input exceeds ${SWEEP_LIMITS.inputBytes} bytes`);
+  const inputLimit = normalizedInventory
+    ? SWEEP_LIMITS.sessionInputBytes
+    : SWEEP_LIMITS.inputBytes;
+  if (inputFileBytes > inputLimit) {
+    errors.push(`sweep input exceeds ${inputLimit} bytes`);
   }
-  if (stringBytes(value) > SWEEP_LIMITS.proseBytes) {
-    errors.push(`sweep prose exceeds ${SWEEP_LIMITS.proseBytes} bytes`);
+  const proseLimit = normalizedInventory
+    ? SWEEP_LIMITS.sessionProseBytes
+    : SWEEP_LIMITS.proseBytes;
+  if (stringBytes(value) > proseLimit) {
+    errors.push(`sweep prose exceeds ${proseLimit} bytes`);
   }
   invalid("Hope sweep plan", errors);
 

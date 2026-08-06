@@ -3,6 +3,35 @@ export const SWEEP_PLAN_VERSION = 1;
 export const SWEEP_COMPLETION_VERSION = 1;
 export const SWEEP_APPROVAL_RECEIPT_VERSION = 1;
 export const SWEEP_SESSION_RESULT_VERSION = 1;
+export const SWEEP_INVENTORY_VERSION = 1;
+export const SWEEP_INVENTORY_DISCOVERY_PROTOCOL = "git-worktree-v1";
+
+export const SWEEP_INVENTORY_STATES = Object.freeze([
+  "ready",
+  "in-progress",
+  "complete",
+  "partial",
+  "failed",
+]);
+
+export const SWEEP_INVENTORY_BATCH_STATES = Object.freeze([
+  "pending",
+  "in-progress",
+  "complete",
+  "partial",
+  "failed",
+]);
+
+export const SWEEP_INVENTORY_EXECUTION_MODES = Object.freeze([
+  "single",
+  "parallel",
+  "sequential",
+]);
+
+export const SWEEP_DISCOVERY_MODES = Object.freeze([
+  "bounded",
+  "whole-project",
+]);
 
 export const SWEEP_LIMITS = Object.freeze({
   candidates: 32,
@@ -13,11 +42,16 @@ export const SWEEP_LIMITS = Object.freeze({
   groupItems: 64,
   inputBytes: 192 * 1024,
   proseBytes: 96 * 1024,
-  sessionInputBytes: 2 * 1024 * 1024,
-  sessionProseBytes: 512 * 1024,
+  sessionInputBytes: 64 * 1024 * 1024,
+  sessionProseBytes: 16 * 1024 * 1024,
   sources: 128,
   stringCharacters: 16 * 1024,
   verifications: 64,
+  inventoryBatchFiles: 127,
+  // These are transport and parser safety limits, not project-size limits.
+  inventoryInputBytes: 64 * 1024 * 1024,
+  inventoryProseBytes: 16 * 1024 * 1024,
+  inventoryNodes: 1_000_000,
 });
 
 export const SWEEP_RISKS = Object.freeze(["low", "medium", "high"]);

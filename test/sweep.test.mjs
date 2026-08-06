@@ -39,7 +39,7 @@ const validateSessionResult = (value) => validateSweepSessionResult(
   sweepApprovalDependencies,
 );
 
-test("sweep validates one bounded dead-code plan", () => {
+test("sweep validates one whole-project-capable dead-code plan", () => {
   const plan = validateSweepPlan(makeSweepPlan());
   assert.equal(plan.result.state, "awaiting-approval");
   assert.equal(plan.result.executableCandidates, 1);

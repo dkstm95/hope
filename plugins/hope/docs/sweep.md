@@ -2,8 +2,8 @@
 
 # Hope sweep
 
-Hope sweep starts one bounded codebase maintenance task when a person asks for
-it.
+Hope sweep starts one project-wide codebase maintenance session when a person
+asks for it.
 
 It inspects an exact repository snapshot, shows a plan, and changes only the
 work units that the person approves.
@@ -18,8 +18,8 @@ cleanup.
 
 ## Product boundary
 
-One invocation starts limited discovery and produces a plan before any
-repository file changes.
+One invocation inventories the complete project-owned worktree and produces a
+plan before any repository file changes.
 
 The person does not choose a daily, weekly, monthly, yearly, or other public
 profile.
@@ -27,9 +27,18 @@ profile.
 Sweep adapts its plan to the repository while keeping the same category,
 evidence, approval, and result contract.
 
+The inventory covers tracked files and relevant untracked files owned by the
+project.
+
+It records ignored cache, dependency, build-output, and other excluded paths
+with a reason.
+
+An excluded path is explicit coverage information; it is not silently treated
+as inspected.
+
 The plan covers production code, tests, documentation, configuration, generated
-sources, package metadata, and other repository content within its stated
-budget.
+sources, package metadata, and other repository content across every inventory
+batch.
 
 Generated files may be inspected, but Sweep changes their editable source and
 uses the repository build when the generated copy must change.
@@ -38,6 +47,53 @@ Sweep version 1 supports every check in the codebase maintenance catalog.
 
 The catalog is fixed by the shared runtime so every entry path uses the same
 checks, evidence requirements, and execution boundary.
+
+## Project inventory and batch execution
+
+The shared runtime creates one version 1 inventory from a verified Git worktree
+enumeration.
+
+It stores the exact Git snapshot, discovery receipt, file identities, exclusions,
+batch assignments, worker receipts, and remaining gaps.
+
+The inventory includes both tracked files and relevant untracked files.
+
+The host excludes only paths that are not project-owned or are generated cache,
+dependency, or build output.
+
+It records each exclusion and its reason.
+
+The runtime's source limit applies to one batch.
+
+Inventory and plan files still have transport and parser safety limits, but no
+fixed file, exclusion, or batch count limits the project inventory.
+
+Every inventory file belongs to exactly one batch, and a whole-project session
+cannot become complete until every batch is complete.
+
+Each batch may run in `parallel` mode when the host can provide independent
+contexts, or in `sequential` mode when it cannot.
+
+The shared runtime owns assignment, coverage, state, and merge receipts.
+
+A started batch keeps the digest of its pending input and the execution identity
+used to assign files.
+
+Completion requires that digest, the same execution, and one receipt for every
+worker assignment.
+
+Workers receive only their exact batch input, inspect and return evidence, and
+never edit files or redefine the project scope.
+
+Use `discover-inventory`, `validate-inventory`, `batch-input`, `start-batch`,
+and `complete-batch` for the shared inventory boundary.
+
+`discover-inventory` must enumerate the repository.
+
+`validate-inventory --root` rechecks that the worktree has not changed.
+
+A whole-project plan binds `session.inventoryDigest` to the normalized complete
+inventory.
 
 ## Codebase maintenance categories
 
@@ -81,15 +137,21 @@ than aliases for success.
 
 ## Initial discovery and plan
 
-The initial call has explicit file, candidate, and change budgets.
+The initial call creates the complete project inventory before category
+inspection.
 
-The host inspects repository rules and available evidence within those budgets.
+File, candidate, and change budgets still apply to the plan and approved work
+units; the per-batch inventory limit is a separate execution limit.
+
+The host inspects repository rules and available evidence across every assigned
+batch and records any remaining gap.
 
 It does not modify the repository during this phase.
 
 The shared runtime validates one version 1 plan with:
 
 - an exact work snapshot;
+- a complete inventory and its digest-bound session identity;
 - one session ID, scope, state, and budget;
 - every versioned category, check, support state, and inspection state;
 - zero or more bounded candidates;
@@ -99,8 +161,10 @@ The shared runtime validates one version 1 plan with:
 - verification steps and unresolved gaps; and
 - an honest summary of checked scope and remaining gaps.
 
-`filesChecked` is the number of distinct file sources cited by inspected
-checks.
+`filesChecked` is the number of distinct file sources cited by inspected checks.
+
+It is a plan evidence metric, while the inventory summary records project-wide
+file coverage.
 
 The runtime derives that number and rejects a smaller or larger claim.
 
@@ -112,8 +176,11 @@ It is `complete-with-findings` when findings remain but none can enter Polish.
 It is `complete-no-change` only when every catalog check completed and found no
 candidate.
 
-It is `blocked` only when incomplete discovery produced no finding that the
-person can act on.
+For a bounded legacy plan, it is `blocked` only when incomplete discovery
+produced no finding that the person can act on.
+
+For a whole-project plan, it is also `blocked` whenever the inventory is missing
+or not `complete`.
 
 ## Maintenance evidence
 

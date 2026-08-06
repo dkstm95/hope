@@ -6,12 +6,17 @@ import {
   createSweepApprovalCandidateFile,
   createSweepApprovalReceiptFile,
   createSweepBrief,
+  completeSweepInventoryBatchFile,
+  createSweepInventoryBatchInputFile,
+  discoverSweepInventoryFile,
   createSweepModelEvaluationPlan,
   createSweepModelEvaluationReceiptFile,
   getSweepModelEvaluationOracle,
   prepareSweepModelEvaluationRun,
   runSweep,
+  startSweepInventoryBatchFile,
   SWEEP_MODEL_ADAPTER_CODE,
+  validateSweepInventoryFile,
   validateSweepCompletionFile,
   validateSweepModelEvaluationReceiptFile,
   validateSweepModelEvaluationReceiptSetFile,
@@ -27,7 +32,12 @@ function usage() {
     "",
     "Internal Skill protocol:",
     "  hope sweep brief [--risk <low|medium|high>]",
-    "  hope sweep validate-plan --input <plan.json>",
+    "  hope sweep discover-inventory --root <repository> --session <id> [--title <text>] [--scope <text>] [--batch-size <number>]",
+    "  hope sweep validate-inventory --input <inventory.json> [--root <repository>]",
+    "  hope sweep batch-input --input <inventory.json> --batch <id>",
+    "  hope sweep start-batch --input <inventory.json> --batch <id> --mode <single|parallel|sequential> [--workers <id,id,...>]",
+    "  hope sweep complete-batch --input <inventory.json> --batch <id> --result <result.json>",
+    "  hope sweep validate-plan --input <plan.json> [--root <repository>]",
     "  hope sweep approval-candidate --input <plan.json> --candidate <id>",
     "  hope sweep approval-receipt --input <approval.json>",
     "  hope sweep validate-completion --input <completion.json>",
@@ -49,6 +59,11 @@ export function parseSweepArguments(argv) {
   if (
     ![
       "brief",
+      "discover-inventory",
+      "validate-inventory",
+      "batch-input",
+      "start-batch",
+      "complete-batch",
       "validate-plan",
       "approval-candidate",
       "approval-receipt",
@@ -67,6 +82,8 @@ export function parseSweepArguments(argv) {
   const { options, positionals } = takeOptions(rest, {
     allowed: [
       "candidate",
+      "batch",
+      "batch-size",
       "case",
       "effort",
       "host",
@@ -74,7 +91,14 @@ export function parseSweepArguments(argv) {
       "invocation",
       "model",
       "risk",
+      "root",
+      "mode",
+      "result",
       "run",
+      "scope",
+      "session",
+      "title",
+      "workers",
     ],
     prefix: "Hope sweep",
   });
@@ -148,6 +172,82 @@ export function parseSweepArguments(argv) {
     if (!hasOnly(["risk"])) throw new TypeError(usage());
     return { command, risk: options.risk };
   }
+  if (command === "discover-inventory") {
+    if (
+      !options.root
+      || !options.session
+      || !hasOnly(["root", "session", "title", "scope", "batch-size"])
+    ) {
+      throw new TypeError(usage());
+    }
+    const batchSize = options["batch-size"] === undefined
+      ? undefined
+      : Number(options["batch-size"]);
+    if (
+      batchSize !== undefined
+      && (!Number.isSafeInteger(batchSize) || String(batchSize) !== options["batch-size"])
+    ) {
+      throw new TypeError(usage());
+    }
+    return {
+      batchSize,
+      command,
+      root: options.root,
+      scope: options.scope,
+      sessionId: options.session,
+      title: options.title,
+    };
+  }
+  if (command === "validate-inventory") {
+    if (!options.input || !hasOnly(["input", "root"])) throw new TypeError(usage());
+    return { command, inputPath: options.input, repositoryRoot: options.root };
+  }
+  if (command === "batch-input") {
+    if (!options.input || !options.batch || !hasOnly(["input", "batch"])) {
+      throw new TypeError(usage());
+    }
+    return { batchId: options.batch, command, inputPath: options.input };
+  }
+  if (command === "start-batch") {
+    if (
+      !options.input
+      || !options.batch
+      || !options.mode
+      || !hasOnly(["input", "batch", "mode", "workers"])
+    ) {
+      throw new TypeError(usage());
+    }
+    const workerIds = options.workers
+      ? options.workers.split(",").filter((workerId) => workerId.length > 0)
+      : [];
+    if (options.workers && workerIds.length === 0) throw new TypeError(usage());
+    return {
+      batchId: options.batch,
+      command,
+      execution: { mode: options.mode, workerIds },
+      inputPath: options.input,
+    };
+  }
+  if (command === "complete-batch") {
+    if (
+      !options.input
+      || !options.batch
+      || !options.result
+      || !hasOnly(["input", "batch", "result"])
+    ) {
+      throw new TypeError(usage());
+    }
+    return {
+      batchId: options.batch,
+      command,
+      inputPath: options.input,
+      resultPath: options.result,
+    };
+  }
+  if (command === "validate-plan") {
+    if (!options.input || !hasOnly(["input", "root"])) throw new TypeError(usage());
+    return { command, inputPath: options.input, repositoryRoot: options.root };
+  }
   if (evaluationKeys.some((key) => options[key]) || options.risk || !options.input) {
     throw new TypeError(usage());
   }
@@ -182,10 +282,39 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       options,
       dependencies,
     );
+  } else if (options.command === "discover-inventory") {
+    result = await (
+      dependencies.discoverSweepInventoryFile ?? discoverSweepInventoryFile
+    )(options, dependencies);
+  } else if (options.command === "validate-inventory") {
+    result = await (
+      dependencies.validateSweepInventoryFile ?? validateSweepInventoryFile
+    )(options.inputPath, {
+      ...dependencies,
+      repositoryRoot: options.repositoryRoot,
+    });
+  } else if (options.command === "batch-input") {
+    result = await (
+      dependencies.createSweepInventoryBatchInputFile
+      ?? createSweepInventoryBatchInputFile
+    )(options.inputPath, options.batchId, dependencies);
+  } else if (options.command === "start-batch") {
+    result = await (
+      dependencies.startSweepInventoryBatchFile
+      ?? startSweepInventoryBatchFile
+    )(options.inputPath, options.batchId, options.execution, dependencies);
+  } else if (options.command === "complete-batch") {
+    result = await (
+      dependencies.completeSweepInventoryBatchFile
+      ?? completeSweepInventoryBatchFile
+    )(options.inputPath, options.batchId, options.resultPath, dependencies);
   } else if (options.command === "validate-plan") {
     result = await (
       dependencies.validateSweepPlanFile ?? validateSweepPlanFile
-    )(options.inputPath, dependencies);
+    )(options.inputPath, {
+      ...dependencies,
+      repositoryRoot: options.repositoryRoot,
+    });
   } else if (options.command === "approval-candidate") {
     result = await (
       dependencies.createSweepApprovalCandidateFile

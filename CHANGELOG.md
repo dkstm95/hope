@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.8.0 - 2026-08-05
+
+- Make Sweep inventory the complete project-owned worktree, including tracked
+  and relevant untracked files, with explicit cache, dependency, build-output,
+  and other exclusions.
+- Add shared inventory and batch-result contracts with exact file identities,
+  complete batch coverage, remaining-gap state, and optional parallel-worker or
+  sequential execution.
+- Bind whole-project plans to a complete inventory digest and keep them blocked
+  while inventory or category discovery remains incomplete.
+- Expose inventory validation, batch input, batch start, and batch completion
+  through the harness and generated plugin, with the same Skill guidance and
+  model-evaluation contract.
+
 ## 1.7.1 - 2026-08-05
 
 - Correct the feature-selection history to record that version 1.7.0 published

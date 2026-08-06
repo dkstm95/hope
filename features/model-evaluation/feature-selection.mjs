@@ -60,7 +60,7 @@ const minimalDescriptions = Object.freeze({
   settings:
     "Use to show, set, or reset Hope's language or theme.",
   sweep:
-    "Use to inspect a codebase for broad maintenance, show a bounded plan, and apply only exact approved behavior-preserving work.",
+    "Use to inventory a project for broad maintenance, show a whole-project plan, and apply only exact approved behavior-preserving work.",
   "toxic-review":
     "Use for a strict, skeptical, risk-focused review of a named work product without attacking people or inventing criticism.",
   write:

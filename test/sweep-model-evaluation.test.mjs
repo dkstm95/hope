@@ -26,7 +26,7 @@ function expectedOutput(caseId, overrides = {}) {
     impacts: { ...oracle.impacts },
     targetPaths: [...oracle.requiredTargetPaths],
     unsupportedCategoryIds: [],
-    reason: "The repository evidence supports this bounded Sweep disposition.",
+    reason: "The repository evidence supports this whole-project Sweep disposition.",
     ...overrides,
   };
 }
@@ -75,7 +75,7 @@ test("Sweep model evaluation keeps every oracle out of prepared host input", asy
   }
 });
 
-test("Sweep model evaluation validates the exact bounded output contract", () => {
+test("Sweep model evaluation validates the exact whole-project output contract", () => {
   assert.equal(
     validateSweepModelEvaluationOutput(
       expectedOutput("sweep-safe-private"),

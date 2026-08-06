@@ -370,13 +370,16 @@ Align.
 
 The current sweep implementation starts from [sweep.md](sweep.md).
 
-One invocation performs bounded discovery and produces a validated plan before
-any repository file changes.
+One invocation inventories the complete project-owned worktree, records
+explicit exclusions, and produces a validated plan before any repository file
+changes.
 
 The shared core owns the versioned category catalog, supported-check disclosure,
-plan, approval-receipt, completion, and session-result schemas, source and
-evidence links, derived file budgets, session states, approval and execution
-contract digests, stale-identity checks, and terminal result rules.
+inventory and batch-result schemas, plan, approval-receipt, completion, and
+session-result schemas, source and evidence links, exact file identities,
+explicit exclusions, batch assignment and coverage state, derived file
+budgets, session states, approval and execution contract digests,
+stale-identity checks, and terminal result rules.
 
 Version 1 exposes all 21 checks across the seven codebase maintenance
 categories.
@@ -384,11 +387,14 @@ categories.
 Each category records its ordered check results, and each candidate uses the
 exact evidence contract declared for its check.
 
-The active Claude or Codex host inspects the repository, authors the bounded
-plan, shows an exact candidate, and waits for the person's approval.
+The active Claude or Codex host inventories the repository, runs each exact
+batch in parallel when independent contexts are available (or sequentially as
+a fallback), authors the whole-project plan, shows an exact candidate, and
+waits for the person's approval.
 
-The independent harness exposes the same brief, plan validation, approval
-candidate, approval receipt, and completion validation.
+The independent harness exposes the same brief, inventory and batch
+transitions, plan validation, approval candidate, approval receipt, and
+completion validation.
 
 It also exposes the same blinded model-evaluation preparation and versioned
 receipt validation used by the Skills before release.
@@ -397,6 +403,11 @@ It reports that automatic repository inspection is unavailable until it has a
 model adapter.
 
 The Skill is a thin adapter to the generated core.
+
+Workers receive exact batch inputs and return evidence only.
+
+The shared core remains the source of truth for assignment, merge, and
+completion coverage.
 
 After the person's decision, the trusted host adapter creates a shared-runtime
 receipt that binds the approval candidate, decision, exact conversation event,

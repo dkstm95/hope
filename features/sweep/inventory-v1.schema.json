@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/sweep/inventory-v1.schema.json",
+  "title": "Hope sweep project inventory version 1",
+  "description": "Structural schema for the complete project-owned file inventory. The runtime validates identities, coverage, batch state, and derived summaries.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "title",
+    "sessionId",
+    "scope",
+    "snapshot",
+    "discovery",
+    "batchSize",
+    "files",
+    "exclusions",
+    "batches",
+    "state",
+    "summary"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "title": { "$ref": "#/$defs/text" },
+    "sessionId": { "$ref": "#/$defs/text" },
+    "scope": { "$ref": "#/$defs/text" },
+    "snapshot": { "type": "object" },
+    "discovery": { "$ref": "#/$defs/discovery" },
+    "batchSize": { "type": "integer", "minimum": 1, "maximum": 127 },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/file" }
+    },
+    "exclusions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/exclusion" }
+    },
+    "batches": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/batch" }
+    },
+    "state": {
+      "enum": ["ready", "in-progress", "complete", "partial", "failed"]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "totalFiles",
+        "inScopeFiles",
+        "excludedFiles",
+        "processedFiles",
+        "remainingFiles",
+        "remainingGaps"
+      ],
+      "properties": {
+        "totalFiles": { "type": "integer", "minimum": 0 },
+        "inScopeFiles": { "type": "integer", "minimum": 0 },
+        "excludedFiles": { "type": "integer", "minimum": 0 },
+        "processedFiles": { "type": "integer", "minimum": 0 },
+        "remainingFiles": { "type": "integer", "minimum": 0 },
+        "remainingGaps": { "$ref": "#/$defs/textList" }
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384,
+      "pattern": "\\S"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol",
+        "repository",
+        "revision",
+        "manifestDigest",
+        "verifiedAt"
+      ],
+      "properties": {
+        "protocol": { "const": "git-worktree-v1" },
+        "repository": { "$ref": "#/$defs/text" },
+        "revision": {
+          "type": "string",
+          "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"
+        },
+        "manifestDigest": { "$ref": "#/$defs/digest" },
+        "verifiedAt": { "$ref": "#/$defs/text" }
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "kind", "digest"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "path": { "$ref": "#/$defs/text" },
+        "kind": { "enum": ["tracked", "untracked"] },
+        "digest": { "$ref": "#/$defs/digest" },
+        "size": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "exclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "reason"],
+      "properties": {
+        "path": { "$ref": "#/$defs/text" },
+        "kind": {
+          "enum": [
+            "ignored-cache",
+            "ignored-dependency",
+            "ignored-build",
+            "outside-project",
+            "other"
+          ]
+        },
+        "reason": { "$ref": "#/$defs/text" }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "workerIds"],
+      "properties": {
+        "mode": { "enum": ["single", "parallel", "sequential"] },
+        "workerIds": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ordinal",
+        "sourceIds",
+        "state",
+        "execution",
+        "assignments",
+        "processedSourceIds",
+        "receipts",
+        "gaps"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "sourceIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 127,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "state": {
+          "enum": ["pending", "in-progress", "complete", "partial", "failed"]
+        },
+        "execution": { "$ref": "#/$defs/execution" },
+        "assignments": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workerId", "sourceIds"],
+            "properties": {
+              "workerId": { "$ref": "#/$defs/id" },
+              "sourceIds": {
+                "type": "array",
+                "maxItems": 127,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/id" }
+              }
+            }
+          }
+        },
+        "inventoryDigest": { "$ref": "#/$defs/digest" },
+        "inputDigest": { "$ref": "#/$defs/digest" },
+        "processedSourceIds": {
+          "type": "array",
+          "maxItems": 127,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "receipts": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workerId", "processedSourceIds", "gaps"],
+            "properties": {
+              "workerId": { "$ref": "#/$defs/id" },
+              "processedSourceIds": {
+                "type": "array",
+                "maxItems": 127,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/id" }
+              },
+              "gaps": { "$ref": "#/$defs/textList" }
+            }
+          }
+        },
+        "receiptDigest": { "$ref": "#/$defs/digest" },
+        "gaps": { "$ref": "#/$defs/textList" }
+      }
+    },
+    "textList": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/text" }
+    }
+  }
+}
