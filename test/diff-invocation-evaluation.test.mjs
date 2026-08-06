@@ -25,6 +25,7 @@ import {
   validateDiffInvocationExampleRemovalEvidence,
   validateDiffInvocationExampleRemovalRecordSet,
   validateDiffInvocationEvaluationOutput,
+  validateDiffInvocationEvaluationReceipt,
   validateDiffInvocationEvaluationRecord,
   validateDiffInvocationEvaluationRecordFile,
   validateDiffInvocationEvaluationRecordSet,
@@ -260,6 +261,13 @@ test("Diff invocation records bind the prepared input and model output", async (
   assert.equal(created.evaluation.runPassed, true);
   const validated = validateDiffInvocationEvaluationRecord(created.record);
   assert.equal(validated.evaluation.runPassed, true);
+  const legacy = structuredClone(created.record);
+  legacy.receiptVersion = legacy.recordVersion;
+  delete legacy.recordVersion;
+  assert.equal(
+    validateDiffInvocationEvaluationReceipt(legacy).evaluation.runPassed,
+    true,
+  );
   assert.ok(
     Buffer.byteLength(JSON.stringify(created.record), "utf8")
       < diffInvocationEvaluationLimits.recordBytes,

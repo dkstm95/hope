@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { execFile as execFileCallback } from "node:child_process";
-import { lstat, readFile, readlink, realpath } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open, readlink, realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 import { resolve, sep } from "node:path";
 
@@ -64,17 +65,66 @@ async function git(root, args) {
   return result.stdout;
 }
 
-async function readWorktreeFile(root, relativePath) {
+function sameEntry(left, right) {
+  return left.dev === right.dev
+    && left.ino === right.ino
+    && left.mode === right.mode;
+}
+
+async function captureAncestorDirectories(root, relativePath, stat) {
+  const parts = relativePath.split("/");
+  const ancestors = [];
+  for (let index = 1; index < parts.length; index += 1) {
+    const path = resolve(root, ...parts.slice(0, index));
+    const info = await stat(path, { bigint: true });
+    if (!info.isDirectory()) {
+      throw new TypeError(
+        `Git returned a project path with a non-directory ancestor: ${relativePath}`,
+      );
+    }
+    ancestors.push({ info, path });
+  }
+  return ancestors;
+}
+
+async function verifyAncestorDirectories(ancestors, stat, relativePath) {
+  for (const ancestor of ancestors) {
+    const current = await stat(ancestor.path, { bigint: true });
+    if (!current.isDirectory() || !sameEntry(current, ancestor.info)) {
+      throw new TypeError(
+        `Project path changed during Sweep discovery: ${relativePath}`,
+      );
+    }
+  }
+}
+
+export async function readSweepWorktreeEntry(root, relativePath, {
+  lstatEntry = lstat,
+  openEntry = open,
+  readLink = readlink,
+} = {}) {
   const absolutePath = resolve(root, relativePath);
   if (!absolutePath.startsWith(`${root}${sep}`)) {
     throw new TypeError(`Git returned a path outside the repository: ${relativePath}`);
   }
-  const info = await lstat(absolutePath);
+  const ancestors = await captureAncestorDirectories(
+    root,
+    relativePath,
+    lstatEntry,
+  );
+  const info = await lstatEntry(absolutePath, { bigint: true });
   if (info.isDirectory()) {
     throw new TypeError(`Git returned a directory as a project entry: ${relativePath}`);
   }
   if (info.isSymbolicLink()) {
-    const linkTarget = await readlink(absolutePath, { encoding: "buffer" });
+    const linkTarget = await readLink(absolutePath, { encoding: "buffer" });
+    const current = await lstatEntry(absolutePath, { bigint: true });
+    if (!current.isSymbolicLink() || !sameEntry(current, info)) {
+      throw new TypeError(
+        `Project entry changed during Sweep discovery: ${relativePath}`,
+      );
+    }
+    await verifyAncestorDirectories(ancestors, lstatEntry, relativePath);
     return {
       entryType: "symbolic-link",
       digest: digestBytes(linkTarget),
@@ -84,12 +134,39 @@ async function readWorktreeFile(root, relativePath) {
   if (!info.isFile()) {
     throw new TypeError(`Git returned a non-file project entry: ${relativePath}`);
   }
-  const bytes = await readFile(absolutePath);
-  return {
-    entryType: "file",
-    digest: digestBytes(bytes),
-    size: bytes.length,
-  };
+  if (typeof constants.O_NOFOLLOW !== "number") {
+    throw new TypeError(
+      "Sweep discovery requires platform support for no-follow file opens",
+    );
+  }
+  const handle = await openEntry(
+    absolutePath,
+    constants.O_RDONLY | constants.O_NOFOLLOW,
+  );
+  try {
+    const opened = await handle.stat({ bigint: true });
+    if (!opened.isFile() || !sameEntry(opened, info)) {
+      throw new TypeError(
+        `Project entry changed before Sweep could read it: ${relativePath}`,
+      );
+    }
+    await verifyAncestorDirectories(ancestors, lstatEntry, relativePath);
+    const bytes = await handle.readFile();
+    const current = await lstatEntry(absolutePath, { bigint: true });
+    if (!current.isFile() || !sameEntry(current, opened)) {
+      throw new TypeError(
+        `Project entry changed during Sweep discovery: ${relativePath}`,
+      );
+    }
+    await verifyAncestorDirectories(ancestors, lstatEntry, relativePath);
+    return {
+      entryType: "file",
+      digest: digestBytes(bytes),
+      size: bytes.length,
+    };
+  } finally {
+    await handle.close();
+  }
 }
 
 function parseIgnoredStatus(value) {
@@ -126,7 +203,7 @@ export async function discoverSweepInventory({
   );
   const files = [];
   for (const path of [...relevant].sort()) {
-    const file = await readWorktreeFile(repository, path);
+    const file = await readSweepWorktreeEntry(repository, path);
     files.push({
       id: `file-${files.length + 1}`,
       path,

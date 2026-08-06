@@ -6,6 +6,7 @@ import {
   validateWorkSnapshot,
 } from "../work-snapshot/index.mjs";
 import { createResultValidation } from "../result-validation/index.mjs";
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
 import {
   POLISH_APPLICATION_STATUSES,
   POLISH_CONTRACT_VERSION,
@@ -39,6 +40,13 @@ function includesEvery(values, required) {
   const available = new Set(values);
   return required.every((value) => available.has(value));
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  polishRecordDigest as polishReceiptDigest,
+  createPolishRecord as createPolishReceipt,
+  validatePolishRecord as validatePolishReceipt,
+};
 
 function sourceContentIdentity(source) {
   return source.digest ?? source.revision ?? "";
@@ -686,7 +694,7 @@ export function validatePolishRun(value, {
 
   if (["revised", "no-change"].includes(status)) {
     if (verification.length === 0) {
-      errors.push(`${status} requires at least one verification record`);
+      errors.push(`${status} requires at least one verification result`);
     }
     for (let index = 0; index < preservation.length; index += 1) {
       if (preservation[index].verificationIds.length === 0) {
@@ -996,16 +1004,22 @@ export function createPolishRecord(value, options = {}) {
 
 export function validatePolishRecord(value) {
   const errors = [];
-  const input = object(value, "polishRecord", errors);
+  const legacyDigestValid = value?.feature === "polish-receipt"
+    && value.receiptDigest === polishRecordDigest(value);
+  const input = normalizeLegacyRecordTerms(value);
+  if (legacyDigestValid) {
+    input.recordDigest = polishRecordDigest(input);
+  }
+  const recordInput = object(input, "polishRecord", errors);
   unknownKeys(
-    input,
+    recordInput,
     ["feature", "version", "run", "result", "recordDigest"],
     "polishRecord",
     errors,
   );
-  const feature = text(input.feature, "polishRecord.feature", errors);
+  const feature = text(recordInput.feature, "polishRecord.feature", errors);
   const version = integer(
-    input.version,
+    recordInput.version,
     "polishRecord.version",
     errors,
     { minimum: POLISH_RECORD_VERSION },
@@ -1019,7 +1033,7 @@ export function validatePolishRecord(value) {
 
   let run;
   try {
-    run = validatePolishRun(input.run);
+    run = validatePolishRun(recordInput.run);
   } catch (error) {
     errors.push(`polishRecord.run: ${error.message}`);
   }
@@ -1029,7 +1043,7 @@ export function validatePolishRecord(value) {
     );
   }
 
-  const resultInput = object(input.result, "polishRecord.result", errors);
+  const resultInput = object(recordInput.result, "polishRecord.result", errors);
   unknownKeys(
     resultInput,
     ["changed", "status", "verificationStatus"],
@@ -1068,7 +1082,7 @@ export function validatePolishRecord(value) {
   }
 
   const recordDigest = text(
-    input.recordDigest,
+    recordInput.recordDigest,
     "polishRecord.recordDigest",
     errors,
   );

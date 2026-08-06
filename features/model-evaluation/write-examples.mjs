@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
+
 import {
   createWritingBrief,
   WRITE_BRIEF_VERSION,
@@ -41,6 +43,16 @@ function syntheticInput({ artifact, constraints, request }) {
     request,
   });
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createHopeWriteExampleEvaluationRecord as createHopeWriteExampleEvaluationReceipt,
+  validateHopeWriteExampleEvaluationRecord as validateHopeWriteExampleEvaluationReceipt,
+  validateHopeWriteExampleEvaluationRecordSet as validateHopeWriteExampleEvaluationReceiptSet,
+  createHopeWriteProductionVerificationRecord as createHopeWriteProductionVerificationReceipt,
+  validateHopeWriteProductionVerificationRecord as validateHopeWriteProductionVerificationReceipt,
+  validateHopeWriteProductionVerificationRecordSet as validateHopeWriteProductionVerificationReceiptSet,
+};
 
 export const hopeWriteExampleEvaluationCases = Object.freeze([
   Object.freeze({
@@ -610,6 +622,7 @@ export async function validateHopeWriteExampleEvaluationRecord(
   value,
   dependencies = {},
 ) {
+  value = normalizeLegacyRecordTerms(value);
   exactKeys(value, [
     "bindings",
     "configuration",
@@ -885,6 +898,7 @@ export async function validateHopeWriteProductionVerificationRecord(
   value,
   dependencies = {},
 ) {
+  value = normalizeLegacyRecordTerms(value);
   exactKeys(value, [
     "bindings",
     "configuration",

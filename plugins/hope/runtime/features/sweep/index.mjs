@@ -198,6 +198,17 @@ export async function createSweepBrief({
   });
 }
 
+// Deprecated version 1 compatibility aliases.
+export {
+  createSweepModelEvaluationRecord as createSweepModelEvaluationReceipt,
+  validateSweepModelEvaluationRecord as validateSweepModelEvaluationReceipt,
+  validateSweepModelEvaluationRecordSet as validateSweepModelEvaluationReceiptSet,
+  createSweepApprovalRecordFile as createSweepApprovalReceiptFile,
+  createSweepModelEvaluationRecordFile as createSweepModelEvaluationReceiptFile,
+  validateSweepModelEvaluationRecordFile as validateSweepModelEvaluationReceiptFile,
+  validateSweepModelEvaluationRecordSetFile as validateSweepModelEvaluationReceiptSetFile,
+};
+
 function sweepModelEvaluationDependencies(dependencies) {
   return {
     ...dependencies,

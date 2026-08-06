@@ -86,7 +86,7 @@ export async function createPolishBrief({
     composition: Object.freeze({
       callers: Object.freeze(["align", "sweep"]),
       rules: Object.freeze([
-        "The caller owns its discovery, approval, and result lifecycle. Polish owns only the bounded revision and its verification record.",
+        "The caller owns its discovery, approval, and result lifecycle. Polish owns only the bounded revision and its verification result.",
         "A composed run uses the same exact target, preservation, evidence, authority, identity, and application contract as a standalone run.",
         "Return needs-alignment instead of changing behavior, a public contract, a dependency, or another material decision.",
         "Polish never imports or invokes Align or Sweep.",
@@ -96,6 +96,11 @@ export async function createPolishBrief({
     writingStandard,
   });
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createPolishRecordFile as createPolishReceiptFile,
+};
 
 export async function validatePolishFile(inputPath, dependencies = {}) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {

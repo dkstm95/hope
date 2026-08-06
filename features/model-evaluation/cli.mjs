@@ -109,7 +109,13 @@ export function parseModelEvaluationArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
   }
-  const [command, ...values] = argv;
+  const [requestedCommand, ...values] = argv;
+  const command = ({
+    "feature-selection-receipt": "feature-selection-record",
+    "polish-preservation-receipt": "polish-preservation-record",
+    "write-example-receipt": "write-example-record",
+    "write-production-receipt": "write-production-record",
+  })[requestedCommand] ?? requestedCommand;
   const commands = new Set([
     "feature-selection-oracle",
     "feature-selection-plan",

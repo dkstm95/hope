@@ -40,7 +40,7 @@ Each run records:
 - the evidence, reason, risk, and verification for every change;
 - an exact output snapshot or an exact list of removed target IDs;
 - a change summary and unresolved items;
-- verification records with their checked scope; and
+- verification results with their checked scope; and
 - whether a revision is proposed, applied, or not needed.
 
 A version 2 run may also record one generic composition block supplied by a
@@ -209,7 +209,7 @@ against the run.
 Sweep owns repository discovery, category status, prioritization, the approval
 candidate, and the final session result.
 
-Polish owns the bounded revision and its preservation and verification record.
+Polish owns the bounded revision and its preservation and verification result.
 
 If Polish returns `needs-alignment`, Sweep does not apply the candidate and
 records a handoff or another honest terminal state.

@@ -9,7 +9,6 @@
     "version",
     "title",
     "snapshot",
-    "approvalRecord",
     "outcome",
     "summary"
   ],
@@ -19,6 +18,8 @@
     "snapshot": { "$ref": "#/$defs/snapshot" },
     "approvalRecord": { "$ref": "approval-v1.schema.json" },
     "polishRecord": { "$ref": "../polish/record-v1.schema.json" },
+    "approvalReceipt": { "$ref": "approval-v1.schema.json" },
+    "polishReceipt": { "$ref": "../polish/receipt-v1.schema.json" },
     "outcome": {
       "type": "object",
       "additionalProperties": false,
@@ -95,6 +96,10 @@
       }
     }
   },
+  "oneOf": [
+    { "required": ["approvalRecord"] },
+    { "required": ["approvalReceipt"] }
+  ],
   "$defs": {
     "text": {
       "type": "string",

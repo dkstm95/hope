@@ -9,6 +9,11 @@ function fail(message) {
   throw new TypeError(`Invalid Hope model evaluation evidence: ${message}`);
 }
 
+// Deprecated version 1 compatibility aliases.
+export {
+  validateHopeModelEvaluationRecordSetProvenance as validateHopeModelEvaluationReceiptSetProvenance,
+};
+
 function assertEvidence(condition, message) {
   if (!condition) fail(message);
 }

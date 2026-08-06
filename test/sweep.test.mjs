@@ -7,11 +7,18 @@ import {
   SWEEP_MODEL_ADAPTER_CODE,
 } from "../features/sweep/index.mjs";
 import { parseSweepArguments } from "../features/sweep/cli.mjs";
-import { createPolishRecord } from "../features/polish/validate.mjs";
+import {
+  createPolishRecord,
+  polishReceiptDigest,
+} from "../features/polish/validate.mjs";
 import {
   createSweepApprovalCandidate,
+  createSweepApprovalReceipt,
+  createSweepApprovalRecord,
+  sweepApprovalReceiptDigest,
   sweepPlanDigest,
   validateSweepApprovalRecord,
+  validateSweepApprovalReceipt,
   validateSweepCompletion,
   validateSweepPlan,
   validateSweepSessionResult,
@@ -247,6 +254,22 @@ test("sweep approval records bind the decision and conversation authority", () =
   );
 });
 
+test("sweep reads deprecated version 1 approval receipt artifacts", () => {
+  const current = makeSweepApprovalRecord();
+  const legacy = clone(current);
+  legacy.feature = "sweep-approval-receipt";
+  delete legacy.recordDigest;
+  legacy.receiptDigest = sweepApprovalReceiptDigest(legacy);
+
+  const validated = validateSweepApprovalReceipt(
+    legacy,
+    sweepApprovalDependencies,
+  );
+  assert.equal(validated.feature, "sweep-approval-record");
+  assert.equal(validated.recordDigest, current.recordDigest);
+  assert.strictEqual(createSweepApprovalReceipt, createSweepApprovalRecord);
+});
+
 test("sweep validates an exact approved and verified completion", () => {
   const completion = validateCompletion(makeSweepCompletion());
   assert.equal(completion.result.status, "applied");
@@ -256,6 +279,32 @@ test("sweep validates an exact approved and verified completion", () => {
     completion.result.verificationStatus,
     "verified-in-checked-scope",
   );
+});
+
+test("sweep reads deprecated version 1 completion receipt fields", () => {
+  const legacy = clone(makeSweepCompletion());
+  legacy.approvalReceipt = legacy.approvalRecord;
+  delete legacy.approvalRecord;
+  legacy.approvalReceipt.feature = "sweep-approval-receipt";
+  delete legacy.approvalReceipt.recordDigest;
+  legacy.approvalReceipt.receiptDigest = sweepApprovalReceiptDigest(
+    legacy.approvalReceipt,
+  );
+
+  legacy.polishReceipt = legacy.polishRecord;
+  delete legacy.polishRecord;
+  legacy.polishReceipt.feature = "polish-receipt";
+  legacy.polishReceipt.run.composition.authorityReceiptDigest =
+    legacy.approvalReceipt.receiptDigest;
+  delete legacy.polishReceipt.run.composition.authorityRecordDigest;
+  delete legacy.polishReceipt.recordDigest;
+  legacy.polishReceipt.receiptDigest = polishReceiptDigest(
+    legacy.polishReceipt,
+  );
+
+  const validated = validateCompletion(legacy);
+  assert.equal(validated.approvalRecord.feature, "sweep-approval-record");
+  assert.equal(validated.polishRecord.feature, "polish-record");
 });
 
 test("sweep rejects an invented output identity for a removed target", () => {

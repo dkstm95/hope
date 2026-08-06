@@ -494,7 +494,7 @@ The shared core validates that choice, binds every role to the exact target and
 source snapshot, and creates digest-bound execution attempts.
 
 The shared core owns the bounded role and finding contract, source binding,
-attempt lifecycle, completion records, final adjudicated result, priority
+attempt lifecycle, attempt records, final adjudicated result, priority
 ordering, and deterministic resource metrics.
 
 Its brief also offers one optional causal-completeness perspective when a named
@@ -506,6 +506,13 @@ repeat the same causal sequence.
 
 When selected, the role marks its method and writes one structured causal
 analysis into the shared result.
+
+Current contracts use role-specific names: records preserve durable evidence,
+reports summarize multi-item work, and results describe outcomes.
+
+Deprecated version 1 `receipt` commands, exports, schemas, and readers remain
+available only as compatibility entry points; new work must use the
+role-specific names.
 
 The shared validator binds that record to the selected role and sources, then
 checks flow dispositions, candidate links, candidate count, cause level, and

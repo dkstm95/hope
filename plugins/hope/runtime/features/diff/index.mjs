@@ -106,6 +106,18 @@ export {
   validateDiffInvocationProductionVerificationRecordSet,
 } from "./invocation-evaluation.mjs";
 
+export {
+  createDiffInvocationExampleRemovalRecord as createDiffInvocationExampleRemovalReceipt,
+  createDiffInvocationEvaluationRecord as createDiffInvocationEvaluationReceipt,
+  createDiffInvocationProductionVerificationRecord as createDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationExampleRemovalRecord as validateDiffInvocationExampleRemovalReceipt,
+  validateDiffInvocationExampleRemovalRecordSet as validateDiffInvocationExampleRemovalReceiptSet,
+  validateDiffInvocationEvaluationRecord as validateDiffInvocationEvaluationReceipt,
+  validateDiffInvocationEvaluationRecordSet as validateDiffInvocationEvaluationReceiptSet,
+  validateDiffInvocationProductionVerificationRecord as validateDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationProductionVerificationRecordSet as validateDiffInvocationProductionVerificationReceiptSet,
+} from "./invocation-evaluation.mjs";
+
 export const DIFF_MODEL_ADAPTER_CODE = "HOPE_DIFF_MODEL_ADAPTER_REQUIRED";
 export const DIFF_MODEL_ADAPTER_MESSAGE =
   "Automatic Hope diff analysis currently runs through the Claude or Codex skill.";
@@ -133,6 +145,19 @@ export async function resolveDiffTarget({
     dependencies.targetOptions,
   );
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createDiffInvocationEvaluationRecordFromFile as createDiffInvocationEvaluationReceiptFromFile,
+  createDiffInvocationExampleRemovalRecordFromFile as createDiffInvocationExampleRemovalReceiptFromFile,
+  createDiffInvocationProductionVerificationRecordFromFile as createDiffInvocationProductionVerificationReceiptFromFile,
+  validateDiffInvocationExampleRemovalRecordFile as validateDiffInvocationExampleRemovalReceiptFile,
+  validateDiffInvocationExampleRemovalRecordSetFile as validateDiffInvocationExampleRemovalReceiptSetFile,
+  validateDiffInvocationProductionVerificationRecordFile as validateDiffInvocationProductionVerificationReceiptFile,
+  validateDiffInvocationProductionVerificationRecordSetFile as validateDiffInvocationProductionVerificationReceiptSetFile,
+  validateDiffInvocationEvaluationRecordFile as validateDiffInvocationEvaluationReceiptFile,
+  validateDiffInvocationEvaluationRecordSetFile as validateDiffInvocationEvaluationReceiptSetFile,
+};
 
 async function readDiffInvocationInput(inputPath, dependencies = {}) {
   return await (dependencies.readInvocationInput ?? readBoundedJson)(inputPath, {

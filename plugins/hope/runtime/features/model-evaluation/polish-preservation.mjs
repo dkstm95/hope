@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
 import { createPolishBrief } from "../polish/index.mjs";
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
 
 import {
   createHopeModelEvaluationProvenance,
@@ -42,6 +43,13 @@ function syntheticInput({ candidates, evidence, preservationConditions, request,
     target: Object.freeze(target),
   });
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createHopePolishPreservationEvaluationRecord as createHopePolishPreservationEvaluationReceipt,
+  validateHopePolishPreservationEvaluationRecord as validateHopePolishPreservationEvaluationReceipt,
+  validateHopePolishPreservationEvaluationRecordSet as validateHopePolishPreservationEvaluationReceiptSet,
+};
 
 function evaluationCase({ candidates, evidence, expectedCandidateId, expectedDecision, id, preservationConditions, request, suite, target }) {
   return Object.freeze({
@@ -737,6 +745,7 @@ export async function validateHopePolishPreservationEvaluationRecord(
   value,
   dependencies = {},
 ) {
+  value = normalizeLegacyRecordTerms(value);
   exactKeys(value, [
     "bindings",
     "configuration",

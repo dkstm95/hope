@@ -1,5 +1,6 @@
 export const POLISH_CONTRACT_VERSION = 2;
 export const POLISH_RECORD_VERSION = 1;
+export const POLISH_RECEIPT_VERSION = POLISH_RECORD_VERSION;
 export const POLISH_SUPPORTED_VERSIONS = Object.freeze([1, 2]);
 
 export const POLISH_LIMITS = Object.freeze({

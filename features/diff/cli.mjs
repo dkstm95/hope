@@ -105,7 +105,13 @@ export function parseDiffArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
   }
-  const [command, ...rest] = argv;
+  const [requestedCommand, ...rest] = argv;
+  const command = ({
+    "invocation-evaluation-receipt": "invocation-evaluation-record",
+    "invocation-example-removal-receipt": "invocation-example-removal-record",
+    "invocation-production-verification-receipt":
+      "invocation-production-verification-record",
+  })[requestedCommand] ?? requestedCommand;
   if (![
     "prepare",
     "invocation-brief",

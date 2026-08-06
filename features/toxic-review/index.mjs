@@ -54,6 +54,13 @@ export {
 } from "./causal-evaluation.mjs";
 
 export {
+  causalCompletenessEvaluationRecordLimits as causalCompletenessEvaluationReceiptLimits,
+  createCausalCompletenessEvaluationRecordTemplate as createCausalCompletenessEvaluationReceiptTemplate,
+  validateCausalCompletenessEvaluationRecord as validateCausalCompletenessEvaluationReceipt,
+  validateCausalCompletenessEvaluationRecordSet as validateCausalCompletenessEvaluationReceiptSet,
+} from "./causal-evaluation.mjs";
+
+export {
   completeToxicReviewRole,
   digestToxicReviewValue,
   failToxicReviewRole,
@@ -182,7 +189,7 @@ export async function createToxicReviewBrief({
         "The host model chooses the smallest useful role set. The core validates, normalizes, and binds that choice to the target and snapshot.",
         "Record why the roles are needed and the person's maximum role count before execution.",
         "Every role keeps one stable binding digest across retries. Every attempt gets a new attempt ID and input digest.",
-        "Do not finalize until every selected role has one valid successful completion record.",
+        "Do not finalize until every selected role has one valid successful role result.",
       ]),
       reviewer: Object.freeze([
         "Review exactly one prepared role input. Do not widen its target, sources, exclusions, or claims.",
@@ -247,6 +254,13 @@ export async function createToxicReviewBrief({
     writingStandard,
   });
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createCausalCompletenessEvaluationRecordTemplateFromFile as createCausalCompletenessEvaluationReceiptTemplateFromFile,
+  validateCausalCompletenessEvaluationRecordFile as validateCausalCompletenessEvaluationReceiptFile,
+  validateCausalCompletenessEvaluationRecordSetFile as validateCausalCompletenessEvaluationReceiptSetFile,
+};
 
 export async function validateToxicReviewFile(inputPath, dependencies = {}) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {

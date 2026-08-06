@@ -10,8 +10,11 @@ import {
   parsePolishArguments,
 } from "../features/polish/cli.mjs";
 import {
+  createPolishReceipt,
   createPolishRecord,
+  polishReceiptDigest,
   validatePolishRecord,
+  validatePolishReceipt,
   validatePolishRun,
 } from "../features/polish/validate.mjs";
 import { makePolishRun } from "../test-support/polish-fixture.mjs";
@@ -219,6 +222,19 @@ test("polish records revalidate the normalized version 2 run", () => {
     () => validatePolishRecord(forged),
     /result must match|recordDigest does not match/u,
   );
+});
+
+test("polish reads deprecated version 1 receipt artifacts", () => {
+  const current = createPolishRecord(makePolishRun());
+  const legacy = structuredClone(current);
+  legacy.feature = "polish-receipt";
+  delete legacy.recordDigest;
+  legacy.receiptDigest = polishReceiptDigest(legacy);
+
+  const validated = validatePolishReceipt(legacy);
+  assert.equal(validated.feature, "polish-record");
+  assert.equal(validated.recordDigest, current.recordDigest);
+  assert.strictEqual(createPolishReceipt, createPolishRecord);
 });
 
 test("polish keeps version 1 runs readable without deletion semantics", () => {

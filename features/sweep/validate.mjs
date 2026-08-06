@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
 import { createResultValidation } from "../result-validation/index.mjs";
+import {
+  normalizeLegacyRecordKeys,
+  normalizeLegacyRecordTerms,
+} from "../record-compat/index.mjs";
 import { validatePolishRecord } from "../polish/validate.mjs";
 import {
   serializedJsonBytes,
@@ -52,6 +56,13 @@ function deepFreeze(value) {
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  sweepApprovalRecordDigest as sweepApprovalReceiptDigest,
+  createSweepApprovalRecord as createSweepApprovalReceipt,
+  validateSweepApprovalRecord as validateSweepApprovalReceipt,
+};
 
 function invalid(label, errors) {
   if (errors.length === 0) return;
@@ -1265,7 +1276,13 @@ function normalizeHostAttestation(
 function normalizeApprovalRecord(value, path, errors, {
   verifyApprovalAttestation,
 } = {}) {
-  const record = validation.object(value, path, errors);
+  const legacyDigestValid = value?.feature === "sweep-approval-receipt"
+    && value.receiptDigest === sweepApprovalRecordDigest(value);
+  const normalizedInput = normalizeLegacyRecordTerms(value);
+  if (legacyDigestValid) {
+    normalizedInput.recordDigest = sweepApprovalRecordDigest(normalizedInput);
+  }
+  const record = validation.object(normalizedInput, path, errors);
   validation.unknownKeys(
     record,
     [
@@ -1467,7 +1484,11 @@ export function validateSweepCompletion(value, {
   verifyApprovalAttestation,
 } = {}) {
   const errors = [];
-  const work = validation.object(value, "sweep", errors);
+  const work = validation.object(
+    normalizeLegacyRecordKeys(value),
+    "sweep",
+    errors,
+  );
   validation.unknownKeys(
     work,
     [
@@ -1539,14 +1560,22 @@ export function validateSweepCompletion(value, {
   if (polishRecord) {
     const polishRun = polishRecord.run;
     const executionContract = approvalCandidate.executionContract;
+    const authorityRecordDigest = polishRun.composition?.authorityRecordDigest;
+    const acceptedAuthorityDigests = new Set([
+      approvalRecord.recordDigest,
+      work.approvalRecord?.receiptDigest,
+    ].filter(Boolean));
     const expectedComposition = {
       caller: "sweep",
       sessionId: approvalCandidate.sessionId,
       workUnitDigest: approvalCandidate.candidateDigest,
       executionContractDigest: approvalCandidate.executionContractDigest,
-      authorityRecordDigest: approvalRecord.recordDigest,
+      authorityRecordDigest,
     };
-    if (!isDeepStrictEqual(polishRun.composition, expectedComposition)) {
+    if (
+      !acceptedAuthorityDigests.has(authorityRecordDigest)
+      || !isDeepStrictEqual(polishRun.composition, expectedComposition)
+    ) {
       errors.push("sweep Polish composition must bind the exact approval and execution contract");
     }
     if (

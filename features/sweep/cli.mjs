@@ -55,7 +55,11 @@ export function parseSweepArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
   }
-  const [command, ...rest] = argv;
+  const [requestedCommand, ...rest] = argv;
+  const command = ({
+    "approval-receipt": "approval-record",
+    "model-evaluation-receipt": "model-evaluation-record",
+  })[requestedCommand] ?? requestedCommand;
   if (
     ![
       "brief",

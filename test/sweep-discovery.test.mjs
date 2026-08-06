@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile as execFileCallback } from "node:child_process";
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, open, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 
 import {
   discoverSweepInventory,
+  readSweepWorktreeEntry,
   verifySweepInventoryRepository,
 } from "../features/sweep/discovery.mjs";
 
@@ -53,6 +54,61 @@ test("sweep discovery records symlink metadata without reading its target", asyn
 
     await rm(outside);
     await verifySweepInventoryRepository(inventory, { root: repository });
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("sweep discovery rejects a symbolic link in an ancestor directory", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "hope-sweep-ancestor-link-"));
+  const repository = join(temporary, "repo");
+  const outside = join(temporary, "outside");
+  try {
+    await mkdir(repository);
+    await mkdir(join(repository, "nested"));
+    await mkdir(outside);
+    await writeFile(join(repository, "nested", "tracked.txt"), "inside\n");
+    await writeFile(join(outside, "tracked.txt"), "outside secret\n");
+    await git(repository, "init", "-q");
+    await git(repository, "config", "user.email", "hope-test@example.com");
+    await git(repository, "config", "user.name", "Hope Test");
+    await git(repository, "add", "nested/tracked.txt");
+    await git(repository, "commit", "-qm", "add nested file");
+    await rm(join(repository, "nested"), { recursive: true });
+    await symlink("../outside", join(repository, "nested"));
+
+    await assert.rejects(
+      discoverSweepInventory({
+        root: repository,
+        sessionId: "ancestor-link-discovery-test-session",
+      }),
+      /non-directory ancestor/u,
+    );
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("sweep discovery refuses a final entry replaced before open", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "hope-sweep-entry-race-"));
+  const repository = join(temporary, "repo");
+  const target = join(repository, "tracked.txt");
+  const outside = join(temporary, "outside-secret.txt");
+  try {
+    await mkdir(repository);
+    await writeFile(target, "inside\n");
+    await writeFile(outside, "outside secret\n");
+
+    await assert.rejects(
+      readSweepWorktreeEntry(repository, "tracked.txt", {
+        openEntry: async (...args) => {
+          await rm(target);
+          await symlink("../outside-secret.txt", target);
+          return open(...args);
+        },
+      }),
+      /ELOOP|symbolic link|too many levels/u,
+    );
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

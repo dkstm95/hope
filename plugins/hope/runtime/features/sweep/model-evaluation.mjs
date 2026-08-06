@@ -2,6 +2,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
+
 import {
   SWEEP_CATEGORY_CATALOG,
   SWEEP_CONTRACT_VERSION,
@@ -39,6 +41,13 @@ function repositoryInput(id, files) {
     files: Object.freeze(files.map((file) => Object.freeze(file))),
   });
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createSweepModelEvaluationRecord as createSweepModelEvaluationReceipt,
+  validateSweepModelEvaluationRecord as validateSweepModelEvaluationReceipt,
+  validateSweepModelEvaluationRecordSet as validateSweepModelEvaluationReceiptSet,
+};
 
 export const sweepModelEvaluationCases = Object.freeze([
   Object.freeze({
@@ -927,6 +936,7 @@ export async function validateSweepModelEvaluationRecord(
   record,
   dependencies = {},
 ) {
+  record = normalizeLegacyRecordTerms(record);
   exactKeys(
     record,
     [

@@ -11,11 +11,12 @@
     "approvalCandidate",
     "decision",
     "authoritySource",
-    "hostAttestation",
-    "recordDigest"
+    "hostAttestation"
   ],
   "properties": {
-    "feature": { "const": "sweep-approval-record" },
+    "feature": {
+      "enum": ["sweep-approval-record", "sweep-approval-receipt"]
+    },
     "version": { "const": 1 },
     "approvalCandidate": { "type": "object" },
     "decision": { "enum": ["approved", "rejected"] },
@@ -40,8 +41,13 @@
         "proof": { "$ref": "#/$defs/text" }
       }
     },
-    "recordDigest": { "$ref": "#/$defs/digest" }
+    "recordDigest": { "$ref": "#/$defs/digest" },
+    "receiptDigest": { "$ref": "#/$defs/digest" }
   },
+  "oneOf": [
+    { "required": ["recordDigest"] },
+    { "required": ["receiptDigest"] }
+  ],
   "$defs": {
     "text": {
       "type": "string",

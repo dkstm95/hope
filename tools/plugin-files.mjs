@@ -116,6 +116,11 @@ export const generatedPluginFiles = Object.freeze([
     "plugins/hope/runtime/features/artifact/index.mjs",
     "// Generated from features/artifact/index.mjs. Do not edit.\n",
   ),
+  generatedText(
+    "features/record-compat/index.mjs",
+    "plugins/hope/runtime/features/record-compat/index.mjs",
+    "// Generated from features/record-compat/index.mjs. Do not edit.\n",
+  ),
   ...[
     "cli.mjs",
     "evidence.mjs",
@@ -135,6 +140,7 @@ export const generatedPluginFiles = Object.freeze([
     "constants.mjs",
     "index.mjs",
     "record-v1.schema.json",
+    "receipt-v1.schema.json",
     "run-v1.schema.json",
     "run-v2.schema.json",
     "validate.mjs",

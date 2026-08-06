@@ -323,7 +323,7 @@ That task may use Align when it contains a material product or design choice.
 
 One version 1 completion binds a validated approval record, the current
 pre-change identities, a validated Polish record when execution reached
-Polish, the output identities, and every final verification record.
+Polish, the output identities, and every final verification result.
 
 Deleted targets are listed in `removedSourceIds`.
 

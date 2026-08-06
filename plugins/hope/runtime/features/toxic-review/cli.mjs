@@ -73,7 +73,10 @@ export function parseToxicReviewArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
   }
-  const [command, ...rest] = argv;
+  const [requestedCommand, ...rest] = argv;
+  const command = requestedCommand === "evaluation-receipt"
+    ? "evaluation-record"
+    : requestedCommand;
   if (![
     "brief",
     "validate",

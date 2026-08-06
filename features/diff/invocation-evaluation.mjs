@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
+
 import {
   createDiffInvocationContract,
   createDiffInvocationEvaluationBaselineContract,
@@ -26,6 +28,19 @@ function assertEvaluation(condition, message) {
     throw new TypeError(`Invalid Diff invocation evaluation: ${message}`);
   }
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createDiffInvocationEvaluationRecord as createDiffInvocationEvaluationReceipt,
+  validateDiffInvocationEvaluationRecord as validateDiffInvocationEvaluationReceipt,
+  validateDiffInvocationEvaluationRecordSet as validateDiffInvocationEvaluationReceiptSet,
+  createDiffInvocationExampleRemovalRecord as createDiffInvocationExampleRemovalReceipt,
+  validateDiffInvocationExampleRemovalRecord as validateDiffInvocationExampleRemovalReceipt,
+  validateDiffInvocationExampleRemovalRecordSet as validateDiffInvocationExampleRemovalReceiptSet,
+  createDiffInvocationProductionVerificationRecord as createDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationProductionVerificationRecord as validateDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationProductionVerificationRecordSet as validateDiffInvocationProductionVerificationReceiptSet,
+};
 
 function canonicalValue(value) {
   if (Array.isArray(value)) return value.map(canonicalValue);
@@ -439,6 +454,7 @@ export function createDiffInvocationEvaluationRecord({
 }
 
 export function validateDiffInvocationEvaluationRecord(record) {
+  record = normalizeLegacyRecordTerms(record);
   exactKeys(
     record,
     [
@@ -773,6 +789,7 @@ export function createDiffInvocationExampleRemovalRecord({
 }
 
 export function validateDiffInvocationExampleRemovalRecord(record) {
+  record = normalizeLegacyRecordTerms(record);
   exactKeys(
     record,
     [
@@ -1111,6 +1128,7 @@ export function createDiffInvocationProductionVerificationRecord({
 }
 
 export function validateDiffInvocationProductionVerificationRecord(record) {
+  record = normalizeLegacyRecordTerms(record);
   exactKeys(
     record,
     [

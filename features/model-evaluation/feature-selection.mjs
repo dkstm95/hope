@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
+
 import {
   createHopeModelEvaluationProvenance,
   validateHopeModelEvaluationProvenance,
@@ -87,6 +89,13 @@ function featuresFor(descriptions) {
     Object.freeze({ description, id })
   ));
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createHopeFeatureSelectionEvaluationRecord as createHopeFeatureSelectionEvaluationReceipt,
+  validateHopeFeatureSelectionEvaluationRecord as validateHopeFeatureSelectionEvaluationReceipt,
+  validateHopeFeatureSelectionEvaluationRecordSet as validateHopeFeatureSelectionEvaluationReceiptSet,
+};
 
 export function createHopeFeatureSelectionContract({
   variant = "full",
@@ -509,6 +518,7 @@ export function validateHopeFeatureSelectionEvaluationRecord(
   value,
   dependencies = {},
 ) {
+  value = normalizeLegacyRecordTerms(value);
   exactKeys(value, [
     "bindings",
     "configuration",

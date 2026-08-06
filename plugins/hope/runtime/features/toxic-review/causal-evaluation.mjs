@@ -2,6 +2,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
+
 import { validateToxicReview } from "./validate.mjs";
 
 const digestPattern = /^sha256:[a-f0-9]{64}$/u;
@@ -12,6 +14,14 @@ function assertRecord(condition, message) {
     throw new TypeError(`Invalid causal evaluation record: ${message}`);
   }
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  causalCompletenessEvaluationRecordLimits as causalCompletenessEvaluationReceiptLimits,
+  createCausalCompletenessEvaluationRecordTemplate as createCausalCompletenessEvaluationReceiptTemplate,
+  validateCausalCompletenessEvaluationRecord as validateCausalCompletenessEvaluationReceipt,
+  validateCausalCompletenessEvaluationRecordSet as validateCausalCompletenessEvaluationReceiptSet,
+};
 
 function canonicalValue(value) {
   if (Array.isArray(value)) return value.map(canonicalValue);
@@ -586,6 +596,7 @@ export function createCausalCompletenessEvaluationRecordTemplate({
 }
 
 export function validateCausalCompletenessEvaluationRecord(record, { brief }) {
+  record = normalizeLegacyRecordTerms(record);
   const encoded = JSON.stringify(record);
   assertRecord(
     Buffer.byteLength(encoded, "utf8")

@@ -27,7 +27,8 @@ export function parsePolishArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
   }
-  const [command, ...rest] = argv;
+  const [requestedCommand, ...rest] = argv;
+  const command = requestedCommand === "receipt" ? "record" : requestedCommand;
   if (!["brief", "validate", "record"].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
