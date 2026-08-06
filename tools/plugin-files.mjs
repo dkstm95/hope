@@ -134,7 +134,7 @@ export const generatedPluginFiles = Object.freeze([
     "cli.mjs",
     "constants.mjs",
     "index.mjs",
-    "receipt-v1.schema.json",
+    "record-v1.schema.json",
     "run-v1.schema.json",
     "run-v2.schema.json",
     "validate.mjs",

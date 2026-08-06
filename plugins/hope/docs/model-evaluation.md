@@ -62,7 +62,7 @@ keeps each case oracle hidden until the model returns its result.
 Give each run a fresh context containing only its prepared brief, blinded input,
 and output contract.
 
-Bind every receipt to:
+Bind every record to:
 
 - the case, suite, variant, and run;
 - the host, model identity, and effort reported for that run;
@@ -79,15 +79,15 @@ Keep failed runs and retries in the runner's attempt ledger.
 
 Hope distinguishes two evidence classes:
 
-- `synthetic` receipts come from the deterministic factories and CLI receipt
+- `synthetic` records come from the deterministic factories and CLI record
   commands; and
-- `host-attested` receipts carry a trusted runner campaign, host event identity,
+- `host-attested` records carry a trusted runner campaign, host event identity,
   statement digest, issuer, time, and proof accepted by a verifier outside the
-  receipt.
+  record.
 
-Individual host-attested receipts are not enough for a release decision.
+Individual host-attested records are not enough for a release decision.
 
-Complete-set validation also requires every receipt to use one runner campaign
+Complete-set validation also requires every record to use one runner campaign
 and issuer, then asks a trusted ledger verifier to confirm that every planned
 run is present and that the caller did not omit, replace, or hide an attempt or
 retry from that campaign.
@@ -101,13 +101,13 @@ Tests may opt in to synthetic complete-set validation with
 `allowSynthetic: true`, but that result is test-only and cannot authorize a
 production prompt or Skill change.
 
-The public CLI has no flag that turns synthetic receipts into release
+The public CLI has no flag that turns synthetic records into release
 evidence.
 
-Store bounded receipts under ignored `test-results/` or an equivalent private
+Store bounded records under ignored `test-results/` or an equivalent private
 location.
 
-Never put private user content into a checked-in evaluation case or receipt.
+Never put private user content into a checked-in evaluation case or record.
 
 ## Compare variants
 
@@ -126,7 +126,7 @@ Use the same host, model, effort, cases, and run count across variants.
 Treat latency, tool calls, retries, and tokens as trusted measurements only when
 the host actually observed and supplied them.
 
-Do not change a production Skill or runtime from a partial receipt set.
+Do not change a production Skill or runtime from a partial record set.
 
 ## Interpret and refresh results
 
@@ -144,7 +144,7 @@ a real failure falls outside the checked behavior.
 Replace or strengthen an easy case instead of adding easier cases only to keep a
 high pass rate.
 
-Keep earlier bounded receipts so a later decision can distinguish an improved
+Keep earlier bounded records so a later decision can distinguish an improved
 model from a changed test.
 
 ## First implementation
@@ -152,7 +152,7 @@ model from a changed test.
 Hope Diff invocation classification is the first feature to apply this policy.
 
 Its shared runtime prepares blinded multilingual decisions, three instruction
-variants, exact receipts, and complete-set validation.
+variants, exact records, and complete-set validation.
 
 The historical follow-up reported all 28 version 3 `rules-only` runs passing.
 
@@ -162,7 +162,7 @@ pass before Hope treats the active brief as release evidence.
 
 The historical production set reported all eight checked decisions passing.
 
-Those Diff receipts predate the shared host-attestation and complete-attempt
+Those Diff records predate the shared host-attestation and complete-attempt
 gate.
 
 They do not independently establish their Codex identity, fresh-context
@@ -225,8 +225,8 @@ Give a fresh host only the returned `brief`, `hostInput`, and
 Do not read the case oracle or give the host another variant before it returns
 one JSON object with `decision` and `reason`.
 
-Create and validate bounded receipts with the matching
-`feature-selection-receipt`, `feature-selection-validate`, and
+Create and validate bounded records with the matching
+`feature-selection-record`, `feature-selection-validate`, and
 `feature-selection-validate-set` commands.
 
 Version 3 kept the 26-run matrix and added the shared evidence boundary.
@@ -238,7 +238,7 @@ attestations, and a trusted complete-attempt ledger.
 It returns `candidate-minimal` only when all 26 decisions pass.
 
 Earlier version 1 and version 2 runs reported 26 of 26 passing decisions, but
-their caller-authored receipts cannot satisfy the shared evidence gate.
+their caller-authored records cannot satisfy the shared evidence gate.
 
 Version 4 narrows the candidate Align description to requests that explicitly
 ask for a shared-understanding check or clarification before coding. Two fresh
@@ -321,7 +321,7 @@ Give a fresh host only the returned `brief`, `hostInput`, and
 Do not read the case oracle or give the host another case or variant before it
 returns one JSON object with `decision`, `candidateId`, and `reason`.
 
-Use the matching `polish-preservation-receipt`,
+Use the matching `polish-preservation-record`,
 `polish-preservation-validate`, and `polish-preservation-validate-set` commands
 to bind and validate the evidence.
 
@@ -341,8 +341,8 @@ reportedly passed 11 of 12 and kept the current target in
 `polish-preservation-02` because it did not find enough evidence that the safe
 private-helper extraction preserved every accepted option and return value.
 
-That score remains reproducible as a deterministic receipt calculation, but
-the version 1 receipt cannot independently prove its fresh-context or host
+That score remains reproducible as a deterministic record calculation, but
+the version 1 record cannot independently prove its fresh-context or host
 configuration claims.
 
 That result keeps the full Polish preservation guidance. It does not justify
@@ -352,7 +352,7 @@ rules.
 That decision applies only to the bounded preservation judgment tested here.
 
 It does not prove that a free-form edit preserved semantics or permit removal
-of identity, authority, planning, application, receipt, or verification
+of identity, authority, planning, application, record, or verification
 protocol.
 
 The independent harness and generated plugin runtime expose the same
@@ -393,7 +393,7 @@ hope model-evaluation write-example-prepare \
 Give a fresh host only the returned `brief`, `hostInput`, and
 `outputContract`.
 
-Use the matching `write-example-receipt`, `write-example-validate`, and
+Use the matching `write-example-record`, `write-example-validate`, and
 `write-example-validate-set` commands to bind and validate the evidence.
 
 The release-eligible complete set returns `remove-examples` only when all 24
@@ -401,7 +401,7 @@ runs pass with one declared host, model, and effort, 24 unique invocation
 identities, valid host attestations, and a trusted complete-attempt ledger.
 
 The historical version 1 run reported all 24 decisions passing, but its
-caller-authored receipts do not satisfy the version 2 evidence gate.
+caller-authored records do not satisfy the version 2 evidence gate.
 
 Its production verification also reused the ablation cases.
 
@@ -415,7 +415,7 @@ hope model-evaluation write-production-plan
 hope model-evaluation write-production-prepare --case <id> --run 1
 ```
 
-Use the matching `write-production-receipt`, `write-production-validate`, and
+Use the matching `write-production-record`, `write-production-validate`, and
 `write-production-validate-set` commands for the final evidence.
 
 Version 2 production verification uses six separate held-out situations and

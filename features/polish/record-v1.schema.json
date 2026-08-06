@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://hope.local/schemas/polish/receipt-v1.schema.json",
-  "title": "Hope polish receipt version 1",
-  "description": "Structural schema. The shared Polish runtime revalidates the embedded run, derived result, and receipt digest.",
+  "$id": "https://hope.local/schemas/polish/record-v1.schema.json",
+  "title": "Hope polish record version 1",
+  "description": "Structural schema. The shared Polish runtime revalidates the embedded run, derived result, and record digest.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,10 +10,10 @@
     "version",
     "run",
     "result",
-    "receiptDigest"
+    "recordDigest"
   ],
   "properties": {
-    "feature": { "const": "polish-receipt" },
+    "feature": { "const": "polish-record" },
     "version": { "const": 1 },
     "run": { "$ref": "run-v2.schema.json" },
     "result": {
@@ -35,7 +35,7 @@
         }
       }
     },
-    "receiptDigest": {
+    "recordDigest": {
       "type": "string",
       "pattern": "^sha256:[a-f0-9]{64}$"
     }

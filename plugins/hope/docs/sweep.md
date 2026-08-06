@@ -36,6 +36,12 @@ with a reason.
 An excluded path is explicit coverage information; it is not silently treated
 as inspected.
 
+Symbolic links are inventory entries in their own right.
+
+Discovery records the link target text and never reads the target file.
+
+This remains true when the target is outside the repository.
+
 The plan covers production code, tests, documentation, configuration, generated
 sources, package metadata, and other repository content across every inventory
 batch.
@@ -53,8 +59,8 @@ checks, evidence requirements, and execution boundary.
 The shared runtime creates one version 1 inventory from a verified Git worktree
 enumeration.
 
-It stores the exact Git snapshot, discovery receipt, file identities, exclusions,
-batch assignments, worker receipts, and remaining gaps.
+It stores the exact Git snapshot, discovery record, file identities, exclusions,
+batch assignments, worker reports, and remaining gaps.
 
 The inventory includes both tracked files and relevant untracked files.
 
@@ -74,16 +80,16 @@ cannot become complete until every batch is complete.
 Each batch may run in `parallel` mode when the host can provide independent
 contexts, or in `sequential` mode when it cannot.
 
-The shared runtime owns assignment, coverage, state, and merge receipts.
+The shared runtime owns assignment, coverage, state, and merge records.
 
 A started batch keeps the digest of its pending input and the execution identity
 used to assign files.
 
-Completion requires that digest, the same execution, and one receipt for every
-worker assignment.
+Completion requires that digest, the same execution, and one worker report for
+every worker assignment.
 
-Workers receive only their exact batch input, inspect and return evidence, and
-never edit files or redefine the project scope.
+Workers receive only their exact batch input, inspect and return a worker report
+with evidence, and never edit files or redefine the project scope.
 
 Use `discover-inventory`, `validate-inventory`, `batch-input`, `start-batch`,
 and `complete-batch` for the shared inventory boundary.
@@ -258,17 +264,17 @@ approve it.
 An approval applies only to that digest in the same Sweep session.
 
 After the person decides, the host resolves the exact role-authenticated
-conversation event and asks the shared runtime to create an approval receipt.
+conversation event and asks the shared runtime to create an approval record.
 
-The receipt binds the normalized candidate, decision, conversation identity,
+The record binds the normalized candidate, decision, conversation identity,
 host event ID, execution contract, and opaque or signed host proof.
 
 The proof verifier is a trusted host dependency outside model-authored JSON.
 
 The runtime rejects an absent or invalid proof and never treats a self-authored
-decision, conversation digest, or receipt hash as user authority.
+decision, conversation digest, or record hash as user authority.
 
-A boolean or free-form completion field cannot substitute for this receipt.
+A boolean or free-form completion field cannot substitute for this record.
 
 If a target, evidence source, preview, or budget changes, the approval is stale
 and the host must create a new plan and ask again.
@@ -286,12 +292,12 @@ Sweep supplies the approved target, preservation conditions, preview, change
 budget, and conversation-backed authority to one normal Polish run.
 
 The Polish version 2 run records a generic composition block that binds the
-Sweep session, candidate, execution contract, and approval receipt digests.
+Sweep session, candidate, execution contract, and approval record digests.
 
 Polish may return a revision, no change, or a need for alignment under its own
 contract.
 
-Sweep records the runtime-created Polish receipt in its completion record.
+Sweep records the runtime-created Polish record in its completion record.
 
 The completion runtime revalidates the embedded Polish version 2 run.
 
@@ -317,9 +323,9 @@ That task may use Align when it contains a material product or design choice.
 
 ## Completion and verification
 
-One version 1 completion binds a validated approval receipt, the current
-pre-change identities, a validated Polish receipt when execution reached
-Polish, the output identities, and every final verification receipt.
+One version 1 completion binds a validated approval record, the current
+pre-change identities, a validated Polish record when execution reached
+Polish, the output identities, and every final verification record.
 
 Deleted targets are listed in `removedSourceIds`.
 
@@ -384,19 +390,19 @@ repository instructions.
 Each fresh host receives only the portable active brief, one synthetic
 repository, and the bounded output contract.
 
-The runtime then creates a versioned receipt that binds the evaluation version,
+The runtime then creates a versioned record that binds the evaluation version,
 case, suite, run, host, model, effort, Sweep contract version, brief, prepared
 input, invocation, and model output.
 
 The complete-set validator requires every case exactly once under one declared
 configuration and keeps failed judgments visible.
 
-A direct receipt factory marks its evidence as synthetic.
+A direct record factory marks its evidence as synthetic.
 
 Only the evaluation runner can attach the bounded host events and raw output
 that produce `codex-runner` provenance.
 
-The release validator rejects a synthetic receipt set.
+The release validator rejects a synthetic record set.
 
 The oracle stays hidden until the fresh host returns its output.
 
@@ -406,16 +412,16 @@ The Claude and Codex Skills use the active host to inspect a repository, author
 the plan, ask for exact approval, invoke Polish, and verify the completion.
 
 They call the generated Sweep runtime for the brief, plan validation, approval
-candidate, approval receipt, completion validation, and session-result
+candidate, approval record, completion validation, and session-result
 validation.
 
-Approval receipt creation and validation require the active host's trusted
+Approval record creation and validation require the active host's trusted
 attestation verifier.
 
-They call the same generated Polish runtime for the Polish receipt.
+They call the same generated Polish runtime for the Polish record.
 
 The same Sweep runtime exposes model-evaluation plan, preparation, oracle,
-receipt, and receipt-set validation commands.
+record, and record-set validation commands.
 
 The independent harness exposes the same operations as `hope sweep`.
 

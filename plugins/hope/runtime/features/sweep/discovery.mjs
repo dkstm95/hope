@@ -1,7 +1,7 @@
 // Generated from features/sweep/discovery.mjs. Do not edit.
 import { createHash } from "node:crypto";
 import { execFile as execFileCallback } from "node:child_process";
-import { lstat, readFile, realpath } from "node:fs/promises";
+import { lstat, readFile, readlink, realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 import { resolve, sep } from "node:path";
 
@@ -72,10 +72,22 @@ async function readWorktreeFile(root, relativePath) {
   }
   const info = await lstat(absolutePath);
   if (info.isDirectory()) {
-    throw new TypeError(`Git returned a directory as a project file: ${relativePath}`);
+    throw new TypeError(`Git returned a directory as a project entry: ${relativePath}`);
+  }
+  if (info.isSymbolicLink()) {
+    const linkTarget = await readlink(absolutePath, { encoding: "buffer" });
+    return {
+      entryType: "symbolic-link",
+      digest: digestBytes(linkTarget),
+      size: linkTarget.length,
+    };
+  }
+  if (!info.isFile()) {
+    throw new TypeError(`Git returned a non-file project entry: ${relativePath}`);
   }
   const bytes = await readFile(absolutePath);
   return {
+    entryType: "file",
     digest: digestBytes(bytes),
     size: bytes.length,
   };

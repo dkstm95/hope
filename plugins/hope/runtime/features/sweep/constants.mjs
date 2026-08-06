@@ -2,7 +2,7 @@
 export const SWEEP_CONTRACT_VERSION = 1;
 export const SWEEP_PLAN_VERSION = 1;
 export const SWEEP_COMPLETION_VERSION = 1;
-export const SWEEP_APPROVAL_RECEIPT_VERSION = 1;
+export const SWEEP_APPROVAL_RECORD_VERSION = 1;
 export const SWEEP_SESSION_RESULT_VERSION = 1;
 export const SWEEP_INVENTORY_VERSION = 1;
 export const SWEEP_INVENTORY_DISCOVERY_PROTOCOL = "git-worktree-v1";

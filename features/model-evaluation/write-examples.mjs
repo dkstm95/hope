@@ -9,7 +9,7 @@ import {
 import {
   createHopeModelEvaluationProvenance,
   validateHopeModelEvaluationProvenance,
-  validateHopeModelEvaluationReceiptSetProvenance,
+  validateHopeModelEvaluationRecordSetProvenance,
 } from "./evidence.mjs";
 
 export const HOPE_WRITE_EXAMPLE_EVALUATION_VERSION = 2;
@@ -29,8 +29,8 @@ export const HOPE_WRITE_EXAMPLE_DECISIONS = Object.freeze([
 export const hopeWriteExampleEvaluationLimits = Object.freeze({
   outputBytes: 16 * 1024,
   reasonCharacters: 2048,
-  receiptBytes: 96 * 1024,
-  receiptSetBytes: 3 * 1024 * 1024,
+  recordBytes: 96 * 1024,
+  recordSetBytes: 3 * 1024 * 1024,
 });
 
 function syntheticInput({ artifact, constraints, request }) {
@@ -280,7 +280,7 @@ export const hopeWriteExampleEvaluationProtocol = Object.freeze({
   interpretation:
     "A synthetic complete set is test-only smoke evidence. Host-attested release evidence still does not prove equivalent writing quality outside the checked decisions.",
   storage:
-    "Keep bounded receipts under ignored test-results/. CLI-created receipts are synthetic; release evidence must come through a trusted runner adapter.",
+    "Keep bounded records under ignored test-results/. CLI-created records are synthetic; release evidence must come through a trusted runner adapter.",
   version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
 });
 
@@ -534,7 +534,7 @@ function evaluationFor(evaluationCase, output) {
   });
 }
 
-export async function createHopeWriteExampleEvaluationReceipt({
+export async function createHopeWriteExampleEvaluationRecord({
   attestation,
   caseId,
   effort,
@@ -577,7 +577,7 @@ export async function createHopeWriteExampleEvaluationReceipt({
     configuration,
     evaluation: Object.freeze({
       bindings,
-      feature: "hope-write-example-evaluation-receipt",
+      feature: "hope-write-example-evaluation-record",
       version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
     }),
     invocation,
@@ -587,11 +587,11 @@ export async function createHopeWriteExampleEvaluationReceipt({
     { attestation, statement },
     dependencies,
   );
-  const receipt = Object.freeze({
+  const record = Object.freeze({
     bindings,
     configuration,
     evaluation,
-    feature: "hope-write-example-evaluation-receipt",
+    feature: "hope-write-example-evaluation-record",
     invocation,
     output: normalizedOutput,
     provenance,
@@ -599,14 +599,14 @@ export async function createHopeWriteExampleEvaluationReceipt({
     version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
   });
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= hopeWriteExampleEvaluationLimits.receiptBytes,
-    "receipt exceeds the byte limit",
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= hopeWriteExampleEvaluationLimits.recordBytes,
+    "record exceeds the byte limit",
   );
-  return Object.freeze({ evaluation, receipt });
+  return Object.freeze({ evaluation, record });
 }
 
-export async function validateHopeWriteExampleEvaluationReceipt(
+export async function validateHopeWriteExampleEvaluationRecord(
   value,
   dependencies = {},
 ) {
@@ -620,19 +620,19 @@ export async function validateHopeWriteExampleEvaluationReceipt(
     "provenance",
     "specification",
     "version",
-  ], "receipt");
+  ], "record");
   assertEvaluation(
-    value.feature === "hope-write-example-evaluation-receipt",
-    "receipt.feature is invalid",
+    value.feature === "hope-write-example-evaluation-record",
+    "record.feature is invalid",
   );
   assertEvaluation(
     value.version === HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
-    `receipt.version must be ${HOPE_WRITE_EXAMPLE_EVALUATION_VERSION}`,
+    `record.version must be ${HOPE_WRITE_EXAMPLE_EVALUATION_VERSION}`,
   );
   exactKeys(
     value.specification,
     ["caseId", "run", "suite", "variant"],
-    "receipt.specification",
+    "record.specification",
   );
   const prepared = await prepareHopeWriteExampleEvaluationRun(
     value.specification,
@@ -640,19 +640,19 @@ export async function validateHopeWriteExampleEvaluationReceipt(
   );
   assertEvaluation(
     value.specification.suite === prepared.suite,
-    "receipt suite does not match the prepared run",
+    "record suite does not match the prepared run",
   );
   exactKeys(
     value.configuration,
     ["effort", "host", "model"],
-    "receipt.configuration",
+    "record.configuration",
   );
   const configuration = Object.freeze({
     effort: boundedText(value.configuration.effort, "configuration.effort"),
     host: boundedText(value.configuration.host, "configuration.host"),
     model: boundedText(value.configuration.model, "configuration.model"),
   });
-  exactKeys(value.invocation, ["id"], "receipt.invocation");
+  exactKeys(value.invocation, ["id"], "record.invocation");
   const invocation = Object.freeze({
     id: boundedText(value.invocation.id, "invocation.id"),
   });
@@ -664,16 +664,16 @@ export async function validateHopeWriteExampleEvaluationReceipt(
   exactKeys(
     value.evaluation,
     ["decisionMatched", "expectedDecision", "runPassed"],
-    "receipt.evaluation",
+    "record.evaluation",
   );
   assertEvaluation(
     isDeepStrictEqual(value.evaluation, evaluation),
-    "receipt.evaluation does not match the output and oracle",
+    "record.evaluation does not match the output and oracle",
   );
   exactKeys(
     value.bindings,
     ["briefDigest", "inputDigest", "outputDigest"],
-    "receipt.bindings",
+    "record.bindings",
   );
   const bindings = Object.freeze({
     briefDigest: prepared.briefDigest,
@@ -682,7 +682,7 @@ export async function validateHopeWriteExampleEvaluationReceipt(
   });
   assertEvaluation(
     isDeepStrictEqual(value.bindings, bindings),
-    "receipt.bindings do not match the prepared run and output",
+    "record.bindings do not match the prepared run and output",
   );
   const statement = Object.freeze({
     configuration,
@@ -701,7 +701,7 @@ export async function validateHopeWriteExampleEvaluationReceipt(
   );
   return Object.freeze({
     evaluation,
-    receipt: Object.freeze({
+    record: Object.freeze({
       bindings,
       configuration,
       evaluation,
@@ -719,62 +719,62 @@ function runKey({ caseId, run, variant }) {
   return `${caseId}:${variant}:${run}`;
 }
 
-function counts(receipts, field, values) {
+function counts(records, field, values) {
   return Object.fromEntries(values.map((value) => {
-    const matching = receipts.filter(
-      (receipt) => receipt.specification[field] === value,
+    const matching = records.filter(
+      (record) => record.specification[field] === value,
     );
     return [value, Object.freeze({
-      failed: matching.filter((receipt) => !receipt.evaluation.runPassed).length,
-      passed: matching.filter((receipt) => receipt.evaluation.runPassed).length,
+      failed: matching.filter((record) => !record.evaluation.runPassed).length,
+      passed: matching.filter((record) => record.evaluation.runPassed).length,
       total: matching.length,
     })];
   }));
 }
 
-export async function validateHopeWriteExampleEvaluationReceiptSet(
+export async function validateHopeWriteExampleEvaluationRecordSet(
   values,
   dependencies = {},
 ) {
-  assertEvaluation(Array.isArray(values), "receipt set must be an array");
+  assertEvaluation(Array.isArray(values), "record set must be an array");
   assertEvaluation(
     Buffer.byteLength(JSON.stringify(values), "utf8")
-      <= hopeWriteExampleEvaluationLimits.receiptSetBytes,
-    "receipt set exceeds the byte limit",
+      <= hopeWriteExampleEvaluationLimits.recordSetBytes,
+    "record set exceeds the byte limit",
   );
   const expected = plannedRuns();
   assertEvaluation(
     values.length === expected.length,
-    `receipt set must contain ${expected.length} runs`,
+    `record set must contain ${expected.length} runs`,
   );
   const validated = await Promise.all(values.map((value) =>
-    validateHopeWriteExampleEvaluationReceipt(value, dependencies)
+    validateHopeWriteExampleEvaluationRecord(value, dependencies)
   ));
-  const receipts = validated.map((result) => result.receipt);
+  const records = validated.map((result) => result.record);
   const expectedKeys = new Set(expected.map(runKey));
-  const actualKeys = receipts.map((receipt) => runKey(receipt.specification));
+  const actualKeys = records.map((record) => runKey(record.specification));
   assertEvaluation(
     new Set(actualKeys).size === actualKeys.length,
-    "receipt set repeats a planned run",
+    "record set repeats a planned run",
   );
   assertEvaluation(
     actualKeys.every((key) => expectedKeys.has(key)),
-    "receipt set contains an unplanned run",
+    "record set contains an unplanned run",
   );
-  const invocationIds = receipts.map((receipt) => receipt.invocation.id);
+  const invocationIds = records.map((record) => record.invocation.id);
   assertEvaluation(
     new Set(invocationIds).size === invocationIds.length,
-    "receipt set repeats an invocation identity",
+    "record set repeats an invocation identity",
   );
-  const configurations = new Set(receipts.map((receipt) =>
-    JSON.stringify(receipt.configuration)
+  const configurations = new Set(records.map((record) =>
+    JSON.stringify(record.configuration)
   ));
   assertEvaluation(
     configurations.size === 1,
-    "receipt set must use one host, model, and effort",
+    "record set must use one host, model, and effort",
   );
-  const provenance = validateHopeModelEvaluationReceiptSetProvenance(
-    receipts,
+  const provenance = validateHopeModelEvaluationRecordSetProvenance(
+    records,
     {
       feature: "hope-write-example-evaluation",
       plannedRunKeys: expected.map(runKey),
@@ -783,37 +783,37 @@ export async function validateHopeWriteExampleEvaluationReceiptSet(
     },
     dependencies,
   );
-  const passedRuns = receipts.filter(
-    (receipt) => receipt.evaluation.runPassed,
+  const passedRuns = records.filter(
+    (record) => record.evaluation.runPassed,
   ).length;
   const summary = Object.freeze({
-    deletionReady: passedRuns === receipts.length,
-    failedRuns: receipts.length - passedRuns,
+    deletionReady: passedRuns === records.length,
+    failedRuns: records.length - passedRuns,
     passedRuns,
-    totalRuns: receipts.length,
+    totalRuns: records.length,
   });
   return Object.freeze({
     bySuite: Object.freeze(counts(
-      receipts,
+      records,
       "suite",
       ["conformance", "safety"],
     )),
     byVariant: Object.freeze(counts(
-      receipts,
+      records,
       "variant",
       HOPE_WRITE_EXAMPLE_VARIANTS,
     )),
-    configuration: receipts[0].configuration,
+    configuration: records[0].configuration,
     decision: summary.deletionReady ? "remove-examples" : "keep-examples",
     feature: "hope-write-example-evaluation-result",
     provenance,
-    receipts: Object.freeze(receipts),
+    records: Object.freeze(records),
     summary,
     version: HOPE_WRITE_EXAMPLE_EVALUATION_VERSION,
   });
 }
 
-export async function createHopeWriteProductionVerificationReceipt({
+export async function createHopeWriteProductionVerificationRecord({
   attestation,
   caseId,
   effort,
@@ -855,7 +855,7 @@ export async function createHopeWriteProductionVerificationReceipt({
     configuration,
     evaluation: Object.freeze({
       bindings,
-      feature: "hope-write-production-verification-receipt",
+      feature: "hope-write-production-verification-record",
       version: hopeWriteProductionVerificationProtocol.version,
     }),
     invocation,
@@ -867,11 +867,11 @@ export async function createHopeWriteProductionVerificationReceipt({
   );
   return Object.freeze({
     evaluation,
-    receipt: Object.freeze({
+    record: Object.freeze({
       bindings,
       configuration,
       evaluation,
-      feature: "hope-write-production-verification-receipt",
+      feature: "hope-write-production-verification-record",
       invocation,
       output: normalizedOutput,
       provenance,
@@ -881,7 +881,7 @@ export async function createHopeWriteProductionVerificationReceipt({
   });
 }
 
-export async function validateHopeWriteProductionVerificationReceipt(
+export async function validateHopeWriteProductionVerificationRecord(
   value,
   dependencies = {},
 ) {
@@ -895,23 +895,23 @@ export async function validateHopeWriteProductionVerificationReceipt(
     "provenance",
     "specification",
     "version",
-  ], "production receipt");
+  ], "production record");
   assertEvaluation(
-    value.feature === "hope-write-production-verification-receipt",
-    "production receipt.feature is invalid",
+    value.feature === "hope-write-production-verification-record",
+    "production record.feature is invalid",
   );
   assertEvaluation(
     value.version === hopeWriteProductionVerificationProtocol.version,
-    "production receipt.version is invalid",
+    "production record.version is invalid",
   );
   exactKeys(
     value.specification,
     ["caseId", "run", "suite", "variant"],
-    "production receipt.specification",
+    "production record.specification",
   );
   assertEvaluation(
     value.specification.variant === "production",
-    "production receipt variant is invalid",
+    "production record variant is invalid",
   );
   const prepared = await prepareHopeWriteProductionVerificationRun(
     value.specification,
@@ -919,19 +919,19 @@ export async function validateHopeWriteProductionVerificationReceipt(
   );
   assertEvaluation(
     value.specification.suite === prepared.suite,
-    "production receipt suite does not match",
+    "production record suite does not match",
   );
   exactKeys(
     value.configuration,
     ["effort", "host", "model"],
-    "production receipt.configuration",
+    "production record.configuration",
   );
   const configuration = Object.freeze({
     effort: boundedText(value.configuration.effort, "configuration.effort"),
     host: boundedText(value.configuration.host, "configuration.host"),
     model: boundedText(value.configuration.model, "configuration.model"),
   });
-  exactKeys(value.invocation, ["id"], "production receipt.invocation");
+  exactKeys(value.invocation, ["id"], "production record.invocation");
   const invocation = Object.freeze({
     id: boundedText(value.invocation.id, "invocation.id"),
   });
@@ -942,7 +942,7 @@ export async function validateHopeWriteProductionVerificationReceipt(
   );
   assertEvaluation(
     isDeepStrictEqual(value.evaluation, evaluation),
-    "production receipt evaluation does not match",
+    "production record evaluation does not match",
   );
   const bindings = Object.freeze({
     briefDigest: prepared.briefDigest,
@@ -951,7 +951,7 @@ export async function validateHopeWriteProductionVerificationReceipt(
   });
   assertEvaluation(
     isDeepStrictEqual(value.bindings, bindings),
-    "production receipt bindings do not match",
+    "production record bindings do not match",
   );
   const statement = Object.freeze({
     configuration,
@@ -970,7 +970,7 @@ export async function validateHopeWriteProductionVerificationReceipt(
   );
   return Object.freeze({
     evaluation,
-    receipt: Object.freeze({
+    record: Object.freeze({
       bindings,
       configuration,
       evaluation,
@@ -984,41 +984,41 @@ export async function validateHopeWriteProductionVerificationReceipt(
   });
 }
 
-export async function validateHopeWriteProductionVerificationReceiptSet(
+export async function validateHopeWriteProductionVerificationRecordSet(
   values,
   dependencies = {},
 ) {
-  assertEvaluation(Array.isArray(values), "production receipt set must be an array");
+  assertEvaluation(Array.isArray(values), "production record set must be an array");
   const expected = productionRuns();
   assertEvaluation(
     values.length === expected.length,
-    `production receipt set must contain ${expected.length} runs`,
+    `production record set must contain ${expected.length} runs`,
   );
   const validated = await Promise.all(values.map((value) =>
-    validateHopeWriteProductionVerificationReceipt(value, dependencies)
+    validateHopeWriteProductionVerificationRecord(value, dependencies)
   ));
-  const receipts = validated.map((result) => result.receipt);
-  const actualKeys = receipts.map((receipt) => runKey(receipt.specification));
+  const records = validated.map((result) => result.record);
+  const actualKeys = records.map((record) => runKey(record.specification));
   const expectedKeys = new Set(expected.map(runKey));
   assertEvaluation(
     new Set(actualKeys).size === actualKeys.length
       && actualKeys.every((key) => expectedKeys.has(key)),
-    "production receipt set does not match the plan",
+    "production record set does not match the plan",
   );
-  const invocationIds = receipts.map((receipt) => receipt.invocation.id);
+  const invocationIds = records.map((record) => record.invocation.id);
   assertEvaluation(
     new Set(invocationIds).size === invocationIds.length,
-    "production receipt set repeats an invocation identity",
+    "production record set repeats an invocation identity",
   );
-  const configurations = new Set(receipts.map((receipt) =>
-    JSON.stringify(receipt.configuration)
+  const configurations = new Set(records.map((record) =>
+    JSON.stringify(record.configuration)
   ));
   assertEvaluation(
     configurations.size === 1,
-    "production receipt set must use one host, model, and effort",
+    "production record set must use one host, model, and effort",
   );
-  const provenance = validateHopeModelEvaluationReceiptSetProvenance(
-    receipts,
+  const provenance = validateHopeModelEvaluationRecordSetProvenance(
+    records,
     {
       feature: "hope-write-production-verification",
       plannedRunKeys: expected.map(runKey),
@@ -1027,21 +1027,21 @@ export async function validateHopeWriteProductionVerificationReceiptSet(
     },
     dependencies,
   );
-  const passedRuns = receipts.filter(
-    (receipt) => receipt.evaluation.runPassed,
+  const passedRuns = records.filter(
+    (record) => record.evaluation.runPassed,
   ).length;
-  const accepted = passedRuns === receipts.length;
+  const accepted = passedRuns === records.length;
   return Object.freeze({
-    configuration: receipts[0].configuration,
+    configuration: records[0].configuration,
     decision: accepted ? "accept-production" : "reject-production",
     feature: "hope-write-production-verification-result",
     provenance,
-    receipts: Object.freeze(receipts),
+    records: Object.freeze(records),
     summary: Object.freeze({
       accepted,
-      failedRuns: receipts.length - passedRuns,
+      failedRuns: records.length - passedRuns,
       passedRuns,
-      totalRuns: receipts.length,
+      totalRuns: records.length,
     }),
     version: hopeWriteProductionVerificationProtocol.version,
   });

@@ -5,13 +5,13 @@ import { isEntrypoint } from "../../entrypoint/index.mjs";
 import { takeOptions } from "../command-options/index.mjs";
 import {
   createSweepApprovalCandidateFile,
-  createSweepApprovalReceiptFile,
+  createSweepApprovalRecordFile,
   createSweepBrief,
   completeSweepInventoryBatchFile,
   createSweepInventoryBatchInputFile,
   discoverSweepInventoryFile,
   createSweepModelEvaluationPlan,
-  createSweepModelEvaluationReceiptFile,
+  createSweepModelEvaluationRecordFile,
   getSweepModelEvaluationOracle,
   prepareSweepModelEvaluationRun,
   runSweep,
@@ -19,8 +19,8 @@ import {
   SWEEP_MODEL_ADAPTER_CODE,
   validateSweepInventoryFile,
   validateSweepCompletionFile,
-  validateSweepModelEvaluationReceiptFile,
-  validateSweepModelEvaluationReceiptSetFile,
+  validateSweepModelEvaluationRecordFile,
+  validateSweepModelEvaluationRecordSetFile,
   validateSweepPlanFile,
   validateSweepSessionResultFile,
 } from "./index.mjs";
@@ -40,15 +40,15 @@ function usage() {
     "  hope sweep complete-batch --input <inventory.json> --batch <id> --result <result.json>",
     "  hope sweep validate-plan --input <plan.json> [--root <repository>]",
     "  hope sweep approval-candidate --input <plan.json> --candidate <id>",
-    "  hope sweep approval-receipt --input <approval.json>",
+    "  hope sweep approval-record --input <approval.json>",
     "  hope sweep validate-completion --input <completion.json>",
     "  hope sweep validate-session-result --input <session-result.json>",
     "  hope sweep model-evaluation-plan",
     "  hope sweep model-evaluation-prepare --case <id> --run <number>",
     "  hope sweep model-evaluation-oracle --case <id>",
-    "  hope sweep model-evaluation-receipt --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope sweep model-evaluation-validate --input <receipt.json>",
-    "  hope sweep model-evaluation-validate-set --input <receipts.json>",
+    "  hope sweep model-evaluation-record --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope sweep model-evaluation-validate --input <record.json>",
+    "  hope sweep model-evaluation-validate-set --input <records.json>",
   ].join("\n");
 }
 
@@ -67,13 +67,13 @@ export function parseSweepArguments(argv) {
       "complete-batch",
       "validate-plan",
       "approval-candidate",
-      "approval-receipt",
+      "approval-record",
       "validate-completion",
       "validate-session-result",
       "model-evaluation-plan",
       "model-evaluation-prepare",
       "model-evaluation-oracle",
-      "model-evaluation-receipt",
+      "model-evaluation-record",
       "model-evaluation-validate",
       "model-evaluation-validate-set",
     ].includes(command)
@@ -133,7 +133,7 @@ export function parseSweepArguments(argv) {
     if (!options.case || !hasOnly(["case"])) throw new TypeError(usage());
     return { caseId: options.case, command };
   }
-  if (command === "model-evaluation-receipt") {
+  if (command === "model-evaluation-record") {
     if (
       !options.case
       || !options.run
@@ -321,10 +321,10 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       dependencies.createSweepApprovalCandidateFile
       ?? createSweepApprovalCandidateFile
     )(options.inputPath, options.candidateId, dependencies);
-  } else if (options.command === "approval-receipt") {
+  } else if (options.command === "approval-record") {
     result = await (
-      dependencies.createSweepApprovalReceiptFile
-      ?? createSweepApprovalReceiptFile
+      dependencies.createSweepApprovalRecordFile
+      ?? createSweepApprovalRecordFile
     )(options.inputPath, dependencies);
   } else if (options.command === "model-evaluation-plan") {
     result = (dependencies.createSweepModelEvaluationPlan
@@ -335,15 +335,15 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   } else if (options.command === "model-evaluation-oracle") {
     result = (dependencies.getSweepModelEvaluationOracle
       ?? getSweepModelEvaluationOracle)(options.caseId);
-  } else if (options.command === "model-evaluation-receipt") {
-    result = await (dependencies.createSweepModelEvaluationReceiptFile
-      ?? createSweepModelEvaluationReceiptFile)(options, dependencies);
+  } else if (options.command === "model-evaluation-record") {
+    result = await (dependencies.createSweepModelEvaluationRecordFile
+      ?? createSweepModelEvaluationRecordFile)(options, dependencies);
   } else if (options.command === "model-evaluation-validate") {
-    result = await (dependencies.validateSweepModelEvaluationReceiptFile
-      ?? validateSweepModelEvaluationReceiptFile)(options.inputPath, dependencies);
+    result = await (dependencies.validateSweepModelEvaluationRecordFile
+      ?? validateSweepModelEvaluationRecordFile)(options.inputPath, dependencies);
   } else if (options.command === "model-evaluation-validate-set") {
-    result = await (dependencies.validateSweepModelEvaluationReceiptSetFile
-      ?? validateSweepModelEvaluationReceiptSetFile)(options.inputPath, dependencies);
+    result = await (dependencies.validateSweepModelEvaluationRecordSetFile
+      ?? validateSweepModelEvaluationRecordSetFile)(options.inputPath, dependencies);
   } else if (options.command === "validate-completion") {
     result = await (
       dependencies.validateSweepCompletionFile

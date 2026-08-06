@@ -110,7 +110,7 @@ test("sweep batch input preserves exact assignment order and worker mode", () =>
         inputDigest: started.batches[0].inputDigest,
         state: "complete",
         execution: { mode: "parallel", workerIds: ["worker-a", "worker-b"] },
-        receipts: started.batches[0].assignments.map((assignment) => ({
+        workerReports: started.batches[0].assignments.map((assignment) => ({
           workerId: assignment.workerId,
           processedSourceIds: assignment.sourceIds,
           gaps: [],
@@ -132,7 +132,7 @@ test("sweep completion requires the started input and immutable execution", () =
     inputDigest: sweepInventoryDigest(inventory),
     state: "complete",
     execution: { mode: "single", workerIds: [] },
-    receipts: [{
+    workerReports: [{
       workerId: "host",
       processedSourceIds: ["file-1", "file-2"],
       gaps: [],
@@ -155,7 +155,7 @@ test("sweep completion requires the started input and immutable execution", () =
     inputDigest: validInputDigest,
     state: "complete",
     execution: { mode: "sequential", workerIds: [] },
-    receipts: [{
+    workerReports: [{
       workerId: "host",
       processedSourceIds: ["file-1", "file-2"],
       gaps: [],
@@ -173,7 +173,7 @@ test("sweep inventory has no project-wide file-count cap", () => {
   assert.equal(inventory.batches.length, 33);
 });
 
-test("sweep inventory records partial worker coverage and rejects forged completion", () => {
+test("sweep inventory workerReports partial worker coverage and rejects forged completion", () => {
   let inventory = makeInventory();
   inventory = startSweepInventoryBatch(
     inventory,
@@ -189,7 +189,7 @@ test("sweep inventory records partial worker coverage and rejects forged complet
         inputDigest: inventory.batches[0].inputDigest,
         state: "complete",
         execution: { mode: "sequential", workerIds: [] },
-        receipts: [{
+        workerReports: [{
           workerId: "host",
           processedSourceIds: [inventory.batches[0].sourceIds[0]],
           gaps: [],
@@ -209,7 +209,7 @@ test("sweep inventory records partial worker coverage and rejects forged complet
         inputDigest: inventory.batches[0].inputDigest,
         state: "partial",
         execution: { mode: "sequential", workerIds: [] },
-        receipts: [{
+        workerReports: [{
           workerId: "host",
           processedSourceIds: [inventory.batches[0].sourceIds[0]],
           gaps: ["The worker context ended before the remaining files were checked."],
@@ -243,7 +243,7 @@ test("whole-project plans bind a complete inventory and block incomplete discove
         inputDigest: completeInventory.batches[0].inputDigest,
         state: "complete",
         execution: { mode: "sequential", workerIds: [] },
-        receipts: [{
+        workerReports: [{
           workerId: "host",
           processedSourceIds: completeInventory.batches[0].sourceIds,
           gaps: [],

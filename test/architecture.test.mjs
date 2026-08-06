@@ -63,7 +63,7 @@ test("Toxic Review leaves normative rules in its runtime brief", async () => {
   assert.match(toxicReview, /`causalCompleteness\.activation`/u);
   assert.match(toxicReview, /`evaluation-plan`/u);
   assert.match(toxicReview, /`evaluation-prepare`/u);
-  assert.match(toxicReview, /`evaluation-receipt`/u);
+  assert.match(toxicReview, /`evaluation-record`/u);
   assert.match(toxicReview, /`evaluation-validate-set`/u);
   assert.match(toxicReview, /`stopping`.*`finalVoice`/su);
   assert.match(toxicReview, /run-prepare/u);
@@ -153,12 +153,12 @@ test("Diff leaves invocation decisions in its runtime contract", async () => {
   assert.match(invocation, /source request changed/u);
   assert.match(diff, /invocation-evaluation-plan/u);
   assert.match(diff, /invocation-evaluation-prepare/u);
-  assert.match(diff, /invocation-evaluation-receipt/u);
+  assert.match(diff, /invocation-evaluation-record/u);
   assert.match(diff, /invocation-evaluation-validate-set/u);
   assert.match(diff, /fresh host/u);
   assert.doesNotMatch(diff, /invocation-0[1-8]/u);
   assert.match(evaluation, /minimal.*rules-only.*full/su);
-  assert.match(evaluation, /receipt set must use one host, model, and effort/u);
+  assert.match(evaluation, /record set must use one host, model, and effort/u);
 });
 
 test("project work requires Hope Write wherever clearer language helps", async () => {

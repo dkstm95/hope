@@ -7,18 +7,18 @@ import {
   SWEEP_MODEL_ADAPTER_CODE,
 } from "../features/sweep/index.mjs";
 import { parseSweepArguments } from "../features/sweep/cli.mjs";
-import { createPolishReceipt } from "../features/polish/validate.mjs";
+import { createPolishRecord } from "../features/polish/validate.mjs";
 import {
   createSweepApprovalCandidate,
   sweepPlanDigest,
-  validateSweepApprovalReceipt,
+  validateSweepApprovalRecord,
   validateSweepCompletion,
   validateSweepPlan,
   validateSweepSessionResult,
 } from "../features/sweep/validate.mjs";
 import {
   makeSweepApprovalCandidate,
-  makeSweepApprovalReceipt,
+  makeSweepApprovalRecord,
   makeSweepCompletion,
   makeSweepPlan,
   makeSweepPolishRun,
@@ -221,26 +221,26 @@ test("sweep binds approval to the exact plan, candidate, sources, and preview", 
   );
 });
 
-test("sweep approval receipts bind the decision and conversation authority", () => {
-  const receipt = makeSweepApprovalReceipt();
+test("sweep approval records bind the decision and conversation authority", () => {
+  const record = makeSweepApprovalRecord();
   assert.equal(
-    validateSweepApprovalReceipt(receipt, sweepApprovalDependencies).decision,
+    validateSweepApprovalRecord(record, sweepApprovalDependencies).decision,
     "approved",
   );
 
-  const forged = clone(receipt);
+  const forged = clone(record);
   forged.decision = "rejected";
   assert.throws(
-    () => validateSweepApprovalReceipt(forged, sweepApprovalDependencies),
-    /receiptDigest does not match/u,
+    () => validateSweepApprovalRecord(forged, sweepApprovalDependencies),
+    /recordDigest does not match/u,
   );
 
   assert.throws(
-    () => validateSweepApprovalReceipt(receipt),
+    () => validateSweepApprovalRecord(record),
     /requires a trusted host attestation verifier/u,
   );
   assert.throws(
-    () => validateSweepApprovalReceipt(receipt, {
+    () => validateSweepApprovalRecord(record, {
       verifyApprovalAttestation: () => false,
     }),
     /was not verified by the trusted host/u,
@@ -278,7 +278,7 @@ test("sweep keeps surviving target identities for no-change", () => {
   const target = completion.snapshot.sources.find(
     (source) => source.id === "target-file",
   );
-  const polish = makeSweepPolishRun(completion.approvalReceipt);
+  const polish = makeSweepPolishRun(completion.approvalRecord);
   polish.plan = [];
   polish.outcome = {
     status: "no-change",
@@ -296,7 +296,7 @@ test("sweep keeps surviving target identities for no-change", () => {
     beforeIdentityChecked: false,
     finalIdentityChecked: false,
   };
-  completion.polishReceipt = createPolishReceipt(polish);
+  completion.polishRecord = createPolishRecord(polish);
   completion.outcome = {
     status: "no-change",
     outputSnapshot: {
@@ -311,21 +311,21 @@ test("sweep keeps surviving target identities for no-change", () => {
   assert.equal(validateCompletion(completion).result.status, "no-change");
 });
 
-test("sweep binds the Polish receipt to the approved candidate and run", () => {
+test("sweep binds the Polish record to the approved candidate and run", () => {
   const wrongCandidate = clone(makeSweepCompletion());
-  wrongCandidate.polishReceipt.run.target.maximumChanges = 2;
+  wrongCandidate.polishRecord.run.target.maximumChanges = 2;
   assert.throws(
     () => validateCompletion(wrongCandidate),
-    /polishReceipt|receiptDigest|change budget/u,
+    /polishRecord|recordDigest|change budget/u,
   );
 
   const wrongRun = clone(makeSweepCompletion());
-  wrongRun.polishReceipt.run.snapshot.sources.find(
+  wrongRun.polishRecord.run.snapshot.sources.find(
     (source) => source.id === "target-file",
   ).digest = `sha256:${"9".repeat(64)}`;
   assert.throws(
     () => validateCompletion(wrongRun),
-    /polishReceipt|receiptDigest|approved source/u,
+    /polishRecord|recordDigest|approved source/u,
   );
 });
 
@@ -345,9 +345,9 @@ test("sweep rejects an approved-action or verification substitution", () => {
     ],
   ]) {
     const completion = clone(makeSweepCompletion());
-    const run = makeSweepPolishRun(completion.approvalReceipt);
+    const run = makeSweepPolishRun(completion.approvalRecord);
     mutate(run);
-    completion.polishReceipt = createPolishReceipt(run);
+    completion.polishRecord = createPolishRecord(run);
     assert.throws(() => validateCompletion(completion), message);
   }
 });
@@ -356,7 +356,7 @@ test("sweep invalidates approval when a bound source changes", () => {
   const stale = clone(makeSweepCompletion());
   stale.snapshot.sources.find((source) => source.id === "target-file").digest =
     `sha256:${"9".repeat(64)}`;
-  delete stale.polishReceipt;
+  delete stale.polishRecord;
   stale.outcome = {
     status: "stale",
     outputSnapshot: null,
@@ -371,7 +371,7 @@ test("sweep invalidates approval when a bound source changes", () => {
 
 test("sweep keeps a Polish material choice as an ordinary-task handoff", () => {
   const handoff = clone(makeSweepCompletion());
-  const polish = makeSweepPolishRun(handoff.approvalReceipt);
+  const polish = makeSweepPolishRun(handoff.approvalRecord);
   polish.plan = [];
   for (const condition of polish.preservation) condition.verificationIds = [];
   polish.outcome = {
@@ -388,7 +388,7 @@ test("sweep keeps a Polish material choice as an ordinary-task handoff", () => {
     beforeIdentityChecked: false,
     finalIdentityChecked: false,
   };
-  handoff.polishReceipt = createPolishReceipt(polish);
+  handoff.polishRecord = createPolishRecord(polish);
   handoff.outcome = {
     status: "handed-off",
     outputSnapshot: null,
@@ -517,12 +517,12 @@ test("sweep brief and CLI expose the two-stage contract", async () => {
   );
   assert.deepEqual(
     parseSweepArguments([
-      "approval-receipt",
+      "approval-record",
       "--input",
       "/tmp/approval.json",
     ]),
     {
-      command: "approval-receipt",
+      command: "approval-record",
       inputPath: "/tmp/approval.json",
     },
   );

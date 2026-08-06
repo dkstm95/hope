@@ -37,9 +37,9 @@ function runFailure(script, arguments_) {
 }
 
 function withoutSchemaPath(value) {
-  const { schemaPath, receiptSchemaPath, ...rest } = value;
+  const { schemaPath, recordSchemaPath, ...rest } = value;
   assert.ok(schemaPath);
-  assert.ok(receiptSchemaPath);
+  assert.ok(recordSchemaPath);
   return rest;
 }
 
@@ -78,20 +78,20 @@ test("core and generated Polish reach the same brief and validator", async () =>
   ]);
   const {
     schemaPath: coreSchemaPath,
-    receiptSchemaPath: coreReceiptSchemaPath,
+    recordSchemaPath: coreRecordSchemaPath,
     ...coreContract
   } = coreBrief;
   const {
     schemaPath: pluginSchemaPath,
-    receiptSchemaPath: pluginReceiptSchemaPath,
+    recordSchemaPath: pluginRecordSchemaPath,
     ...pluginContract
   } = pluginBrief;
   const schemaSuffix = join("features", "polish", "run-v2.schema.json");
-  const receiptSuffix = join("features", "polish", "receipt-v1.schema.json");
+  const recordSuffix = join("features", "polish", "record-v1.schema.json");
   assert.ok(coreSchemaPath.endsWith(schemaSuffix));
   assert.ok(pluginSchemaPath.endsWith(schemaSuffix));
-  assert.ok(coreReceiptSchemaPath.endsWith(receiptSuffix));
-  assert.ok(pluginReceiptSchemaPath.endsWith(receiptSuffix));
+  assert.ok(coreRecordSchemaPath.endsWith(recordSuffix));
+  assert.ok(pluginRecordSchemaPath.endsWith(recordSuffix));
   assert.deepEqual(pluginContract, coreContract);
   assert.deepEqual(
     pluginValidator.validatePolishRun(makePolishRun()),
@@ -145,15 +145,15 @@ test("exact harness and generated Polish commands stay equivalent", async () => 
   );
   assert.deepEqual(pluginResult, harnessResult);
 
-  const harnessReceipt = runJson(
+  const harnessRecord = runJson(
     "harness/hope.mjs",
-    ["polish", "receipt", "--input", input],
+    ["polish", "record", "--input", input],
   );
-  const pluginReceipt = runJson(
+  const pluginRecord = runJson(
     "plugins/hope/runtime/features/polish/cli.mjs",
-    ["receipt", "--input", input],
+    ["record", "--input", input],
   );
-  assert.deepEqual(pluginReceipt, harnessReceipt);
+  assert.deepEqual(pluginRecord, harnessRecord);
 
   assert.equal(
     runFailure("plugins/hope/runtime/features/polish/cli.mjs", [

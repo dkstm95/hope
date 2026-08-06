@@ -9,12 +9,12 @@ import { fileURLToPath } from "node:url";
 import {
   createDiffInvocationContract,
   createDiffInvocationExampleRemovalPlan,
-  createDiffInvocationExampleRemovalReceipt,
+  createDiffInvocationExampleRemovalRecord,
   createDiffInvocationEvaluationPlan,
-  createDiffInvocationEvaluationReceipt,
-  createDiffInvocationEvaluationReceiptFromFile,
+  createDiffInvocationEvaluationRecord,
+  createDiffInvocationEvaluationRecordFromFile,
   createDiffInvocationProductionVerificationPlan,
-  createDiffInvocationProductionVerificationReceipt,
+  createDiffInvocationProductionVerificationRecord,
   diffInvocationEvaluationCases,
   diffInvocationEvaluationLimits,
   diffInvocationEvaluationProtocol,
@@ -23,13 +23,13 @@ import {
   prepareDiffInvocationEvaluationRun,
   prepareDiffInvocationProductionVerificationRun,
   validateDiffInvocationExampleRemovalEvidence,
-  validateDiffInvocationExampleRemovalReceiptSet,
+  validateDiffInvocationExampleRemovalRecordSet,
   validateDiffInvocationEvaluationOutput,
-  validateDiffInvocationEvaluationReceipt,
-  validateDiffInvocationEvaluationReceiptFile,
-  validateDiffInvocationEvaluationReceiptSet,
-  validateDiffInvocationEvaluationReceiptSetFile,
-  validateDiffInvocationProductionVerificationReceiptSet,
+  validateDiffInvocationEvaluationRecord,
+  validateDiffInvocationEvaluationRecordFile,
+  validateDiffInvocationEvaluationRecordSet,
+  validateDiffInvocationEvaluationRecordSetFile,
+  validateDiffInvocationProductionVerificationRecordSet,
 } from "../features/diff/index.mjs";
 import {
   main as runDiffCommand,
@@ -72,8 +72,8 @@ function expectedOutput(caseId, decision) {
   };
 }
 
-function receiptFor(specification, overrides = {}) {
-  return createDiffInvocationEvaluationReceipt({
+function recordFor(specification, overrides = {}) {
+  return createDiffInvocationEvaluationRecord({
     caseId: specification.caseId,
     variant: specification.variant,
     run: specification.run,
@@ -84,11 +84,11 @@ function receiptFor(specification, overrides = {}) {
       `invocation-${specification.caseId}-${specification.variant}-${specification.run}`,
     output: expectedOutput(specification.caseId),
     ...overrides,
-  }).receipt;
+  }).record;
 }
 
-function exampleRemovalReceiptFor(specification, overrides = {}) {
-  return createDiffInvocationExampleRemovalReceipt({
+function exampleRemovalRecordFor(specification, overrides = {}) {
+  return createDiffInvocationExampleRemovalRecord({
     batch: specification.batch,
     caseId: specification.caseId,
     run: specification.run,
@@ -99,11 +99,11 @@ function exampleRemovalReceiptFor(specification, overrides = {}) {
       `example-removal-${specification.batch}-${specification.caseId}-${specification.run}`,
     output: expectedOutput(specification.caseId),
     ...overrides,
-  }).receipt;
+  }).record;
 }
 
-function productionVerificationReceiptFor(specification, overrides = {}) {
-  return createDiffInvocationProductionVerificationReceipt({
+function productionVerificationRecordFor(specification, overrides = {}) {
+  return createDiffInvocationProductionVerificationRecord({
     caseId: specification.caseId,
     run: specification.run,
     host: "codex-test-host",
@@ -112,7 +112,7 @@ function productionVerificationReceiptFor(specification, overrides = {}) {
     invocationId: `production-${specification.caseId}-${specification.run}`,
     output: expectedOutput(specification.caseId),
     ...overrides,
-  }).receipt;
+  }).record;
 }
 
 test("Diff invocation evaluation separates conformance, ablation, and safety", () => {
@@ -243,29 +243,29 @@ test("Diff invocation evaluation validates bounded model output", () => {
   );
 });
 
-test("Diff invocation receipts bind the prepared input and model output", async () => {
+test("Diff invocation records bind the prepared input and model output", async () => {
   const specification = {
     caseId: "invocation-04",
     variant: "full",
     run: 1,
   };
-  const created = createDiffInvocationEvaluationReceipt({
+  const created = createDiffInvocationEvaluationRecord({
     ...specification,
     host: "codex-test-host",
     model: "test-model",
     effort: "test-effort",
-    invocationId: "invocation-receipt-test",
+    invocationId: "invocation-record-test",
     output: expectedOutput(specification.caseId),
   });
   assert.equal(created.evaluation.runPassed, true);
-  const validated = validateDiffInvocationEvaluationReceipt(created.receipt);
+  const validated = validateDiffInvocationEvaluationRecord(created.record);
   assert.equal(validated.evaluation.runPassed, true);
   assert.ok(
-    Buffer.byteLength(JSON.stringify(created.receipt), "utf8")
-      < diffInvocationEvaluationLimits.receiptBytes,
+    Buffer.byteLength(JSON.stringify(created.record), "utf8")
+      < diffInvocationEvaluationLimits.recordBytes,
   );
 
-  const fromFile = await createDiffInvocationEvaluationReceiptFromFile(
+  const fromFile = await createDiffInvocationEvaluationRecordFromFile(
     {
       ...specification,
       host: "codex-test-host",
@@ -283,17 +283,17 @@ test("Diff invocation receipts bind the prepared input and model output", async 
   );
   assert.equal(fromFile.evaluation.runPassed, true);
 
-  const tampered = structuredClone(created.receipt);
+  const tampered = structuredClone(created.record);
   tampered.output.reason = "Changed after the model invocation.";
   assert.throws(
-    () => validateDiffInvocationEvaluationReceipt(tampered),
+    () => validateDiffInvocationEvaluationRecord(tampered),
     /outputDigest does not match/u,
   );
 
-  const wrongInput = structuredClone(created.receipt);
+  const wrongInput = structuredClone(created.record);
   wrongInput.invocation.inputDigest = `sha256:${"a".repeat(64)}`;
   assert.throws(
-    () => validateDiffInvocationEvaluationReceipt(wrongInput),
+    () => validateDiffInvocationEvaluationRecord(wrongInput),
     /inputDigest does not match/u,
   );
 });
@@ -304,7 +304,7 @@ test("A wrong Diff invocation decision remains valid failed evidence", () => {
     variant: "full",
     run: 1,
   };
-  const created = createDiffInvocationEvaluationReceipt({
+  const created = createDiffInvocationEvaluationRecord({
     ...specification,
     host: "codex-test-host",
     model: "test-model",
@@ -316,16 +316,16 @@ test("A wrong Diff invocation decision remains valid failed evidence", () => {
   assert.equal(created.evaluation.decisionMatched, false);
   assert.equal(created.evaluation.runPassed, false);
   assert.equal(
-    validateDiffInvocationEvaluationReceipt(created.receipt)
+    validateDiffInvocationEvaluationRecord(created.record)
       .evaluation.runPassed,
     false,
   );
 });
 
-test("Diff invocation receipt sets require one complete model configuration", () => {
+test("Diff invocation record sets require one complete model configuration", () => {
   const plan = createDiffInvocationEvaluationPlan();
-  const receipts = plan.runs.map((specification) => receiptFor(specification));
-  const validated = validateDiffInvocationEvaluationReceiptSet(receipts);
+  const records = plan.runs.map((specification) => recordFor(specification));
+  const validated = validateDiffInvocationEvaluationRecordSet(records);
   assert.deepEqual(validated.summary, {
     totalRuns: 26,
     passedRuns: 26,
@@ -342,22 +342,22 @@ test("Diff invocation receipt sets require one complete model configuration", ()
     safety: { total: 6, passed: 6, failed: 0 },
   });
 
-  const reusedInvocation = structuredClone(receipts);
+  const reusedInvocation = structuredClone(records);
   reusedInvocation.at(-1).invocation.id = reusedInvocation[0].invocation.id;
   assert.throws(
-    () => validateDiffInvocationEvaluationReceiptSet(reusedInvocation),
+    () => validateDiffInvocationEvaluationRecordSet(reusedInvocation),
     /repeats invocation/u,
   );
 
-  const mixedModel = structuredClone(receipts);
+  const mixedModel = structuredClone(records);
   mixedModel.at(-1).configuration.model = "another-model";
   assert.throws(
-    () => validateDiffInvocationEvaluationReceiptSet(mixedModel),
+    () => validateDiffInvocationEvaluationRecordSet(mixedModel),
     /one host, model, and effort/u,
   );
 
   assert.throws(
-    () => validateDiffInvocationEvaluationReceiptSet(receipts.slice(1)),
+    () => validateDiffInvocationEvaluationRecordSet(records.slice(1)),
     /must contain 26 runs/u,
   );
 });
@@ -388,11 +388,11 @@ test("Diff example removal completes and repeats rules-only coverage", () => {
 
 test("Diff example-removal evidence keeps failures and requires one configuration", () => {
   const baselinePlan = createDiffInvocationEvaluationPlan();
-  const baselineReceipts = baselinePlan.runs.map(receiptFor);
+  const baselineRecords = baselinePlan.runs.map(recordFor);
   const followupPlan = createDiffInvocationExampleRemovalPlan();
-  const followupReceipts = followupPlan.runs.map(exampleRemovalReceiptFor);
-  const followup = validateDiffInvocationExampleRemovalReceiptSet(
-    followupReceipts,
+  const followupRecords = followupPlan.runs.map(exampleRemovalRecordFor);
+  const followup = validateDiffInvocationExampleRemovalRecordSet(
+    followupRecords,
   );
   assert.deepEqual(followup.summary, {
     totalRuns: 22,
@@ -400,8 +400,8 @@ test("Diff example-removal evidence keeps failures and requires one configuratio
     failedRuns: 0,
   });
   const evidence = validateDiffInvocationExampleRemovalEvidence({
-    baselineReceipts,
-    followupReceipts,
+    baselineRecords,
+    followupRecords,
   });
   assert.deepEqual(evidence.summary, {
     totalRuns: 28,
@@ -411,31 +411,31 @@ test("Diff example-removal evidence keeps failures and requires one configuratio
   });
   assert.equal(evidence.decision, "remove-examples");
 
-  const failed = structuredClone(followupReceipts);
-  failed[0] = exampleRemovalReceiptFor(followupPlan.runs[0], {
+  const failed = structuredClone(followupRecords);
+  failed[0] = exampleRemovalRecordFor(followupPlan.runs[0], {
     output: expectedOutput(followupPlan.runs[0].caseId, "answer"),
   });
   const failedEvidence = validateDiffInvocationExampleRemovalEvidence({
-    baselineReceipts,
-    followupReceipts: failed,
+    baselineRecords,
+    followupRecords: failed,
   });
   assert.equal(failedEvidence.summary.failedRuns, 1);
   assert.equal(failedEvidence.summary.deletionReady, false);
   assert.equal(failedEvidence.decision, "keep-examples");
 
-  const mixed = structuredClone(followupReceipts);
+  const mixed = structuredClone(followupRecords);
   mixed.at(-1).configuration.model = "another-model";
   assert.throws(
-    () => validateDiffInvocationExampleRemovalReceiptSet(mixed),
+    () => validateDiffInvocationExampleRemovalRecordSet(mixed),
     /one host, model, and effort/u,
   );
 
-  const reusedAcrossSets = structuredClone(followupReceipts);
-  reusedAcrossSets[0].invocation.id = baselineReceipts[0].invocation.id;
+  const reusedAcrossSets = structuredClone(followupRecords);
+  reusedAcrossSets[0].invocation.id = baselineRecords[0].invocation.id;
   assert.throws(
     () => validateDiffInvocationExampleRemovalEvidence({
-      baselineReceipts,
-      followupReceipts: reusedAcrossSets,
+      baselineRecords,
+      followupRecords: reusedAcrossSets,
     }),
     /baseline and follow-up evidence repeat invocation/u,
   );
@@ -465,9 +465,9 @@ test("Diff production verification evaluates the exact active brief", () => {
 
 test("Diff production verification requires every active-brief decision", () => {
   const plan = createDiffInvocationProductionVerificationPlan();
-  const receipts = plan.runs.map(productionVerificationReceiptFor);
-  const result = validateDiffInvocationProductionVerificationReceiptSet(
-    receipts,
+  const records = plan.runs.map(productionVerificationRecordFor);
+  const result = validateDiffInvocationProductionVerificationRecordSet(
+    records,
   );
   assert.deepEqual(result.summary, {
     totalRuns: 8,
@@ -477,11 +477,11 @@ test("Diff production verification requires every active-brief decision", () => 
   });
   assert.equal(result.decision, "accept-active-brief");
 
-  const failed = structuredClone(receipts);
-  failed[5] = productionVerificationReceiptFor(plan.runs[5], {
+  const failed = structuredClone(records);
+  failed[5] = productionVerificationRecordFor(plan.runs[5], {
     output: expectedOutput(plan.runs[5].caseId, "execute"),
   });
-  const failedResult = validateDiffInvocationProductionVerificationReceiptSet(
+  const failedResult = validateDiffInvocationProductionVerificationRecordSet(
     failed,
   );
   assert.equal(failedResult.summary.failedRuns, 1);
@@ -491,15 +491,15 @@ test("Diff production verification requires every active-brief decision", () => 
 
 test("Diff invocation evaluation file validators use bounded inputs", async () => {
   const plan = createDiffInvocationEvaluationPlan();
-  const receipts = plan.runs.map((specification) => receiptFor(specification));
-  const one = await validateDiffInvocationEvaluationReceiptFile(
-    "receipt.json",
-    { readInput: async () => ({ value: receipts[0] }) },
+  const records = plan.runs.map((specification) => recordFor(specification));
+  const one = await validateDiffInvocationEvaluationRecordFile(
+    "record.json",
+    { readInput: async () => ({ value: records[0] }) },
   );
   assert.equal(one.evaluation.runPassed, true);
-  const complete = await validateDiffInvocationEvaluationReceiptSetFile(
-    "receipts.json",
-    { readInput: async () => ({ value: receipts }) },
+  const complete = await validateDiffInvocationEvaluationRecordSetFile(
+    "records.json",
+    { readInput: async () => ({ value: records }) },
   );
   assert.equal(complete.summary.passedRuns, 26);
 });
@@ -567,7 +567,7 @@ test("Diff CLI parses and delegates invocation evaluation commands", async () =>
   );
   assert.deepEqual(
     parseDiffArguments([
-      "invocation-evaluation-receipt",
+      "invocation-evaluation-record",
       "--case",
       "invocation-03",
       "--variant",
@@ -586,7 +586,7 @@ test("Diff CLI parses and delegates invocation evaluation commands", async () =>
       "invocation-id",
     ]),
     {
-      command: "invocation-evaluation-receipt",
+      command: "invocation-evaluation-record",
       caseId: "invocation-03",
       variant: "minimal",
       run: 1,
@@ -667,38 +667,38 @@ test("core, harness, and generated plugin expose the same invocation evaluation"
 test("every Diff entry exposes the complete evaluation evidence workflow", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "hope-diff-evidence-"));
   try {
-    const baselineReceipts = createDiffInvocationEvaluationPlan().runs.map(
-      receiptFor,
+    const baselineRecords = createDiffInvocationEvaluationPlan().runs.map(
+      recordFor,
     );
     const followupPlan = createDiffInvocationExampleRemovalPlan();
-    const followupReceipts = followupPlan.runs.map(exampleRemovalReceiptFor);
+    const followupRecords = followupPlan.runs.map(exampleRemovalRecordFor);
     const productionPlan = createDiffInvocationProductionVerificationPlan();
-    const productionReceipts = productionPlan.runs.map(
-      productionVerificationReceiptFor,
+    const productionRecords = productionPlan.runs.map(
+      productionVerificationRecordFor,
     );
-    const failedFollowupReceipts = structuredClone(followupReceipts);
-    failedFollowupReceipts[0] = exampleRemovalReceiptFor(
+    const failedFollowupRecords = structuredClone(followupRecords);
+    failedFollowupRecords[0] = exampleRemovalRecordFor(
       followupPlan.runs[0],
       { output: expectedOutput(followupPlan.runs[0].caseId, "answer") },
     );
-    const failedProductionReceipts = structuredClone(productionReceipts);
-    failedProductionReceipts[5] = productionVerificationReceiptFor(
+    const failedProductionRecords = structuredClone(productionRecords);
+    failedProductionRecords[5] = productionVerificationRecordFor(
       productionPlan.runs[5],
       { output: expectedOutput(productionPlan.runs[5].caseId, "execute") },
     );
 
     const paths = Object.fromEntries([
       ["output", expectedOutput("invocation-06")],
-      ["baseline", baselineReceipts],
-      ["followup", followupReceipts],
-      ["followupReceipt", followupReceipts[0]],
-      ["production", productionReceipts],
-      ["productionReceipt", productionReceipts[0]],
-      ["failedProduction", failedProductionReceipts],
-      ["evidence", { baselineReceipts, followupReceipts }],
+      ["baseline", baselineRecords],
+      ["followup", followupRecords],
+      ["followupRecord", followupRecords[0]],
+      ["production", productionRecords],
+      ["productionRecord", productionRecords[0]],
+      ["failedProduction", failedProductionRecords],
+      ["evidence", { baselineRecords, followupRecords }],
       [
         "failedEvidence",
-        { baselineReceipts, followupReceipts: failedFollowupReceipts },
+        { baselineRecords, followupRecords: failedFollowupRecords },
       ],
     ].map(([name, value]) => [name, { name, value }]));
     await Promise.all(Object.values(paths).map(async (entry) => {
@@ -707,7 +707,7 @@ test("every Diff entry exposes the complete evaluation evidence workflow", async
     }));
 
     const createdExample = assertEntryParity([
-      "invocation-example-removal-receipt",
+      "invocation-example-removal-record",
       "--case",
       "invocation-06",
       "--batch",
@@ -729,7 +729,7 @@ test("every Diff entry exposes the complete evaluation evidence workflow", async
     assert.equal(assertEntryParity([
       "invocation-example-removal-validate",
       "--input",
-      paths.followupReceipt.path,
+      paths.followupRecord.path,
     ]).evaluation.runPassed, true);
     assert.equal(assertEntryParity([
       "invocation-example-removal-validate-set",
@@ -753,7 +753,7 @@ test("every Diff entry exposes the complete evaluation evidence workflow", async
     ]).summary.passedRuns, 26);
 
     const createdProduction = assertEntryParity([
-      "invocation-production-verification-receipt",
+      "invocation-production-verification-record",
       "--case",
       "invocation-06",
       "--run",
@@ -773,7 +773,7 @@ test("every Diff entry exposes the complete evaluation evidence workflow", async
     assert.equal(assertEntryParity([
       "invocation-production-verification-validate",
       "--input",
-      paths.productionReceipt.path,
+      paths.productionRecord.path,
     ]).evaluation.runPassed, true);
     assert.equal(assertEntryParity([
       "invocation-production-verification-validate-set",
@@ -790,7 +790,7 @@ test("every Diff entry exposes the complete evaluation evidence workflow", async
   }
 });
 
-test("every Diff entry creates and validates the same evaluation receipt", async () => {
+test("every Diff entry creates and validates the same evaluation record", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "hope-diff-evaluation-"));
   try {
     const outputPath = join(temporary, "output.json");
@@ -800,7 +800,7 @@ test("every Diff entry creates and validates the same evaluation receipt", async
       { mode: 0o600 },
     );
     const arguments_ = [
-      "invocation-evaluation-receipt",
+      "invocation-evaluation-record",
       "--case",
       "invocation-03",
       "--variant",
@@ -820,16 +820,16 @@ test("every Diff entry creates and validates the same evaluation receipt", async
     ];
     const created = assertEntryParity(arguments_);
 
-    const receiptPath = join(temporary, "receipt.json");
+    const recordPath = join(temporary, "record.json");
     await writeFile(
-      receiptPath,
-      JSON.stringify(created.receipt),
+      recordPath,
+      JSON.stringify(created.record),
       { mode: 0o600 },
     );
     const validated = assertEntryParity([
       "invocation-evaluation-validate",
       "--input",
-      receiptPath,
+      recordPath,
     ]);
     assert.equal(validated.evaluation.runPassed, true);
   } finally {

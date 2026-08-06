@@ -6,13 +6,13 @@ import { takeOptions } from "../command-options/index.mjs";
 
 import {
   createHopeFeatureSelectionEvaluationPlan,
-  createHopeFeatureSelectionEvaluationReceiptFromFile,
+  createHopeFeatureSelectionEvaluationRecordFromFile,
   createHopePolishPreservationEvaluationPlan,
-  createHopePolishPreservationEvaluationReceiptFromFile,
+  createHopePolishPreservationEvaluationRecordFromFile,
   createHopeWriteExampleEvaluationPlan,
-  createHopeWriteExampleEvaluationReceiptFromFile,
+  createHopeWriteExampleEvaluationRecordFromFile,
   createHopeWriteProductionVerificationPlan,
-  createHopeWriteProductionVerificationReceiptFromFile,
+  createHopeWriteProductionVerificationRecordFromFile,
   getHopeFeatureSelectionEvaluationOracle,
   getHopePolishPreservationEvaluationOracle,
   getHopeWriteExampleEvaluationOracle,
@@ -23,14 +23,14 @@ import {
   prepareHopePolishPreservationEvaluationRun,
   prepareHopeWriteExampleEvaluationRun,
   prepareHopeWriteProductionVerificationRun,
-  validateHopeFeatureSelectionEvaluationReceiptFile,
-  validateHopeFeatureSelectionEvaluationReceiptSetFile,
-  validateHopePolishPreservationEvaluationReceiptFile,
-  validateHopePolishPreservationEvaluationReceiptSetFile,
-  validateHopeWriteExampleEvaluationReceiptFile,
-  validateHopeWriteExampleEvaluationReceiptSetFile,
-  validateHopeWriteProductionVerificationReceiptFile,
-  validateHopeWriteProductionVerificationReceiptSetFile,
+  validateHopeFeatureSelectionEvaluationRecordFile,
+  validateHopeFeatureSelectionEvaluationRecordSetFile,
+  validateHopePolishPreservationEvaluationRecordFile,
+  validateHopePolishPreservationEvaluationRecordSetFile,
+  validateHopeWriteExampleEvaluationRecordFile,
+  validateHopeWriteExampleEvaluationRecordSetFile,
+  validateHopeWriteProductionVerificationRecordFile,
+  validateHopeWriteProductionVerificationRecordSetFile,
 } from "./index.mjs";
 
 export const HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE =
@@ -65,28 +65,28 @@ function usage() {
     "  hope model-evaluation feature-selection-plan",
     "  hope model-evaluation feature-selection-prepare --case <id> --variant <minimal|full> --run <number>",
     "  hope model-evaluation feature-selection-oracle --case <id>",
-    "  hope model-evaluation feature-selection-receipt --case <id> --variant <minimal|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope model-evaluation feature-selection-validate --input <receipt.json>",
-    "  hope model-evaluation feature-selection-validate-set --input <receipts.json>",
+    "  hope model-evaluation feature-selection-record --case <id> --variant <minimal|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope model-evaluation feature-selection-validate --input <record.json>",
+    "  hope model-evaluation feature-selection-validate-set --input <records.json>",
     "  hope model-evaluation polish-preservation-plan",
     "  hope model-evaluation polish-preservation-prepare --case <id> --variant <invariants-only|full> --run <number>",
     "  hope model-evaluation polish-preservation-oracle --case <id>",
-    "  hope model-evaluation polish-preservation-receipt --case <id> --variant <invariants-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope model-evaluation polish-preservation-validate --input <receipt.json>",
-    "  hope model-evaluation polish-preservation-validate-set --input <receipts.json>",
+    "  hope model-evaluation polish-preservation-record --case <id> --variant <invariants-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope model-evaluation polish-preservation-validate --input <record.json>",
+    "  hope model-evaluation polish-preservation-validate-set --input <records.json>",
     "  hope model-evaluation write-example-plan",
     "  hope model-evaluation write-example-prepare --case <id> --variant <rules-only|full> --run <number>",
     "  hope model-evaluation write-example-oracle --case <id>",
-    "  hope model-evaluation write-example-receipt --case <id> --variant <rules-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope model-evaluation write-example-validate --input <receipt.json>",
-    "  hope model-evaluation write-example-validate-set --input <receipts.json>",
+    "  hope model-evaluation write-example-record --case <id> --variant <rules-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope model-evaluation write-example-validate --input <record.json>",
+    "  hope model-evaluation write-example-validate-set --input <records.json>",
     "  hope model-evaluation write-production-plan",
     "  hope model-evaluation write-production-prepare --case <id> --run <number>",
-    "  hope model-evaluation write-production-receipt --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope model-evaluation write-production-validate --input <receipt.json>",
-    "  hope model-evaluation write-production-validate-set --input <receipts.json>",
+    "  hope model-evaluation write-production-record --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope model-evaluation write-production-validate --input <record.json>",
+    "  hope model-evaluation write-production-validate-set --input <records.json>",
     "",
-    "Receipt commands create synthetic test evidence.",
+    "Record commands create synthetic test evidence.",
     "Release evidence requires a trusted host adapter and complete-attempt ledger.",
   ].join("\n");
 }
@@ -115,24 +115,24 @@ export function parseModelEvaluationArguments(argv) {
     "feature-selection-oracle",
     "feature-selection-plan",
     "feature-selection-prepare",
-    "feature-selection-receipt",
+    "feature-selection-record",
     "feature-selection-validate",
     "feature-selection-validate-set",
     "polish-preservation-oracle",
     "polish-preservation-plan",
     "polish-preservation-prepare",
-    "polish-preservation-receipt",
+    "polish-preservation-record",
     "polish-preservation-validate",
     "polish-preservation-validate-set",
     "write-example-oracle",
     "write-example-plan",
     "write-example-prepare",
-    "write-example-receipt",
+    "write-example-record",
     "write-example-validate",
     "write-example-validate-set",
     "write-production-plan",
     "write-production-prepare",
-    "write-production-receipt",
+    "write-production-record",
     "write-production-validate",
     "write-production-validate-set",
   ]);
@@ -146,10 +146,10 @@ export function parseModelEvaluationArguments(argv) {
     if (values.length !== 0) throw new TypeError(usage());
     return { command };
   }
-  const receiptCommand = command === "feature-selection-receipt"
-    || command === "polish-preservation-receipt"
-    || command === "write-example-receipt";
-  const productionReceipt = command === "write-production-receipt";
+  const recordCommand = command === "feature-selection-record"
+    || command === "polish-preservation-record"
+    || command === "write-example-record";
+  const productionRecord = command === "write-production-record";
   const prepareCommand = command === "feature-selection-prepare"
     || command === "polish-preservation-prepare"
     || command === "write-example-prepare";
@@ -157,9 +157,9 @@ export function parseModelEvaluationArguments(argv) {
   const oracleCommand = command === "feature-selection-oracle"
     || command === "polish-preservation-oracle"
     || command === "write-example-oracle";
-  const allowed = receiptCommand
+  const allowed = recordCommand
     ? ["case", "effort", "host", "input", "invocation", "model", "run", "variant"]
-    : productionReceipt
+    : productionRecord
       ? ["case", "effort", "host", "input", "invocation", "model", "run"]
     : prepareCommand
       ? ["case", "run", "variant"]
@@ -195,7 +195,7 @@ export function parseModelEvaluationArguments(argv) {
       run: runNumber(options.run),
     };
   }
-  if (productionReceipt) {
+  if (productionRecord) {
     return {
       caseId: required(options.case, "--case"),
       command,
@@ -322,41 +322,41 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
         ?? getHopeWriteExampleEvaluationOracle)(options.caseId),
     );
   }
-  if (options.command === "feature-selection-receipt") {
+  if (options.command === "feature-selection-record") {
     return writeJson(
       stdout,
-      await (dependencies.createFeatureSelectionReceiptFromFile
-        ?? createHopeFeatureSelectionEvaluationReceiptFromFile)(
+      await (dependencies.createFeatureSelectionRecordFromFile
+        ?? createHopeFeatureSelectionEvaluationRecordFromFile)(
           options,
           dependencies,
         ),
     );
   }
-  if (options.command === "polish-preservation-receipt") {
+  if (options.command === "polish-preservation-record") {
     return writeJson(
       stdout,
-      await (dependencies.createPolishPreservationReceiptFromFile
-        ?? createHopePolishPreservationEvaluationReceiptFromFile)(
+      await (dependencies.createPolishPreservationRecordFromFile
+        ?? createHopePolishPreservationEvaluationRecordFromFile)(
           options,
           dependencies,
         ),
     );
   }
-  if (options.command === "write-example-receipt") {
+  if (options.command === "write-example-record") {
     return writeJson(
       stdout,
-      await (dependencies.createWriteExampleReceiptFromFile
-        ?? createHopeWriteExampleEvaluationReceiptFromFile)(
+      await (dependencies.createWriteExampleRecordFromFile
+        ?? createHopeWriteExampleEvaluationRecordFromFile)(
           options,
           dependencies,
         ),
     );
   }
-  if (options.command === "write-production-receipt") {
+  if (options.command === "write-production-record") {
     return writeJson(
       stdout,
-      await (dependencies.createWriteProductionReceiptFromFile
-        ?? createHopeWriteProductionVerificationReceiptFromFile)(
+      await (dependencies.createWriteProductionRecordFromFile
+        ?? createHopeWriteProductionVerificationRecordFromFile)(
           options,
           dependencies,
         ),
@@ -365,8 +365,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (options.command === "feature-selection-validate") {
     return writeJson(
       stdout,
-      await (dependencies.validateFeatureSelectionReceiptFile
-        ?? validateHopeFeatureSelectionEvaluationReceiptFile)(
+      await (dependencies.validateFeatureSelectionRecordFile
+        ?? validateHopeFeatureSelectionEvaluationRecordFile)(
           options.inputPath,
           dependencies,
         ),
@@ -375,8 +375,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (options.command === "polish-preservation-validate") {
     return writeJson(
       stdout,
-      await (dependencies.validatePolishPreservationReceiptFile
-        ?? validateHopePolishPreservationEvaluationReceiptFile)(
+      await (dependencies.validatePolishPreservationRecordFile
+        ?? validateHopePolishPreservationEvaluationRecordFile)(
           options.inputPath,
           dependencies,
         ),
@@ -385,8 +385,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (options.command === "polish-preservation-validate-set") {
     return writeJson(
       stdout,
-      await (dependencies.validatePolishPreservationReceiptSetFile
-        ?? validateHopePolishPreservationEvaluationReceiptSetFile)(
+      await (dependencies.validatePolishPreservationRecordSetFile
+        ?? validateHopePolishPreservationEvaluationRecordSetFile)(
           options.inputPath,
           dependencies,
         ),
@@ -395,8 +395,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (options.command === "write-example-validate") {
     return writeJson(
       stdout,
-      await (dependencies.validateWriteExampleReceiptFile
-        ?? validateHopeWriteExampleEvaluationReceiptFile)(
+      await (dependencies.validateWriteExampleRecordFile
+        ?? validateHopeWriteExampleEvaluationRecordFile)(
           options.inputPath,
           dependencies,
         ),
@@ -405,8 +405,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (options.command === "write-production-validate") {
     return writeJson(
       stdout,
-      await (dependencies.validateWriteProductionReceiptFile
-        ?? validateHopeWriteProductionVerificationReceiptFile)(
+      await (dependencies.validateWriteProductionRecordFile
+        ?? validateHopeWriteProductionVerificationRecordFile)(
           options.inputPath,
           dependencies,
         ),
@@ -415,8 +415,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (options.command === "write-production-validate-set") {
     return writeJson(
       stdout,
-      await (dependencies.validateWriteProductionReceiptSetFile
-        ?? validateHopeWriteProductionVerificationReceiptSetFile)(
+      await (dependencies.validateWriteProductionRecordSetFile
+        ?? validateHopeWriteProductionVerificationRecordSetFile)(
           options.inputPath,
           dependencies,
         ),
@@ -425,8 +425,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   if (options.command === "write-example-validate-set") {
     return writeJson(
       stdout,
-      await (dependencies.validateWriteExampleReceiptSetFile
-        ?? validateHopeWriteExampleEvaluationReceiptSetFile)(
+      await (dependencies.validateWriteExampleRecordSetFile
+        ?? validateHopeWriteExampleEvaluationRecordSetFile)(
           options.inputPath,
           dependencies,
         ),
@@ -434,8 +434,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   }
   return writeJson(
     stdout,
-    await (dependencies.validateFeatureSelectionReceiptSetFile
-      ?? validateHopeFeatureSelectionEvaluationReceiptSetFile)(
+    await (dependencies.validateFeatureSelectionRecordSetFile
+      ?? validateHopeFeatureSelectionEvaluationRecordSetFile)(
         options.inputPath,
         dependencies,
       ),

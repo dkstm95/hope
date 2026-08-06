@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import {
   createHopeFeatureSelectionContract,
   createHopeFeatureSelectionEvaluationPlan,
-  createHopeFeatureSelectionEvaluationReceipt,
+  createHopeFeatureSelectionEvaluationRecord,
   getHopeFeatureSelectionEvaluationOracle,
   HOPE_FEATURE_SELECTION_CONTRACT_VERSION,
   HOPE_FEATURE_SELECTION_DECISIONS,
@@ -17,12 +17,12 @@ import {
   hopeFeatureSelectionDescriptions,
   prepareHopeFeatureSelectionEvaluationRun,
   validateHopeFeatureSelectionEvaluationOutput,
-  validateHopeFeatureSelectionEvaluationReceipt,
-  validateHopeFeatureSelectionEvaluationReceiptSet,
+  validateHopeFeatureSelectionEvaluationRecord,
+  validateHopeFeatureSelectionEvaluationRecordSet,
 } from "../features/model-evaluation/feature-selection.mjs";
 import {
-  validateHopeFeatureSelectionEvaluationReceiptFile,
-  validateHopeFeatureSelectionEvaluationReceiptSetFile,
+  validateHopeFeatureSelectionEvaluationRecordFile,
+  validateHopeFeatureSelectionEvaluationRecordSetFile,
 } from "../features/model-evaluation/index.mjs";
 import {
   digestHopeModelEvaluationEvidence,
@@ -43,8 +43,8 @@ function expectedOutput(caseId, decision) {
   };
 }
 
-function receiptFor(specification, overrides = {}, dependencies = {}) {
-  return createHopeFeatureSelectionEvaluationReceipt({
+function recordFor(specification, overrides = {}, dependencies = {}) {
+  return createHopeFeatureSelectionEvaluationRecord({
     attestation: overrides.attestation,
     caseId: specification.caseId,
     effort: overrides.effort ?? "test-effort",
@@ -55,11 +55,11 @@ function receiptFor(specification, overrides = {}, dependencies = {}) {
     output: overrides.output ?? expectedOutput(specification.caseId),
     run: specification.run,
     variant: specification.variant,
-  }, dependencies).receipt;
+  }, dependencies).record;
 }
 
-function attestedReceiptFor(specification) {
-  const synthetic = receiptFor(specification);
+function attestedRecordFor(specification) {
+  const synthetic = recordFor(specification);
   const statement = {
     configuration: synthetic.configuration,
     evaluation: {
@@ -70,7 +70,7 @@ function attestedReceiptFor(specification) {
     invocation: synthetic.invocation,
     specification: synthetic.specification,
   };
-  return receiptFor(specification, {
+  return recordFor(specification, {
     attestation: {
       campaignId: "feature-selection-campaign",
       eventId: synthetic.invocation.id,
@@ -174,9 +174,9 @@ test("feature-selection outputs stay bounded and exact", () => {
   );
 });
 
-test("feature-selection receipts retain wrong decisions and reject tampering", () => {
+test("feature-selection records retain wrong decisions and reject tampering", () => {
   const specification = createHopeFeatureSelectionEvaluationPlan().runs[0];
-  const created = createHopeFeatureSelectionEvaluationReceipt({
+  const created = createHopeFeatureSelectionEvaluationRecord({
     caseId: specification.caseId,
     effort: "test-effort",
     host: "codex-test-host",
@@ -188,27 +188,27 @@ test("feature-selection receipts retain wrong decisions and reject tampering", (
   });
   assert.equal(created.evaluation.runPassed, false);
   assert.equal(
-    validateHopeFeatureSelectionEvaluationReceipt(created.receipt)
+    validateHopeFeatureSelectionEvaluationRecord(created.record)
       .evaluation.runPassed,
     false,
   );
-  const tampered = structuredClone(created.receipt);
+  const tampered = structuredClone(created.record);
   tampered.output.reason = "changed after binding";
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceipt(tampered),
+    () => validateHopeFeatureSelectionEvaluationRecord(tampered),
     /bindings do not match/u,
   );
 });
 
 test("complete feature-selection evidence requires unique runs and one configuration", () => {
   const plan = createHopeFeatureSelectionEvaluationPlan();
-  const receipts = plan.runs.map(receiptFor);
+  const records = plan.runs.map(recordFor);
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceiptSet(receipts),
+    () => validateHopeFeatureSelectionEvaluationRecordSet(records),
     /requires host-attested evidence/u,
   );
-  const result = validateHopeFeatureSelectionEvaluationReceiptSet(
-    receipts,
+  const result = validateHopeFeatureSelectionEvaluationRecordSet(
+    records,
     { allowSynthetic: true },
   );
   assert.deepEqual(result.summary, {
@@ -223,32 +223,32 @@ test("complete feature-selection evidence requires unique runs and one configura
     full: { failed: 0, passed: 13, total: 13 },
   });
 
-  const failed = structuredClone(receipts);
-  failed[0] = receiptFor(plan.runs[0], {
+  const failed = structuredClone(records);
+  failed[0] = recordFor(plan.runs[0], {
     output: expectedOutput(plan.runs[0].caseId, "none"),
   });
   assert.equal(
-    validateHopeFeatureSelectionEvaluationReceiptSet(
+    validateHopeFeatureSelectionEvaluationRecordSet(
       failed,
       { allowSynthetic: true },
     ).decision,
     "keep-full",
   );
 
-  const reusedInvocation = structuredClone(receipts);
+  const reusedInvocation = structuredClone(records);
   reusedInvocation.at(-1).invocation.id = reusedInvocation[0].invocation.id;
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceiptSet(
+    () => validateHopeFeatureSelectionEvaluationRecordSet(
       reusedInvocation,
       { allowSynthetic: true },
     ),
     /repeats an invocation identity/u,
   );
 
-  const mixedModel = structuredClone(receipts);
+  const mixedModel = structuredClone(records);
   mixedModel.at(-1).configuration.model = "another-model";
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceiptSet(
+    () => validateHopeFeatureSelectionEvaluationRecordSet(
       mixedModel,
       { allowSynthetic: true },
     ),
@@ -256,8 +256,8 @@ test("complete feature-selection evidence requires unique runs and one configura
   );
 
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceiptSet(
-      receipts.slice(1),
+    () => validateHopeFeatureSelectionEvaluationRecordSet(
+      records.slice(1),
       { allowSynthetic: true },
     ),
     /must contain 26 runs/u,
@@ -265,17 +265,17 @@ test("complete feature-selection evidence requires unique runs and one configura
 });
 
 test("host-attested feature-selection evidence also requires the complete ledger", () => {
-  const receipts = createHopeFeatureSelectionEvaluationPlan().runs.map(
-    attestedReceiptFor,
+  const records = createHopeFeatureSelectionEvaluationPlan().runs.map(
+    attestedRecordFor,
   );
   assert.throws(
-    () => validateHopeFeatureSelectionEvaluationReceiptSet(receipts, {
+    () => validateHopeFeatureSelectionEvaluationRecordSet(records, {
       verifyModelEvaluationAttestation: () => true,
     }),
     /requires a trusted complete-attempt verifier/u,
   );
   let eventCount = 0;
-  const result = validateHopeFeatureSelectionEvaluationReceiptSet(receipts, {
+  const result = validateHopeFeatureSelectionEvaluationRecordSet(records, {
     verifyModelEvaluationAttestation: () => true,
     verifyModelEvaluationSet(manifest) {
       eventCount = manifest.events.length;
@@ -290,20 +290,20 @@ test("host-attested feature-selection evidence also requires the complete ledger
 test("feature-selection file validators use bounded JSON inputs", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "hope-feature-selection-"));
   try {
-    const receipts = createHopeFeatureSelectionEvaluationPlan().runs.map(receiptFor);
-    const receiptPath = join(temporary, "receipt.json");
-    const setPath = join(temporary, "receipts.json");
+    const records = createHopeFeatureSelectionEvaluationPlan().runs.map(recordFor);
+    const recordPath = join(temporary, "record.json");
+    const setPath = join(temporary, "records.json");
     await Promise.all([
-      writeFile(receiptPath, JSON.stringify(receipts[0])),
-      writeFile(setPath, JSON.stringify(receipts)),
+      writeFile(recordPath, JSON.stringify(records[0])),
+      writeFile(setPath, JSON.stringify(records)),
     ]);
     assert.equal(
-      (await validateHopeFeatureSelectionEvaluationReceiptFile(receiptPath))
+      (await validateHopeFeatureSelectionEvaluationRecordFile(recordPath))
         .evaluation.runPassed,
       true,
     );
     assert.equal(
-      (await validateHopeFeatureSelectionEvaluationReceiptSetFile(
+      (await validateHopeFeatureSelectionEvaluationRecordSetFile(
         setPath,
         { allowSynthetic: true },
       ))

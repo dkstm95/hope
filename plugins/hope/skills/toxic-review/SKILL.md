@@ -76,7 +76,7 @@ Do not read the oracle before that host returns its result.
 
 Then call `evaluation-oracle` for the case and evaluate every rubric criterion.
 
-Call `evaluation-receipt` with the validated review and host-owned model,
+Call `evaluation-record` with the validated review and host-owned model,
 effort, and invocation identity.
 
 For a legacy run, complete the returned null assessment after evaluation.
@@ -87,7 +87,7 @@ causal result.
 For every run, complete the rubric, evaluator, and evaluation-time fields, and
 keep the prepared input, brief, invocation, and output bindings.
 
-Validate each receipt with `evaluation-validate` and the complete array with
+Validate each record with `evaluation-validate` and the complete array with
 `evaluation-validate-set`.
 
 Keep failed runs in the set and report run success separately from rubric

@@ -4,18 +4,18 @@ import test from "node:test";
 import {
   causalCompletenessEvaluationCases,
   causalCompletenessEvaluationProtocol,
-  causalCompletenessEvaluationReceiptLimits,
+  causalCompletenessEvaluationRecordLimits,
   causalCompletenessRubric,
   createCausalCompletenessEvaluationPlan,
-  createCausalCompletenessEvaluationReceiptTemplate,
+  createCausalCompletenessEvaluationRecordTemplate,
   digestCausalEvaluationValue,
   getCausalCompletenessEvaluationOracle,
   prepareCausalCompletenessEvaluationRun,
-  validateCausalCompletenessEvaluationReceipt,
-  validateCausalCompletenessEvaluationReceiptSet,
+  validateCausalCompletenessEvaluationRecord,
+  validateCausalCompletenessEvaluationRecordSet,
 } from "../features/toxic-review/causal-evaluation.mjs";
 import {
-  createCausalCompletenessEvaluationReceiptTemplateFromFile,
+  createCausalCompletenessEvaluationRecordTemplateFromFile,
   createToxicReviewBrief,
 } from "../features/toxic-review/index.mjs";
 import { validateToxicReview } from "../features/toxic-review/validate.mjs";
@@ -189,7 +189,7 @@ function rubricResults(review) {
   }));
 }
 
-function makeReceipt({
+function makeRecord({
   brief,
   caseId = "repeated-boundary-conformance",
   variant = "full",
@@ -217,7 +217,7 @@ function makeReceipt({
       })
     : makeBoundCausalReview(prepared, assessment);
   return {
-    receiptVersion: 1,
+    recordVersion: 1,
     caseId,
     suite: prepared.suite,
     variant,
@@ -242,8 +242,8 @@ function makeReceipt({
   };
 }
 
-function replaceReceiptReview(receipt, review, assessment) {
-  const replaced = structuredClone(receipt);
+function replaceRecordReview(record, review, assessment) {
+  const replaced = structuredClone(record);
   replaced.validatedReview = review;
   replaced.invocation.outputDigest = digestCausalEvaluationValue(review);
   replaced.assessment = assessment;
@@ -357,50 +357,50 @@ test("evaluation preparation binds variants and synthetic sources", async () => 
   );
 });
 
-test("evaluation receipts bind the case, invocation, output, and decoded evidence", async () => {
+test("evaluation records bind the case, invocation, output, and decoded evidence", async () => {
   const brief = await makeBrief();
-  const receipt = makeReceipt({
+  const record = makeRecord({
     brief,
     caseId: "critical-path-ablation",
     variant: "legacy",
   });
   const prepared = prepareCausalCompletenessEvaluationRun({
     brief,
-    caseId: receipt.caseId,
-    variant: receipt.variant,
-    run: receipt.run,
+    caseId: record.caseId,
+    variant: record.variant,
+    run: record.run,
   });
-  const template = createCausalCompletenessEvaluationReceiptTemplate({
+  const template = createCausalCompletenessEvaluationRecordTemplate({
     brief,
-    caseId: receipt.caseId,
-    variant: receipt.variant,
-    run: receipt.run,
-    model: receipt.configuration.model,
-    effort: receipt.configuration.effort,
-    invocationId: receipt.invocation.id,
-    validatedReview: receipt.validatedReview,
+    caseId: record.caseId,
+    variant: record.variant,
+    run: record.run,
+    model: record.configuration.model,
+    effort: record.configuration.effort,
+    invocationId: record.invocation.id,
+    validatedReview: record.validatedReview,
   });
-  assert.equal(template.receipt.invocation.inputDigest, prepared.inputDigest);
+  assert.equal(template.record.invocation.inputDigest, prepared.inputDigest);
   assert.equal(
-    template.receipt.invocation.outputDigest,
-    digestCausalEvaluationValue(receipt.validatedReview),
+    template.record.invocation.outputDigest,
+    digestCausalEvaluationValue(record.validatedReview),
   );
-  assert.equal(template.receipt.assessment, null);
-  assert.equal(template.receipt.rubricResults[0].passed, null);
+  assert.equal(template.record.assessment, null);
+  assert.equal(template.record.rubricResults[0].passed, null);
   const {
     observedMetrics: _observedMetrics,
     result: _result,
     resources: _resources,
     ...reviewInput
-  } = receipt.validatedReview;
-  const fromFile = await createCausalCompletenessEvaluationReceiptTemplateFromFile(
+  } = record.validatedReview;
+  const fromFile = await createCausalCompletenessEvaluationRecordTemplateFromFile(
     {
-      caseId: receipt.caseId,
-      variant: receipt.variant,
-      run: receipt.run,
-      model: receipt.configuration.model,
-      effort: receipt.configuration.effort,
-      invocationId: receipt.invocation.id,
+      caseId: record.caseId,
+      variant: record.variant,
+      run: record.run,
+      model: record.configuration.model,
+      effort: record.configuration.effort,
+      invocationId: record.invocation.id,
       inputPath: "synthetic-review.json",
     },
     {
@@ -408,57 +408,57 @@ test("evaluation receipts bind the case, invocation, output, and decoded evidenc
       readInput: async () => ({ value: reviewInput, fileBytes: 777 }),
     },
   );
-  assert.equal(fromFile.receipt.validatedReview.resources.inputFileBytes, 777);
-  const validated = validateCausalCompletenessEvaluationReceipt(receipt, { brief });
+  assert.equal(fromFile.record.validatedReview.resources.inputFileBytes, 777);
+  const validated = validateCausalCompletenessEvaluationRecord(record, { brief });
   assert.equal(validated.evaluation.runPassed, true);
   assert.equal(validated.evaluation.oracleMatched, true);
   assert.ok(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      < causalCompletenessEvaluationReceiptLimits.bytes,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      < causalCompletenessEvaluationRecordLimits.bytes,
   );
 
-  const wrongInput = structuredClone(receipt);
+  const wrongInput = structuredClone(record);
   wrongInput.invocation.inputDigest = `sha256:${"a".repeat(64)}`;
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceipt(wrongInput, { brief }),
+    () => validateCausalCompletenessEvaluationRecord(wrongInput, { brief }),
     /inputDigest does not match/u,
   );
 
-  const unrelated = structuredClone(receipt);
+  const unrelated = structuredClone(record);
   unrelated.validatedReview = validateToxicReview(makeToxicReview());
   unrelated.invocation.outputDigest = digestCausalEvaluationValue(
     unrelated.validatedReview,
   );
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceipt(unrelated, { brief }),
+    () => validateCausalCompletenessEvaluationRecord(unrelated, { brief }),
     /target does not match the prepared case/u,
   );
 
-  const wrongOutput = structuredClone(receipt);
+  const wrongOutput = structuredClone(record);
   wrongOutput.invocation.outputDigest = `sha256:${"b".repeat(64)}`;
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceipt(wrongOutput, { brief }),
+    () => validateCausalCompletenessEvaluationRecord(wrongOutput, { brief }),
     /outputDigest does not match/u,
   );
 
-  const serializedEvidence = structuredClone(receipt);
+  const serializedEvidence = structuredClone(record);
   serializedEvidence.rubricResults[0].evidence[0] = {
     pointer: "/summary/noMaterialIssueFound",
     excerpt: "noMaterialIssueFound",
   };
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceipt(
+    () => validateCausalCompletenessEvaluationRecord(
       serializedEvidence,
       { brief },
     ),
     /pointer must resolve to text/u,
   );
 
-  const duplicateRationale = structuredClone(receipt);
+  const duplicateRationale = structuredClone(record);
   duplicateRationale.rubricResults[1].rationale =
     duplicateRationale.rubricResults[0].rationale;
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceipt(
+    () => validateCausalCompletenessEvaluationRecord(
       duplicateRationale,
       { brief },
     ),
@@ -466,7 +466,7 @@ test("evaluation receipts bind the case, invocation, output, and decoded evidenc
   );
 });
 
-test("evaluation receipt variants require the matching causal record", async () => {
+test("evaluation record variants require the matching causal record", async () => {
   const brief = await makeBrief();
   const caseId = "critical-path-ablation";
   const oracle = findCase(caseId).oracle;
@@ -484,7 +484,7 @@ test("evaluation receipt variants require the matching causal record", async () 
     run: 1,
   });
   const legacyReview = makeBoundReview(legacyPrepared);
-  assert.equal(createCausalCompletenessEvaluationReceiptTemplate({
+  assert.equal(createCausalCompletenessEvaluationRecordTemplate({
     brief,
     caseId,
     variant: "legacy",
@@ -493,14 +493,14 @@ test("evaluation receipt variants require the matching causal record", async () 
     effort: "test-effort",
     invocationId: "legacy-unstructured",
     validatedReview: legacyReview,
-  }).receipt.assessment, null);
+  }).record.assessment, null);
 
   const structuredLegacyReview = makeBoundCausalReview(
     legacyPrepared,
     assessment,
   );
   assert.throws(
-    () => createCausalCompletenessEvaluationReceiptTemplate({
+    () => createCausalCompletenessEvaluationRecordTemplate({
       brief,
       caseId,
       variant: "legacy",
@@ -512,11 +512,11 @@ test("evaluation receipt variants require the matching causal record", async () 
     }),
     /legacy evaluation review must not contain causalAnalysis/u,
   );
-  const legacyReceipt = makeReceipt({ brief, caseId, variant: "legacy" });
+  const legacyRecord = makeRecord({ brief, caseId, variant: "legacy" });
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceipt(
-      replaceReceiptReview(
-        legacyReceipt,
+    () => validateCausalCompletenessEvaluationRecord(
+      replaceRecordReview(
+        legacyRecord,
         structuredLegacyReview,
         assessment,
       ),
@@ -534,7 +534,7 @@ test("evaluation receipt variants require the matching causal record", async () 
     });
     const unstructuredReview = makeBoundReview(prepared);
     assert.throws(
-      () => createCausalCompletenessEvaluationReceiptTemplate({
+      () => createCausalCompletenessEvaluationRecordTemplate({
         brief,
         caseId,
         variant,
@@ -547,10 +547,10 @@ test("evaluation receipt variants require the matching causal record", async () 
       new RegExp(`${variant} evaluation review must contain causalAnalysis`, "u"),
     );
 
-    const receipt = makeReceipt({ brief, caseId, variant });
+    const record = makeRecord({ brief, caseId, variant });
     assert.throws(
-      () => validateCausalCompletenessEvaluationReceipt(
-        replaceReceiptReview(receipt, unstructuredReview, assessment),
+      () => validateCausalCompletenessEvaluationRecord(
+        replaceRecordReview(record, unstructuredReview, assessment),
         { brief },
       ),
       new RegExp(`${variant} evaluation review must contain causalAnalysis`, "u"),
@@ -558,7 +558,7 @@ test("evaluation receipt variants require the matching causal record", async () 
   }
 });
 
-test("evaluation receipts bind a structured causal assessment", async () => {
+test("evaluation records bind a structured causal assessment", async () => {
   const brief = await makeBrief();
   const prepared = prepareCausalCompletenessEvaluationRun({
     brief,
@@ -572,7 +572,7 @@ test("evaluation receipts bind a structured causal assessment", async () => {
     candidateCount: 2,
     noMaterialIssueFound: false,
   });
-  const template = createCausalCompletenessEvaluationReceiptTemplate({
+  const template = createCausalCompletenessEvaluationRecordTemplate({
     brief,
     caseId: prepared.caseId,
     variant: prepared.variant,
@@ -582,52 +582,52 @@ test("evaluation receipts bind a structured causal assessment", async () => {
     invocationId: "structured-causal-run",
     validatedReview: review,
   });
-  assert.deepEqual(template.receipt.assessment, {
+  assert.deepEqual(template.record.assessment, {
     claimAssessment: "unsupported",
     causeLevel: "mixed",
     candidateCount: 2,
     noMaterialIssueFound: false,
   });
 
-  const receipt = structuredClone(template.receipt);
-  receipt.rubricResults = rubricResults(review);
-  receipt.evaluator = "test evaluator";
-  receipt.evaluatedAt = evaluatedAt;
-  const validated = validateCausalCompletenessEvaluationReceipt(
-    receipt,
+  const record = structuredClone(template.record);
+  record.rubricResults = rubricResults(review);
+  record.evaluator = "test evaluator";
+  record.evaluatedAt = evaluatedAt;
+  const validated = validateCausalCompletenessEvaluationRecord(
+    record,
     { brief },
   );
   assert.equal(validated.evaluation.oracleMatched, true);
   assert.equal(validated.evaluation.runPassed, true);
 
-  const mismatched = structuredClone(receipt);
+  const mismatched = structuredClone(record);
   mismatched.assessment.candidateCount = 1;
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceipt(mismatched, { brief }),
+    () => validateCausalCompletenessEvaluationRecord(mismatched, { brief }),
     /assessment must match validatedReview\.causalAnalysis/u,
   );
 });
 
 test("valid failed runs remain auditable instead of disappearing", async () => {
   const brief = await makeBrief();
-  const receipt = makeReceipt({ brief });
-  receipt.rubricResults[0] = {
-    criterionId: receipt.rubricResults[0].criterionId,
+  const record = makeRecord({ brief });
+  record.rubricResults[0] = {
+    criterionId: record.rubricResults[0].criterionId,
     passed: false,
     rationale: "The result did not identify a captured baseline.",
     evidence: [],
   };
-  const validated = validateCausalCompletenessEvaluationReceipt(receipt, { brief });
+  const validated = validateCausalCompletenessEvaluationRecord(record, { brief });
   assert.equal(validated.evaluation.runPassed, false);
   assert.deepEqual(validated.evaluation.failedCriteria, ["binds-outcome"]);
 
-  const wrongAssessment = makeReceipt({
+  const wrongAssessment = makeRecord({
     brief,
     caseId: "critical-path-ablation",
     variant: "legacy",
   });
   wrongAssessment.assessment.causeLevel = "inconclusive";
-  const assessed = validateCausalCompletenessEvaluationReceipt(
+  const assessed = validateCausalCompletenessEvaluationRecord(
     wrongAssessment,
     { brief },
   );
@@ -637,7 +637,7 @@ test("valid failed runs remain auditable instead of disappearing", async () => {
 
 test("ablation oracle accepts evidence-supported phase grouping", async () => {
   const brief = await makeBrief();
-  const grouped = makeReceipt({
+  const grouped = makeRecord({
     brief,
     caseId: "critical-path-ablation",
     variant: "full",
@@ -647,14 +647,14 @@ test("ablation oracle accepts evidence-supported phase grouping", async () => {
       candidateCount: 3,
     },
   });
-  const accepted = validateCausalCompletenessEvaluationReceipt(
+  const accepted = validateCausalCompletenessEvaluationRecord(
     grouped,
     { brief },
   );
   assert.equal(accepted.evaluation.oracleMatched, true);
   assert.equal(accepted.evaluation.runPassed, true);
 
-  const outsideOracle = makeReceipt({
+  const outsideOracle = makeRecord({
     brief,
     caseId: "critical-path-ablation",
     variant: "full",
@@ -664,7 +664,7 @@ test("ablation oracle accepts evidence-supported phase grouping", async () => {
       candidateCount: 4,
     },
   });
-  const rejected = validateCausalCompletenessEvaluationReceipt(
+  const rejected = validateCausalCompletenessEvaluationRecord(
     outsideOracle,
     { brief },
   );
@@ -672,13 +672,13 @@ test("ablation oracle accepts evidence-supported phase grouping", async () => {
   assert.equal(rejected.evaluation.runPassed, false);
 });
 
-test("evaluation receipt sets cover every paired run and reject reused invocations", async () => {
+test("evaluation record sets cover every paired run and reject reused invocations", async () => {
   const brief = await makeBrief();
-  const receipts = causalCompletenessEvaluationCases.flatMap((evaluationCase) => {
+  const records = causalCompletenessEvaluationCases.flatMap((evaluationCase) => {
     const suite = causalCompletenessEvaluationProtocol.suites[evaluationCase.suite];
     return suite.variants.flatMap((variant) => Array.from(
       { length: suite.runsPerVariant },
-      (_, index) => makeReceipt({
+      (_, index) => makeRecord({
         brief,
         caseId: evaluationCase.id,
         variant,
@@ -686,8 +686,8 @@ test("evaluation receipt sets cover every paired run and reject reused invocatio
       }),
     ));
   });
-  const validated = validateCausalCompletenessEvaluationReceiptSet(
-    receipts,
+  const validated = validateCausalCompletenessEvaluationRecordSet(
+    records,
     { brief },
   );
   assert.deepEqual(validated.summary, {
@@ -699,20 +699,20 @@ test("evaluation receipt sets cover every paired run and reject reused invocatio
     failedCriteria: 0,
   });
 
-  const reusedInvocation = structuredClone(receipts);
+  const reusedInvocation = structuredClone(records);
   reusedInvocation.at(-1).invocation.id = reusedInvocation[0].invocation.id;
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceiptSet(
+    () => validateCausalCompletenessEvaluationRecordSet(
       reusedInvocation,
       { brief },
     ),
     /repeats invocation/u,
   );
 
-  const mixedModel = structuredClone(receipts);
+  const mixedModel = structuredClone(records);
   mixedModel.at(-1).configuration.model = "different-model";
   assert.throws(
-    () => validateCausalCompletenessEvaluationReceiptSet(
+    () => validateCausalCompletenessEvaluationRecordSet(
       mixedModel,
       { brief },
     ),

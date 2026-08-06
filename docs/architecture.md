@@ -22,13 +22,34 @@ The project definitions are:
 [model-evaluation.md](model-evaluation.md) defines how Hope tests model-facing
 behavior before changing prompts, tools, or orchestration.
 
+## Shared record vocabulary
+
+Hope uses `record` as the generic name for a runtime-bound, auditable artifact.
+
+The role-specific names make each boundary explicit:
+
+- an `approvalRecord` binds an authorized decision to its exact execution
+  contract;
+- a `workerReport` describes the sources a Sweep worker processed and any gaps;
+- a `verificationResult` describes a check against the final snapshot;
+- an `evaluationRecord` binds one model-evaluation case to its prepared input and
+  output; and
+- a `completionRecord` closes one approved change.
+
+A record is not automatically cryptographic proof.
+
+Host attestations remain a separate trust boundary.
+
+Host attestations are required wherever the contract grants authority or release
+evidence.
+
 The shared model-evaluation runtime owns cross-feature selection, Polish
 preservation, and Write decision-example ablation cases, prepared inputs,
-output bindings, receipts, and complete-set validation.
+output bindings, records, and complete-set validation.
 
 `features/model-evaluation/evidence.mjs` owns their common trust boundary.
 
-It labels direct factory and CLI receipts as synthetic, validates
+It labels direct factory and CLI records as synthetic, validates
 host-attested statement bindings through an injected trusted verifier, and
 requires a second trusted verifier for the complete attempt ledger before a
 set can support a release decision.
@@ -209,7 +230,7 @@ containing only the new context sources or limits.
 The context transition returns that generation's first page in the same
 process.
 
-Its committed operation receipt lets the same request IDs replay that result
+Its committed operation record lets the same request IDs replay that result
 without another provider fetch.
 
 The Skill reads and checkpoints only that generation.
@@ -219,7 +240,7 @@ The runtime does not keep a daemon alive between commands.
 Each command uses a shared fenced mutation lease, makes one bounded,
 recoverable transition, and then exits.
 
-Generation receipts keep analysis from mixing uninspected context with earlier
+Generation records keep analysis from mixing uninspected context with earlier
 evidence.
 
 The Claude and Codex Skills provide the first complete AI analysis path.
@@ -251,29 +272,29 @@ classifier model.
 The Diff core also owns a blinded invocation-evaluation protocol.
 
 Its historical version 3 baseline retains the removed representative cases for
-receipt validation without returning them in the active version 4 invocation
+record validation without returning them in the active version 4 invocation
 brief.
 
 It prepares synthetic Korean and English inputs under minimum, rules-only, and
 complete contract variants.
 
 It binds the declared host, model, effort, exact brief, input, invocation, and
-output into bounded receipts.
+output into bounded records.
 
 The harness and generated plugin runtime expose identical plan, preparation,
-oracle, receipt, and validation commands.
+oracle, record, and validation commands.
 
 The active Skill coordinates fresh host runs only when a person explicitly asks
 for evaluation or release evidence.
 
-Repository tests validate the evaluation protocol and receipt boundaries
+Repository tests validate the evaluation protocol and record boundaries
 without claiming that they executed a host model.
 
 The Diff core keeps the first 26-run comparison intact and exposes a separate
 22-run follow-up before removing published invocation examples.
 
 That follow-up completes and repeats `rules-only` coverage, then combines its
-receipts with the original baseline through one deterministic evidence
+records with the original baseline through one deterministic evidence
 decision.
 
 The core then exposes a separate eight-run production verification.
@@ -359,9 +380,9 @@ the normalized candidate to an exact digest.
 
 The host invokes Polish once for that candidate, then uses Align's shared
 `complete-polish` transition to revalidate the resulting state and attach a
-digest-bound receipt.
+digest-bound record.
 
-The receipt prevents another pass over the same candidate.
+The record prevents another pass over the same candidate.
 
 The dependency direction is `Align -> Polish`; Polish does not import or invoke
 Align.
@@ -375,7 +396,7 @@ explicit exclusions, and produces a validated plan before any repository file
 changes.
 
 The shared core owns the versioned category catalog, supported-check disclosure,
-inventory and batch-result schemas, plan, approval-receipt, completion, and
+inventory and batch-result schemas, plan, approval-record, completion, and
 session-result schemas, source and evidence links, exact file identities,
 explicit exclusions, batch assignment and coverage state, derived file
 budgets, session states, approval and execution contract digests,
@@ -393,11 +414,11 @@ a fallback), authors the whole-project plan, shows an exact candidate, and
 waits for the person's approval.
 
 The independent harness exposes the same brief, inventory and batch
-transitions, plan validation, approval candidate, approval receipt, and
+transitions, plan validation, approval candidate, approval record, and
 completion validation.
 
 It also exposes the same blinded model-evaluation preparation and versioned
-receipt validation used by the Skills before release.
+record validation used by the Skills before release.
 
 It reports that automatic repository inspection is unavailable until it has a
 model adapter.
@@ -410,16 +431,16 @@ The shared core remains the source of truth for assignment, merge, and
 completion coverage.
 
 After the person's decision, the trusted host adapter creates a shared-runtime
-receipt that binds the approval candidate, decision, exact conversation event,
+record that binds the approval candidate, decision, exact conversation event,
 and opaque or signed host attestation.
 
 The core refuses to validate that authority without the host's independent
 attestation verifier.
 
 After an identity recheck, Sweep invokes one normal Polish version 2 run for
-the behavior-preserving work unit and creates its shared-runtime receipt.
+the behavior-preserving work unit and creates its shared-runtime record.
 
-Sweep revalidates both receipts and validates the exact action contract, final
+Sweep revalidates both records and validates the exact action contract, final
 output, approved change budget, changed-target coverage, and verification scope
 in one completion record.
 
@@ -450,7 +471,7 @@ It also records the verification scope and whether a revision is only proposed
 or was applied with captured authority and identity checks.
 
 The independent harness exposes the same brief, validator, and versioned
-receipt creator.
+record creator.
 
 It does not claim automatic AI editing without a model adapter.
 
@@ -473,7 +494,7 @@ The shared core validates that choice, binds every role to the exact target and
 source snapshot, and creates digest-bound execution attempts.
 
 The shared core owns the bounded role and finding contract, source binding,
-attempt lifecycle, completion receipts, final adjudicated result, priority
+attempt lifecycle, completion records, final adjudicated result, priority
 ordering, and deterministic resource metrics.
 
 Its brief also offers one optional causal-completeness perspective when a named
@@ -498,10 +519,10 @@ Its replaceable Toxic Review model adapter uses the same prepared role inputs
 and finalization boundary as the Skills.
 
 The same core owns blinded causal-evaluation cases, brief variants, exact case
-and invocation bindings, and deterministic receipt validation.
+and invocation bindings, and deterministic record validation.
 
 The harness and generated plugin runtime expose identical evaluation-prepare,
-single-receipt validation, and receipt-set validation commands.
+single-record validation, and record-set validation commands.
 
 The active Skill supplies the model execution and evaluator judgment.
 

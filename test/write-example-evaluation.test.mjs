@@ -6,17 +6,17 @@ import { fileURLToPath } from "node:url";
 
 import {
   createHopeWriteExampleEvaluationPlan,
-  createHopeWriteExampleEvaluationReceipt,
+  createHopeWriteExampleEvaluationRecord,
   createHopeWriteProductionVerificationPlan,
-  createHopeWriteProductionVerificationReceipt,
+  createHopeWriteProductionVerificationRecord,
   getHopeWriteExampleEvaluationOracle,
   hopeWriteProductionVerificationCases,
   prepareHopeWriteExampleEvaluationRun,
   prepareHopeWriteProductionVerificationRun,
   validateHopeWriteExampleEvaluationOutput,
-  validateHopeWriteExampleEvaluationReceipt,
-  validateHopeWriteExampleEvaluationReceiptSet,
-  validateHopeWriteProductionVerificationReceiptSet,
+  validateHopeWriteExampleEvaluationRecord,
+  validateHopeWriteExampleEvaluationRecordSet,
+  validateHopeWriteProductionVerificationRecordSet,
 } from "../features/model-evaluation/write-examples.mjs";
 import {
   main as runModelEvaluationCommand,
@@ -51,33 +51,33 @@ function productionOutputFor(caseId, decision) {
   };
 }
 
-function attestationFor(receipt, {
+function attestationFor(record, {
   campaignId,
   issuer = "trusted-test-runner",
 } = {}) {
   const statement = {
-    configuration: receipt.configuration,
+    configuration: record.configuration,
     evaluation: {
-      bindings: receipt.bindings,
-      feature: receipt.feature,
-      version: receipt.version,
+      bindings: record.bindings,
+      feature: record.feature,
+      version: record.version,
     },
-    invocation: receipt.invocation,
-    specification: receipt.specification,
+    invocation: record.invocation,
+    specification: record.specification,
   };
   return {
     campaignId,
-    eventId: receipt.invocation.id,
+    eventId: record.invocation.id,
     issuedAt: "2026-08-04T00:00:00.000Z",
     issuer,
-    proof: `proof-for-${receipt.invocation.id}`,
+    proof: `proof-for-${record.invocation.id}`,
     statementDigest: digestHopeModelEvaluationEvidence(statement),
     version: HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
   };
 }
 
-async function receiptFor(specification, overrides = {}, dependencies = {}) {
-  return (await createHopeWriteExampleEvaluationReceipt({
+async function recordFor(specification, overrides = {}, dependencies = {}) {
+  return (await createHopeWriteExampleEvaluationRecord({
     attestation: overrides.attestation,
     caseId: specification.caseId,
     effort: overrides.effort ?? "test-effort",
@@ -88,16 +88,16 @@ async function receiptFor(specification, overrides = {}, dependencies = {}) {
     output: overrides.output ?? outputFor(specification.caseId),
     run: specification.run,
     variant: specification.variant,
-  }, dependencies)).receipt;
+  }, dependencies)).record;
 }
 
-async function completeReceipts() {
-  return Promise.all(createHopeWriteExampleEvaluationPlan().runs.map(receiptFor));
+async function completeRecords() {
+  return Promise.all(createHopeWriteExampleEvaluationPlan().runs.map(recordFor));
 }
 
-async function attestedReceiptFor(specification, attestationOptions = {}) {
-  const synthetic = await receiptFor(specification);
-  return await receiptFor(specification, {
+async function attestedRecordFor(specification, attestationOptions = {}) {
+  const synthetic = await recordFor(specification);
+  return await recordFor(specification, {
     attestation: attestationFor(synthetic, {
       campaignId: "write-example-campaign",
       ...attestationOptions,
@@ -107,7 +107,7 @@ async function attestedReceiptFor(specification, attestationOptions = {}) {
   });
 }
 
-async function productionReceiptFor(specification, {
+async function productionRecordFor(specification, {
   attestationOptions,
   attested = false,
 } = {}) {
@@ -120,11 +120,11 @@ async function productionReceiptFor(specification, {
     output: productionOutputFor(specification.caseId),
     run: specification.run,
   };
-  const synthetic = (await createHopeWriteProductionVerificationReceipt(
+  const synthetic = (await createHopeWriteProductionVerificationRecord(
     options,
-  )).receipt;
+  )).record;
   if (!attested) return synthetic;
-  return (await createHopeWriteProductionVerificationReceipt({
+  return (await createHopeWriteProductionVerificationRecord({
     ...options,
     attestation: attestationFor(synthetic, {
       campaignId: "write-production-campaign",
@@ -132,7 +132,7 @@ async function productionReceiptFor(specification, {
     }),
   }, {
     verifyModelEvaluationAttestation: () => true,
-  })).receipt;
+  })).record;
 }
 
 test("Write example ablation pairs 24 fresh runs", () => {
@@ -185,9 +185,9 @@ test("Write example outputs are exact and bounded", () => {
   );
 });
 
-test("Write example receipts retain failures and reject tampering", async () => {
+test("Write example records retain failures and reject tampering", async () => {
   const specification = createHopeWriteExampleEvaluationPlan().runs[0];
-  const created = await createHopeWriteExampleEvaluationReceipt({
+  const created = await createHopeWriteExampleEvaluationRecord({
     caseId: specification.caseId,
     effort: "test-effort",
     host: "codex-test-host",
@@ -199,26 +199,26 @@ test("Write example receipts retain failures and reject tampering", async () => 
   });
   assert.equal(created.evaluation.runPassed, false);
   assert.equal(
-    (await validateHopeWriteExampleEvaluationReceipt(created.receipt))
+    (await validateHopeWriteExampleEvaluationRecord(created.record))
       .evaluation.runPassed,
     false,
   );
-  const tampered = structuredClone(created.receipt);
+  const tampered = structuredClone(created.record);
   tampered.output.reason = "changed after binding";
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceipt(tampered),
+    validateHopeWriteExampleEvaluationRecord(tampered),
     /bindings do not match/u,
   );
 });
 
 test("complete Write example evidence requires every run and one configuration", async () => {
-  const receipts = await completeReceipts();
+  const records = await completeRecords();
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceiptSet(receipts),
+    validateHopeWriteExampleEvaluationRecordSet(records),
     /requires host-attested evidence/u,
   );
-  const result = await validateHopeWriteExampleEvaluationReceiptSet(
-    receipts,
+  const result = await validateHopeWriteExampleEvaluationRecordSet(
+    records,
     { allowSynthetic: true },
   );
   assert.deepEqual(result.summary, {
@@ -233,20 +233,20 @@ test("complete Write example evidence requires every run and one configuration",
     full: { failed: 0, passed: 12, total: 12 },
   });
 
-  const repeated = structuredClone(receipts);
+  const repeated = structuredClone(records);
   repeated.at(-1).invocation.id = repeated[0].invocation.id;
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceiptSet(
+    validateHopeWriteExampleEvaluationRecordSet(
       repeated,
       { allowSynthetic: true },
     ),
     /repeats an invocation identity/u,
   );
 
-  const mixed = structuredClone(receipts);
+  const mixed = structuredClone(records);
   mixed.at(-1).configuration.model = "another-model";
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceiptSet(
+    validateHopeWriteExampleEvaluationRecordSet(
       mixed,
       { allowSynthetic: true },
     ),
@@ -254,8 +254,8 @@ test("complete Write example evidence requires every run and one configuration",
   );
 
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceiptSet(
-      receipts.slice(1),
+    validateHopeWriteExampleEvaluationRecordSet(
+      records.slice(1),
       { allowSynthetic: true },
     ),
     /must contain 24 runs/u,
@@ -264,12 +264,12 @@ test("complete Write example evidence requires every run and one configuration",
 
 test("one failed Write example run keeps the examples", async () => {
   const plan = createHopeWriteExampleEvaluationPlan();
-  const receipts = await completeReceipts();
-  receipts[0] = await receiptFor(plan.runs[0], {
+  const records = await completeRecords();
+  records[0] = await recordFor(plan.runs[0], {
     output: outputFor(plan.runs[0].caseId, "keep-current-structure"),
   });
-  const result = await validateHopeWriteExampleEvaluationReceiptSet(
-    receipts,
+  const result = await validateHopeWriteExampleEvaluationRecordSet(
+    records,
     { allowSynthetic: true },
   );
   assert.equal(result.summary.deletionReady, false);
@@ -278,22 +278,22 @@ test("one failed Write example run keeps the examples", async () => {
 
 test("Write ablation trusted evidence rejects mixed campaigns", async () => {
   const plan = createHopeWriteExampleEvaluationPlan();
-  const receipts = await Promise.all(plan.runs.map((specification) =>
-    attestedReceiptFor(specification)
+  const records = await Promise.all(plan.runs.map((specification) =>
+    attestedRecordFor(specification)
   ));
-  const result = await validateHopeWriteExampleEvaluationReceiptSet(receipts, {
+  const result = await validateHopeWriteExampleEvaluationRecordSet(records, {
     verifyModelEvaluationAttestation: () => true,
     verifyModelEvaluationSet: (manifest) => manifest.events.length === 24,
   });
   assert.equal(result.provenance.kind, "host-attested");
 
-  const mixedCampaign = [...receipts];
-  mixedCampaign[mixedCampaign.length - 1] = await attestedReceiptFor(
+  const mixedCampaign = [...records];
+  mixedCampaign[mixedCampaign.length - 1] = await attestedRecordFor(
     plan.runs.at(-1),
     { campaignId: "another-write-campaign" },
   );
   await assert.rejects(
-    validateHopeWriteExampleEvaluationReceiptSet(mixedCampaign, {
+    validateHopeWriteExampleEvaluationRecordSet(mixedCampaign, {
       verifyModelEvaluationAttestation: () => true,
       verifyModelEvaluationSet: () => true,
     }),
@@ -427,15 +427,15 @@ test("Write production cases use structures distinct from their ablation counter
 
 test("complete Write production evidence accepts only six passing fresh runs", async () => {
   const plan = createHopeWriteProductionVerificationPlan();
-  const receipts = await Promise.all(plan.runs.map((specification) =>
-    productionReceiptFor(specification)
+  const records = await Promise.all(plan.runs.map((specification) =>
+    productionRecordFor(specification)
   ));
   await assert.rejects(
-    validateHopeWriteProductionVerificationReceiptSet(receipts),
+    validateHopeWriteProductionVerificationRecordSet(records),
     /requires host-attested evidence/u,
   );
-  const result = await validateHopeWriteProductionVerificationReceiptSet(
-    receipts,
+  const result = await validateHopeWriteProductionVerificationRecordSet(
+    records,
     { allowSynthetic: true },
   );
   assert.deepEqual(result.summary, {
@@ -446,10 +446,10 @@ test("complete Write production evidence accepts only six passing fresh runs", a
   });
   assert.equal(result.decision, "accept-production");
 
-  const reused = structuredClone(receipts);
+  const reused = structuredClone(records);
   reused.at(-1).invocation.id = reused[0].invocation.id;
   await assert.rejects(
-    validateHopeWriteProductionVerificationReceiptSet(
+    validateHopeWriteProductionVerificationRecordSet(
       reused,
       { allowSynthetic: true },
     ),
@@ -458,20 +458,20 @@ test("complete Write production evidence accepts only six passing fresh runs", a
 });
 
 test("Write production trusted evidence fails a rejected attempt ledger", async () => {
-  const receipts = await Promise.all(
+  const records = await Promise.all(
     createHopeWriteProductionVerificationPlan().runs.map((specification) =>
-      productionReceiptFor(specification, { attested: true })
+      productionRecordFor(specification, { attested: true })
     ),
   );
   await assert.rejects(
-    validateHopeWriteProductionVerificationReceiptSet(receipts, {
+    validateHopeWriteProductionVerificationRecordSet(records, {
       verifyModelEvaluationAttestation: () => true,
       verifyModelEvaluationSet: () => false,
     }),
     /did not verify the complete attempt history/u,
   );
-  const result = await validateHopeWriteProductionVerificationReceiptSet(
-    receipts,
+  const result = await validateHopeWriteProductionVerificationRecordSet(
+    records,
     {
       verifyModelEvaluationAttestation: () => true,
       verifyModelEvaluationSet: (manifest) => manifest.events.length === 6,

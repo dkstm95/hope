@@ -5,7 +5,7 @@ import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
   completeToxicReviewRoleFile,
   createCausalCompletenessEvaluationPlanForActiveBrief,
-  createCausalCompletenessEvaluationReceiptTemplateFromFile,
+  createCausalCompletenessEvaluationRecordTemplateFromFile,
   createCausalCompletenessEvaluationRun,
   createToxicReviewBrief,
   failToxicReviewRoleFile,
@@ -16,8 +16,8 @@ import {
   retryToxicReviewRoleFile,
   runToxicReview,
   TOXIC_REVIEW_MODEL_ADAPTER_CODE,
-  validateCausalCompletenessEvaluationReceiptFile,
-  validateCausalCompletenessEvaluationReceiptSetFile,
+  validateCausalCompletenessEvaluationRecordFile,
+  validateCausalCompletenessEvaluationRecordSetFile,
   validateToxicReviewFile,
 } from "./index.mjs";
 
@@ -39,9 +39,9 @@ function usage() {
     "  hope toxic-review evaluation-plan",
     "  hope toxic-review evaluation-prepare --case <id> --variant <legacy|rules-only|full> --run <number>",
     "  hope toxic-review evaluation-oracle --case <id>",
-    "  hope toxic-review evaluation-receipt --case <id> --variant <variant> --run <number> --input <review.json> --model <id> --effort <level> --invocation <id>",
-    "  hope toxic-review evaluation-validate --input <receipt.json>",
-    "  hope toxic-review evaluation-validate-set --input <receipts.json>",
+    "  hope toxic-review evaluation-record --case <id> --variant <variant> --run <number> --input <review.json> --model <id> --effort <level> --invocation <id>",
+    "  hope toxic-review evaluation-validate --input <record.json>",
+    "  hope toxic-review evaluation-validate-set --input <records.json>",
   ].join("\n");
 }
 
@@ -85,7 +85,7 @@ export function parseToxicReviewArguments(argv) {
     "evaluation-plan",
     "evaluation-prepare",
     "evaluation-oracle",
-    "evaluation-receipt",
+    "evaluation-record",
     "evaluation-validate",
     "evaluation-validate-set",
   ].includes(command)) {
@@ -143,7 +143,7 @@ export function parseToxicReviewArguments(argv) {
       variant: options.variant,
     };
   }
-  if (command === "evaluation-receipt") {
+  if (command === "evaluation-record") {
     requireCommandOptions(options, {
       required: [
         "case",
@@ -287,20 +287,20 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       dependencies.getCausalCompletenessEvaluationOracle
         ?? getCausalCompletenessEvaluationOracle
     )(options.caseId);
-  } else if (options.command === "evaluation-receipt") {
+  } else if (options.command === "evaluation-record") {
     result = await (
-      dependencies.createCausalCompletenessEvaluationReceiptTemplate
-        ?? createCausalCompletenessEvaluationReceiptTemplateFromFile
+      dependencies.createCausalCompletenessEvaluationRecordTemplate
+        ?? createCausalCompletenessEvaluationRecordTemplateFromFile
     )(options, dependencies);
   } else if (options.command === "evaluation-validate") {
     result = await (
-      dependencies.validateCausalCompletenessEvaluationReceiptFile
-        ?? validateCausalCompletenessEvaluationReceiptFile
+      dependencies.validateCausalCompletenessEvaluationRecordFile
+        ?? validateCausalCompletenessEvaluationRecordFile
     )(options.inputPath, dependencies);
   } else {
     result = await (
-      dependencies.validateCausalCompletenessEvaluationReceiptSetFile
-        ?? validateCausalCompletenessEvaluationReceiptSetFile
+      dependencies.validateCausalCompletenessEvaluationRecordSetFile
+        ?? validateCausalCompletenessEvaluationRecordSetFile
     )(options.inputPath, dependencies);
   }
   stdout.write(`${JSON.stringify(result, null, 2)}\n`);

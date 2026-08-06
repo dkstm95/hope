@@ -372,7 +372,7 @@ test("toxic review brief chooses roles dynamically instead of fixing a panel", a
   );
   assert.deepEqual(
     parseToxicReviewArguments([
-      "evaluation-receipt",
+      "evaluation-record",
       "--case",
       "critical-path-ablation",
       "--variant",
@@ -389,7 +389,7 @@ test("toxic review brief chooses roles dynamically instead of fixing a panel", a
       "host-run-1",
     ]),
     {
-      command: "evaluation-receipt",
+      command: "evaluation-record",
       caseId: "critical-path-ablation",
       effort: "high",
       inputPath: "review.json",
@@ -403,11 +403,11 @@ test("toxic review brief chooses roles dynamically instead of fixing a panel", a
     parseToxicReviewArguments([
       "evaluation-validate-set",
       "--input",
-      "receipts.json",
+      "records.json",
     ]),
     {
       command: "evaluation-validate-set",
-      inputPath: "receipts.json",
+      inputPath: "records.json",
     },
   );
   assert.throws(

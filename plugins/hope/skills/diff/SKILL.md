@@ -158,12 +158,12 @@ Give a fresh host only the returned `brief`, `hostInput`, and `outputContract`.
 Do not read the oracle or give that host another variant before it returns one
 JSON object with `decision` and `reason`.
 
-Call `invocation-evaluation-receipt` with that output and the host-owned host,
+Call `invocation-evaluation-record` with that output and the host-owned host,
 model, effort, and invocation identity.
 
-Keep every receipt, including a valid failed run.
+Keep every record, including a valid failed run.
 
-Validate each receipt with `invocation-evaluation-validate` and the complete
+Validate each record with `invocation-evaluation-validate` and the complete
 array with `invocation-evaluation-validate-set`.
 
 If one complete baseline makes the published examples a removal candidate, run
@@ -173,7 +173,7 @@ baseline.
 Prepare each listed run with `invocation-example-removal-prepare` and keep the
 same fresh-host boundary.
 
-Create and validate the new receipts with the matching example-removal
+Create and validate the new records with the matching example-removal
 commands, then pass the original and follow-up arrays to
 `invocation-example-removal-validate-evidence`.
 
@@ -186,7 +186,7 @@ Prepare every listed run with
 `invocation-production-verification-prepare` and keep the same fresh-host
 boundary.
 
-Create and validate the receipts with the matching production-verification
+Create and validate the records with the matching production-verification
 commands.
 
 Continue only when the complete set returns `accept-active-brief`.
@@ -195,7 +195,7 @@ Do not use the current context as a fresh evaluation host after it has seen an
 oracle, another variant, or the complete case set.
 
 Do not change the production Skill or invocation contract from a partial
-receipt set.
+record set.
 
 Deterministic contract tests are not model-behavior evidence.
 
@@ -317,7 +317,7 @@ command.
 
 Hope verifies any committed prefix and resumes the uncommitted suffix.
 
-After a completed replay, it returns the durable checkpoint receipts again.
+After a completed replay, it returns the durable checkpoint records again.
 
 When the generation ends, `nextWindow` is absent.
 

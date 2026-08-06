@@ -128,7 +128,7 @@ function validRelativePath(value) {
 function normalizeFile(raw, path, errors, ids, paths) {
   const item = plainObject(raw) ? raw : {};
   if (!plainObject(raw)) errors.push(`${path} must be an object`);
-  unknownKeys(item, ["id", "path", "kind", "digest", "size"], path, errors);
+  unknownKeys(item, ["id", "path", "kind", "entryType", "digest", "size"], path, errors);
   const id = identifier(item.id, `${path}.id`, errors, ids);
   const filePath = text(item.path, `${path}.path`, errors, { maximum: 8_192 });
   if (filePath && !validRelativePath(filePath)) {
@@ -136,10 +136,15 @@ function normalizeFile(raw, path, errors, ids, paths) {
   }
   if (filePath && paths.has(filePath)) errors.push(`${path}.path repeats ${filePath}`);
   if (filePath) paths.add(filePath);
+  const entryType = item.entryType ?? "file";
+  if (!["file", "symbolic-link"].includes(entryType)) {
+    errors.push(`${path}.entryType must be file or symbolic-link`);
+  }
   return {
     id,
     path: filePath,
     kind: item.kind,
+    entryType,
     digest: digest(item.digest, `${path}.digest`, errors),
     size: integer(item.size, `${path}.size`, errors, { minimum: 0, optional: true }),
   };
@@ -226,7 +231,10 @@ function inventoryStringBytes(value) {
 
 function inventoryManifestPayload(files, exclusions) {
   return {
-    files,
+    files: files.map((file) => ({
+      ...file,
+      entryType: file.entryType ?? "file",
+    })),
     exclusions,
   };
 }
@@ -357,64 +365,64 @@ function normalizeAssignments(raw, path, errors, sourceIds, execution) {
   return assignments;
 }
 
-function normalizeReceipts(raw, path, errors, assignments) {
+function normalizeWorkerReports(raw, path, errors, assignments) {
   const items = array(raw, path, errors, assignments.length);
   const expected = new Map(assignments.map((assignment) => [assignment.workerId, assignment.sourceIds]));
   const seen = new Set();
-  const receipts = [];
-  items.forEach((rawReceipt, index) => {
-    const receiptPath = `${path}[${index}]`;
-    const input = plainObject(rawReceipt) ? rawReceipt : {};
-    if (!plainObject(rawReceipt)) errors.push(`${receiptPath} must be an object`);
-    unknownKeys(input, ["workerId", "processedSourceIds", "gaps"], receiptPath, errors);
-    const workerId = identifier(input.workerId, `${receiptPath}.workerId`, errors);
+  const workerReports = [];
+  items.forEach((rawReport, index) => {
+    const reportPath = `${path}[${index}]`;
+    const input = plainObject(rawReport) ? rawReport : {};
+    if (!plainObject(rawReport)) errors.push(`${reportPath} must be an object`);
+    unknownKeys(input, ["workerId", "processedSourceIds", "gaps"], reportPath, errors);
+    const workerId = identifier(input.workerId, `${reportPath}.workerId`, errors);
     if (seen.has(workerId)) errors.push(`${path} repeats worker ${workerId}`);
     seen.add(workerId);
     const assignedSourceIds = expected.get(workerId) ?? [];
     const processedSourceIds = references(
       input.processedSourceIds,
-      `${receiptPath}.processedSourceIds`,
+      `${reportPath}.processedSourceIds`,
       errors,
       new Set(assignedSourceIds),
       { maximum: SWEEP_LIMITS.inventoryBatchFiles },
     );
-    const gaps = array(input.gaps, `${receiptPath}.gaps`, errors, SWEEP_LIMITS.groupItems)
-      .map((gap, gapIndex) => text(gap, `${receiptPath}.gaps[${gapIndex}]`, errors));
-    receipts.push({ workerId, processedSourceIds, gaps });
+    const gaps = array(input.gaps, `${reportPath}.gaps`, errors, SWEEP_LIMITS.groupItems)
+      .map((gap, gapIndex) => text(gap, `${reportPath}.gaps[${gapIndex}]`, errors));
+    workerReports.push({ workerId, processedSourceIds, gaps });
   });
-  if (receipts.length !== assignments.length) {
-    errors.push(`${path} must contain one receipt per assignment`);
+  if (workerReports.length !== assignments.length) {
+    errors.push(`${path} must contain one worker report per assignment`);
   }
   for (const assignment of assignments) {
     if (!seen.has(assignment.workerId)) errors.push(`${path} is missing worker ${assignment.workerId}`);
   }
-  return receipts;
+  return workerReports;
 }
 
-function receiptProcessedSourceIds(receipts, sourceOrder = undefined) {
-  const processed = new Set(receipts.flatMap((receipt) => receipt.processedSourceIds));
+function reportProcessedSourceIds(workerReports, sourceOrder = undefined) {
+  const processed = new Set(workerReports.flatMap((workerReport) => workerReport.processedSourceIds));
   return sourceOrder
     ? sourceOrder.filter((sourceId) => processed.has(sourceId))
     : unique([...processed]);
 }
 
-function receiptGaps(receipts) {
-  return unique(receipts.flatMap((receipt) => receipt.gaps));
+function reportGaps(workerReports) {
+  return unique(workerReports.flatMap((workerReport) => workerReport.gaps));
 }
 
-function batchReceiptPayload(value) {
+function batchWorkerReportsPayload(value) {
   return {
     batchId: value.batchId,
     inventoryDigest: value.inventoryDigest,
     inputDigest: value.inputDigest,
     state: value.state,
     execution: value.execution,
-    receipts: value.receipts,
+    workerReports: value.workerReports,
   };
 }
 
 export function sweepInventoryBatchResultDigest(value) {
-  return hashCanonicalValue(batchReceiptPayload(value));
+  return hashCanonicalValue(batchWorkerReportsPayload(value));
 }
 
 function normalizeBatch(raw, path, errors, batchIds, fileIds) {
@@ -432,8 +440,8 @@ function normalizeBatch(raw, path, errors, batchIds, fileIds) {
       "inventoryDigest",
       "inputDigest",
       "processedSourceIds",
-      "receipts",
-      "receiptDigest",
+      "workerReports",
+      "workerReportsDigest",
       "gaps",
     ],
     path,
@@ -476,13 +484,13 @@ function normalizeBatch(raw, path, errors, batchIds, fileIds) {
     new Set(sourceIds),
     { maximum: SWEEP_LIMITS.inventoryBatchFiles },
   );
-  const receipts = input.receipts === undefined
+  const workerReports = input.workerReports === undefined
     || ((state === "pending" || state === "in-progress")
-      && Array.isArray(input.receipts)
-      && input.receipts.length === 0)
+      && Array.isArray(input.workerReports)
+      && input.workerReports.length === 0)
     ? []
-    : normalizeReceipts(input.receipts, `${path}.receipts`, errors, assignments);
-  const receiptDigest = digest(input.receiptDigest, `${path}.receiptDigest`, errors, {
+    : normalizeWorkerReports(input.workerReports, `${path}.workerReports`, errors, assignments);
+  const workerReportsDigest = digest(input.workerReportsDigest, `${path}.workerReportsDigest`, errors, {
     optional: true,
   });
   const gaps = array(input.gaps, `${path}.gaps`, errors, SWEEP_LIMITS.groupItems)
@@ -496,8 +504,8 @@ function normalizeBatch(raw, path, errors, batchIds, fileIds) {
       || assignments.length > 0
       || inventoryDigest
       || inputDigest
-      || receipts.length > 0
-      || receiptDigest
+      || workerReports.length > 0
+      || workerReportsDigest
       || gaps.length > 0
     ) {
       errors.push(`${path} pending batch must not contain execution results`);
@@ -508,8 +516,8 @@ function normalizeBatch(raw, path, errors, batchIds, fileIds) {
       errors.push(`${path} in-progress batch requires inventory and input digests`);
     }
     if (assignments.length === 0) errors.push(`${path} in-progress batch requires assignments`);
-    if (receipts.length > 0 || receiptDigest) {
-      errors.push(`${path} in-progress batch must not contain receipts`);
+    if (workerReports.length > 0 || workerReportsDigest) {
+      errors.push(`${path} in-progress batch must not contain workerReports`);
     }
   }
   if (state === "complete") {
@@ -520,17 +528,17 @@ function normalizeBatch(raw, path, errors, batchIds, fileIds) {
       errors.push(`${path} complete batch requires inventory and input digests`);
     }
     if (assignments.length === 0) errors.push(`${path} complete batch requires assignments`);
-    if (receipts.length === 0 || !receiptDigest) {
-      errors.push(`${path} complete batch requires receipts and a receipt digest`);
+    if (workerReports.length === 0 || !workerReportsDigest) {
+      errors.push(`${path} complete batch requires workerReports and a workerReport digest`);
     }
     if (gaps.length > 0) errors.push(`${path} complete batch must not keep gaps`);
   }
   if (state === "partial") {
-    if (!inventoryDigest || !inputDigest || !receiptDigest) {
-      errors.push(`${path} partial batch requires execution and receipt digests`);
+    if (!inventoryDigest || !inputDigest || !workerReportsDigest) {
+      errors.push(`${path} partial batch requires execution and workerReport digests`);
     }
-    if (assignments.length === 0 || receipts.length === 0) {
-      errors.push(`${path} partial batch requires assignments and receipts`);
+    if (assignments.length === 0 || workerReports.length === 0) {
+      errors.push(`${path} partial batch requires assignments and workerReports`);
     }
     if (gaps.length === 0) errors.push(`${path} partial batch must explain its gap`);
   }
@@ -538,34 +546,34 @@ function normalizeBatch(raw, path, errors, batchIds, fileIds) {
     errors.push(`${path} failed batch must explain its gap`);
   }
   if (state === "failed") {
-    if (!inventoryDigest || !inputDigest || !receiptDigest) {
-      errors.push(`${path} failed batch requires execution and receipt digests`);
+    if (!inventoryDigest || !inputDigest || !workerReportsDigest) {
+      errors.push(`${path} failed batch requires execution and workerReport digests`);
     }
-    if (assignments.length === 0 || receipts.length === 0) {
-      errors.push(`${path} failed batch requires assignments and receipts`);
+    if (assignments.length === 0 || workerReports.length === 0) {
+      errors.push(`${path} failed batch requires assignments and workerReports`);
     }
   }
-  if (state !== "pending" && receipts.length > 0) {
-    const expectedProcessed = receiptProcessedSourceIds(receipts, sourceIds);
-    const expectedGaps = receiptGaps(receipts);
+  if (state !== "pending" && workerReports.length > 0) {
+    const expectedProcessed = reportProcessedSourceIds(workerReports, sourceIds);
+    const expectedGaps = reportGaps(workerReports);
     if (!isDeepStrictEqual(processedSourceIds, expectedProcessed)) {
-      errors.push(`${path}.processedSourceIds must be derived from worker receipts`);
+      errors.push(`${path}.processedSourceIds must be derived from worker reports`);
     }
     if (!isDeepStrictEqual(gaps, expectedGaps)) {
-      errors.push(`${path}.gaps must be derived from worker receipts`);
+      errors.push(`${path}.gaps must be derived from worker reports`);
     }
     if (
-      receiptDigest
-      && receiptDigest !== sweepInventoryBatchResultDigest({
+      workerReportsDigest
+      && workerReportsDigest !== sweepInventoryBatchResultDigest({
         batchId: id,
         inventoryDigest,
         inputDigest,
         state,
         execution,
-        receipts,
+        workerReports,
       })
     ) {
-      errors.push(`${path}.receiptDigest must match its worker receipts`);
+      errors.push(`${path}.workerReportsDigest must match its worker reports`);
     }
   }
   return {
@@ -578,8 +586,8 @@ function normalizeBatch(raw, path, errors, batchIds, fileIds) {
     ...(inventoryDigest ? { inventoryDigest } : {}),
     ...(inputDigest ? { inputDigest } : {}),
     processedSourceIds,
-    receipts,
-    ...(receiptDigest ? { receiptDigest } : {}),
+    workerReports,
+    ...(workerReportsDigest ? { workerReportsDigest } : {}),
     gaps,
   };
 }
@@ -926,8 +934,8 @@ export function completeSweepInventoryBatch(value, batchId, result) {
       "inputDigest",
       "state",
       "execution",
-      "receipts",
-      "receiptDigest",
+      "workerReports",
+      "workerReportsDigest",
     ],
     "batch",
     errors,
@@ -946,13 +954,13 @@ export function completeSweepInventoryBatch(value, batchId, result) {
   const execution = normalizeExecution(input.execution, "batch.execution", errors);
   const inventoryDigest = digest(input.inventoryDigest, "batch.inventoryDigest", errors);
   const inputDigest = digest(input.inputDigest, "batch.inputDigest", errors);
-  const receipts = normalizeReceipts(
-    input.receipts,
-    "batch.receipts",
+  const workerReports = normalizeWorkerReports(
+    input.workerReports,
+    "batch.workerReports",
     errors,
     batch.assignments,
   );
-  const receiptDigest = digest(input.receiptDigest, "batch.receiptDigest", errors);
+  const workerReportsDigest = digest(input.workerReportsDigest, "batch.workerReportsDigest", errors);
   if (inventoryDigest !== batch.inventoryDigest) {
     errors.push("batch.inventoryDigest must match the inventory captured at start");
   }
@@ -962,18 +970,18 @@ export function completeSweepInventoryBatch(value, batchId, result) {
   if (!isDeepStrictEqual(execution, batch.execution)) {
     errors.push("batch.execution must match the execution assigned at start");
   }
-  const processedSourceIds = receiptProcessedSourceIds(receipts, batch.sourceIds);
-  const gaps = receiptGaps(receipts);
-  const expectedReceiptDigest = sweepInventoryBatchResultDigest({
+  const processedSourceIds = reportProcessedSourceIds(workerReports, batch.sourceIds);
+  const gaps = reportGaps(workerReports);
+  const expectedWorkerReportsDigest = sweepInventoryBatchResultDigest({
     batchId,
     inventoryDigest,
     inputDigest,
     state: input.state,
     execution,
-    receipts,
+    workerReports,
   });
-  if (receiptDigest !== expectedReceiptDigest) {
-    errors.push("batch.receiptDigest must match the exact worker receipts");
+  if (workerReportsDigest !== expectedWorkerReportsDigest) {
+    errors.push("batch.workerReportsDigest must match the exact worker reports");
   }
   if (input.state === "complete" && !isDeepStrictEqual(processedSourceIds, batch.sourceIds)) {
     errors.push("complete batch result must process every assigned file");
@@ -986,11 +994,11 @@ export function completeSweepInventoryBatch(value, batchId, result) {
       ...item,
       state: input.state,
       execution,
-      receipts,
+      workerReports,
       inventoryDigest,
       inputDigest,
       processedSourceIds,
-      receiptDigest,
+      workerReportsDigest,
       gaps,
     }
     : item);
@@ -1026,8 +1034,8 @@ export function validateSweepInventoryBatchInput(value) {
       "inventoryDigest",
       "inputDigest",
       "processedSourceIds",
-      "receipts",
-      "receiptDigest",
+      "workerReports",
+      "workerReportsDigest",
       "gaps",
     ],
     "sweepBatchInput.batch",
@@ -1119,7 +1127,7 @@ export function validateSweepInventoryBatchInput(value) {
       ...(inventoryDigest ? { inventoryDigest } : {}),
       ...(inputDigest ? { inputDigest } : {}),
       processedSourceIds,
-      receipts: [],
+      workerReports: [],
       gaps,
     }),
     files: Object.freeze(files),
@@ -1136,7 +1144,7 @@ export function createSweepInventoryBatchResult({
   inputDigest,
   state,
   execution,
-  receipts = [],
+  workerReports = [],
 } = {}) {
   const result = {
     batchId,
@@ -1144,11 +1152,11 @@ export function createSweepInventoryBatchResult({
     inputDigest,
     state,
     execution,
-    receipts,
+    workerReports,
   };
   return Object.freeze({
     ...result,
-    receiptDigest: sweepInventoryBatchResultDigest(result),
+    workerReportsDigest: sweepInventoryBatchResultDigest(result),
   });
 }
 

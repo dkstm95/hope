@@ -104,7 +104,7 @@ Align derives readiness but cannot author its own approval.
 A trusted host approval must point to a captured conversation source.
 
 Its pre-approval Polish transition consumes one exact candidate digest,
-revalidates the resulting state, and records a digest-bound receipt so the same
+revalidates the resulting state, and records a digest-bound record so the same
 candidate is not polished again.
 
 Polish requires an output snapshot to keep the target source IDs, kinds, and

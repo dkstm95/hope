@@ -10,8 +10,8 @@
     "inputDigest",
     "state",
     "execution",
-    "receipts",
-    "receiptDigest"
+    "workerReports",
+    "workerReportsDigest"
   ],
   "properties": {
     "batchId": {
@@ -38,7 +38,7 @@
         }
       }
     },
-    "receipts": {
+    "workerReports": {
       "type": "array",
       "minItems": 1,
       "maxItems": 16,
@@ -68,6 +68,6 @@
         }
       }
     },
-    "receiptDigest": { "pattern": "^sha256:[a-f0-9]{64}$" }
+    "workerReportsDigest": { "pattern": "^sha256:[a-f0-9]{64}$" }
   }
 }

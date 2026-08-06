@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
 import { createResultValidation } from "../result-validation/index.mjs";
-import { validatePolishReceipt } from "../polish/validate.mjs";
+import { validatePolishRecord } from "../polish/validate.mjs";
 import {
   serializedJsonBytes,
   stringBytes,
@@ -10,7 +10,7 @@ import {
 } from "../work-snapshot/index.mjs";
 import {
   SWEEP_APPROVAL_STATUSES,
-  SWEEP_APPROVAL_RECEIPT_VERSION,
+  SWEEP_APPROVAL_RECORD_VERSION,
   SWEEP_BEHAVIOR_IMPACTS,
   SWEEP_CANDIDATE_DISPOSITIONS,
   SWEEP_CANDIDATE_RESULT_STATUSES,
@@ -1155,7 +1155,7 @@ function normalizeApprovalCandidate(value, path, errors) {
   return normalized;
 }
 
-function approvalReceiptPayload(value) {
+function approvalRecordPayload(value) {
   return {
     feature: value.feature,
     version: value.version,
@@ -1166,8 +1166,8 @@ function approvalReceiptPayload(value) {
   };
 }
 
-export function sweepApprovalReceiptDigest(value) {
-  return hashCanonicalValue(approvalReceiptPayload(value));
+export function sweepApprovalRecordDigest(value) {
+  return hashCanonicalValue(approvalRecordPayload(value));
 }
 
 function normalizeApprovalAuthority(value, path, errors) {
@@ -1192,7 +1192,7 @@ function normalizeApprovalAuthority(value, path, errors) {
 function approvalStatement({ approvalCandidate, decision, authoritySource }) {
   return {
     feature: "sweep-approval-statement",
-    version: SWEEP_APPROVAL_RECEIPT_VERSION,
+    version: SWEEP_APPROVAL_RECORD_VERSION,
     sessionId: approvalCandidate.sessionId,
     candidateDigest: approvalCandidate.candidateDigest,
     decision,
@@ -1262,12 +1262,12 @@ function normalizeHostAttestation(
   return attestation;
 }
 
-function normalizeApprovalReceipt(value, path, errors, {
+function normalizeApprovalRecord(value, path, errors, {
   verifyApprovalAttestation,
 } = {}) {
-  const receipt = validation.object(value, path, errors);
+  const record = validation.object(value, path, errors);
   validation.unknownKeys(
-    receipt,
+    record,
     [
       "feature",
       "version",
@@ -1275,23 +1275,23 @@ function normalizeApprovalReceipt(value, path, errors, {
       "decision",
       "authoritySource",
       "hostAttestation",
-      "receiptDigest",
+      "recordDigest",
     ],
     path,
     errors,
   );
   const approvalCandidate = normalizeApprovalCandidate(
-    receipt.approvalCandidate,
+    record.approvalCandidate,
     `${path}.approvalCandidate`,
     errors,
   );
   const authoritySource = normalizeApprovalAuthority(
-    receipt.authoritySource,
+    record.authoritySource,
     `${path}.authoritySource`,
     errors,
   );
   const decision = validation.choice(
-    receipt.decision,
+    record.decision,
     SWEEP_APPROVAL_STATUSES,
     `${path}.decision`,
     errors,
@@ -1302,27 +1302,27 @@ function normalizeApprovalReceipt(value, path, errors, {
     authoritySource,
   });
   const normalized = {
-    feature: validation.text(receipt.feature, `${path}.feature`, errors),
-    version: validation.integer(receipt.version, `${path}.version`, errors, {
-      minimum: SWEEP_APPROVAL_RECEIPT_VERSION,
+    feature: validation.text(record.feature, `${path}.feature`, errors),
+    version: validation.integer(record.version, `${path}.version`, errors, {
+      minimum: SWEEP_APPROVAL_RECORD_VERSION,
     }),
     approvalCandidate,
     decision,
     authoritySource,
     hostAttestation: normalizeHostAttestation(
-      receipt.hostAttestation,
+      record.hostAttestation,
       `${path}.hostAttestation`,
       errors,
       statement,
       verifyApprovalAttestation,
     ),
   };
-  if (normalized.feature !== "sweep-approval-receipt") {
-    errors.push(`${path}.feature must be sweep-approval-receipt`);
+  if (normalized.feature !== "sweep-approval-record") {
+    errors.push(`${path}.feature must be sweep-approval-record`);
   }
-  if (normalized.version !== SWEEP_APPROVAL_RECEIPT_VERSION) {
+  if (normalized.version !== SWEEP_APPROVAL_RECORD_VERSION) {
     errors.push(
-      `${path}.version must be ${SWEEP_APPROVAL_RECEIPT_VERSION}`,
+      `${path}.version must be ${SWEEP_APPROVAL_RECORD_VERSION}`,
     );
   }
   if (
@@ -1331,21 +1331,21 @@ function normalizeApprovalReceipt(value, path, errors, {
   ) {
     errors.push(`${path}.authoritySource must have a distinct source ID`);
   }
-  const receiptDigest = digest(
-    receipt.receiptDigest,
-    `${path}.receiptDigest`,
+  const recordDigest = digest(
+    record.recordDigest,
+    `${path}.recordDigest`,
     errors,
   );
   if (
-    receiptDigest
-    && receiptDigest !== sweepApprovalReceiptDigest(normalized)
+    recordDigest
+    && recordDigest !== sweepApprovalRecordDigest(normalized)
   ) {
-    errors.push(`${path}.receiptDigest does not match its normalized approval`);
+    errors.push(`${path}.recordDigest does not match its normalized approval`);
   }
-  return { ...normalized, receiptDigest };
+  return { ...normalized, recordDigest };
 }
 
-export function createSweepApprovalReceipt(value, options = {}) {
+export function createSweepApprovalRecord(value, options = {}) {
   const errors = [];
   const input = validation.object(value, "sweepApproval", errors);
   validation.unknownKeys(
@@ -1370,9 +1370,9 @@ export function createSweepApprovalReceipt(value, options = {}) {
     "sweepApproval.decision",
     errors,
   );
-  const receipt = {
-    feature: "sweep-approval-receipt",
-    version: SWEEP_APPROVAL_RECEIPT_VERSION,
+  const record = {
+    feature: "sweep-approval-record",
+    version: SWEEP_APPROVAL_RECORD_VERSION,
     approvalCandidate,
     decision,
     authoritySource,
@@ -1392,21 +1392,21 @@ export function createSweepApprovalReceipt(value, options = {}) {
   }
   invalid("Hope sweep approval", errors);
   return deepFreeze({
-    ...receipt,
-    receiptDigest: sweepApprovalReceiptDigest(receipt),
+    ...record,
+    recordDigest: sweepApprovalRecordDigest(record),
   });
 }
 
-export function validateSweepApprovalReceipt(value, options = {}) {
+export function validateSweepApprovalRecord(value, options = {}) {
   const errors = [];
-  const receipt = normalizeApprovalReceipt(
+  const record = normalizeApprovalRecord(
     value,
-    "sweepApprovalReceipt",
+    "sweepApprovalRecord",
     errors,
     options,
   );
-  invalid("Hope sweep approval receipt", errors);
-  return deepFreeze(receipt);
+  invalid("Hope sweep approval record", errors);
+  return deepFreeze(record);
 }
 
 function normalizedOutputSnapshot(value, path, errors) {
@@ -1474,8 +1474,8 @@ export function validateSweepCompletion(value, {
       "version",
       "title",
       "snapshot",
-      "approvalReceipt",
-      "polishReceipt",
+      "approvalRecord",
+      "polishRecord",
       "outcome",
       "summary",
     ],
@@ -1487,16 +1487,16 @@ export function validateSweepCompletion(value, {
     normalizedSnapshot.sources.map((source) => [source.id, source]),
   );
   const snapshotSourceIds = new Set(snapshotSources.keys());
-  const approvalReceipt = normalizeApprovalReceipt(
-    work.approvalReceipt,
-    "sweep.approvalReceipt",
+  const approvalRecord = normalizeApprovalRecord(
+    work.approvalRecord,
+    "sweep.approvalRecord",
     errors,
     { verifyApprovalAttestation },
   );
-  const approvalCandidate = approvalReceipt.approvalCandidate;
+  const approvalCandidate = approvalRecord.approvalCandidate;
   const requiredSnapshotIds = new Set([
     ...approvalCandidate.sources.map((source) => source.id),
-    approvalReceipt.authoritySource?.id,
+    approvalRecord.authoritySource?.id,
   ].filter(Boolean));
   if (
     requiredSnapshotIds.size !== normalizedSnapshot.sources.length
@@ -1507,10 +1507,10 @@ export function validateSweepCompletion(value, {
     );
   }
   if (
-    approvalReceipt.authoritySource
+    approvalRecord.authoritySource
     && !sameSourceIdentity(
-      approvalReceipt.authoritySource,
-      snapshotSources.get(approvalReceipt.authoritySource.id),
+      approvalRecord.authoritySource,
+      snapshotSources.get(approvalRecord.authoritySource.id),
     )
   ) {
     errors.push("sweep approval authority identity is stale");
@@ -1528,23 +1528,23 @@ export function validateSweepCompletion(value, {
       snapshotSources.get(sourceId),
     ),
   );
-  let polishReceipt;
-  if (work.polishReceipt !== undefined) {
+  let polishRecord;
+  if (work.polishRecord !== undefined) {
     try {
-      polishReceipt = validatePolishReceipt(work.polishReceipt);
+      polishRecord = validatePolishRecord(work.polishRecord);
     } catch (error) {
-      errors.push(`sweep.polishReceipt: ${error.message}`);
+      errors.push(`sweep.polishRecord: ${error.message}`);
     }
   }
-  if (polishReceipt) {
-    const polishRun = polishReceipt.run;
+  if (polishRecord) {
+    const polishRun = polishRecord.run;
     const executionContract = approvalCandidate.executionContract;
     const expectedComposition = {
       caller: "sweep",
       sessionId: approvalCandidate.sessionId,
       workUnitDigest: approvalCandidate.candidateDigest,
       executionContractDigest: approvalCandidate.executionContractDigest,
-      authorityReceiptDigest: approvalReceipt.receiptDigest,
+      authorityRecordDigest: approvalRecord.recordDigest,
     };
     if (!isDeepStrictEqual(polishRun.composition, expectedComposition)) {
       errors.push("sweep Polish composition must bind the exact approval and execution contract");
@@ -1615,7 +1615,7 @@ export function validateSweepCompletion(value, {
         errors.push(`sweep Polish run must bind approved source ${source.id}`);
       }
     }
-    const authority = approvalReceipt.authoritySource;
+    const authority = approvalRecord.authoritySource;
     if (
       authority
       && !sameSourceIdentity(
@@ -1788,26 +1788,26 @@ export function validateSweepCompletion(value, {
   const terminal = normalizedOutcome.status;
   const allPassed = verification.length > 0
     && verification.every((item) => item.status === "passed");
-  const approved = approvalReceipt.decision === "approved";
+  const approved = approvalRecord.decision === "approved";
   const exactApproval = targetMatches
     && evidenceMatches
-    && Boolean(approvalReceipt.authoritySource)
+    && Boolean(approvalRecord.authoritySource)
     && sameSourceIdentity(
-      approvalReceipt.authoritySource,
-      snapshotSources.get(approvalReceipt.authoritySource?.id),
+      approvalRecord.authoritySource,
+      snapshotSources.get(approvalRecord.authoritySource?.id),
     );
   if (["applied", "no-change"].includes(terminal)) {
     if (!approved || !exactApproval) {
       errors.push(`sweep ${terminal} outcome requires an exact approval`);
     }
-    if (!polishReceipt) {
-      errors.push(`sweep ${terminal} outcome requires a Polish receipt`);
+    if (!polishRecord) {
+      errors.push(`sweep ${terminal} outcome requires a Polish record`);
     }
-    if (polishReceipt?.result.verificationStatus !== "verified-in-checked-scope") {
+    if (polishRecord?.result.verificationStatus !== "verified-in-checked-scope") {
       errors.push(`sweep ${terminal} outcome requires verified Polish work`);
     }
     const expectedPolish = terminal === "applied" ? "revised" : "no-change";
-    if (polishReceipt?.result.status !== expectedPolish) {
+    if (polishRecord?.result.status !== expectedPolish) {
       errors.push(`sweep ${terminal} outcome requires Polish ${expectedPolish}`);
     }
     if (!allPassed) {
@@ -1827,12 +1827,12 @@ export function validateSweepCompletion(value, {
     if (!approved || (targetMatches && evidenceMatches)) {
       errors.push("sweep stale outcome requires an approved identity mismatch");
     }
-    if (polishReceipt || outputSnapshot || normalizedOutcome.gaps.length === 0) {
+    if (polishRecord || outputSnapshot || normalizedOutcome.gaps.length === 0) {
       errors.push("sweep stale outcome must stop before Polish and explain the gap");
     }
   }
   if (terminal === "rejected") {
-    if (approved || polishReceipt || outputSnapshot) {
+    if (approved || polishRecord || outputSnapshot) {
       errors.push("sweep rejected outcome must stop before execution");
     }
   }
@@ -1852,7 +1852,7 @@ export function validateSweepCompletion(value, {
     if (!approved || !exactApproval) {
       errors.push("sweep handed-off outcome requires an exact approval");
     }
-    if (polishReceipt?.result.status !== "needs-alignment") {
+    if (polishRecord?.result.status !== "needs-alignment") {
       errors.push("sweep handed-off completion requires Polish needs-alignment");
     }
   }
@@ -1884,7 +1884,7 @@ export function validateSweepCompletion(value, {
         );
       }
       usedPolishChangeIds.add(change.polishChangeId);
-      const polishChange = polishReceipt?.run.outcome.changes.find(
+      const polishChange = polishRecord?.run.outcome.changes.find(
         (item) => item.id === change.polishChangeId,
       );
       if (!polishChange) {
@@ -1930,15 +1930,15 @@ export function validateSweepCompletion(value, {
         errors.push(`sweep changed target ${sourceId} is missing from changes`);
       }
     }
-    for (const polishChange of polishReceipt?.run.outcome.changes ?? []) {
+    for (const polishChange of polishRecord?.run.outcome.changes ?? []) {
       if (!usedPolishChangeIds.has(polishChange.id)) {
         errors.push(`sweep must report Polish change ${polishChange.id}`);
       }
     }
   }
 
-  if (polishReceipt && ["applied", "no-change"].includes(terminal)) {
-    const polishRun = polishReceipt.run;
+  if (polishRecord && ["applied", "no-change"].includes(terminal)) {
+    const polishRun = polishRecord.run;
     const sameRemoved = JSON.stringify(polishRun.outcome.removedSourceIds)
       === JSON.stringify(removedSourceIds);
     const polishSources = polishRun.outcome.outputSnapshot?.sources ?? [];
@@ -1965,8 +1965,8 @@ export function validateSweepCompletion(value, {
     }),
     title: validation.text(work.title, "sweep.title", errors),
     snapshot: normalizedSnapshot,
-    approvalReceipt,
-    ...(polishReceipt ? { polishReceipt } : {}),
+    approvalRecord,
+    ...(polishRecord ? { polishRecord } : {}),
     outcome: normalizedOutcome,
     summary: normalizedSummary,
   };
@@ -2012,8 +2012,8 @@ function completionPayload(value) {
     version: value.version,
     title: value.title,
     snapshot: value.snapshot,
-    approvalReceipt: value.approvalReceipt,
-    ...(value.polishReceipt ? { polishReceipt: value.polishReceipt } : {}),
+    approvalRecord: value.approvalRecord,
+    ...(value.polishRecord ? { polishRecord: value.polishRecord } : {}),
     outcome: value.outcome,
     summary: value.summary,
   };

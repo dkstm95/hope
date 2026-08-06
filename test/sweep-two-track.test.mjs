@@ -10,7 +10,7 @@ import {
   createSweepInventoryBatchResult,
   createSweepBrief,
   createSweepModelEvaluationPlan,
-  createSweepModelEvaluationReceipt,
+  createSweepModelEvaluationRecord,
   getSweepModelEvaluationOracle,
   getSweepInventoryBatch,
   startSweepInventoryBatch,
@@ -20,7 +20,7 @@ import {
   SWEEP_MODEL_ADAPTER_MESSAGE,
 } from "../features/sweep/index.mjs";
 import {
-  validateSweepApprovalReceipt,
+  validateSweepApprovalRecord,
   validateSweepCompletion,
   validateSweepPlan,
   validateSweepSessionResult,
@@ -30,7 +30,7 @@ import { main, parseArguments } from "../harness/hope.mjs";
 import {
   makeSweepCompletion,
   makeSweepApprovalCandidate,
-  makeSweepApprovalReceipt,
+  makeSweepApprovalRecord,
   makeSweepPlan,
   makeSweepSessionResult,
   sweepApprovalDependencies,
@@ -169,12 +169,12 @@ test("core and generated Sweep reach the same contracts", async () => {
     sweepInventoryDigest(inventory),
   );
   assert.deepEqual(
-    pluginValidator.validateSweepApprovalReceipt(
-      makeSweepApprovalReceipt(),
+    pluginValidator.validateSweepApprovalRecord(
+      makeSweepApprovalRecord(),
       sweepApprovalDependencies,
     ),
-    validateSweepApprovalReceipt(
-      makeSweepApprovalReceipt(),
+    validateSweepApprovalRecord(
+      makeSweepApprovalRecord(),
       sweepApprovalDependencies,
     ),
   );
@@ -226,13 +226,13 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   const batchResultPath = join(temporaryRoot, "batch-result.json");
   const invalidPlanPath = join(temporaryRoot, "invalid-plan.json");
   const evaluationOutputPath = join(temporaryRoot, "evaluation-output.json");
-  const evaluationReceiptsPath = join(temporaryRoot, "evaluation-receipts.json");
-  const invalidEvaluationReceiptsPath = join(
+  const evaluationRecordsPath = join(temporaryRoot, "evaluation-workerReports.json");
+  const invalidEvaluationRecordsPath = join(
     temporaryRoot,
-    "invalid-evaluation-receipts.json",
+    "invalid-evaluation-workerReports.json",
   );
   const approvalCandidate = makeSweepApprovalCandidate();
-  const approvalReceipt = makeSweepCompletion().approvalReceipt;
+  const approvalRecord = makeSweepCompletion().approvalRecord;
   const invalidPlan = makeSweepPlan();
   invalidPlan.candidates[0].evidenceChecks[0].sourceIds = [];
   const noCandidatePlan = makeSweepPlan();
@@ -264,14 +264,14 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     inputDigest: sweepInventoryBatchDigest(batchInput),
     state: "complete",
     execution: startedInventory.batches[0].execution,
-    receipts: [{
+    workerReports: [{
       workerId: "host",
       processedSourceIds: ["file-1"],
       gaps: [],
     }],
   });
   const evaluationPlan = createSweepModelEvaluationPlan();
-  const evaluationReceipts = [];
+  const evaluationRecords = [];
   for (const specification of evaluationPlan.runs) {
     const oracle = getSweepModelEvaluationOracle(specification.caseId).oracle;
     const output = {
@@ -284,7 +284,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       reason: "The synthetic repository supports this bounded result.",
     };
     const invocationId = `two-track-${specification.caseId}`;
-    evaluationReceipts.push((await createSweepModelEvaluationReceipt({
+    evaluationRecords.push((await createSweepModelEvaluationRecord({
       ...specification,
       host: "codex-test-host",
       model: "test-model",
@@ -304,7 +304,7 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
           { type: "turn.completed" },
         ],
       },
-    })).receipt);
+    })).record);
   }
   await Promise.all([
     writeFile(planPath, JSON.stringify(makeSweepPlan()), { mode: 0o600 }),
@@ -314,8 +314,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
     writeFile(approvalPath, JSON.stringify({
       approvalCandidate,
       decision: "approved",
-      authoritySource: approvalReceipt.authoritySource,
-      hostAttestation: approvalReceipt.hostAttestation,
+      authoritySource: approvalRecord.authoritySource,
+      hostAttestation: approvalRecord.hostAttestation,
     }), { mode: 0o600 }),
     writeFile(sessionResultPath, JSON.stringify(sessionResult), { mode: 0o600 }),
     writeFile(inventoryPath, JSON.stringify(inventory), { mode: 0o600 }),
@@ -337,13 +337,13 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       reason: "The private helper has no supported reference or contract.",
     }), { mode: 0o600 }),
     writeFile(
-      evaluationReceiptsPath,
-      JSON.stringify(evaluationReceipts),
+      evaluationRecordsPath,
+      JSON.stringify(evaluationRecords),
       { mode: 0o600 },
     ),
     writeFile(
-      invalidEvaluationReceiptsPath,
-      JSON.stringify(evaluationReceipts.slice(1)),
+      invalidEvaluationRecordsPath,
+      JSON.stringify(evaluationRecords.slice(1)),
       { mode: 0o600 },
     ),
   ]);
@@ -438,13 +438,13 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   );
   assert.equal(
     runFailure("plugins/hope/runtime/features/sweep/cli.mjs", [
-      "approval-receipt",
+      "approval-record",
       "--input",
       approvalPath,
     ]),
     runFailure("harness/hope.mjs", [
       "sweep",
-      "approval-receipt",
+      "approval-record",
       "--input",
       approvalPath,
     ]),
@@ -501,8 +501,8 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
       "1",
     ]),
   );
-  const evaluationReceiptArguments = [
-    "model-evaluation-receipt",
+  const evaluationRecordArguments = [
+    "model-evaluation-record",
     "--case",
     "sweep-safe-private",
     "--run",
@@ -521,34 +521,34 @@ test("exact harness and generated Sweep commands stay equivalent", async () => {
   assert.deepEqual(
     runJson(
       "plugins/hope/runtime/features/sweep/cli.mjs",
-      evaluationReceiptArguments,
+      evaluationRecordArguments,
     ),
-    runJson("harness/hope.mjs", ["sweep", ...evaluationReceiptArguments]),
+    runJson("harness/hope.mjs", ["sweep", ...evaluationRecordArguments]),
   );
   assert.deepEqual(
     runJson("plugins/hope/runtime/features/sweep/cli.mjs", [
       "model-evaluation-validate-set",
       "--input",
-      evaluationReceiptsPath,
+      evaluationRecordsPath,
     ]),
     runJson("harness/hope.mjs", [
       "sweep",
       "model-evaluation-validate-set",
       "--input",
-      evaluationReceiptsPath,
+      evaluationRecordsPath,
     ]),
   );
   assert.equal(
     runFailure("plugins/hope/runtime/features/sweep/cli.mjs", [
       "model-evaluation-validate-set",
       "--input",
-      invalidEvaluationReceiptsPath,
+      invalidEvaluationRecordsPath,
     ]),
     runFailure("harness/hope.mjs", [
       "sweep",
       "model-evaluation-validate-set",
       "--input",
-      invalidEvaluationReceiptsPath,
+      invalidEvaluationRecordsPath,
     ]),
   );
 });

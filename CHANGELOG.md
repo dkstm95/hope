@@ -36,12 +36,12 @@
 - Add one shared model-evaluation boundary for choosing among Hope features,
   testing Polish preservation guidance, and evaluating whether Write still
   needs its representative decision examples.
-- Expose the same blinded preparation, receipt, and complete-set validation
+- Expose the same blinded preparation, record, and complete-set validation
   commands through the independent harness and generated plugin runtime.
 - Add feature-selection contract version 2 with Sweep and 13 distinct Korean
   and English boundary, conformance, and safety cases.
-- Add versioned provenance that separates synthetic receipts from
-  host-attested receipts and fails release validation without both a trusted
+- Add versioned provenance that separates synthetic records from
+  host-attested records and fails release validation without both a trusted
   attestation verifier and a trusted complete-attempt ledger.
 - Retain the full descriptions for all seven public Hope Skills because the
   historical 26-run sets injected candidate descriptions instead of testing
@@ -50,7 +50,7 @@
   naming the candidate action, then use six separate held-out production
   cases.
 - Restore and retain Write's four active decision examples because historical
-  caller-authored receipts cannot satisfy the new evidence gate.
+  caller-authored records cannot satisfy the new evidence gate.
 - Preserve the historical Polish score of 23 out of 24 as non-release smoke
   data and keep the full preservation guidance.
 - Make harness and generated-runtime model-evaluation failures use the same
@@ -69,18 +69,18 @@
 - Derive every executable candidate's canonical plan and execution-contract
   digests from validated content instead of caller-provided identities.
 - Require a trusted host verifier for the exact conversation event and opaque
-  or signed approval attestation instead of trusting self-authored receipts.
-- Add Polish run version 2 and a validated receipt so composed work can
+  or signed approval attestation instead of trusting self-authored records.
+- Add Polish run version 2 and a validated record so composed work can
   represent target deletion and cannot substitute an inline result summary.
 - Enforce the approved action, preview, preservation conditions, verification
   methods, change budget, and changed-target coverage at Sweep completion.
 - Add one aggregate session result that binds every plan candidate, completion
   digest, terminal disposition, and remaining gap.
-- Add blinded Sweep model-evaluation cases and digest-bound receipts for every
+- Add blinded Sweep model-evaluation cases and digest-bound records for every
   maintenance category plus uncertain, public-contract, and untrusted-input
   judgments across the harness and generated plugin.
-- Bind each Sweep model-evaluation receipt to the exact evaluation version and
-  separate synthetic test receipts from runner-recorded release evidence.
+- Bind each Sweep model-evaluation record to the exact evaluation version and
+  separate synthetic test records from runner-recorded release evidence.
 - Report unsupported, partial, failed, stale, inconclusive, rejected, and
   handed-off work without presenting it as successful maintenance.
 - Compose approved behavior-preserving work through the existing Polish
@@ -95,7 +95,7 @@
   minimum, rules-only, and complete instruction variants.
 - Bind every evaluation run to its declared host, model, effort, active brief,
   prepared input, host invocation, and exact model output.
-- Keep wrong decisions as failed evidence, require one complete 26-run receipt
+- Keep wrong decisions as failed evidence, require one complete 26-run record
   set, and report results separately by suite and instruction variant.
 - Expose the same evaluation preparation and validation commands through the
   independent harness and generated Claude and Codex plugin runtime.
@@ -106,12 +106,12 @@
 - Add a separate 22-run rules-only follow-up that preserves the first baseline
   and requires 28 passing candidate runs before removing invocation examples.
 - Remove the representative invocation examples from the active version 4
-  candidate after the historical receipts report 28 rules-only runs passing,
+  candidate after the historical records report 28 rules-only runs passing,
   while retaining the version 3 evaluation baseline for audit.
 - Add a final eight-run gate that evaluates the exact active version 4 brief
   without examples or evaluation-only control text.
-- Record the historical active-version-4 receipt calculation as eight passing
-  exact-production runs. Those receipts predate the current host-attestation
+- Record the historical active-version-4 record calculation as eight passing
+  exact-production runs. Those records predate the current host-attestation
   and complete-attempt gate.
 
 ## 1.3.0 - 2026-08-03
@@ -138,7 +138,7 @@
 ## 1.2.0 - 2026-08-03
 
 - Add one shared Toxic Review role-run lifecycle with exact input bindings,
-  complete ordered attempt receipts, visible failure and cancellation, bounded
+  complete ordered attempt records, visible failure and cancellation, bounded
   retries, and finalization only after every selected reviewer succeeds.
 - Run multiple reviewers only in fresh independent contexts, expose the role
   selection reason and maximum role count, and reject unsupported fan-out
@@ -190,7 +190,7 @@
   products. It supports evidence-backed consolidation and removal, records
   proposed and applied revisions separately, and stops on material ambiguity.
 - Run Polish once on each contract-ready Align candidate before approval, then
-  revalidate the state and record a digest-bound receipt.
+  revalidate the state and record a digest-bound record.
 - Remove the unused Diff analysis v1 schema and legacy private-run paths.
   Current runs use one analysis contract, resource policy, and rendering path.
 - Prefer one sentence per prose paragraph when it improves meaning, readability,
@@ -314,7 +314,7 @@ request before approval or merge.
   then every planned pass through snapshot-bound stdout pages of at most 8 KiB,
   while keeping all inspection state transient.
 - Require Review Model `analysisCoverage` to record the active session's summary
-  and pass page-count/terminal-receipt attestation, bind it to each exact
+  and pass page-count/terminal-record attestation, bind it to each exact
   deterministic view without claiming proof of AI reading or cognition, then
   synthesize semantic workstreams and their cross-workstream effects.
 - Bind every review to the captured base, merge-base, head, metadata, file set,

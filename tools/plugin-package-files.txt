@@ -63,7 +63,7 @@ runtime/features/model-evaluation/write-examples.mjs
 runtime/features/polish/cli.mjs
 runtime/features/polish/constants.mjs
 runtime/features/polish/index.mjs
-runtime/features/polish/receipt-v1.schema.json
+runtime/features/polish/record-v1.schema.json
 runtime/features/polish/run-v1.schema.json
 runtime/features/polish/run-v2.schema.json
 runtime/features/polish/validate.mjs

@@ -15,19 +15,19 @@ import {
 } from "./constants.mjs";
 import {
   createSweepApprovalCandidate,
-  createSweepApprovalReceipt,
+  createSweepApprovalRecord,
   sweepPlanDigest,
   validateSweepCompletion,
   validateSweepPlan,
   validateSweepSessionResult,
 } from "./validate.mjs";
 import {
-  createSweepModelEvaluationReceipt as createSweepModelEvaluationReceiptCore,
+  createSweepModelEvaluationRecord as createSweepModelEvaluationRecordCore,
   prepareSweepModelEvaluationRun as prepareSweepModelEvaluationRunCore,
   sweepModelEvaluationLimits,
   validateSweepModelEvaluationOutput,
-  validateSweepModelEvaluationReceipt as validateSweepModelEvaluationReceiptCore,
-  validateSweepModelEvaluationReceiptSet as validateSweepModelEvaluationReceiptSetCore,
+  validateSweepModelEvaluationRecord as validateSweepModelEvaluationRecordCore,
+  validateSweepModelEvaluationRecordSet as validateSweepModelEvaluationRecordSetCore,
 } from "./model-evaluation.mjs";
 import {
   completeSweepInventoryBatch,
@@ -129,8 +129,8 @@ export async function createSweepBrief({
     ]),
     batchExecution: Object.freeze([
       "Use parallel workers only when the host can provide independent contexts; otherwise run the same exact batches sequentially.",
-      "Create and retain the exact pending batch input digest before start-batch. Give each worker only its assigned source IDs from that input; workers inspect and return one receipt per assignment.",
-      "Complete a batch only from the started inventory, with matching inventory and input digests, immutable execution, and one validated receipt per worker. The runtime derives processed IDs and gaps from those receipts.",
+      "Create and retain the exact pending batch input digest before start-batch. Give each worker only its assigned source IDs from that input; workers inspect and return one worker report per assignment.",
+      "Complete a batch only from the started inventory, with matching inventory and input digests, immutable execution, and one validated worker report per worker. The runtime derives processed IDs and gaps from those reports.",
     ]),
     categories: SWEEP_CATEGORY_CATALOG,
     checks: SWEEP_CHECK_CATALOG,
@@ -164,11 +164,11 @@ export async function createSweepBrief({
       "Show the person the exact candidate and execution-contract digests, bound sources, action, preview, budget, preservation conditions, and verification before asking for approval.",
       "Do not modify repository files until the person explicitly approves that digest in the same Sweep session.",
       "Resolve the exact role-authenticated conversation event and supply its opaque or signed host attestation to a trusted verifier outside model-authored JSON.",
-      "The approval-receipt runtime must fail when the trusted host verifier is absent or rejects the proof. A boolean, conversation digest, or self-authored receipt is not approval.",
+      "The approval-record runtime must fail when the trusted host verifier is absent or rejects the proof. A boolean, conversation digest, or self-authored record is not approval.",
       "Recheck every bound target and evidence identity before execution. Any change makes the approval stale and requires a new plan and approval.",
     ]),
     execution: Object.freeze([
-      "Invoke one normal Polish version 2 run only for the approved behavior-preserving candidate, then create its receipt through the shared Polish runtime.",
+      "Invoke one normal Polish version 2 run only for the approved behavior-preserving candidate, then create its record through the shared Polish runtime.",
       "Pass the exact target, action, preview, preservation conditions, verification methods, budget, and conversation-backed authority to Polish through its generic composition block.",
       "Keep behavior, public-contract, dependency, and uncertain changes out of Polish and hand them to a separately approved ordinary implementation task.",
       "Treat files that must change together as one work unit and apply them only after individual and integrated verification pass.",
@@ -177,7 +177,7 @@ export async function createSweepBrief({
       "Write one version 1 completion for the exact approval candidate and validate it before reporting the result.",
       "Record applied, no-change, stale, rejected, failed, inconclusive, or handed-off without hiding partial or missing work.",
       "Record deleted targets as removed source IDs and identify every surviving target in the output snapshot. Never invent a content digest for an absent file.",
-      "An applied result needs validated approval and Polish receipts, a changed target identity within the approved budget, and linked passed verification for every changed target.",
+      "An applied result needs validated approval and Polish records, a changed target identity within the approved budget, and linked passed verification for every changed target.",
       "Close the session with one version 1 session result that binds the normalized plan, every candidate disposition, every completion digest, and every remaining gap.",
       "Remove private plan, Polish, and completion JSON after the session completes or is cancelled.",
     ]),
@@ -190,7 +190,7 @@ export async function createSweepBrief({
       "Keep deterministic envelope tests separate from model judgment evidence.",
       "Forward-test every maintenance category plus uncertain, externally reachable, and untrusted-input cases in fresh contexts with hidden oracles.",
       "Record the declared host, model, effort, exact prepared input, output, and judgment. Do not claim that repository tests ran a host model.",
-      "Treat direct factory receipts as synthetic. Release evidence needs runner-recorded host events and raw output for every receipt.",
+      "Treat direct factory records as synthetic. Release evidence needs runner-recorded host events and raw output for every record.",
     ]),
     limits: SWEEP_LIMITS,
     writingStandard,
@@ -214,32 +214,32 @@ export async function prepareSweepModelEvaluationRun(
   );
 }
 
-export async function createSweepModelEvaluationReceipt(
+export async function createSweepModelEvaluationRecord(
   options,
   dependencies = {},
 ) {
-  return await createSweepModelEvaluationReceiptCore(
+  return await createSweepModelEvaluationRecordCore(
     options,
     sweepModelEvaluationDependencies(dependencies),
   );
 }
 
-export async function validateSweepModelEvaluationReceipt(
-  receipt,
+export async function validateSweepModelEvaluationRecord(
+  record,
   dependencies = {},
 ) {
-  return await validateSweepModelEvaluationReceiptCore(
-    receipt,
+  return await validateSweepModelEvaluationRecordCore(
+    record,
     sweepModelEvaluationDependencies(dependencies),
   );
 }
 
-export async function validateSweepModelEvaluationReceiptSet(
-  receipts,
+export async function validateSweepModelEvaluationRecordSet(
+  records,
   dependencies = {},
 ) {
-  return await validateSweepModelEvaluationReceiptSetCore(
-    receipts,
+  return await validateSweepModelEvaluationRecordSetCore(
+    records,
     sweepModelEvaluationDependencies(dependencies),
   );
 }
@@ -412,7 +412,7 @@ export async function createSweepApprovalCandidateFile(
   );
 }
 
-export async function createSweepApprovalReceiptFile(
+export async function createSweepApprovalRecordFile(
   inputPath,
   dependencies = {},
 ) {
@@ -421,7 +421,7 @@ export async function createSweepApprovalReceiptFile(
     "Hope sweep approval",
     dependencies,
   );
-  return (dependencies.createApprovalReceipt ?? createSweepApprovalReceipt)(
+  return (dependencies.createApprovalRecord ?? createSweepApprovalRecord)(
     input.value,
     { verifyApprovalAttestation: dependencies.verifyApprovalAttestation },
   );
@@ -462,7 +462,7 @@ export async function validateSweepSessionResultFile(
   );
 }
 
-export async function createSweepModelEvaluationReceiptFile(
+export async function createSweepModelEvaluationRecordFile(
   options,
   dependencies = {},
 ) {
@@ -475,29 +475,29 @@ export async function createSweepModelEvaluationReceiptFile(
   );
   const output = (dependencies.validateEvaluationOutput
     ?? validateSweepModelEvaluationOutput)(input.value);
-  return await createSweepModelEvaluationReceipt({ ...options, output }, dependencies);
+  return await createSweepModelEvaluationRecord({ ...options, output }, dependencies);
 }
 
-export async function validateSweepModelEvaluationReceiptFile(
+export async function validateSweepModelEvaluationRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope sweep model-evaluation receipt",
-    maximumBytes: sweepModelEvaluationLimits.receiptBytes,
+    label: "Hope sweep model-evaluation record",
+    maximumBytes: sweepModelEvaluationLimits.recordBytes,
   });
-  return await validateSweepModelEvaluationReceipt(input.value, dependencies);
+  return await validateSweepModelEvaluationRecord(input.value, dependencies);
 }
 
-export async function validateSweepModelEvaluationReceiptSetFile(
+export async function validateSweepModelEvaluationRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope sweep model-evaluation receipt set",
-    maximumBytes: sweepModelEvaluationLimits.receiptSetBytes,
+    label: "Hope sweep model-evaluation record set",
+    maximumBytes: sweepModelEvaluationLimits.recordSetBytes,
   });
-  return await validateSweepModelEvaluationReceiptSet(input.value, dependencies);
+  return await validateSweepModelEvaluationRecordSet(input.value, dependencies);
 }
 
 export function runSweep() {

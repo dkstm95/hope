@@ -3,6 +3,12 @@ name: sweep
 description: Use to inventory a project for broad maintenance, show a whole-project plan, and apply only exact approved behavior-preserving work.
 ---
 
+Sweep discovery treats symbolic links as entries, not as permission to read their
+targets.
+
+Report the link target text as the entry identity and keep any target outside the
+repository out of the inventory.
+
 # Hope sweep
 
 Use the active Claude or Codex session to inspect the repository, show the plan,
@@ -102,20 +108,20 @@ host worker.
 
 Give each worker only the source IDs in its validated assignment.
 
-Each worker returns one receipt for that assignment, including processed source
-IDs and gaps.
+Each worker returns one worker report for that assignment, including processed
+source IDs and gaps.
 
 Workers inspect and return evidence; they do not edit files or redefine scope.
 
-Merge the worker receipts through:
+Merge the worker reports through:
 
 ```text
 complete-batch --input <started-inventory.json> --batch <batch-id> --result <result.json>
 ```
 
 The result must include the original inventory digest, the prepared batch-input
-digest, the unchanged execution identity, every worker receipt, and the runtime
-receipt digest.
+digest, the unchanged execution identity, every worker report, and the runtime
+worker-reports digest.
 
 Do not author a complete whole-project plan until every batch is complete.
 
@@ -180,10 +186,10 @@ conversation source, event ID, and opaque or signed attestation proof.
 
 Keep the proof verifier outside model-authored JSON.
 
-Then create the bound receipt with:
+Then create the bound record with:
 
 ```text
-approval-receipt --input <approval.json>
+approval-record --input <approval.json>
 ```
 
 The plain file command must fail when the host does not supply its trusted
@@ -191,7 +197,7 @@ attestation verifier.
 
 Stop before editing when that verifier is unavailable.
 
-Do not replace this receipt with a boolean, conversation digest, receipt hash,
+Do not replace this record with a boolean, conversation digest, record hash,
 or prose claim.
 
 ## Execute approved work
@@ -210,10 +216,10 @@ version 2 run.
 Keep the approved target, action, in-scope preview, out-of-scope conditions,
 preservation IDs and conditions, and verification methods exact.
 
-Validate the Polish version 2 run and create its receipt with the Polish
-runtime's `receipt` command.
+Validate the Polish version 2 run and create its record with the Polish
+runtime's `record` command.
 
-Use the full receipt in the Sweep completion; do not author an inline Polish
+Use the full record in the Sweep completion; do not author an inline Polish
 summary.
 
 Use the person's Sweep approval as the conversation-backed application
@@ -229,7 +235,7 @@ ordinary implementation task.
 Write the version 1 completion required by `completionSchemaPath` to a private
 temporary JSON file with restricted permissions.
 
-Include the approval receipt and, when Polish ran, the Polish receipt.
+Include the approval record and, when Polish ran, the Polish record.
 
 Bind every applied change to its Polish change ID and to a passed final
 verification that cites the changed target.
@@ -270,15 +276,15 @@ Do not give that host the oracle, another case, or an earlier output.
 
 Require the model output shape in `evaluation-output-v1.schema.json`.
 
-Run the repository evaluation runner so each receipt contains the exact host
+Run the repository evaluation runner so each record contains the exact host
 events and raw model output.
 
-A receipt created directly by `model-evaluation-receipt` is synthetic and
+A record created directly by `model-evaluation-record` is synthetic and
 cannot satisfy the release gate.
 
 Use `model-evaluation-oracle` only after the output exists.
 
-Collect every receipt and run `model-evaluation-validate-set` before treating
+Collect every record and run `model-evaluation-validate-set` before treating
 the set as release smoke evidence.
 
 Keep failed runs and store the bounded evidence under ignored `test-results/`.

@@ -10,8 +10,8 @@ import {
   parsePolishArguments,
 } from "../features/polish/cli.mjs";
 import {
-  createPolishReceipt,
-  validatePolishReceipt,
+  createPolishRecord,
+  validatePolishRecord,
   validatePolishRun,
 } from "../features/polish/validate.mjs";
 import { makePolishRun } from "../test-support/polish-fixture.mjs";
@@ -206,18 +206,18 @@ test("polish version 2 represents an exact target deletion", () => {
   assert.equal(run.resources.removedTargetSources, 1);
 });
 
-test("polish receipts revalidate the normalized version 2 run", () => {
-  const receipt = createPolishReceipt(makePolishRun());
-  const validated = validatePolishReceipt(receipt);
-  assert.equal(validated.feature, "polish-receipt");
+test("polish records revalidate the normalized version 2 run", () => {
+  const record = createPolishRecord(makePolishRun());
+  const validated = validatePolishRecord(record);
+  assert.equal(validated.feature, "polish-record");
   assert.equal(validated.run.version, 2);
   assert.equal(validated.result.verificationStatus, "verified-in-checked-scope");
 
-  const forged = structuredClone(receipt);
+  const forged = structuredClone(record);
   forged.result.status = "no-change";
   assert.throws(
-    () => validatePolishReceipt(forged),
-    /result must match|receiptDigest does not match/u,
+    () => validatePolishRecord(forged),
+    /result must match|recordDigest does not match/u,
   );
 });
 
@@ -241,7 +241,7 @@ test("polish brief keeps target heuristics out of the fixed contract", async () 
   );
   assert.equal(brief.feature, "polish");
   assert.match(brief.schemaPath, /run-v2\.schema\.json$/u);
-  assert.match(brief.receiptSchemaPath, /receipt-v1\.schema\.json$/u);
+  assert.match(brief.recordSchemaPath, /record-v1\.schema\.json$/u);
   assert.match(brief.planning[1], /Do not use a fixed target checklist/u);
   assert.match(brief.contract[3], /no-change/u);
   assert.deepEqual(brief.composition.callers, ["align", "sweep"]);

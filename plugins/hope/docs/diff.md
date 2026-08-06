@@ -196,7 +196,7 @@ invocation contract.
 Version 4 removed them from the active brief after the historical bounded
 rules-only comparison and follow-up reported passing results.
 
-The historical version 3 baseline keeps the examples so its receipts remain
+The historical version 3 baseline keeps the examples so its records remain
 auditable.
 
 Diff therefore owns a separate blinded model-behavior evaluation for invocation
@@ -247,27 +247,27 @@ Give a fresh host only the returned `brief`, `hostInput`, and
 Do not read the case oracle or give another variant to that host before it
 returns one JSON object with `decision` and `reason`.
 
-Bind that output to a receipt with:
+Bind that output to a record with:
 
 ```text
-hope diff invocation-evaluation-receipt \
+hope diff invocation-evaluation-record \
   --case <id> --variant <variant> --run <number> \
   --input <output.json> --host <id> --model <id> --effort <level> \
   --invocation <host-invocation-id>
 ```
 
-Validate one receipt with `invocation-evaluation-validate` and the complete
+Validate one record with `invocation-evaluation-validate` and the complete
 array with `invocation-evaluation-validate-set`.
 
-Receipt validation retains wrong decisions as failed model evidence instead of
+Record validation retains wrong decisions as failed model evidence instead of
 discarding them.
 
 A complete set must cover every planned run, use unique invocation identities,
 and keep one host, model, and effort.
 
-Store receipts under ignored `test-results/` or equivalent release evidence.
+Store records under ignored `test-results/` or equivalent release evidence.
 
-The repository's deterministic tests validate the protocol and receipt
+The repository's deterministic tests validate the protocol and record
 bindings, but they do not claim to execute a host model.
 
 Follow [model-evaluation.md](model-evaluation.md) before changing the production
@@ -290,23 +290,23 @@ List and prepare the 22 new runs with
 `invocation-example-removal-plan` and
 `invocation-example-removal-prepare`.
 
-Create and validate their receipts with the matching
-`invocation-example-removal-receipt`, `-validate`, and `-validate-set`
+Create and validate their records with the matching
+`invocation-example-removal-record`, `-validate`, and `-validate-set`
 commands.
 
 `invocation-example-removal-validate-evidence` accepts one object containing
-the original `baselineReceipts` and new `followupReceipts` arrays.
+the original `baselineRecords` and new `followupRecords` arrays.
 
 It returns `remove-examples` only when all 28 candidate runs pass under the same
 declared host, model, effort, and contract version.
 
 A valid failure returns `keep-examples` and remains part of the evidence.
 
-The historical receipt calculation reported 28 rules-only candidate runs
+The historical record calculation reported 28 rules-only candidate runs
 without a failure, so version 4 became the production-verification candidate at
 that time.
 
-Those receipts predate the current trusted host-attestation and
+Those records predate the current trusted host-attestation and
 complete-attempt gate and do not independently establish their Codex identity
 or fresh-context execution.
 
@@ -317,7 +317,7 @@ Before release, list the eight exact-production runs with
 `invocation-production-verification-plan`.
 
 Prepare each run with `invocation-production-verification-prepare`, then create
-and validate its receipt with the matching `-receipt`, `-validate`, and
+and validate its record with the matching `-record`, `-validate`, and
 `-validate-set` commands.
 
 Each prepared run contains the exact active version 4 brief.
@@ -329,7 +329,7 @@ Release the active brief only when the complete set returns
 
 A failed decision returns `do-not-release` and remains part of the evidence.
 
-The historical production receipt calculation reported all eight cases passing
+The historical production record calculation reported all eight cases passing
 with the exact active version 4 brief, so version 4 keeps the rules and omits
 the examples as a historical product state.
 

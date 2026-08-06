@@ -48,7 +48,7 @@ fields.
 Use `writingStandard.text` for user-facing language and use
 `writingStandard.decisionExamples` only when a situation matches.
 
-Use both `schemaPath` and `receiptSchemaPath` when the run is composed by
+Use both `schemaPath` and `recordSchemaPath` when the run is composed by
 another Hope feature.
 
 The examples guide decisions; they are not evaluation results.
@@ -93,14 +93,14 @@ Validate it with:
 validate --input <private-run.json>
 ```
 
-When another Hope feature consumes the result, create the receipt from the
+When another Hope feature consumes the result, create the record from the
 same validated run:
 
 ```text
-receipt --input <private-run.json>
+record --input <private-run.json>
 ```
 
-Do not write or summarize a composition receipt by hand.
+Do not write or summarize a composition record by hand.
 
 Use the validated result to report the revised work, change summary, checked
 scope, and uncertainty.

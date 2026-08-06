@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hope.local/schemas/sweep/approval-v1.schema.json",
-  "title": "Hope sweep approval receipt version 1",
-  "description": "Structural schema. The shared Sweep runtime revalidates the candidate, execution contract, conversation authority, host attestation, decision, and receipt digest.",
+  "title": "Hope sweep approval record version 1",
+  "description": "Structural schema. The shared Sweep runtime revalidates the candidate, execution contract, conversation authority, host attestation, decision, and record digest.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,10 +12,10 @@
     "decision",
     "authoritySource",
     "hostAttestation",
-    "receiptDigest"
+    "recordDigest"
   ],
   "properties": {
-    "feature": { "const": "sweep-approval-receipt" },
+    "feature": { "const": "sweep-approval-record" },
     "version": { "const": 1 },
     "approvalCandidate": { "type": "object" },
     "decision": { "enum": ["approved", "rejected"] },
@@ -40,7 +40,7 @@
         "proof": { "$ref": "#/$defs/text" }
       }
     },
-    "receiptDigest": { "$ref": "#/$defs/digest" }
+    "recordDigest": { "$ref": "#/$defs/digest" }
   },
   "$defs": {
     "text": {

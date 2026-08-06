@@ -31,14 +31,14 @@
         "sessionId",
         "workUnitDigest",
         "executionContractDigest",
-        "authorityReceiptDigest"
+        "authorityRecordDigest"
       ],
       "properties": {
         "caller": { "$ref": "#/$defs/text" },
         "sessionId": { "$ref": "#/$defs/text" },
         "workUnitDigest": { "$ref": "#/$defs/digest" },
         "executionContractDigest": { "$ref": "#/$defs/digest" },
-        "authorityReceiptDigest": { "$ref": "#/$defs/digest" }
+        "authorityRecordDigest": { "$ref": "#/$defs/digest" }
       }
     },
     "target": {

@@ -104,11 +104,12 @@
     "file": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "path", "kind", "digest"],
+      "required": ["id", "path", "kind", "entryType", "digest"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "path": { "$ref": "#/$defs/text" },
         "kind": { "enum": ["tracked", "untracked"] },
+        "entryType": { "enum": ["file", "symbolic-link"] },
         "digest": { "$ref": "#/$defs/digest" },
         "size": { "type": "integer", "minimum": 0 }
       }
@@ -156,7 +157,7 @@
         "execution",
         "assignments",
         "processedSourceIds",
-        "receipts",
+        "workerReports",
         "gaps"
       ],
       "properties": {
@@ -199,7 +200,7 @@
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/id" }
         },
-        "receipts": {
+        "workerReports": {
           "type": "array",
           "maxItems": 16,
           "items": {
@@ -218,7 +219,7 @@
             }
           }
         },
-        "receiptDigest": { "$ref": "#/$defs/digest" },
+        "workerReportsDigest": { "$ref": "#/$defs/digest" },
         "gaps": { "$ref": "#/$defs/textList" }
       }
     },

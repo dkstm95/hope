@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hope.local/schemas/sweep/completion-v1.schema.json",
   "title": "Hope sweep completion version 1",
-  "description": "Structural authoring schema. The shared Sweep runtime revalidates attested approval and Polish receipts and enforces the approved execution contract, identity, evidence, and change budget.",
+  "description": "Structural authoring schema. The shared Sweep runtime revalidates attested approval and Polish records and enforces the approved execution contract, identity, evidence, and change budget.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "version",
     "title",
     "snapshot",
-    "approvalReceipt",
+    "approvalRecord",
     "outcome",
     "summary"
   ],
@@ -17,8 +17,8 @@
     "version": { "const": 1 },
     "title": { "$ref": "#/$defs/text" },
     "snapshot": { "$ref": "#/$defs/snapshot" },
-    "approvalReceipt": { "$ref": "approval-v1.schema.json" },
-    "polishReceipt": { "$ref": "../polish/receipt-v1.schema.json" },
+    "approvalRecord": { "$ref": "approval-v1.schema.json" },
+    "polishRecord": { "$ref": "../polish/record-v1.schema.json" },
     "outcome": {
       "type": "object",
       "additionalProperties": false,

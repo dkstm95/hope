@@ -14,13 +14,13 @@ import {
   TOXIC_REVIEW_TARGETS,
 } from "./constants.mjs";
 import {
-  causalCompletenessEvaluationReceiptLimits,
+  causalCompletenessEvaluationRecordLimits,
   createCausalCompletenessEvaluationPlan,
-  createCausalCompletenessEvaluationReceiptTemplate,
+  createCausalCompletenessEvaluationRecordTemplate,
   getCausalCompletenessEvaluationOracle,
   prepareCausalCompletenessEvaluationRun,
-  validateCausalCompletenessEvaluationReceipt,
-  validateCausalCompletenessEvaluationReceiptSet,
+  validateCausalCompletenessEvaluationRecord,
+  validateCausalCompletenessEvaluationRecordSet,
 } from "./causal-evaluation.mjs";
 import { validateToxicReview } from "./validate.mjs";
 import {
@@ -43,15 +43,15 @@ import {
 export {
   causalCompletenessEvaluationCases,
   causalCompletenessEvaluationProtocol,
-  causalCompletenessEvaluationReceiptLimits,
+  causalCompletenessEvaluationRecordLimits,
   causalCompletenessRubric,
   createCausalCompletenessEvaluationPlan,
-  createCausalCompletenessEvaluationReceiptTemplate,
+  createCausalCompletenessEvaluationRecordTemplate,
   digestCausalEvaluationValue,
   getCausalCompletenessEvaluationOracle,
   prepareCausalCompletenessEvaluationRun,
-  validateCausalCompletenessEvaluationReceipt,
-  validateCausalCompletenessEvaluationReceiptSet,
+  validateCausalCompletenessEvaluationRecord,
+  validateCausalCompletenessEvaluationRecordSet,
 } from "./causal-evaluation.mjs";
 
 export {
@@ -183,7 +183,7 @@ export async function createToxicReviewBrief({
         "The host model chooses the smallest useful role set. The core validates, normalizes, and binds that choice to the target and snapshot.",
         "Record why the roles are needed and the person's maximum role count before execution.",
         "Every role keeps one stable binding digest across retries. Every attempt gets a new attempt ID and input digest.",
-        "Do not finalize until every selected role has one valid successful completion receipt.",
+        "Do not finalize until every selected role has one valid successful completion record.",
       ]),
       reviewer: Object.freeze([
         "Review exactly one prepared role input. Do not widen its target, sources, exclusions, or claims.",
@@ -195,7 +195,7 @@ export async function createToxicReviewBrief({
         "The trusted host records succeeded, failed, or cancelled for every attempt and includes its invocation identity.",
         "A failed or cancelled role may be retried only with the same target, role, sources, and brief binding.",
         "Never turn an unstarted, failed, cancelled, stale, or mismatched role into an empty successful finding set.",
-        "The completed execution record keeps every attempt receipt in order, including failure or cancellation details and the successful output digest.",
+        "The completed execution record keeps every attempt record in order, including failure or cancellation details and the successful output digest.",
       ]),
       independence: Object.freeze([
         "One role uses single mode.",
@@ -385,7 +385,7 @@ export async function createCausalCompletenessEvaluationRun(
   return prepareCausalCompletenessEvaluationRun({ ...options, brief });
 }
 
-export async function createCausalCompletenessEvaluationReceiptTemplateFromFile(
+export async function createCausalCompletenessEvaluationRecordTemplateFromFile(
   options,
   dependencies = {},
 ) {
@@ -401,35 +401,35 @@ export async function createCausalCompletenessEvaluationReceiptTemplateFromFile(
     { inputFileBytes: input.fileBytes },
   );
   const brief = await activeCausalEvaluationBrief(dependencies);
-  return createCausalCompletenessEvaluationReceiptTemplate({
+  return createCausalCompletenessEvaluationRecordTemplate({
     ...options,
     brief,
     validatedReview,
   });
 }
 
-export async function validateCausalCompletenessEvaluationReceiptFile(
+export async function validateCausalCompletenessEvaluationRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope toxic review causal evaluation receipt",
-    maximumBytes: causalCompletenessEvaluationReceiptLimits.bytes,
+    label: "Hope toxic review causal evaluation record",
+    maximumBytes: causalCompletenessEvaluationRecordLimits.bytes,
   });
   const brief = await activeCausalEvaluationBrief(dependencies);
-  return validateCausalCompletenessEvaluationReceipt(input.value, { brief });
+  return validateCausalCompletenessEvaluationRecord(input.value, { brief });
 }
 
-export async function validateCausalCompletenessEvaluationReceiptSetFile(
+export async function validateCausalCompletenessEvaluationRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope toxic review causal evaluation receipt set",
+    label: "Hope toxic review causal evaluation record set",
     maximumBytes: 2 * 1024 * 1024,
   });
   const brief = await activeCausalEvaluationBrief(dependencies);
-  return validateCausalCompletenessEvaluationReceiptSet(input.value, { brief });
+  return validateCausalCompletenessEvaluationRecordSet(input.value, { brief });
 }
 
 function adapterCapabilityError(message) {

@@ -734,7 +734,7 @@ test("align consumes one revised Polish result and rejects a repeat", async () =
     afterPath,
     polishPath,
   });
-  assert.equal(completed.receipt.outcome, "revised");
+  assert.equal(completed.record.outcome, "revised");
   assert.equal(completed.state.polish.resultDigest, resultDigest);
   assert.equal(validateAlignState(completed.state).polish.outcome, "revised");
 
@@ -782,8 +782,8 @@ test("align consumes no-change and needs-alignment Polish results", async () => 
     beforePath,
     polishPath: noChangePath,
   });
-  assert.equal(unchanged.receipt.outcome, "no-change");
-  assert.equal(unchanged.receipt.candidateDigest, unchanged.receipt.resultDigest);
+  assert.equal(unchanged.record.outcome, "no-change");
+  assert.equal(unchanged.record.candidateDigest, unchanged.record.resultDigest);
 
   const after = makeAlignState({
     revision: before.revision + 1,
@@ -819,6 +819,6 @@ test("align consumes no-change and needs-alignment Polish results", async () => 
     afterPath,
     polishPath: needsPath,
   });
-  assert.equal(stopped.receipt.outcome, "needs-alignment");
+  assert.equal(stopped.record.outcome, "needs-alignment");
   assert.equal(stopped.state.readiness.state, "interviewing");
 });

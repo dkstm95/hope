@@ -1274,7 +1274,7 @@ export async function readDiffGenerationPage(runPath, {
     || value.totalPages !== pageCount
     || digestJson(digestValue) !== value.digest
   ) {
-    throw new Error("Hope diff context receipt does not match its inspection page");
+    throw new Error("Hope diff context record does not match its inspection page");
   }
   return Object.freeze({
     ...value,
@@ -1701,7 +1701,7 @@ export async function appendDiffRunPlan(runValue, snapshot, {
     const ledgerStateFile = `ledger-state.${generation}.json`;
     await writeJson(join(run.path, ledgerStateFile), ledgerState);
     await claim.renew();
-    const operationReceipt = contextOperation
+    const operationRecord = contextOperation
       ? {
           collected: contextOperation.collected,
           generation,
@@ -1727,8 +1727,8 @@ export async function appendDiffRunPlan(runValue, snapshot, {
       deliveredPage: 0,
       generation,
       ledgerStateFile,
-      contextOperations: operationReceipt
-        ? [...run.manifest.contextOperations, operationReceipt]
+      contextOperations: operationRecord
+        ? [...run.manifest.contextOperations, operationRecord]
         : run.manifest.contextOperations,
       pageCount: pages.length,
       pagesFile,
