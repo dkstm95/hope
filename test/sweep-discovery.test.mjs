@@ -107,7 +107,7 @@ test("sweep discovery refuses a final entry replaced before open", async () => {
           return open(...args);
         },
       }),
-      /ELOOP|symbolic link|too many levels/u,
+      /ELOOP|symbolic link|too many levels|changed before Sweep could read/u,
     );
   } finally {
     await rm(temporary, { recursive: true, force: true });
