@@ -113,3 +113,39 @@ test("sweep discovery refuses a final entry replaced before open", async () => {
     await rm(temporary, { recursive: true, force: true });
   }
 });
+
+test("sweep discovery checks descriptor identity without no-follow support", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "hope-sweep-entry-fallback-"));
+  const repository = join(temporary, "repo");
+  const target = join(repository, "tracked.txt");
+  const outside = join(temporary, "outside-secret.txt");
+  let contentRead = false;
+  try {
+    await mkdir(repository);
+    await writeFile(target, "inside\n");
+    await writeFile(outside, "outside secret\n");
+
+    await assert.rejects(
+      readSweepWorktreeEntry(repository, "tracked.txt", {
+        noFollowFlag: 0,
+        openEntry: async (...args) => {
+          await rm(target);
+          await symlink("../outside-secret.txt", target);
+          const handle = await open(...args);
+          return {
+            close: () => handle.close(),
+            readFile: () => {
+              contentRead = true;
+              return handle.readFile();
+            },
+            stat: (...statArgs) => handle.stat(...statArgs),
+          };
+        },
+      }),
+      /changed before Sweep could read/u,
+    );
+    assert.equal(contentRead, false);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});

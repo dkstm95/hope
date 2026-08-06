@@ -100,6 +100,7 @@ async function verifyAncestorDirectories(ancestors, stat, relativePath) {
 
 export async function readSweepWorktreeEntry(root, relativePath, {
   lstatEntry = lstat,
+  noFollowFlag = constants.O_NOFOLLOW,
   openEntry = open,
   readLink = readlink,
 } = {}) {
@@ -134,14 +135,9 @@ export async function readSweepWorktreeEntry(root, relativePath, {
   if (!info.isFile()) {
     throw new TypeError(`Git returned a non-file project entry: ${relativePath}`);
   }
-  if (typeof constants.O_NOFOLLOW !== "number") {
-    throw new TypeError(
-      "Sweep discovery requires platform support for no-follow file opens",
-    );
-  }
   const handle = await openEntry(
     absolutePath,
-    constants.O_RDONLY | constants.O_NOFOLLOW,
+    constants.O_RDONLY | (noFollowFlag ?? 0),
   );
   try {
     const opened = await handle.stat({ bigint: true });
