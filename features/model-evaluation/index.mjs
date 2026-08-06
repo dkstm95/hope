@@ -1,25 +1,25 @@
 import { readBoundedJson } from "../work-snapshot/index.mjs";
 
 import {
-  createHopeFeatureSelectionEvaluationReceipt,
+  createHopeFeatureSelectionEvaluationRecord,
   hopeFeatureSelectionEvaluationLimits,
-  validateHopeFeatureSelectionEvaluationReceipt,
-  validateHopeFeatureSelectionEvaluationReceiptSet,
+  validateHopeFeatureSelectionEvaluationRecord,
+  validateHopeFeatureSelectionEvaluationRecordSet,
 } from "./feature-selection.mjs";
 import {
-  createHopeWriteExampleEvaluationReceipt,
-  createHopeWriteProductionVerificationReceipt,
+  createHopeWriteExampleEvaluationRecord,
+  createHopeWriteProductionVerificationRecord,
   hopeWriteExampleEvaluationLimits,
-  validateHopeWriteExampleEvaluationReceipt,
-  validateHopeWriteExampleEvaluationReceiptSet,
-  validateHopeWriteProductionVerificationReceipt,
-  validateHopeWriteProductionVerificationReceiptSet,
+  validateHopeWriteExampleEvaluationRecord,
+  validateHopeWriteExampleEvaluationRecordSet,
+  validateHopeWriteProductionVerificationRecord,
+  validateHopeWriteProductionVerificationRecordSet,
 } from "./write-examples.mjs";
 import {
-  createHopePolishPreservationEvaluationReceipt,
+  createHopePolishPreservationEvaluationRecord,
   hopePolishPreservationEvaluationLimits,
-  validateHopePolishPreservationEvaluationReceipt,
-  validateHopePolishPreservationEvaluationReceiptSet,
+  validateHopePolishPreservationEvaluationRecord,
+  validateHopePolishPreservationEvaluationRecordSet,
 } from "./polish-preservation.mjs";
 
 export * from "./feature-selection.mjs";
@@ -27,7 +27,7 @@ export * from "./evidence.mjs";
 export * from "./polish-preservation.mjs";
 export * from "./write-examples.mjs";
 
-export async function createHopeFeatureSelectionEvaluationReceiptFromFile({
+export async function createHopeFeatureSelectionEvaluationRecordFromFile({
   inputPath,
   ...options
 }, dependencies = {}) {
@@ -35,44 +35,60 @@ export async function createHopeFeatureSelectionEvaluationReceiptFromFile({
     label: "Hope feature-selection model output",
     maximumBytes: hopeFeatureSelectionEvaluationLimits.outputBytes,
   });
-  return (dependencies.createReceipt
-    ?? createHopeFeatureSelectionEvaluationReceipt)({
+  return (dependencies.createRecord
+    ?? createHopeFeatureSelectionEvaluationRecord)({
     ...options,
     output: input.value,
   }, dependencies);
 }
 
-export async function validateHopeFeatureSelectionEvaluationReceiptFile(
+// Deprecated version 1 compatibility aliases.
+export {
+  createHopeFeatureSelectionEvaluationRecordFromFile as createHopeFeatureSelectionEvaluationReceiptFromFile,
+  validateHopeFeatureSelectionEvaluationRecordFile as validateHopeFeatureSelectionEvaluationReceiptFile,
+  validateHopeFeatureSelectionEvaluationRecordSetFile as validateHopeFeatureSelectionEvaluationReceiptSetFile,
+  createHopePolishPreservationEvaluationRecordFromFile as createHopePolishPreservationEvaluationReceiptFromFile,
+  validateHopePolishPreservationEvaluationRecordFile as validateHopePolishPreservationEvaluationReceiptFile,
+  validateHopePolishPreservationEvaluationRecordSetFile as validateHopePolishPreservationEvaluationReceiptSetFile,
+  createHopeWriteExampleEvaluationRecordFromFile as createHopeWriteExampleEvaluationReceiptFromFile,
+  validateHopeWriteExampleEvaluationRecordFile as validateHopeWriteExampleEvaluationReceiptFile,
+  validateHopeWriteExampleEvaluationRecordSetFile as validateHopeWriteExampleEvaluationReceiptSetFile,
+  createHopeWriteProductionVerificationRecordFromFile as createHopeWriteProductionVerificationReceiptFromFile,
+  validateHopeWriteProductionVerificationRecordFile as validateHopeWriteProductionVerificationReceiptFile,
+  validateHopeWriteProductionVerificationRecordSetFile as validateHopeWriteProductionVerificationReceiptSetFile,
+};
+
+export async function validateHopeFeatureSelectionEvaluationRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope feature-selection evaluation receipt",
-    maximumBytes: hopeFeatureSelectionEvaluationLimits.receiptBytes,
+    label: "Hope feature-selection evaluation record",
+    maximumBytes: hopeFeatureSelectionEvaluationLimits.recordBytes,
   });
-  return (dependencies.validateReceipt
-    ?? validateHopeFeatureSelectionEvaluationReceipt)(
+  return (dependencies.validateRecord
+    ?? validateHopeFeatureSelectionEvaluationRecord)(
     input.value,
     dependencies,
   );
 }
 
-export async function validateHopeFeatureSelectionEvaluationReceiptSetFile(
+export async function validateHopeFeatureSelectionEvaluationRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope feature-selection evaluation receipt set",
-    maximumBytes: hopeFeatureSelectionEvaluationLimits.receiptSetBytes,
+    label: "Hope feature-selection evaluation record set",
+    maximumBytes: hopeFeatureSelectionEvaluationLimits.recordSetBytes,
   });
-  return (dependencies.validateReceiptSet
-    ?? validateHopeFeatureSelectionEvaluationReceiptSet)(
+  return (dependencies.validateRecordSet
+    ?? validateHopeFeatureSelectionEvaluationRecordSet)(
     input.value,
     dependencies,
   );
 }
 
-export async function createHopePolishPreservationEvaluationReceiptFromFile({
+export async function createHopePolishPreservationEvaluationRecordFromFile({
   inputPath,
   ...options
 }, dependencies = {}) {
@@ -80,44 +96,44 @@ export async function createHopePolishPreservationEvaluationReceiptFromFile({
     label: "Hope Polish preservation model output",
     maximumBytes: hopePolishPreservationEvaluationLimits.outputBytes,
   });
-  return await (dependencies.createReceipt
-    ?? createHopePolishPreservationEvaluationReceipt)({
+  return await (dependencies.createRecord
+    ?? createHopePolishPreservationEvaluationRecord)({
     ...options,
     output: input.value,
   }, dependencies);
 }
 
-export async function validateHopePolishPreservationEvaluationReceiptFile(
+export async function validateHopePolishPreservationEvaluationRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope Polish preservation evaluation receipt",
-    maximumBytes: hopePolishPreservationEvaluationLimits.receiptBytes,
+    label: "Hope Polish preservation evaluation record",
+    maximumBytes: hopePolishPreservationEvaluationLimits.recordBytes,
   });
-  return await (dependencies.validateReceipt
-    ?? validateHopePolishPreservationEvaluationReceipt)(
+  return await (dependencies.validateRecord
+    ?? validateHopePolishPreservationEvaluationRecord)(
     input.value,
     dependencies,
   );
 }
 
-export async function validateHopePolishPreservationEvaluationReceiptSetFile(
+export async function validateHopePolishPreservationEvaluationRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope Polish preservation evaluation receipt set",
-    maximumBytes: hopePolishPreservationEvaluationLimits.receiptSetBytes,
+    label: "Hope Polish preservation evaluation record set",
+    maximumBytes: hopePolishPreservationEvaluationLimits.recordSetBytes,
   });
-  return await (dependencies.validateReceiptSet
-    ?? validateHopePolishPreservationEvaluationReceiptSet)(
+  return await (dependencies.validateRecordSet
+    ?? validateHopePolishPreservationEvaluationRecordSet)(
     input.value,
     dependencies,
   );
 }
 
-export async function createHopeWriteExampleEvaluationReceiptFromFile({
+export async function createHopeWriteExampleEvaluationRecordFromFile({
   inputPath,
   ...options
 }, dependencies = {}) {
@@ -125,44 +141,44 @@ export async function createHopeWriteExampleEvaluationReceiptFromFile({
     label: "Hope Write example evaluation output",
     maximumBytes: hopeWriteExampleEvaluationLimits.outputBytes,
   });
-  return await (dependencies.createReceipt
-    ?? createHopeWriteExampleEvaluationReceipt)({
+  return await (dependencies.createRecord
+    ?? createHopeWriteExampleEvaluationRecord)({
     ...options,
     output: input.value,
   }, dependencies);
 }
 
-export async function validateHopeWriteExampleEvaluationReceiptFile(
+export async function validateHopeWriteExampleEvaluationRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope Write example evaluation receipt",
-    maximumBytes: hopeWriteExampleEvaluationLimits.receiptBytes,
+    label: "Hope Write example evaluation record",
+    maximumBytes: hopeWriteExampleEvaluationLimits.recordBytes,
   });
-  return await (dependencies.validateReceipt
-    ?? validateHopeWriteExampleEvaluationReceipt)(
+  return await (dependencies.validateRecord
+    ?? validateHopeWriteExampleEvaluationRecord)(
     input.value,
     dependencies,
   );
 }
 
-export async function validateHopeWriteExampleEvaluationReceiptSetFile(
+export async function validateHopeWriteExampleEvaluationRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope Write example evaluation receipt set",
-    maximumBytes: hopeWriteExampleEvaluationLimits.receiptSetBytes,
+    label: "Hope Write example evaluation record set",
+    maximumBytes: hopeWriteExampleEvaluationLimits.recordSetBytes,
   });
-  return await (dependencies.validateReceiptSet
-    ?? validateHopeWriteExampleEvaluationReceiptSet)(
+  return await (dependencies.validateRecordSet
+    ?? validateHopeWriteExampleEvaluationRecordSet)(
     input.value,
     dependencies,
   );
 }
 
-export async function createHopeWriteProductionVerificationReceiptFromFile({
+export async function createHopeWriteProductionVerificationRecordFromFile({
   inputPath,
   ...options
 }, dependencies = {}) {
@@ -170,38 +186,38 @@ export async function createHopeWriteProductionVerificationReceiptFromFile({
     label: "Hope Write production verification output",
     maximumBytes: hopeWriteExampleEvaluationLimits.outputBytes,
   });
-  return await (dependencies.createReceipt
-    ?? createHopeWriteProductionVerificationReceipt)({
+  return await (dependencies.createRecord
+    ?? createHopeWriteProductionVerificationRecord)({
     ...options,
     output: input.value,
   }, dependencies);
 }
 
-export async function validateHopeWriteProductionVerificationReceiptFile(
+export async function validateHopeWriteProductionVerificationRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope Write production verification receipt",
-    maximumBytes: hopeWriteExampleEvaluationLimits.receiptBytes,
+    label: "Hope Write production verification record",
+    maximumBytes: hopeWriteExampleEvaluationLimits.recordBytes,
   });
-  return await (dependencies.validateReceipt
-    ?? validateHopeWriteProductionVerificationReceipt)(
+  return await (dependencies.validateRecord
+    ?? validateHopeWriteProductionVerificationRecord)(
     input.value,
     dependencies,
   );
 }
 
-export async function validateHopeWriteProductionVerificationReceiptSetFile(
+export async function validateHopeWriteProductionVerificationRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope Write production verification receipt set",
-    maximumBytes: hopeWriteExampleEvaluationLimits.receiptSetBytes,
+    label: "Hope Write production verification record set",
+    maximumBytes: hopeWriteExampleEvaluationLimits.recordSetBytes,
   });
-  return await (dependencies.validateReceiptSet
-    ?? validateHopeWriteProductionVerificationReceiptSet)(
+  return await (dependencies.validateRecordSet
+    ?? validateHopeWriteProductionVerificationRecordSet)(
     input.value,
     dependencies,
   );

@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
+
 import {
   createDiffInvocationContract,
   createDiffInvocationEvaluationBaselineContract,
@@ -17,8 +19,8 @@ export const DIFF_INVOCATION_EVALUATED_CONTRACT_VERSION = 3;
 export const diffInvocationEvaluationLimits = Object.freeze({
   outputBytes: 16 * 1024,
   reasonCharacters: 2048,
-  receiptBytes: 64 * 1024,
-  receiptSetBytes: 2 * 1024 * 1024,
+  recordBytes: 64 * 1024,
+  recordSetBytes: 2 * 1024 * 1024,
 });
 
 function assertEvaluation(condition, message) {
@@ -26,6 +28,19 @@ function assertEvaluation(condition, message) {
     throw new TypeError(`Invalid Diff invocation evaluation: ${message}`);
   }
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createDiffInvocationEvaluationRecord as createDiffInvocationEvaluationReceipt,
+  validateDiffInvocationEvaluationRecord as validateDiffInvocationEvaluationReceipt,
+  validateDiffInvocationEvaluationRecordSet as validateDiffInvocationEvaluationReceiptSet,
+  createDiffInvocationExampleRemovalRecord as createDiffInvocationExampleRemovalReceipt,
+  validateDiffInvocationExampleRemovalRecord as validateDiffInvocationExampleRemovalReceipt,
+  validateDiffInvocationExampleRemovalRecordSet as validateDiffInvocationExampleRemovalReceiptSet,
+  createDiffInvocationProductionVerificationRecord as createDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationProductionVerificationRecord as validateDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationProductionVerificationRecordSet as validateDiffInvocationProductionVerificationReceiptSet,
+};
 
 function canonicalValue(value) {
   if (Array.isArray(value)) return value.map(canonicalValue);
@@ -219,14 +234,14 @@ export const diffInvocationEvaluationProtocol = Object.freeze({
   hostInput:
     "Give a fresh host only the prepared brief, hostInput, and outputContract. Do not give it the case oracle or another variant.",
   interpretation:
-    "A complete receipt set is model-behavior smoke evidence for one declared host, model, and effort. It is not a statistical guarantee or proof that another host behaves the same way.",
+    "A complete record set is model-behavior smoke evidence for one declared host, model, and effort. It is not a statistical guarantee or proof that another host behaves the same way.",
   refresh: Object.freeze([
-    "Do not declare an evaluation saturated from one complete receipt set.",
+    "Do not declare an evaluation saturated from one complete record set.",
     "Review the cases when repeated supported-model runs stop separating variants or a real failure falls outside the checked decisions.",
     "Replace or strengthen a case instead of adding easier cases only to preserve a high score.",
   ]),
   storage:
-    "Keep bounded receipts under ignored test-results/ or equivalent release evidence. The checked-in cases contain synthetic data only.",
+    "Keep bounded records under ignored test-results/ or equivalent release evidence. The checked-in cases contain synthetic data only.",
 });
 
 export const diffInvocationEvaluationOutputContract = Object.freeze({
@@ -393,7 +408,7 @@ function evaluationFor(output, evaluationCase) {
   });
 }
 
-export function createDiffInvocationEvaluationReceipt({
+export function createDiffInvocationEvaluationRecord({
   caseId,
   effort,
   host,
@@ -406,8 +421,8 @@ export function createDiffInvocationEvaluationReceipt({
   const prepared = prepareDiffInvocationEvaluationRun({ caseId, run, variant });
   const evaluationCase = findEvaluationCase(caseId);
   const validatedOutput = validateDiffInvocationEvaluationOutput(output);
-  const receipt = Object.freeze({
-    receiptVersion: 1,
+  const record = Object.freeze({
+    recordVersion: 1,
     caseId,
     suite: prepared.suite,
     variant,
@@ -428,21 +443,22 @@ export function createDiffInvocationEvaluationReceipt({
     sanitized: true,
   });
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= diffInvocationEvaluationLimits.receiptBytes,
-    `receipt exceeds ${diffInvocationEvaluationLimits.receiptBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= diffInvocationEvaluationLimits.recordBytes,
+    `record exceeds ${diffInvocationEvaluationLimits.recordBytes} bytes`,
   );
   return Object.freeze({
-    receipt,
+    record,
     evaluation: evaluationFor(validatedOutput, evaluationCase),
   });
 }
 
-export function validateDiffInvocationEvaluationReceipt(receipt) {
+export function validateDiffInvocationEvaluationRecord(record) {
+  record = normalizeLegacyRecordTerms(record);
   exactKeys(
-    receipt,
+    record,
     [
-      "receiptVersion",
+      "recordVersion",
       "caseId",
       "suite",
       "variant",
@@ -452,26 +468,26 @@ export function validateDiffInvocationEvaluationReceipt(receipt) {
       "output",
       "sanitized",
     ],
-    "receipt",
+    "record",
   );
-  assertEvaluation(receipt.receiptVersion === 1, "receiptVersion must be 1");
-  const caseId = boundedText(receipt.caseId, "caseId");
-  const variant = boundedText(receipt.variant, "variant");
-  const run = positiveRun(receipt.run);
+  assertEvaluation(record.recordVersion === 1, "recordVersion must be 1");
+  const caseId = boundedText(record.caseId, "caseId");
+  const variant = boundedText(record.variant, "variant");
+  const run = positiveRun(record.run);
   const prepared = prepareDiffInvocationEvaluationRun({ caseId, run, variant });
   const evaluationCase = findEvaluationCase(caseId);
-  assertEvaluation(receipt.suite === prepared.suite, "suite does not match case");
+  assertEvaluation(record.suite === prepared.suite, "suite does not match case");
   exactKeys(
-    receipt.configuration,
+    record.configuration,
     ["host", "model", "effort", "contractVersion", "briefDigest"],
     "configuration",
   );
   const configuration = Object.freeze({
-    host: boundedText(receipt.configuration.host, "configuration.host"),
-    model: boundedText(receipt.configuration.model, "configuration.model"),
-    effort: boundedText(receipt.configuration.effort, "configuration.effort"),
-    contractVersion: receipt.configuration.contractVersion,
-    briefDigest: receipt.configuration.briefDigest,
+    host: boundedText(record.configuration.host, "configuration.host"),
+    model: boundedText(record.configuration.model, "configuration.model"),
+    effort: boundedText(record.configuration.effort, "configuration.effort"),
+    contractVersion: record.configuration.contractVersion,
+    briefDigest: record.configuration.briefDigest,
   });
   assertEvaluation(
     configuration.contractVersion
@@ -484,36 +500,36 @@ export function validateDiffInvocationEvaluationReceipt(receipt) {
     "briefDigest does not match the prepared brief",
   );
   exactKeys(
-    receipt.invocation,
+    record.invocation,
     ["id", "inputDigest", "outputDigest"],
     "invocation",
   );
   const invocation = Object.freeze({
-    id: boundedText(receipt.invocation.id, "invocation.id"),
-    inputDigest: receipt.invocation.inputDigest,
-    outputDigest: receipt.invocation.outputDigest,
+    id: boundedText(record.invocation.id, "invocation.id"),
+    inputDigest: record.invocation.inputDigest,
+    outputDigest: record.invocation.outputDigest,
   });
   assertEvaluation(
     digestPattern.test(invocation.inputDigest)
       && invocation.inputDigest === prepared.inputDigest,
     "inputDigest does not match the prepared run",
   );
-  const output = validateDiffInvocationEvaluationOutput(receipt.output);
+  const output = validateDiffInvocationEvaluationOutput(record.output);
   assertEvaluation(
     digestPattern.test(invocation.outputDigest)
       && invocation.outputDigest
         === digestDiffInvocationEvaluationValue(output),
     "outputDigest does not match model output",
   );
-  assertEvaluation(receipt.sanitized === true, "sanitized must be true");
+  assertEvaluation(record.sanitized === true, "sanitized must be true");
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= diffInvocationEvaluationLimits.receiptBytes,
-    `receipt exceeds ${diffInvocationEvaluationLimits.receiptBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= diffInvocationEvaluationLimits.recordBytes,
+    `record exceeds ${diffInvocationEvaluationLimits.recordBytes} bytes`,
   );
   return Object.freeze({
-    receipt: Object.freeze({
-      receiptVersion: 1,
+    record: Object.freeze({
+      recordVersion: 1,
       caseId,
       suite: prepared.suite,
       variant,
@@ -530,7 +546,7 @@ export function validateDiffInvocationEvaluationReceipt(receipt) {
 function countResults(runs, key) {
   const grouped = new Map();
   for (const run of runs) {
-    const name = run.receipt[key];
+    const name = run.record[key];
     const current = grouped.get(name) ?? { failed: 0, passed: 0, total: 0 };
     current.total += 1;
     if (run.evaluation.runPassed) current.passed += 1;
@@ -542,46 +558,46 @@ function countResults(runs, key) {
   ));
 }
 
-export function validateDiffInvocationEvaluationReceiptSet(receipts) {
-  assertEvaluation(Array.isArray(receipts), "receipt set must be an array");
+export function validateDiffInvocationEvaluationRecordSet(records) {
+  assertEvaluation(Array.isArray(records), "record set must be an array");
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipts), "utf8")
-      <= diffInvocationEvaluationLimits.receiptSetBytes,
-    `receipt set exceeds ${diffInvocationEvaluationLimits.receiptSetBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(records), "utf8")
+      <= diffInvocationEvaluationLimits.recordSetBytes,
+    `record set exceeds ${diffInvocationEvaluationLimits.recordSetBytes} bytes`,
   );
   const expected = expectedRunSpecifications();
   assertEvaluation(
-    receipts.length === expected.length,
-    `receipt set must contain ${expected.length} runs`,
+    records.length === expected.length,
+    `record set must contain ${expected.length} runs`,
   );
-  const validated = receipts.map(validateDiffInvocationEvaluationReceipt);
+  const validated = records.map(validateDiffInvocationEvaluationRecord);
   const expectedKeys = new Set(expected.map(expectedRunKey));
   const actualKeys = new Set();
   const invocationIds = new Set();
   for (const result of validated) {
-    const key = expectedRunKey(result.receipt);
-    assertEvaluation(expectedKeys.has(key), `receipt set has unexpected run ${key}`);
-    assertEvaluation(!actualKeys.has(key), `receipt set repeats run ${key}`);
+    const key = expectedRunKey(result.record);
+    assertEvaluation(expectedKeys.has(key), `record set has unexpected run ${key}`);
+    assertEvaluation(!actualKeys.has(key), `record set repeats run ${key}`);
     actualKeys.add(key);
-    const invocationId = result.receipt.invocation.id;
+    const invocationId = result.record.invocation.id;
     assertEvaluation(
       !invocationIds.has(invocationId),
-      `receipt set repeats invocation ${invocationId}`,
+      `record set repeats invocation ${invocationId}`,
     );
     invocationIds.add(invocationId);
   }
   assertEvaluation(
     actualKeys.size === expectedKeys.size,
-    "receipt set does not cover every planned run",
+    "record set does not cover every planned run",
   );
-  const first = validated[0].receipt.configuration;
+  const first = validated[0].record.configuration;
   for (const result of validated.slice(1)) {
-    const configuration = result.receipt.configuration;
+    const configuration = result.record.configuration;
     assertEvaluation(
       configuration.host === first.host
         && configuration.model === first.model
         && configuration.effort === first.effort,
-      "receipt set must use one host, model, and effort",
+      "record set must use one host, model, and effort",
     );
   }
   const passedRuns = validated.filter(
@@ -604,10 +620,10 @@ export function validateDiffInvocationEvaluationReceiptSet(receipts) {
     bySuite: countResults(validated, "suite"),
     byVariant: countResults(validated, "variant"),
     runs: Object.freeze(validated.map((result) => Object.freeze({
-      caseId: result.receipt.caseId,
-      suite: result.receipt.suite,
-      variant: result.receipt.variant,
-      run: result.receipt.run,
+      caseId: result.record.caseId,
+      suite: result.record.suite,
+      variant: result.record.variant,
+      run: result.record.run,
       passed: result.evaluation.runPassed,
     }))),
     refresh: diffInvocationEvaluationProtocol.refresh,
@@ -722,7 +738,7 @@ export function prepareDiffInvocationExampleRemovalRun({
   });
 }
 
-export function createDiffInvocationExampleRemovalReceipt({
+export function createDiffInvocationExampleRemovalRecord({
   batch,
   caseId,
   effort,
@@ -739,8 +755,8 @@ export function createDiffInvocationExampleRemovalReceipt({
   });
   const evaluationCase = findEvaluationCase(caseId);
   const validatedOutput = validateDiffInvocationEvaluationOutput(output);
-  const receipt = Object.freeze({
-    receiptVersion: 1,
+  const record = Object.freeze({
+    recordVersion: 1,
     batch,
     caseId,
     suite: prepared.suite,
@@ -762,21 +778,22 @@ export function createDiffInvocationExampleRemovalReceipt({
     sanitized: true,
   });
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= diffInvocationEvaluationLimits.receiptBytes,
-    `receipt exceeds ${diffInvocationEvaluationLimits.receiptBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= diffInvocationEvaluationLimits.recordBytes,
+    `record exceeds ${diffInvocationEvaluationLimits.recordBytes} bytes`,
   );
   return Object.freeze({
-    receipt,
+    record,
     evaluation: evaluationFor(validatedOutput, evaluationCase),
   });
 }
 
-export function validateDiffInvocationExampleRemovalReceipt(receipt) {
+export function validateDiffInvocationExampleRemovalRecord(record) {
+  record = normalizeLegacyRecordTerms(record);
   exactKeys(
-    receipt,
+    record,
     [
-      "receiptVersion",
+      "recordVersion",
       "batch",
       "caseId",
       "suite",
@@ -787,31 +804,31 @@ export function validateDiffInvocationExampleRemovalReceipt(receipt) {
       "output",
       "sanitized",
     ],
-    "example-removal receipt",
+    "example-removal record",
   );
-  assertEvaluation(receipt.receiptVersion === 1, "receiptVersion must be 1");
-  const batch = positiveRun(receipt.batch);
-  const caseId = boundedText(receipt.caseId, "caseId");
-  const run = positiveRun(receipt.run);
+  assertEvaluation(record.recordVersion === 1, "recordVersion must be 1");
+  const batch = positiveRun(record.batch);
+  const caseId = boundedText(record.caseId, "caseId");
+  const run = positiveRun(record.run);
   const prepared = prepareDiffInvocationExampleRemovalRun({
     batch,
     caseId,
     run,
   });
   const evaluationCase = findEvaluationCase(caseId);
-  assertEvaluation(receipt.suite === prepared.suite, "suite does not match case");
-  assertEvaluation(receipt.variant === "rules-only", "variant must be rules-only");
+  assertEvaluation(record.suite === prepared.suite, "suite does not match case");
+  assertEvaluation(record.variant === "rules-only", "variant must be rules-only");
   exactKeys(
-    receipt.configuration,
+    record.configuration,
     ["host", "model", "effort", "contractVersion", "briefDigest"],
     "configuration",
   );
   const configuration = Object.freeze({
-    host: boundedText(receipt.configuration.host, "configuration.host"),
-    model: boundedText(receipt.configuration.model, "configuration.model"),
-    effort: boundedText(receipt.configuration.effort, "configuration.effort"),
-    contractVersion: receipt.configuration.contractVersion,
-    briefDigest: receipt.configuration.briefDigest,
+    host: boundedText(record.configuration.host, "configuration.host"),
+    model: boundedText(record.configuration.model, "configuration.model"),
+    effort: boundedText(record.configuration.effort, "configuration.effort"),
+    contractVersion: record.configuration.contractVersion,
+    briefDigest: record.configuration.briefDigest,
   });
   assertEvaluation(
     configuration.contractVersion
@@ -824,36 +841,36 @@ export function validateDiffInvocationExampleRemovalReceipt(receipt) {
     "briefDigest does not match the prepared brief",
   );
   exactKeys(
-    receipt.invocation,
+    record.invocation,
     ["id", "inputDigest", "outputDigest"],
     "invocation",
   );
   const invocation = Object.freeze({
-    id: boundedText(receipt.invocation.id, "invocation.id"),
-    inputDigest: receipt.invocation.inputDigest,
-    outputDigest: receipt.invocation.outputDigest,
+    id: boundedText(record.invocation.id, "invocation.id"),
+    inputDigest: record.invocation.inputDigest,
+    outputDigest: record.invocation.outputDigest,
   });
   assertEvaluation(
     digestPattern.test(invocation.inputDigest)
       && invocation.inputDigest === prepared.inputDigest,
     "inputDigest does not match the prepared run",
   );
-  const output = validateDiffInvocationEvaluationOutput(receipt.output);
+  const output = validateDiffInvocationEvaluationOutput(record.output);
   assertEvaluation(
     digestPattern.test(invocation.outputDigest)
       && invocation.outputDigest
         === digestDiffInvocationEvaluationValue(output),
     "outputDigest does not match model output",
   );
-  assertEvaluation(receipt.sanitized === true, "sanitized must be true");
+  assertEvaluation(record.sanitized === true, "sanitized must be true");
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= diffInvocationEvaluationLimits.receiptBytes,
-    `receipt exceeds ${diffInvocationEvaluationLimits.receiptBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= diffInvocationEvaluationLimits.recordBytes,
+    `record exceeds ${diffInvocationEvaluationLimits.recordBytes} bytes`,
   );
   return Object.freeze({
-    receipt: Object.freeze({
-      receiptVersion: 1,
+    record: Object.freeze({
+      recordVersion: 1,
       batch,
       caseId,
       suite: prepared.suite,
@@ -868,43 +885,43 @@ export function validateDiffInvocationExampleRemovalReceipt(receipt) {
   });
 }
 
-export function validateDiffInvocationExampleRemovalReceiptSet(receipts) {
-  assertEvaluation(Array.isArray(receipts), "example-removal receipt set must be an array");
+export function validateDiffInvocationExampleRemovalRecordSet(records) {
+  assertEvaluation(Array.isArray(records), "example-removal record set must be an array");
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipts), "utf8")
-      <= diffInvocationEvaluationLimits.receiptSetBytes,
-    `receipt set exceeds ${diffInvocationEvaluationLimits.receiptSetBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(records), "utf8")
+      <= diffInvocationEvaluationLimits.recordSetBytes,
+    `record set exceeds ${diffInvocationEvaluationLimits.recordSetBytes} bytes`,
   );
   assertEvaluation(
-    receipts.length === exampleRemovalSpecifications.length,
-    `example-removal receipt set must contain ${exampleRemovalSpecifications.length} runs`,
+    records.length === exampleRemovalSpecifications.length,
+    `example-removal record set must contain ${exampleRemovalSpecifications.length} runs`,
   );
-  const validated = receipts.map(validateDiffInvocationExampleRemovalReceipt);
+  const validated = records.map(validateDiffInvocationExampleRemovalRecord);
   const expectedKeys = new Set(
     exampleRemovalSpecifications.map(exampleRemovalRunKey),
   );
   const actualKeys = new Set();
   const invocationIds = new Set();
   for (const result of validated) {
-    const key = exampleRemovalRunKey(result.receipt);
-    assertEvaluation(expectedKeys.has(key), `receipt set has unexpected run ${key}`);
-    assertEvaluation(!actualKeys.has(key), `receipt set repeats run ${key}`);
+    const key = exampleRemovalRunKey(result.record);
+    assertEvaluation(expectedKeys.has(key), `record set has unexpected run ${key}`);
+    assertEvaluation(!actualKeys.has(key), `record set repeats run ${key}`);
     actualKeys.add(key);
-    const invocationId = result.receipt.invocation.id;
+    const invocationId = result.record.invocation.id;
     assertEvaluation(
       !invocationIds.has(invocationId),
-      `receipt set repeats invocation ${invocationId}`,
+      `record set repeats invocation ${invocationId}`,
     );
     invocationIds.add(invocationId);
   }
-  const first = validated[0].receipt.configuration;
+  const first = validated[0].record.configuration;
   for (const result of validated.slice(1)) {
-    const configuration = result.receipt.configuration;
+    const configuration = result.record.configuration;
     assertEvaluation(
       configuration.host === first.host
         && configuration.model === first.model
         && configuration.effort === first.effort,
-      "receipt set must use one host, model, and effort",
+      "record set must use one host, model, and effort",
     );
   }
   const passedRuns = validated.filter(
@@ -927,30 +944,30 @@ export function validateDiffInvocationExampleRemovalReceiptSet(receipts) {
     byBatch: countResults(validated, "batch"),
     bySuite: countResults(validated, "suite"),
     runs: Object.freeze(validated.map((result) => Object.freeze({
-      batch: result.receipt.batch,
-      caseId: result.receipt.caseId,
-      suite: result.receipt.suite,
-      run: result.receipt.run,
+      batch: result.record.batch,
+      caseId: result.record.caseId,
+      suite: result.record.suite,
+      run: result.record.run,
       passed: result.evaluation.runPassed,
     }))),
   });
 }
 
 export function validateDiffInvocationExampleRemovalEvidence({
-  baselineReceipts,
-  followupReceipts,
+  baselineRecords,
+  followupRecords,
 }) {
-  const baseline = validateDiffInvocationEvaluationReceiptSet(baselineReceipts);
-  const followup = validateDiffInvocationExampleRemovalReceiptSet(
-    followupReceipts,
+  const baseline = validateDiffInvocationEvaluationRecordSet(baselineRecords);
+  const followup = validateDiffInvocationExampleRemovalRecordSet(
+    followupRecords,
   );
   const baselineInvocationIds = new Set(
-    baselineReceipts.map((receipt) => receipt.invocation.id),
+    baselineRecords.map((record) => record.invocation.id),
   );
-  for (const receipt of followupReceipts) {
+  for (const record of followupRecords) {
     assertEvaluation(
-      !baselineInvocationIds.has(receipt.invocation.id),
-      `baseline and follow-up evidence repeat invocation ${receipt.invocation.id}`,
+      !baselineInvocationIds.has(record.invocation.id),
+      `baseline and follow-up evidence repeat invocation ${record.invocation.id}`,
     );
   }
   assertEvaluation(
@@ -1066,7 +1083,7 @@ export function prepareDiffInvocationProductionVerificationRun({
   });
 }
 
-export function createDiffInvocationProductionVerificationReceipt({
+export function createDiffInvocationProductionVerificationRecord({
   caseId,
   effort,
   host,
@@ -1078,8 +1095,8 @@ export function createDiffInvocationProductionVerificationReceipt({
   const prepared = prepareDiffInvocationProductionVerificationRun({ caseId, run });
   const evaluationCase = findEvaluationCase(caseId);
   const validatedOutput = validateDiffInvocationEvaluationOutput(output);
-  const receipt = Object.freeze({
-    receiptVersion: 1,
+  const record = Object.freeze({
+    recordVersion: 1,
     caseId,
     suite: prepared.suite,
     variant: "production",
@@ -1100,21 +1117,22 @@ export function createDiffInvocationProductionVerificationReceipt({
     sanitized: true,
   });
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= diffInvocationEvaluationLimits.receiptBytes,
-    `receipt exceeds ${diffInvocationEvaluationLimits.receiptBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= diffInvocationEvaluationLimits.recordBytes,
+    `record exceeds ${diffInvocationEvaluationLimits.recordBytes} bytes`,
   );
   return Object.freeze({
-    receipt,
+    record,
     evaluation: evaluationFor(validatedOutput, evaluationCase),
   });
 }
 
-export function validateDiffInvocationProductionVerificationReceipt(receipt) {
+export function validateDiffInvocationProductionVerificationRecord(record) {
+  record = normalizeLegacyRecordTerms(record);
   exactKeys(
-    receipt,
+    record,
     [
-      "receiptVersion",
+      "recordVersion",
       "caseId",
       "suite",
       "variant",
@@ -1124,26 +1142,26 @@ export function validateDiffInvocationProductionVerificationReceipt(receipt) {
       "output",
       "sanitized",
     ],
-    "production-verification receipt",
+    "production-verification record",
   );
-  assertEvaluation(receipt.receiptVersion === 1, "receiptVersion must be 1");
-  const caseId = boundedText(receipt.caseId, "caseId");
-  const run = positiveRun(receipt.run);
+  assertEvaluation(record.recordVersion === 1, "recordVersion must be 1");
+  const caseId = boundedText(record.caseId, "caseId");
+  const run = positiveRun(record.run);
   const prepared = prepareDiffInvocationProductionVerificationRun({ caseId, run });
   const evaluationCase = findEvaluationCase(caseId);
-  assertEvaluation(receipt.suite === prepared.suite, "suite does not match case");
-  assertEvaluation(receipt.variant === "production", "variant must be production");
+  assertEvaluation(record.suite === prepared.suite, "suite does not match case");
+  assertEvaluation(record.variant === "production", "variant must be production");
   exactKeys(
-    receipt.configuration,
+    record.configuration,
     ["host", "model", "effort", "contractVersion", "briefDigest"],
     "configuration",
   );
   const configuration = Object.freeze({
-    host: boundedText(receipt.configuration.host, "configuration.host"),
-    model: boundedText(receipt.configuration.model, "configuration.model"),
-    effort: boundedText(receipt.configuration.effort, "configuration.effort"),
-    contractVersion: receipt.configuration.contractVersion,
-    briefDigest: receipt.configuration.briefDigest,
+    host: boundedText(record.configuration.host, "configuration.host"),
+    model: boundedText(record.configuration.model, "configuration.model"),
+    effort: boundedText(record.configuration.effort, "configuration.effort"),
+    contractVersion: record.configuration.contractVersion,
+    briefDigest: record.configuration.briefDigest,
   });
   assertEvaluation(
     configuration.contractVersion === DIFF_INVOCATION_CONTRACT_VERSION,
@@ -1155,36 +1173,36 @@ export function validateDiffInvocationProductionVerificationReceipt(receipt) {
     "briefDigest does not match the exact active brief",
   );
   exactKeys(
-    receipt.invocation,
+    record.invocation,
     ["id", "inputDigest", "outputDigest"],
     "invocation",
   );
   const invocation = Object.freeze({
-    id: boundedText(receipt.invocation.id, "invocation.id"),
-    inputDigest: receipt.invocation.inputDigest,
-    outputDigest: receipt.invocation.outputDigest,
+    id: boundedText(record.invocation.id, "invocation.id"),
+    inputDigest: record.invocation.inputDigest,
+    outputDigest: record.invocation.outputDigest,
   });
   assertEvaluation(
     digestPattern.test(invocation.inputDigest)
       && invocation.inputDigest === prepared.inputDigest,
     "inputDigest does not match the prepared run",
   );
-  const output = validateDiffInvocationEvaluationOutput(receipt.output);
+  const output = validateDiffInvocationEvaluationOutput(record.output);
   assertEvaluation(
     digestPattern.test(invocation.outputDigest)
       && invocation.outputDigest
         === digestDiffInvocationEvaluationValue(output),
     "outputDigest does not match model output",
   );
-  assertEvaluation(receipt.sanitized === true, "sanitized must be true");
+  assertEvaluation(record.sanitized === true, "sanitized must be true");
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= diffInvocationEvaluationLimits.receiptBytes,
-    `receipt exceeds ${diffInvocationEvaluationLimits.receiptBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= diffInvocationEvaluationLimits.recordBytes,
+    `record exceeds ${diffInvocationEvaluationLimits.recordBytes} bytes`,
   );
   return Object.freeze({
-    receipt: Object.freeze({
-      receiptVersion: 1,
+    record: Object.freeze({
+      recordVersion: 1,
       caseId,
       suite: prepared.suite,
       variant: "production",
@@ -1198,22 +1216,22 @@ export function validateDiffInvocationProductionVerificationReceipt(receipt) {
   });
 }
 
-export function validateDiffInvocationProductionVerificationReceiptSet(receipts) {
+export function validateDiffInvocationProductionVerificationRecordSet(records) {
   assertEvaluation(
-    Array.isArray(receipts),
-    "production-verification receipt set must be an array",
+    Array.isArray(records),
+    "production-verification record set must be an array",
   );
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipts), "utf8")
-      <= diffInvocationEvaluationLimits.receiptSetBytes,
-    `receipt set exceeds ${diffInvocationEvaluationLimits.receiptSetBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(records), "utf8")
+      <= diffInvocationEvaluationLimits.recordSetBytes,
+    `record set exceeds ${diffInvocationEvaluationLimits.recordSetBytes} bytes`,
   );
   assertEvaluation(
-    receipts.length === productionVerificationSpecifications.length,
-    `production-verification receipt set must contain ${productionVerificationSpecifications.length} runs`,
+    records.length === productionVerificationSpecifications.length,
+    `production-verification record set must contain ${productionVerificationSpecifications.length} runs`,
   );
-  const validated = receipts.map(
-    validateDiffInvocationProductionVerificationReceipt,
+  const validated = records.map(
+    validateDiffInvocationProductionVerificationRecord,
   );
   const expectedKeys = new Set(
     productionVerificationSpecifications.map(productionVerificationRunKey),
@@ -1221,25 +1239,25 @@ export function validateDiffInvocationProductionVerificationReceiptSet(receipts)
   const actualKeys = new Set();
   const invocationIds = new Set();
   for (const result of validated) {
-    const key = productionVerificationRunKey(result.receipt);
-    assertEvaluation(expectedKeys.has(key), `receipt set has unexpected run ${key}`);
-    assertEvaluation(!actualKeys.has(key), `receipt set repeats run ${key}`);
+    const key = productionVerificationRunKey(result.record);
+    assertEvaluation(expectedKeys.has(key), `record set has unexpected run ${key}`);
+    assertEvaluation(!actualKeys.has(key), `record set repeats run ${key}`);
     actualKeys.add(key);
-    const invocationId = result.receipt.invocation.id;
+    const invocationId = result.record.invocation.id;
     assertEvaluation(
       !invocationIds.has(invocationId),
-      `receipt set repeats invocation ${invocationId}`,
+      `record set repeats invocation ${invocationId}`,
     );
     invocationIds.add(invocationId);
   }
-  const first = validated[0].receipt.configuration;
+  const first = validated[0].record.configuration;
   for (const result of validated.slice(1)) {
-    const configuration = result.receipt.configuration;
+    const configuration = result.record.configuration;
     assertEvaluation(
       configuration.host === first.host
         && configuration.model === first.model
         && configuration.effort === first.effort,
-      "receipt set must use one host, model, and effort",
+      "record set must use one host, model, and effort",
     );
   }
   const passedRuns = validated.filter(
@@ -1263,9 +1281,9 @@ export function validateDiffInvocationProductionVerificationReceiptSet(receipts)
     }),
     bySuite: countResults(validated, "suite"),
     runs: Object.freeze(validated.map((result) => Object.freeze({
-      caseId: result.receipt.caseId,
-      suite: result.receipt.suite,
-      run: result.receipt.run,
+      caseId: result.record.caseId,
+      suite: result.record.suite,
+      run: result.record.run,
       passed: result.evaluation.runPassed,
     }))),
     decision: verificationPassed ? "accept-active-brief" : "do-not-release",

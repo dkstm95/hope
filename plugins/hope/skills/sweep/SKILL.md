@@ -1,7 +1,13 @@
 ---
 name: sweep
-description: Use to inspect a codebase for broad maintenance, show a bounded plan, and apply only exact approved behavior-preserving work.
+description: Use to inventory a project for broad maintenance, show a whole-project plan, and apply only exact approved behavior-preserving work.
 ---
+
+Sweep discovery treats symbolic links as entries, not as permission to read their
+targets.
+
+Report the link target text as the entry identity and keep any target outside the
+repository out of the inventory.
 
 # Hope sweep
 
@@ -55,14 +61,87 @@ The examples guide decisions and are not evaluation results.
 
 Do not copy the runtime contract into another checklist in this Skill.
 
+## Inventory the project
+
+Capture the exact repository identity before inspection.
+
+Run `discover-inventory` against the repository root to build one verified
+inventory of all tracked files and relevant untracked files owned by the
+project:
+
+```text
+discover-inventory --root <repository> --session <session-id> --title <title> --scope <scope>
+```
+
+Exclude only ignored cache, dependency, build-output, outside-project, or other
+non-owned paths.
+
+Record every exclusion with its reason.
+
+Write the returned inventory required by `inventorySchemaPath` to a private
+temporary JSON file with restricted permissions.
+
+Validate it with:
+
+```text
+validate-inventory --input <inventory.json> --root <repository>
+```
+
+The runtime assigns every in-scope file to exactly one batch.
+
+The source limit applies to one batch, not to the project total.
+
+For each batch, create its exact pending worker input and retain its digest:
+
+```text
+batch-input --input <inventory.json> --batch <batch-id>
+```
+
+Use `start-batch --mode parallel --workers <id,id,...>` only when the host can
+provide independent contexts.
+
+Save the returned inventory over the previous inventory file before completing
+the batch.
+
+Otherwise use `start-batch --mode sequential` and let the runtime assign the
+host worker.
+
+Give each worker only the source IDs in its validated assignment.
+
+Each worker returns one worker report for that assignment, including processed
+source IDs and gaps.
+
+Workers inspect and return evidence; they do not edit files or redefine scope.
+
+Merge the worker reports through:
+
+```text
+complete-batch --input <started-inventory.json> --batch <batch-id> --result <result.json>
+```
+
+The result must include the original inventory digest, the prepared batch-input
+digest, the unchanged execution identity, every worker report, and the runtime
+worker-reports digest.
+
+Do not author a complete whole-project plan until every batch is complete.
+
+A partial or failed batch remains visible as an inventory gap.
+
 ## Prepare the plan
 
-Capture the exact repository and relevant file identities before inspection.
+Use the completed inventory and its digest as the source of truth for project
+coverage.
+
+Capture exact target and evidence identities before category inspection.
 
 Choose explicit file, candidate, and change budgets for this session.
 
-Inspect only within those budgets and record every runtime category and check
+Inspect every inventory batch and record every runtime category and check
 honestly.
+
+The plan's `filesChecked` metric counts distinct file evidence sources.
+
+The inventory summary counts project-wide coverage.
 
 Do not modify repository files during discovery or plan authoring.
 
@@ -72,11 +151,17 @@ JSON file with restricted permissions.
 Validate it with:
 
 ```text
-validate-plan --input <plan.json>
+validate-plan --input <plan.json> --root <repository>
 ```
 
 A no-change, findings-only, or blocked plan is valid when it accurately reports
 the checked scope and gaps.
+
+Set `session.discoveryMode` to `whole-project`, include the complete `inventory`,
+and bind `session.inventoryDigest` to the normalized inventory.
+
+The plan must remain `blocked` while the inventory or category discovery is
+incomplete.
 
 ## Ask for exact approval
 
@@ -101,10 +186,10 @@ conversation source, event ID, and opaque or signed attestation proof.
 
 Keep the proof verifier outside model-authored JSON.
 
-Then create the bound receipt with:
+Then create the bound record with:
 
 ```text
-approval-receipt --input <approval.json>
+approval-record --input <approval.json>
 ```
 
 The plain file command must fail when the host does not supply its trusted
@@ -112,7 +197,7 @@ attestation verifier.
 
 Stop before editing when that verifier is unavailable.
 
-Do not replace this receipt with a boolean, conversation digest, receipt hash,
+Do not replace this record with a boolean, conversation digest, record hash,
 or prose claim.
 
 ## Execute approved work
@@ -131,10 +216,10 @@ version 2 run.
 Keep the approved target, action, in-scope preview, out-of-scope conditions,
 preservation IDs and conditions, and verification methods exact.
 
-Validate the Polish version 2 run and create its receipt with the Polish
-runtime's `receipt` command.
+Validate the Polish version 2 run and create its record with the Polish
+runtime's `record` command.
 
-Use the full receipt in the Sweep completion; do not author an inline Polish
+Use the full record in the Sweep completion; do not author an inline Polish
 summary.
 
 Use the person's Sweep approval as the conversation-backed application
@@ -150,7 +235,7 @@ ordinary implementation task.
 Write the version 1 completion required by `completionSchemaPath` to a private
 temporary JSON file with restricted permissions.
 
-Include the approval receipt and, when Polish ran, the Polish receipt.
+Include the approval record and, when Polish ran, the Polish record.
 
 Bind every applied change to its Polish change ID and to a passed final
 verification that cites the changed target.
@@ -191,15 +276,15 @@ Do not give that host the oracle, another case, or an earlier output.
 
 Require the model output shape in `evaluation-output-v1.schema.json`.
 
-Run the repository evaluation runner so each receipt contains the exact host
+Run the repository evaluation runner so each record contains the exact host
 events and raw model output.
 
-A receipt created directly by `model-evaluation-receipt` is synthetic and
+A record created directly by `model-evaluation-record` is synthetic and
 cannot satisfy the release gate.
 
 Use `model-evaluation-oracle` only after the output exists.
 
-Collect every receipt and run `model-evaluation-validate-set` before treating
+Collect every record and run `model-evaluation-validate-set` before treating
 the set as release smoke evidence.
 
 Keep failed runs and store the bounded evidence under ignored `test-results/`.

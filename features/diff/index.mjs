@@ -32,18 +32,18 @@ import {
   transitionDiffPendingConfirmationInput,
 } from "./invocation.mjs";
 import {
-  createDiffInvocationExampleRemovalReceipt,
-  createDiffInvocationEvaluationReceipt,
-  createDiffInvocationProductionVerificationReceipt,
+  createDiffInvocationExampleRemovalRecord,
+  createDiffInvocationEvaluationRecord,
+  createDiffInvocationProductionVerificationRecord,
   diffInvocationEvaluationLimits,
   validateDiffInvocationExampleRemovalEvidence,
-  validateDiffInvocationExampleRemovalReceipt,
-  validateDiffInvocationExampleRemovalReceiptSet,
+  validateDiffInvocationExampleRemovalRecord,
+  validateDiffInvocationExampleRemovalRecordSet,
   validateDiffInvocationEvaluationOutput,
-  validateDiffInvocationEvaluationReceipt,
-  validateDiffInvocationEvaluationReceiptSet,
-  validateDiffInvocationProductionVerificationReceipt,
-  validateDiffInvocationProductionVerificationReceiptSet,
+  validateDiffInvocationEvaluationRecord,
+  validateDiffInvocationEvaluationRecordSet,
+  validateDiffInvocationProductionVerificationRecord,
+  validateDiffInvocationProductionVerificationRecordSet,
 } from "./invocation-evaluation.mjs";
 import {
   appendDiffRunPlan,
@@ -78,11 +78,11 @@ export {
 
 export {
   createDiffInvocationExampleRemovalPlan,
-  createDiffInvocationExampleRemovalReceipt,
+  createDiffInvocationExampleRemovalRecord,
   createDiffInvocationEvaluationPlan,
-  createDiffInvocationEvaluationReceipt,
+  createDiffInvocationEvaluationRecord,
   createDiffInvocationProductionVerificationPlan,
-  createDiffInvocationProductionVerificationReceipt,
+  createDiffInvocationProductionVerificationRecord,
   DIFF_INVOCATION_EVALUATED_CONTRACT_VERSION,
   diffInvocationExampleRemovalProtocol,
   diffInvocationEvaluationCases,
@@ -96,13 +96,25 @@ export {
   prepareDiffInvocationEvaluationRun,
   prepareDiffInvocationProductionVerificationRun,
   validateDiffInvocationExampleRemovalEvidence,
-  validateDiffInvocationExampleRemovalReceipt,
-  validateDiffInvocationExampleRemovalReceiptSet,
+  validateDiffInvocationExampleRemovalRecord,
+  validateDiffInvocationExampleRemovalRecordSet,
   validateDiffInvocationEvaluationOutput,
-  validateDiffInvocationEvaluationReceipt,
-  validateDiffInvocationEvaluationReceiptSet,
-  validateDiffInvocationProductionVerificationReceipt,
-  validateDiffInvocationProductionVerificationReceiptSet,
+  validateDiffInvocationEvaluationRecord,
+  validateDiffInvocationEvaluationRecordSet,
+  validateDiffInvocationProductionVerificationRecord,
+  validateDiffInvocationProductionVerificationRecordSet,
+} from "./invocation-evaluation.mjs";
+
+export {
+  createDiffInvocationExampleRemovalRecord as createDiffInvocationExampleRemovalReceipt,
+  createDiffInvocationEvaluationRecord as createDiffInvocationEvaluationReceipt,
+  createDiffInvocationProductionVerificationRecord as createDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationExampleRemovalRecord as validateDiffInvocationExampleRemovalReceipt,
+  validateDiffInvocationExampleRemovalRecordSet as validateDiffInvocationExampleRemovalReceiptSet,
+  validateDiffInvocationEvaluationRecord as validateDiffInvocationEvaluationReceipt,
+  validateDiffInvocationEvaluationRecordSet as validateDiffInvocationEvaluationReceiptSet,
+  validateDiffInvocationProductionVerificationRecord as validateDiffInvocationProductionVerificationReceipt,
+  validateDiffInvocationProductionVerificationRecordSet as validateDiffInvocationProductionVerificationReceiptSet,
 } from "./invocation-evaluation.mjs";
 
 export const DIFF_MODEL_ADAPTER_CODE = "HOPE_DIFF_MODEL_ADAPTER_REQUIRED";
@@ -133,6 +145,19 @@ export async function resolveDiffTarget({
   );
 }
 
+// Deprecated version 1 compatibility aliases.
+export {
+  createDiffInvocationEvaluationRecordFromFile as createDiffInvocationEvaluationReceiptFromFile,
+  createDiffInvocationExampleRemovalRecordFromFile as createDiffInvocationExampleRemovalReceiptFromFile,
+  createDiffInvocationProductionVerificationRecordFromFile as createDiffInvocationProductionVerificationReceiptFromFile,
+  validateDiffInvocationExampleRemovalRecordFile as validateDiffInvocationExampleRemovalReceiptFile,
+  validateDiffInvocationExampleRemovalRecordSetFile as validateDiffInvocationExampleRemovalReceiptSetFile,
+  validateDiffInvocationProductionVerificationRecordFile as validateDiffInvocationProductionVerificationReceiptFile,
+  validateDiffInvocationProductionVerificationRecordSetFile as validateDiffInvocationProductionVerificationReceiptSetFile,
+  validateDiffInvocationEvaluationRecordFile as validateDiffInvocationEvaluationReceiptFile,
+  validateDiffInvocationEvaluationRecordSetFile as validateDiffInvocationEvaluationReceiptSetFile,
+};
+
 async function readDiffInvocationInput(inputPath, dependencies = {}) {
   return await (dependencies.readInvocationInput ?? readBoundedJson)(inputPath, {
     label: "Hope diff invocation input",
@@ -156,7 +181,7 @@ export async function transitionDiffConfirmationFromFile(
   return transitionDiffPendingConfirmationInput(value);
 }
 
-export async function createDiffInvocationEvaluationReceiptFromFile(
+export async function createDiffInvocationEvaluationRecordFromFile(
   options,
   dependencies = {},
 ) {
@@ -169,10 +194,10 @@ export async function createDiffInvocationEvaluationReceiptFromFile(
   );
   const output = (dependencies.validateOutput
     ?? validateDiffInvocationEvaluationOutput)(input.value);
-  return createDiffInvocationEvaluationReceipt({ ...options, output });
+  return createDiffInvocationEvaluationRecord({ ...options, output });
 }
 
-export async function createDiffInvocationExampleRemovalReceiptFromFile(
+export async function createDiffInvocationExampleRemovalRecordFromFile(
   options,
   dependencies = {},
 ) {
@@ -185,10 +210,10 @@ export async function createDiffInvocationExampleRemovalReceiptFromFile(
   );
   const output = (dependencies.validateOutput
     ?? validateDiffInvocationEvaluationOutput)(input.value);
-  return createDiffInvocationExampleRemovalReceipt({ ...options, output });
+  return createDiffInvocationExampleRemovalRecord({ ...options, output });
 }
 
-export async function createDiffInvocationProductionVerificationReceiptFromFile(
+export async function createDiffInvocationProductionVerificationRecordFromFile(
   options,
   dependencies = {},
 ) {
@@ -201,32 +226,32 @@ export async function createDiffInvocationProductionVerificationReceiptFromFile(
   );
   const output = (dependencies.validateOutput
     ?? validateDiffInvocationEvaluationOutput)(input.value);
-  return createDiffInvocationProductionVerificationReceipt({
+  return createDiffInvocationProductionVerificationRecord({
     ...options,
     output,
   });
 }
 
-export async function validateDiffInvocationExampleRemovalReceiptFile(
+export async function validateDiffInvocationExampleRemovalRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation example-removal receipt",
-    maximumBytes: diffInvocationEvaluationLimits.receiptBytes,
+    label: "Hope diff invocation example-removal record",
+    maximumBytes: diffInvocationEvaluationLimits.recordBytes,
   });
-  return validateDiffInvocationExampleRemovalReceipt(input.value);
+  return validateDiffInvocationExampleRemovalRecord(input.value);
 }
 
-export async function validateDiffInvocationExampleRemovalReceiptSetFile(
+export async function validateDiffInvocationExampleRemovalRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation example-removal receipt set",
-    maximumBytes: diffInvocationEvaluationLimits.receiptSetBytes,
+    label: "Hope diff invocation example-removal record set",
+    maximumBytes: diffInvocationEvaluationLimits.recordSetBytes,
   });
-  return validateDiffInvocationExampleRemovalReceiptSet(input.value);
+  return validateDiffInvocationExampleRemovalRecordSet(input.value);
 }
 
 export async function validateDiffInvocationExampleRemovalEvidenceFile(
@@ -235,53 +260,53 @@ export async function validateDiffInvocationExampleRemovalEvidenceFile(
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
     label: "Hope diff invocation example-removal evidence",
-    maximumBytes: diffInvocationEvaluationLimits.receiptSetBytes * 2,
+    maximumBytes: diffInvocationEvaluationLimits.recordSetBytes * 2,
   });
   return validateDiffInvocationExampleRemovalEvidence(input.value);
 }
 
-export async function validateDiffInvocationProductionVerificationReceiptFile(
+export async function validateDiffInvocationProductionVerificationRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation production-verification receipt",
-    maximumBytes: diffInvocationEvaluationLimits.receiptBytes,
+    label: "Hope diff invocation production-verification record",
+    maximumBytes: diffInvocationEvaluationLimits.recordBytes,
   });
-  return validateDiffInvocationProductionVerificationReceipt(input.value);
+  return validateDiffInvocationProductionVerificationRecord(input.value);
 }
 
-export async function validateDiffInvocationProductionVerificationReceiptSetFile(
+export async function validateDiffInvocationProductionVerificationRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation production-verification receipt set",
-    maximumBytes: diffInvocationEvaluationLimits.receiptSetBytes,
+    label: "Hope diff invocation production-verification record set",
+    maximumBytes: diffInvocationEvaluationLimits.recordSetBytes,
   });
-  return validateDiffInvocationProductionVerificationReceiptSet(input.value);
+  return validateDiffInvocationProductionVerificationRecordSet(input.value);
 }
 
-export async function validateDiffInvocationEvaluationReceiptFile(
+export async function validateDiffInvocationEvaluationRecordFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation evaluation receipt",
-    maximumBytes: diffInvocationEvaluationLimits.receiptBytes,
+    label: "Hope diff invocation evaluation record",
+    maximumBytes: diffInvocationEvaluationLimits.recordBytes,
   });
-  return validateDiffInvocationEvaluationReceipt(input.value);
+  return validateDiffInvocationEvaluationRecord(input.value);
 }
 
-export async function validateDiffInvocationEvaluationReceiptSetFile(
+export async function validateDiffInvocationEvaluationRecordSetFile(
   inputPath,
   dependencies = {},
 ) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation evaluation receipt set",
-    maximumBytes: diffInvocationEvaluationLimits.receiptSetBytes,
+    label: "Hope diff invocation evaluation record set",
+    maximumBytes: diffInvocationEvaluationLimits.recordSetBytes,
   });
-  return validateDiffInvocationEvaluationReceiptSet(input.value);
+  return validateDiffInvocationEvaluationRecordSet(input.value);
 }
 
 async function readPrivateJson(path, {
@@ -597,7 +622,7 @@ export async function checkpointDiffPage(runPath, page, dependencies = {}) {
     .filter((request) => !request.collected)
     .map(({ collected: _collected, ...request }) => Object.freeze(request));
   const checkpointed = result.ledgerState.currentPage;
-  const checkpointReceipt = Object.freeze({
+  const checkpointRecord = Object.freeze({
     generation: result.checkpoint.generation,
     observationIds: result.checkpoint.observations.map(
       (observation) => observation.id,
@@ -610,7 +635,7 @@ export async function checkpointDiffPage(runPath, page, dependencies = {}) {
     snapshotDigest: result.checkpoint.snapshotDigest,
   });
   return Object.freeze({
-    checkpoint: checkpointReceipt,
+    checkpoint: checkpointRecord,
     checkpointCount: checkpointed,
     nextPage: result.nextPage
       ? inspectionPageView(result.nextPage)
@@ -620,7 +645,7 @@ export async function checkpointDiffPage(runPath, page, dependencies = {}) {
   });
 }
 
-function checkpointReceipt(checkpoint) {
+function checkpointRecord(checkpoint) {
   return Object.freeze({
     generation: checkpoint.generation,
     observationIds: checkpoint.observations.map(
@@ -668,7 +693,7 @@ export async function checkpointDiffWindow(
     .map(({ collected: _collected, ...request }) => Object.freeze(request));
   return Object.freeze({
     checkpointCount: result.ledgerState.currentPage,
-    checkpoints: Object.freeze(result.checkpoints.map(checkpointReceipt)),
+    checkpoints: Object.freeze(result.checkpoints.map(checkpointRecord)),
     committedThrough: result.ledgerState.currentPage,
     nextWindow: result.nextWindow,
     pendingContextRequests: Object.freeze(pending),

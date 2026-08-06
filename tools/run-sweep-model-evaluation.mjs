@@ -13,9 +13,9 @@ import { fileURLToPath } from "node:url";
 
 import {
   createSweepModelEvaluationPlan,
-  createSweepModelEvaluationReceipt,
+  createSweepModelEvaluationRecord,
   prepareSweepModelEvaluationRun,
-  validateSweepModelEvaluationReceiptSet,
+  validateSweepModelEvaluationRecordSet,
 } from "../features/sweep/index.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -135,7 +135,7 @@ async function runCase(specification, host) {
   const events = parseEvents(result.stdout);
   const rawOutput = await readFile(outputPath, "utf8");
   const output = JSON.parse(rawOutput);
-  const created = await createSweepModelEvaluationReceipt({
+  const created = await createSweepModelEvaluationRecord({
     ...specification,
     host,
     model,
@@ -149,13 +149,13 @@ async function runCase(specification, host) {
     },
   });
   await privateWrite(
-    join(caseRoot, "receipt.json"),
-    `${JSON.stringify(created.receipt, null, 2)}\n`,
+    join(caseRoot, "record.json"),
+    `${JSON.stringify(created.record, null, 2)}\n`,
   );
   process.stdout.write(
     `${specification.caseId}: ${created.evaluation.runPassed ? "pass" : "fail"}\n`,
   );
-  return created.receipt;
+  return created.record;
 }
 
 await mkdir(outputRoot, { mode: 0o700, recursive: true });
@@ -163,15 +163,15 @@ const host = await codexVersion();
 const plan = createSweepModelEvaluationPlan();
 await privateWrite(join(outputRoot, "plan.json"), `${JSON.stringify(plan, null, 2)}\n`);
 
-const receipts = [];
+const records = [];
 for (const specification of plan.runs) {
-  receipts.push(await runCase(specification, host));
+  records.push(await runCase(specification, host));
 }
 await privateWrite(
-  join(outputRoot, "receipts.json"),
-  `${JSON.stringify(receipts, null, 2)}\n`,
+  join(outputRoot, "records.json"),
+  `${JSON.stringify(records, null, 2)}\n`,
 );
-const result = await validateSweepModelEvaluationReceiptSet(receipts);
+const result = await validateSweepModelEvaluationRecordSet(records);
 await privateWrite(
   join(outputRoot, "result.json"),
   `${JSON.stringify(result, null, 2)}\n`,

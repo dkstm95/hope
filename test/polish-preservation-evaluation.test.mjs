@@ -10,18 +10,18 @@ import { createPolishBrief } from "../features/polish/index.mjs";
 import {
   createHopePolishPreservationContract,
   createHopePolishPreservationEvaluationPlan,
-  createHopePolishPreservationEvaluationReceipt,
+  createHopePolishPreservationEvaluationRecord,
   getHopePolishPreservationEvaluationOracle,
   HOPE_POLISH_PRESERVATION_DECISIONS,
   HOPE_POLISH_PRESERVATION_VARIANTS,
   prepareHopePolishPreservationEvaluationRun,
   validateHopePolishPreservationEvaluationOutput,
-  validateHopePolishPreservationEvaluationReceipt,
-  validateHopePolishPreservationEvaluationReceiptSet,
+  validateHopePolishPreservationEvaluationRecord,
+  validateHopePolishPreservationEvaluationRecordSet,
 } from "../features/model-evaluation/polish-preservation.mjs";
 import {
-  validateHopePolishPreservationEvaluationReceiptFile,
-  validateHopePolishPreservationEvaluationReceiptSetFile,
+  validateHopePolishPreservationEvaluationRecordFile,
+  validateHopePolishPreservationEvaluationRecordSetFile,
 } from "../features/model-evaluation/index.mjs";
 import {
   digestHopeModelEvaluationEvidence,
@@ -43,33 +43,33 @@ function expectedOutput(caseId, overrides = {}) {
   };
 }
 
-function attestationFor(receipt, {
+function attestationFor(record, {
   campaignId = "polish-preservation-campaign",
   issuer = "trusted-test-runner",
 } = {}) {
   const statement = {
-    configuration: receipt.configuration,
+    configuration: record.configuration,
     evaluation: {
-      bindings: receipt.bindings,
-      feature: receipt.feature,
-      version: receipt.version,
+      bindings: record.bindings,
+      feature: record.feature,
+      version: record.version,
     },
-    invocation: receipt.invocation,
-    specification: receipt.specification,
+    invocation: record.invocation,
+    specification: record.specification,
   };
   return {
     campaignId,
-    eventId: receipt.invocation.id,
+    eventId: record.invocation.id,
     issuedAt: "2026-08-04T00:00:00.000Z",
     issuer,
-    proof: `proof-for-${receipt.invocation.id}`,
+    proof: `proof-for-${record.invocation.id}`,
     statementDigest: digestHopeModelEvaluationEvidence(statement),
     version: HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
   };
 }
 
-async function receiptFor(specification, overrides = {}, dependencies = {}) {
-  return (await createHopePolishPreservationEvaluationReceipt({
+async function recordFor(specification, overrides = {}, dependencies = {}) {
+  return (await createHopePolishPreservationEvaluationRecord({
     attestation: overrides.attestation,
     caseId: specification.caseId,
     effort: overrides.effort ?? "test-effort",
@@ -80,12 +80,12 @@ async function receiptFor(specification, overrides = {}, dependencies = {}) {
     output: overrides.output ?? expectedOutput(specification.caseId),
     run: specification.run,
     variant: specification.variant,
-  }, dependencies)).receipt;
+  }, dependencies)).record;
 }
 
-async function attestedReceiptFor(specification, attestationOptions) {
-  const synthetic = await receiptFor(specification);
-  return await receiptFor(specification, {
+async function attestedRecordFor(specification, attestationOptions) {
+  const synthetic = await recordFor(specification);
+  return await recordFor(specification, {
     attestation: attestationFor(synthetic, attestationOptions),
   }, {
     verifyModelEvaluationAttestation: () => true,
@@ -200,8 +200,8 @@ test("Polish preservation output is exact and decision-bound", () => {
   );
 });
 
-test("Polish preservation receipts retain wrong judgments and reject tampering", async () => {
-  const created = await createHopePolishPreservationEvaluationReceipt({
+test("Polish preservation records retain wrong judgments and reject tampering", async () => {
+  const created = await createHopePolishPreservationEvaluationRecord({
     caseId: "polish-preservation-01",
     effort: "test-effort",
     host: "codex-test-host",
@@ -219,27 +219,27 @@ test("Polish preservation receipts retain wrong judgments and reject tampering",
   assert.equal(created.evaluation.candidateMatched, false);
   assert.equal(created.evaluation.runPassed, false);
   assert.equal(
-    (await validateHopePolishPreservationEvaluationReceipt(created.receipt))
+    (await validateHopePolishPreservationEvaluationRecord(created.record))
       .evaluation.runPassed,
     false,
   );
-  const tampered = structuredClone(created.receipt);
+  const tampered = structuredClone(created.record);
   tampered.output.reason = "changed after binding";
   await assert.rejects(
-    async () => await validateHopePolishPreservationEvaluationReceipt(tampered),
+    async () => await validateHopePolishPreservationEvaluationRecord(tampered),
     /bindings do not match/u,
   );
 });
 
 test("complete Polish preservation evidence requires unique runs and one configuration", async () => {
   const plan = createHopePolishPreservationEvaluationPlan();
-  const receipts = await Promise.all(plan.runs.map(receiptFor));
+  const records = await Promise.all(plan.runs.map(recordFor));
   await assert.rejects(
-    validateHopePolishPreservationEvaluationReceiptSet(receipts),
+    validateHopePolishPreservationEvaluationRecordSet(records),
     /requires host-attested evidence/u,
   );
-  const result = await validateHopePolishPreservationEvaluationReceiptSet(
-    receipts,
+  const result = await validateHopePolishPreservationEvaluationRecordSet(
+    records,
     { allowSynthetic: true },
   );
   assert.deepEqual(result.summary, {
@@ -254,8 +254,8 @@ test("complete Polish preservation evidence requires unique runs and one configu
     full: { failed: 0, passed: 12, total: 12 },
   });
 
-  const failed = structuredClone(receipts);
-  failed[0] = await receiptFor(plan.runs[0], {
+  const failed = structuredClone(records);
+  failed[0] = await recordFor(plan.runs[0], {
     output: {
       candidateId: "candidate-b",
       decision: "apply-candidate",
@@ -263,27 +263,27 @@ test("complete Polish preservation evidence requires unique runs and one configu
     },
   });
   assert.equal(
-    (await validateHopePolishPreservationEvaluationReceiptSet(
+    (await validateHopePolishPreservationEvaluationRecordSet(
       failed,
       { allowSynthetic: true },
     )).decision,
     "keep-full",
   );
 
-  const reusedInvocation = structuredClone(receipts);
+  const reusedInvocation = structuredClone(records);
   reusedInvocation.at(-1).invocation.id = reusedInvocation[0].invocation.id;
   await assert.rejects(
-    async () => await validateHopePolishPreservationEvaluationReceiptSet(
+    async () => await validateHopePolishPreservationEvaluationRecordSet(
       reusedInvocation,
       { allowSynthetic: true },
     ),
     /repeats an invocation identity/u,
   );
 
-  const mixedModel = structuredClone(receipts);
+  const mixedModel = structuredClone(records);
   mixedModel.at(-1).configuration.model = "another-model";
   await assert.rejects(
-    async () => await validateHopePolishPreservationEvaluationReceiptSet(
+    async () => await validateHopePolishPreservationEvaluationRecordSet(
       mixedModel,
       { allowSynthetic: true },
     ),
@@ -293,11 +293,11 @@ test("complete Polish preservation evidence requires unique runs and one configu
 
 test("Polish trusted evidence validates one campaign and issuer end to end", async () => {
   const plan = createHopePolishPreservationEvaluationPlan();
-  const receipts = await Promise.all(plan.runs.map((specification) =>
-    attestedReceiptFor(specification)
+  const records = await Promise.all(plan.runs.map((specification) =>
+    attestedRecordFor(specification)
   ));
-  const result = await validateHopePolishPreservationEvaluationReceiptSet(
-    receipts,
+  const result = await validateHopePolishPreservationEvaluationRecordSet(
+    records,
     {
       verifyModelEvaluationAttestation: () => true,
       verifyModelEvaluationSet: (manifest) => manifest.events.length === 24,
@@ -305,13 +305,13 @@ test("Polish trusted evidence validates one campaign and issuer end to end", asy
   );
   assert.equal(result.provenance.kind, "host-attested");
 
-  const mixedIssuer = [...receipts];
-  mixedIssuer[mixedIssuer.length - 1] = await attestedReceiptFor(
+  const mixedIssuer = [...records];
+  mixedIssuer[mixedIssuer.length - 1] = await attestedRecordFor(
     plan.runs.at(-1),
     { issuer: "another-trusted-runner" },
   );
   await assert.rejects(
-    validateHopePolishPreservationEvaluationReceiptSet(mixedIssuer, {
+    validateHopePolishPreservationEvaluationRecordSet(mixedIssuer, {
       verifyModelEvaluationAttestation: () => true,
       verifyModelEvaluationSet: () => true,
     }),
@@ -322,22 +322,22 @@ test("Polish trusted evidence validates one campaign and issuer end to end", asy
 test("Polish preservation file validators use bounded JSON inputs", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "hope-polish-preservation-"));
   try {
-    const receipts = await Promise.all(
-      createHopePolishPreservationEvaluationPlan().runs.map(receiptFor),
+    const records = await Promise.all(
+      createHopePolishPreservationEvaluationPlan().runs.map(recordFor),
     );
-    const receiptPath = join(temporary, "receipt.json");
-    const setPath = join(temporary, "receipts.json");
+    const recordPath = join(temporary, "record.json");
+    const setPath = join(temporary, "records.json");
     await Promise.all([
-      writeFile(receiptPath, JSON.stringify(receipts[0])),
-      writeFile(setPath, JSON.stringify(receipts)),
+      writeFile(recordPath, JSON.stringify(records[0])),
+      writeFile(setPath, JSON.stringify(records)),
     ]);
     assert.equal(
-      (await validateHopePolishPreservationEvaluationReceiptFile(receiptPath))
+      (await validateHopePolishPreservationEvaluationRecordFile(recordPath))
         .evaluation.runPassed,
       true,
     );
     assert.equal(
-      (await validateHopePolishPreservationEvaluationReceiptSetFile(
+      (await validateHopePolishPreservationEvaluationRecordSetFile(
         setPath,
         { allowSynthetic: true },
       ))

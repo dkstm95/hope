@@ -42,14 +42,14 @@ Each run records:
 - the evidence, reason, risk, and verification for every change;
 - an exact output snapshot or an exact list of removed target IDs;
 - a change summary and unresolved items;
-- verification receipts with their checked scope; and
+- verification results with their checked scope; and
 - whether a revision is proposed, applied, or not needed.
 
 A version 2 run may also record one generic composition block supplied by a
 caller such as Sweep.
 
 The block binds the caller, session, work unit, execution contract, and
-authority receipt digests without making Polish import that caller.
+authority record digests without making Polish import that caller.
 
 Polish does not intentionally change observable behavior, a public contract,
 core meaning, facts, uncertainty, citations, or voice.
@@ -146,7 +146,7 @@ It does not attempt to roll back later edits that it cannot prove it owns.
 
 ## Verification
 
-Each receipt records a method, status, scope, detail, and evidence sources.
+Each record records a method, status, scope, detail, and evidence sources.
 
 Statuses are:
 
@@ -166,17 +166,17 @@ Passing tests or inspection do not prove complete semantic preservation.
 
 The result names only the scope it checked and keeps missing coverage visible.
 
-The shared runtime can create one version 1 Polish receipt from a validated
+The shared runtime can create one version 1 Polish record from a validated
 version 2 run.
 
-The receipt embeds the normalized run, derives its result, and binds both with
+The record embeds the normalized run, derives its result, and binds both with
 a digest.
 
-Composition callers revalidate that receipt instead of accepting a
+Composition callers revalidate that record instead of accepting a
 caller-authored summary of Polish work.
 
 Version 1 run records remain readable for compatibility, but only version 2 can
-represent deletion and produce a composition receipt.
+represent deletion and produce a composition record.
 
 ## Timing and composition
 
@@ -211,7 +211,7 @@ against the run.
 Sweep owns repository discovery, category status, prioritization, the approval
 candidate, and the final session result.
 
-Polish owns the bounded revision and its preservation and verification record.
+Polish owns the bounded revision and its preservation and verification result.
 
 If Polish returns `needs-alignment`, Sweep does not apply the candidate and
 records a handoff or another honest terminal state.
@@ -248,7 +248,7 @@ private run record before presenting the result.
 
 The independent harness exposes the same feature as `hope polish`.
 
-Its internal `brief`, `validate`, and `receipt` commands reach the shared core.
+Its internal `brief`, `validate`, and `record` commands reach the shared core.
 
 Automatic polishing reports that the harness model adapter is unavailable until
 one exists.

@@ -6,7 +6,7 @@ import {
   digestHopeModelEvaluationEvidence,
   HOPE_MODEL_EVALUATION_EVIDENCE_VERSION,
   validateHopeModelEvaluationProvenance,
-  validateHopeModelEvaluationReceiptSetProvenance,
+  validateHopeModelEvaluationRecordSetProvenance,
 } from "../features/model-evaluation/evidence.mjs";
 
 function statement(eventId) {
@@ -68,7 +68,7 @@ test("release evidence requires a trusted complete-attempt ledger", () => {
   const first = statement("event-1");
   const second = statement("event-2");
   const dependencies = { verifyModelEvaluationAttestation: () => true };
-  const receipts = [first, second].map((value) => ({
+  const records = [first, second].map((value) => ({
     provenance: createHopeModelEvaluationProvenance({
       attestation: attestation(value),
       statement: value,
@@ -82,15 +82,15 @@ test("release evidence requires a trusted complete-attempt ledger", () => {
     version: 1,
   };
   assert.throws(
-    () => validateHopeModelEvaluationReceiptSetProvenance(
-      receipts,
+    () => validateHopeModelEvaluationRecordSetProvenance(
+      records,
       metadata,
     ),
     /requires a trusted complete-attempt verifier/u,
   );
   let receivedManifest;
-  const result = validateHopeModelEvaluationReceiptSetProvenance(
-    receipts,
+  const result = validateHopeModelEvaluationRecordSetProvenance(
+    records,
     metadata,
     {
       verifyModelEvaluationSet(manifest) {
@@ -107,7 +107,7 @@ test("release evidence requires a trusted complete-attempt ledger", () => {
 });
 
 test("synthetic evidence is test-only unless the caller opts in", () => {
-  const receipts = [{
+  const records = [{
     provenance: { kind: "synthetic" },
     specification: { caseId: "event-1" },
   }];
@@ -118,12 +118,12 @@ test("synthetic evidence is test-only unless the caller opts in", () => {
     version: 1,
   };
   assert.throws(
-    () => validateHopeModelEvaluationReceiptSetProvenance(receipts, metadata),
+    () => validateHopeModelEvaluationRecordSetProvenance(records, metadata),
     /requires host-attested evidence/u,
   );
   assert.deepEqual(
-    validateHopeModelEvaluationReceiptSetProvenance(
-      receipts,
+    validateHopeModelEvaluationRecordSetProvenance(
+      records,
       metadata,
       { allowSynthetic: true },
     ),

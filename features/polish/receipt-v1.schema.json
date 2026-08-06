@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hope.local/schemas/polish/receipt-v1.schema.json",
   "title": "Hope polish receipt version 1",
-  "description": "Structural schema. The shared Polish runtime revalidates the embedded run, derived result, and receipt digest.",
+  "description": "Deprecated compatibility schema. The shared Polish runtime accepts this version 1 shape and returns the current record shape.",
   "type": "object",
   "additionalProperties": false,
   "required": [

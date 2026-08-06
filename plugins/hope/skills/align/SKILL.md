@@ -91,9 +91,9 @@ complete-polish --before <candidate-state.json> --polish <private-run.json> [--a
 Supply `--after` for `revised` and `needs-alignment`; omit it for `no-change`.
 
 Replace the private Align state with the returned `state`, which contains the
-validated receipt.
+validated record.
 
-Do not author the receipt yourself.
+Do not author the record yourself.
 
 A revised state must already include its incremented revision and change record.
 

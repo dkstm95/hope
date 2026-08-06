@@ -10,6 +10,11 @@ function fail(message) {
   throw new TypeError(`Invalid Hope model evaluation evidence: ${message}`);
 }
 
+// Deprecated version 1 compatibility aliases.
+export {
+  validateHopeModelEvaluationRecordSetProvenance as validateHopeModelEvaluationReceiptSetProvenance,
+};
+
 function assertEvidence(condition, message) {
   if (!condition) fail(message);
 }
@@ -175,8 +180,8 @@ export function validateHopeModelEvaluationProvenance(
   });
 }
 
-export function validateHopeModelEvaluationReceiptSetProvenance(
-  receipts,
+export function validateHopeModelEvaluationRecordSetProvenance(
+  records,
   {
     feature,
     plannedRunKeys,
@@ -188,49 +193,49 @@ export function validateHopeModelEvaluationReceiptSetProvenance(
     verifyModelEvaluationSet,
   } = {},
 ) {
-  const provenances = new Set(receipts.map(
-    (receipt) => receipt.provenance.kind,
+  const provenances = new Set(records.map(
+    (record) => record.provenance.kind,
   ));
   assertEvidence(
     provenances.size === 1,
-    "receipt set must not mix synthetic and host-attested evidence",
+    "record set must not mix synthetic and host-attested evidence",
   );
   if (provenances.has("synthetic")) {
     assertEvidence(
       allowSynthetic === true,
-      "release receipt set requires host-attested evidence",
+      "release record set requires host-attested evidence",
     );
     return Object.freeze({ kind: "synthetic" });
   }
   assertEvidence(
     typeof verifyModelEvaluationSet === "function",
-    "release receipt set requires a trusted complete-attempt verifier",
+    "release record set requires a trusted complete-attempt verifier",
   );
-  const campaignIds = new Set(receipts.map(
-    (receipt) => receipt.provenance.attestation.campaignId,
+  const campaignIds = new Set(records.map(
+    (record) => record.provenance.attestation.campaignId,
   ));
   assertEvidence(
     campaignIds.size === 1,
-    "receipt set must use one trusted runner campaign",
+    "record set must use one trusted runner campaign",
   );
-  const issuers = new Set(receipts.map(
-    (receipt) => receipt.provenance.attestation.issuer,
+  const issuers = new Set(records.map(
+    (record) => record.provenance.attestation.issuer,
   ));
   assertEvidence(
     issuers.size === 1,
-    "receipt set must use one trusted attestation issuer",
+    "record set must use one trusted attestation issuer",
   );
   const manifest = Object.freeze({
-    campaignId: receipts[0].provenance.attestation.campaignId,
-    events: Object.freeze(receipts.map((receipt) => Object.freeze({
-      eventId: receipt.provenance.attestation.eventId,
-      issuedAt: receipt.provenance.attestation.issuedAt,
-      issuer: receipt.provenance.attestation.issuer,
-      runKey: runKey(receipt.specification),
-      statementDigest: receipt.provenance.attestation.statementDigest,
+    campaignId: records[0].provenance.attestation.campaignId,
+    events: Object.freeze(records.map((record) => Object.freeze({
+      eventId: record.provenance.attestation.eventId,
+      issuedAt: record.provenance.attestation.issuedAt,
+      issuer: record.provenance.attestation.issuer,
+      runKey: runKey(record.specification),
+      statementDigest: record.provenance.attestation.statementDigest,
     }))),
     feature,
-    issuer: receipts[0].provenance.attestation.issuer,
+    issuer: records[0].provenance.attestation.issuer,
     plannedRunKeys: Object.freeze([...plannedRunKeys]),
     version,
   });

@@ -3,13 +3,13 @@ import test from "node:test";
 
 import {
   createSweepModelEvaluationPlan,
-  createSweepModelEvaluationReceipt,
+  createSweepModelEvaluationRecord,
   getSweepModelEvaluationOracle,
   prepareSweepModelEvaluationRun,
   sweepModelEvaluationCases,
   validateSweepModelEvaluationOutput,
-  validateSweepModelEvaluationReceipt,
-  validateSweepModelEvaluationReceiptSet,
+  validateSweepModelEvaluationRecord,
+  validateSweepModelEvaluationRecordSet,
 } from "../features/sweep/index.mjs";
 
 const dependencies = {
@@ -26,13 +26,13 @@ function expectedOutput(caseId, overrides = {}) {
     impacts: { ...oracle.impacts },
     targetPaths: [...oracle.requiredTargetPaths],
     unsupportedCategoryIds: [],
-    reason: "The repository evidence supports this bounded Sweep disposition.",
+    reason: "The repository evidence supports this whole-project Sweep disposition.",
     ...overrides,
   };
 }
 
-async function receiptFor(specification, overrides = {}) {
-  return (await createSweepModelEvaluationReceipt({
+async function recordFor(specification, overrides = {}) {
+  return (await createSweepModelEvaluationRecord({
     caseId: specification.caseId,
     run: specification.run,
     host: "codex-test-host",
@@ -41,7 +41,7 @@ async function receiptFor(specification, overrides = {}) {
     invocationId: `invocation-${specification.caseId}-${specification.run}`,
     output: expectedOutput(specification.caseId),
     ...overrides,
-  }, dependencies)).receipt;
+  }, dependencies)).record;
 }
 
 test("Sweep model evaluation covers every category and its safety boundaries", () => {
@@ -75,7 +75,7 @@ test("Sweep model evaluation keeps every oracle out of prepared host input", asy
   }
 });
 
-test("Sweep model evaluation validates the exact bounded output contract", () => {
+test("Sweep model evaluation validates the exact whole-project output contract", () => {
   assert.equal(
     validateSweepModelEvaluationOutput(
       expectedOutput("sweep-safe-private"),
@@ -117,7 +117,7 @@ test("Sweep model evaluation validates the exact bounded output contract", () =>
 });
 
 test("Sweep model evaluation accepts a safe no-candidate dynamic result", async () => {
-  const created = await createSweepModelEvaluationReceipt({
+  const created = await createSweepModelEvaluationRecord({
     caseId: "sweep-dynamic-lookup",
     run: 1,
     host: "codex-test-host",
@@ -138,7 +138,7 @@ test("Sweep model evaluation accepts a safe no-candidate dynamic result", async 
 });
 
 test("Sweep model evaluation accepts an equivalent public-contract category", async () => {
-  const created = await createSweepModelEvaluationReceipt({
+  const created = await createSweepModelEvaluationRecord({
     caseId: "sweep-public-contract",
     run: 1,
     host: "codex-test-host",
@@ -162,47 +162,47 @@ test("Sweep model evaluation accepts an equivalent public-contract category", as
   assert.equal(created.evaluation.runPassed, true);
 });
 
-test("Sweep model evaluation receipts bind the active brief, input, and output", async () => {
-  const receipt = await receiptFor({
+test("Sweep model evaluation records bind the active brief, input, and output", async () => {
+  const record = await recordFor({
     caseId: "sweep-public-contract",
     run: 1,
   });
-  const validated = await validateSweepModelEvaluationReceipt(
-    receipt,
+  const validated = await validateSweepModelEvaluationRecord(
+    record,
     dependencies,
   );
   assert.equal(validated.evaluation.runPassed, true);
 
-  const changedOutput = structuredClone(receipt);
+  const changedOutput = structuredClone(record);
   changedOutput.output.reason = "Changed after the invocation.";
   await assert.rejects(
-    validateSweepModelEvaluationReceipt(changedOutput, dependencies),
+    validateSweepModelEvaluationRecord(changedOutput, dependencies),
     /outputDigest does not match/u,
   );
 
-  const changedInput = structuredClone(receipt);
+  const changedInput = structuredClone(record);
   changedInput.invocation.inputDigest = `sha256:${"a".repeat(64)}`;
   await assert.rejects(
-    validateSweepModelEvaluationReceipt(changedInput, dependencies),
+    validateSweepModelEvaluationRecord(changedInput, dependencies),
     /inputDigest does not match/u,
   );
 
-  const changedEvaluation = structuredClone(receipt);
+  const changedEvaluation = structuredClone(record);
   changedEvaluation.evaluationVersion -= 1;
   await assert.rejects(
-    validateSweepModelEvaluationReceipt(changedEvaluation, dependencies),
+    validateSweepModelEvaluationRecord(changedEvaluation, dependencies),
     /evaluationVersion does not match/u,
   );
 });
 
 test("Sweep model evaluation keeps failed runs and requires one complete configuration", async () => {
   const plan = createSweepModelEvaluationPlan();
-  const receipts = [];
+  const records = [];
   for (const specification of plan.runs) {
-    receipts.push(await receiptFor(specification));
+    records.push(await recordFor(specification));
   }
-  const result = await validateSweepModelEvaluationReceiptSet(
-    receipts,
+  const result = await validateSweepModelEvaluationRecordSet(
+    records,
     dependencies,
   );
   assert.deepEqual(result.summary, {
@@ -211,8 +211,8 @@ test("Sweep model evaluation keeps failed runs and requires one complete configu
     failedRuns: 0,
   });
 
-  const failed = [...receipts];
-  failed[0] = await receiptFor(plan.runs[0], {
+  const failed = [...records];
+  failed[0] = await recordFor(plan.runs[0], {
     output: expectedOutput(plan.runs[0].caseId, {
       decision: "report-only",
       impacts: {
@@ -222,16 +222,16 @@ test("Sweep model evaluation keeps failed runs and requires one complete configu
       },
     }),
   });
-  const failedResult = await validateSweepModelEvaluationReceiptSet(
+  const failedResult = await validateSweepModelEvaluationRecordSet(
     failed,
     dependencies,
   );
   assert.equal(failedResult.summary.failedRuns, 1);
 
-  const mixed = structuredClone(receipts);
+  const mixed = structuredClone(records);
   mixed[1].configuration.model = "another-model";
   await assert.rejects(
-    validateSweepModelEvaluationReceiptSet(mixed, dependencies),
+    validateSweepModelEvaluationRecordSet(mixed, dependencies),
     /briefDigest|one host, model, and effort/u,
   );
 });
@@ -240,10 +240,10 @@ test("Sweep release evidence requires a runner-recorded host invocation", async 
   const plan = createSweepModelEvaluationPlan();
   const synthetic = [];
   for (const specification of plan.runs) {
-    synthetic.push(await receiptFor(specification));
+    synthetic.push(await recordFor(specification));
   }
   await assert.rejects(
-    validateSweepModelEvaluationReceiptSet(synthetic, {
+    validateSweepModelEvaluationRecordSet(synthetic, {
       loadWritingStandard: dependencies.loadWritingStandard,
     }),
     /requires host-recorded runner evidence/u,
@@ -265,16 +265,16 @@ test("Sweep release evidence requires a runner-recorded host invocation", async 
       { type: "turn.completed" },
     ],
   };
-  const recorded = await receiptFor(specification, {
+  const recorded = await recordFor(specification, {
     invocationId,
     output,
     runnerEvidence,
   });
-  const validated = await validateSweepModelEvaluationReceipt(
+  const validated = await validateSweepModelEvaluationRecord(
     recorded,
     dependencies,
   );
-  assert.equal(validated.receipt.provenance.kind, "codex-runner");
+  assert.equal(validated.record.provenance.kind, "codex-runner");
 
   const tampered = structuredClone(recorded);
   tampered.provenance.rawOutput = JSON.stringify({
@@ -282,7 +282,7 @@ test("Sweep release evidence requires a runner-recorded host invocation", async 
     reason: "A different recorded output.",
   });
   await assert.rejects(
-    validateSweepModelEvaluationReceipt(tampered, dependencies),
+    validateSweepModelEvaluationRecord(tampered, dependencies),
     /does not match model output|digests do not match/u,
   );
 });

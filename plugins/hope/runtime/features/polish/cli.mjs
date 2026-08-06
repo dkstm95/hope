@@ -4,7 +4,7 @@
 import { takeOptions } from "../command-options/index.mjs";
 import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
-  createPolishReceiptFile,
+  createPolishRecordFile,
   createPolishBrief,
   POLISH_MODEL_ADAPTER_CODE,
   runPolish,
@@ -20,7 +20,7 @@ function usage() {
     "Internal Skill protocol:",
     "  hope polish brief [--risk <low|medium|high>]",
     "  hope polish validate --input <run.json>",
-    "  hope polish receipt --input <run.json>",
+    "  hope polish record --input <run.json>",
   ].join("\n");
 }
 
@@ -28,8 +28,9 @@ export function parsePolishArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
   }
-  const [command, ...rest] = argv;
-  if (!["brief", "validate", "receipt"].includes(command)) {
+  const [requestedCommand, ...rest] = argv;
+  const command = requestedCommand === "receipt" ? "record" : requestedCommand;
+  if (!["brief", "validate", "record"].includes(command)) {
     return { arguments: argv, command: "automatic" };
   }
   const { options, positionals } = takeOptions(rest, {
@@ -69,7 +70,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     )(options.inputPath, dependencies);
   } else {
     result = await (
-      dependencies.createPolishReceiptFile ?? createPolishReceiptFile
+      dependencies.createPolishRecordFile ?? createPolishRecordFile
     )(options.inputPath, dependencies);
   }
   stdout.write(`${JSON.stringify(result, null, 2)}\n`);

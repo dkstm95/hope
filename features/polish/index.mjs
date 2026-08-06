@@ -11,7 +11,7 @@ import {
   POLISH_RISKS,
 } from "./constants.mjs";
 import {
-  createPolishReceipt,
+  createPolishRecord,
   validatePolishRun,
 } from "./validate.mjs";
 
@@ -37,8 +37,8 @@ export async function createPolishBrief({
     schemaPath: fileURLToPath(
       new URL("./run-v2.schema.json", import.meta.url),
     ),
-    receiptSchemaPath: fileURLToPath(
-      new URL("./receipt-v1.schema.json", import.meta.url),
+    recordSchemaPath: fileURLToPath(
+      new URL("./record-v1.schema.json", import.meta.url),
     ),
     snapshot: Object.freeze([
       "Capture the exact target and only the authority sources needed to judge this run.",
@@ -73,7 +73,7 @@ export async function createPolishBrief({
       "Write one version 2 run that follows schemaPath to a private temporary JSON file outside the repository with restricted permissions.",
       "The output snapshot must identify every surviving target source. List deleted targets in removedSourceIds; for no-change, every target identity must match the input exactly.",
       "Validate the run, fix only clear contract errors, and remove the private JSON after validation or cancellation.",
-      "Create the versioned receipt through the shared runtime when another feature composes this run. Do not author a receipt by hand.",
+      "Create the versioned record through the shared runtime when another feature composes this run. Do not author a record by hand.",
       "Record whether the revision is proposed, applied, or not needed. Applied work needs conversation-backed authority, a before-and-after comparison, and successful identity checks before and after application.",
       "Apply a revision only with explicit authority. Stop on an identity mismatch.",
     ]),
@@ -85,7 +85,7 @@ export async function createPolishBrief({
     composition: Object.freeze({
       callers: Object.freeze(["align", "sweep"]),
       rules: Object.freeze([
-        "The caller owns its discovery, approval, and result lifecycle. Polish owns only the bounded revision and its verification record.",
+        "The caller owns its discovery, approval, and result lifecycle. Polish owns only the bounded revision and its verification result.",
         "A composed run uses the same exact target, preservation, evidence, authority, identity, and application contract as a standalone run.",
         "Return needs-alignment instead of changing behavior, a public contract, a dependency, or another material decision.",
         "Polish never imports or invokes Align or Sweep.",
@@ -95,6 +95,11 @@ export async function createPolishBrief({
     writingStandard,
   });
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createPolishRecordFile as createPolishReceiptFile,
+};
 
 export async function validatePolishFile(inputPath, dependencies = {}) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
@@ -107,12 +112,12 @@ export async function validatePolishFile(inputPath, dependencies = {}) {
   });
 }
 
-export async function createPolishReceiptFile(inputPath, dependencies = {}) {
+export async function createPolishRecordFile(inputPath, dependencies = {}) {
   const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
     label: "Hope polish run",
     maximumBytes: POLISH_LIMITS.inputBytes,
   });
-  return (dependencies.createReceipt ?? createPolishReceipt)(input.value, {
+  return (dependencies.createRecord ?? createPolishRecord)(input.value, {
     inputFileBytes: input.fileBytes,
     observedMetrics: dependencies.observedMetrics,
   });

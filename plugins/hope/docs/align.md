@@ -191,13 +191,13 @@ Before showing a contract-ready candidate for approval, the host runs
 The command rejects an interviewing or blocked state and returns an artifact
 source bound to the canonical candidate digest.
 
-The digest excludes derived metrics and the prior Polish receipt.
+The digest excludes derived metrics and the prior Polish record.
 
 After Polish returns, the host runs `complete-polish`.
 
 The shared transition checks that the run targeted the prepared digest,
 revalidates the resulting Align state, records the outcome and verification
-status, and binds a receipt to the resulting candidate.
+status, and binds a record to the resulting candidate.
 
 A revised state must increment its revision, remain contract-ready, and record
 the cleanup.
@@ -205,9 +205,9 @@ the cleanup.
 `needs-alignment` must increment the revision and return to interviewing with a
 recorded blocker.
 
-A completed receipt prevents another pass over the same candidate.
+A completed record prevents another pass over the same candidate.
 
-A user change removes the stale receipt, creates a new digest, and may receive
+A user change removes the stale record, creates a new digest, and may receive
 one new pass.
 
 Model-authored state cannot approve itself.
@@ -361,7 +361,7 @@ Those values remain in structured state for validation and audit.
 
 They do not create hidden or collapsed UI in the normal artifact.
 
-Version 1 stays readable and keeps its existing candidate and Polish receipt
+Version 1 stays readable and keeps its existing candidate and Polish record
 identity.
 
 Hope does not rewrite it implicitly.

@@ -788,7 +788,7 @@ export function validateToxicReviewRunState(value) {
           || attemptInput.result
           || attemptInput.error
         ) {
-          errors.push(`${attemptPath} pending attempt cannot have a receipt`);
+          errors.push(`${attemptPath} pending attempt cannot have a record`);
         }
       } else if (!hostInvocationId) {
         errors.push(`${attemptPath}.hostInvocationId is required after execution`);
@@ -1015,7 +1015,7 @@ export function retryToxicReviewRole(value, roleId) {
   return validateToxicReviewRunState(withDerivedStatus(next));
 }
 
-function roleAttemptReceipt(attempt) {
+function roleAttemptRecord(attempt) {
   return Object.freeze({
     attempt: attempt.attempt,
     attemptId: attempt.attemptId,
@@ -1097,7 +1097,7 @@ export function finalizeToxicReviewRun(value, decision) {
           status: latestAttempt.status,
           hostInvocationId: latestAttempt.hostInvocationId,
           outputDigest: latestAttempt.outputDigest,
-          attempts: Object.freeze(role.attempts.map(roleAttemptReceipt)),
+          attempts: Object.freeze(role.attempts.map(roleAttemptRecord)),
         });
       })),
       adjudication: Object.freeze({

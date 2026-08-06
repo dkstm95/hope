@@ -3,11 +3,12 @@ import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
 import { createPolishBrief } from "../polish/index.mjs";
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
 
 import {
   createHopeModelEvaluationProvenance,
   validateHopeModelEvaluationProvenance,
-  validateHopeModelEvaluationReceiptSetProvenance,
+  validateHopeModelEvaluationRecordSetProvenance,
 } from "./evidence.mjs";
 
 export const HOPE_POLISH_PRESERVATION_CONTRACT_VERSION = 1;
@@ -28,8 +29,8 @@ export const hopePolishPreservationEvaluationLimits = Object.freeze({
   candidateIdCharacters: 64,
   outputBytes: 16 * 1024,
   reasonCharacters: 2048,
-  receiptBytes: 96 * 1024,
-  receiptSetBytes: 3 * 1024 * 1024,
+  recordBytes: 96 * 1024,
+  recordSetBytes: 3 * 1024 * 1024,
 });
 
 function syntheticInput({ candidates, evidence, preservationConditions, request, target }) {
@@ -42,6 +43,13 @@ function syntheticInput({ candidates, evidence, preservationConditions, request,
     target: Object.freeze(target),
   });
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createHopePolishPreservationEvaluationRecord as createHopePolishPreservationEvaluationReceipt,
+  validateHopePolishPreservationEvaluationRecord as validateHopePolishPreservationEvaluationReceipt,
+  validateHopePolishPreservationEvaluationRecordSet as validateHopePolishPreservationEvaluationReceiptSet,
+};
 
 function evaluationCase({ candidates, evidence, expectedCandidateId, expectedDecision, id, preservationConditions, request, suite, target }) {
   return Object.freeze({
@@ -486,7 +494,7 @@ export const hopePolishPreservationEvaluationProtocol = Object.freeze({
   interpretation:
     "A synthetic passing set is test-only. Host-attested release evidence tests bounded preservation judgments but does not prove that a free-form edit preserved semantics or that unrelated Polish protocol can be removed.",
   storage:
-    "Keep bounded receipts under ignored test-results/. CLI-created receipts are synthetic; release evidence must come through a trusted runner adapter.",
+    "Keep bounded records under ignored test-results/. CLI-created records are synthetic; release evidence must come through a trusted runner adapter.",
   variants: HOPE_POLISH_PRESERVATION_VARIANTS,
   version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
 });
@@ -668,7 +676,7 @@ function createEvaluation(evaluationCase, output) {
   });
 }
 
-export async function createHopePolishPreservationEvaluationReceipt({
+export async function createHopePolishPreservationEvaluationRecord({
   attestation,
   caseId,
   effort,
@@ -709,7 +717,7 @@ export async function createHopePolishPreservationEvaluationReceipt({
     configuration,
     evaluation: Object.freeze({
       bindings,
-      feature: "hope-polish-preservation-evaluation-receipt",
+      feature: "hope-polish-preservation-evaluation-record",
       version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
     }),
     invocation,
@@ -719,24 +727,25 @@ export async function createHopePolishPreservationEvaluationReceipt({
     { attestation, statement },
     dependencies,
   );
-  const receipt = Object.freeze({
+  const record = Object.freeze({
     bindings,
     configuration,
     evaluation,
-    feature: "hope-polish-preservation-evaluation-receipt",
+    feature: "hope-polish-preservation-evaluation-record",
     invocation,
     output: normalizedOutput,
     provenance,
     specification,
     version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
   });
-  return Object.freeze({ evaluation, receipt });
+  return Object.freeze({ evaluation, record });
 }
 
-export async function validateHopePolishPreservationEvaluationReceipt(
+export async function validateHopePolishPreservationEvaluationRecord(
   value,
   dependencies = {},
 ) {
+  value = normalizeLegacyRecordTerms(value);
   exactKeys(value, [
     "bindings",
     "configuration",
@@ -747,19 +756,19 @@ export async function validateHopePolishPreservationEvaluationReceipt(
     "provenance",
     "specification",
     "version",
-  ], "receipt");
+  ], "record");
   assertEvaluation(
-    value.feature === "hope-polish-preservation-evaluation-receipt",
-    "receipt.feature is invalid",
+    value.feature === "hope-polish-preservation-evaluation-record",
+    "record.feature is invalid",
   );
   assertEvaluation(
     value.version === HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
-    `receipt.version must be ${HOPE_POLISH_PRESERVATION_EVALUATION_VERSION}`,
+    `record.version must be ${HOPE_POLISH_PRESERVATION_EVALUATION_VERSION}`,
   );
   exactKeys(
     value.specification,
     ["caseId", "run", "suite", "variant"],
-    "receipt.specification",
+    "record.specification",
   );
   const prepared = await prepareHopePolishPreservationEvaluationRun(
     value.specification,
@@ -767,12 +776,12 @@ export async function validateHopePolishPreservationEvaluationReceipt(
   );
   assertEvaluation(
     value.specification.suite === prepared.suite,
-    "receipt.specification does not match the prepared run",
+    "record.specification does not match the prepared run",
   );
   exactKeys(
     value.configuration,
     ["contractVersion", "effort", "host", "model"],
-    "receipt.configuration",
+    "record.configuration",
   );
   const configuration = Object.freeze({
     contractVersion: value.configuration.contractVersion,
@@ -784,7 +793,7 @@ export async function validateHopePolishPreservationEvaluationReceipt(
     configuration.contractVersion === prepared.contractVersion,
     "configuration.contractVersion does not match the prepared run",
   );
-  exactKeys(value.invocation, ["id"], "receipt.invocation");
+  exactKeys(value.invocation, ["id"], "record.invocation");
   const invocation = Object.freeze({
     id: boundedText(value.invocation.id, "invocation.id"),
   });
@@ -802,16 +811,16 @@ export async function validateHopePolishPreservationEvaluationReceipt(
       "expectedDecision",
       "runPassed",
     ],
-    "receipt.evaluation",
+    "record.evaluation",
   );
   assertEvaluation(
     isDeepStrictEqual(value.evaluation, evaluation),
-    "receipt.evaluation does not match the bound output and oracle",
+    "record.evaluation does not match the bound output and oracle",
   );
   exactKeys(
     value.bindings,
     ["briefDigest", "inputDigest", "outputDigest"],
-    "receipt.bindings",
+    "record.bindings",
   );
   const bindings = Object.freeze({
     briefDigest: prepared.briefDigest,
@@ -820,7 +829,7 @@ export async function validateHopePolishPreservationEvaluationReceipt(
   });
   assertEvaluation(
     isDeepStrictEqual(value.bindings, bindings),
-    "receipt.bindings do not match the prepared run and output",
+    "record.bindings do not match the prepared run and output",
   );
   const statement = Object.freeze({
     configuration,
@@ -839,7 +848,7 @@ export async function validateHopePolishPreservationEvaluationReceipt(
   );
   return Object.freeze({
     evaluation,
-    receipt: Object.freeze({
+    record: Object.freeze({
       bindings,
       configuration,
       evaluation,
@@ -853,60 +862,60 @@ export async function validateHopePolishPreservationEvaluationReceipt(
   });
 }
 
-function countBy(receipts, field, values) {
+function countBy(records, field, values) {
   return Object.fromEntries(values.map((value) => {
-    const selected = receipts.filter(
-      (receipt) => receipt.specification[field] === value,
+    const selected = records.filter(
+      (record) => record.specification[field] === value,
     );
     return [value, Object.freeze({
-      failed: selected.filter((receipt) => !receipt.evaluation.runPassed).length,
-      passed: selected.filter((receipt) => receipt.evaluation.runPassed).length,
+      failed: selected.filter((record) => !record.evaluation.runPassed).length,
+      passed: selected.filter((record) => record.evaluation.runPassed).length,
       total: selected.length,
     })];
   }));
 }
 
-export async function validateHopePolishPreservationEvaluationReceiptSet(
+export async function validateHopePolishPreservationEvaluationRecordSet(
   values,
   dependencies = {},
 ) {
-  assertEvaluation(Array.isArray(values), "receipt set must be an array");
+  assertEvaluation(Array.isArray(values), "record set must be an array");
   const expected = plannedRuns();
   assertEvaluation(
     values.length === expected.length,
-    `receipt set must contain ${expected.length} runs`,
+    `record set must contain ${expected.length} runs`,
   );
   const validated = await Promise.all(values.map(
-    async (value) => await validateHopePolishPreservationEvaluationReceipt(
+    async (value) => await validateHopePolishPreservationEvaluationRecord(
       value,
       dependencies,
     ),
   ));
-  const receipts = validated.map((entry) => entry.receipt);
+  const records = validated.map((entry) => entry.record);
   const expectedKeys = new Set(expected.map(runKey));
-  const actualKeys = receipts.map((receipt) => runKey(receipt.specification));
+  const actualKeys = records.map((record) => runKey(record.specification));
   assertEvaluation(
     new Set(actualKeys).size === actualKeys.length,
-    "receipt set repeats a planned run",
+    "record set repeats a planned run",
   );
   assertEvaluation(
     actualKeys.every((key) => expectedKeys.has(key)),
-    "receipt set contains an unplanned run",
+    "record set contains an unplanned run",
   );
-  const invocationIds = receipts.map((receipt) => receipt.invocation.id);
+  const invocationIds = records.map((record) => record.invocation.id);
   assertEvaluation(
     new Set(invocationIds).size === invocationIds.length,
-    "receipt set repeats an invocation identity",
+    "record set repeats an invocation identity",
   );
-  const configurations = new Set(receipts.map((receipt) => JSON.stringify(
-    receipt.configuration,
+  const configurations = new Set(records.map((record) => JSON.stringify(
+    record.configuration,
   )));
   assertEvaluation(
     configurations.size === 1,
-    "receipt set must use one host, model, effort, and contract version",
+    "record set must use one host, model, effort, and contract version",
   );
-  const provenance = validateHopeModelEvaluationReceiptSetProvenance(
-    receipts,
+  const provenance = validateHopeModelEvaluationRecordSetProvenance(
+    records,
     {
       feature: "hope-polish-preservation-evaluation",
       plannedRunKeys: expected.map(runKey),
@@ -915,35 +924,35 @@ export async function validateHopePolishPreservationEvaluationReceiptSet(
     },
     dependencies,
   );
-  const passedRuns = receipts.filter(
-    (receipt) => receipt.evaluation.runPassed,
+  const passedRuns = records.filter(
+    (record) => record.evaluation.runPassed,
   ).length;
   const summary = Object.freeze({
-    candidateInvariantsOnly: passedRuns === receipts.length,
-    failedRuns: receipts.length - passedRuns,
+    candidateInvariantsOnly: passedRuns === records.length,
+    failedRuns: records.length - passedRuns,
     passedRuns,
-    totalRuns: receipts.length,
+    totalRuns: records.length,
   });
   return Object.freeze({
     bySuite: Object.freeze(countBy(
-      receipts,
+      records,
       "suite",
       [...new Set(hopePolishPreservationEvaluationCases.map(
         (evaluationCase) => evaluationCase.suite,
       ))],
     )),
     byVariant: Object.freeze(countBy(
-      receipts,
+      records,
       "variant",
       HOPE_POLISH_PRESERVATION_VARIANTS,
     )),
-    configuration: receipts[0].configuration,
+    configuration: records[0].configuration,
     decision: summary.candidateInvariantsOnly
       ? "candidate-invariants-only"
       : "keep-full",
     feature: "hope-polish-preservation-evaluation-result",
     provenance,
-    receipts: Object.freeze(receipts),
+    records: Object.freeze(records),
     summary,
     version: HOPE_POLISH_PRESERVATION_EVALUATION_VERSION,
   });

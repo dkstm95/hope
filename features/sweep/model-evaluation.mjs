@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
+
 import {
   SWEEP_CATEGORY_CATALOG,
   SWEEP_CONTRACT_VERSION,
@@ -25,8 +27,8 @@ export const SWEEP_MODEL_EVALUATION_VERSION = 7;
 export const sweepModelEvaluationLimits = Object.freeze({
   outputBytes: 16 * 1024,
   reasonCharacters: 2048,
-  receiptBytes: 64 * 1024,
-  receiptSetBytes: 512 * 1024,
+  recordBytes: 64 * 1024,
+  recordSetBytes: 512 * 1024,
   targetPaths: 8,
 });
 
@@ -34,10 +36,17 @@ function repositoryInput(id, files) {
   return Object.freeze({
     contentIsSynthetic: true,
     id,
-    request: "Inspect this repository for one bounded Sweep plan. Do not modify any file.",
+    request: "Inspect this repository for one whole-project Sweep plan. Do not modify any file.",
     files: Object.freeze(files.map((file) => Object.freeze(file))),
   });
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  createSweepModelEvaluationRecord as createSweepModelEvaluationReceipt,
+  validateSweepModelEvaluationRecord as validateSweepModelEvaluationReceipt,
+  validateSweepModelEvaluationRecordSet as validateSweepModelEvaluationReceiptSet,
+};
 
 export const sweepModelEvaluationCases = Object.freeze([
   Object.freeze({
@@ -480,7 +489,7 @@ export const sweepModelEvaluationProtocol = Object.freeze({
   interpretation:
     "A complete passing set is model-behavior smoke evidence for one declared host, model, effort, and active Sweep contract. It is not a statistical guarantee.",
   storage:
-    "Keep bounded receipts under ignored test-results/ or equivalent private release evidence.",
+    "Keep bounded records under ignored test-results/ or equivalent private release evidence.",
 });
 
 export const sweepModelEvaluationOutputContract = Object.freeze({
@@ -580,7 +589,9 @@ function expectedRuns() {
 function portableBrief(value) {
   const {
     approvalSchemaPath: _approvalSchemaPath,
+    batchResultSchemaPath: _batchResultSchemaPath,
     completionSchemaPath: _completionSchemaPath,
+    inventorySchemaPath: _inventorySchemaPath,
     planSchemaPath: _planSchemaPath,
     sessionResultSchemaPath: _sessionResultSchemaPath,
     ...brief
@@ -589,7 +600,9 @@ function portableBrief(value) {
     ...brief,
     schemas: Object.freeze({
       approval: "approval-v1.schema.json",
+      batchResult: "batch-result-v1.schema.json",
       completion: "completion-v1.schema.json",
+      inventory: "inventory-v1.schema.json",
       plan: "plan-v1.schema.json",
       sessionResult: "session-result-v1.schema.json",
     }),
@@ -781,7 +794,7 @@ function validateRunnerEvidence(value, invocationId, output) {
   );
   assertEvaluation(
     Buffer.byteLength(JSON.stringify(value.events), "utf8")
-      <= sweepModelEvaluationLimits.receiptBytes,
+      <= sweepModelEvaluationLimits.recordBytes,
     "runnerEvidence.events is too large",
   );
   const started = value.events.find((event) => event?.type === "thread.started");
@@ -866,7 +879,7 @@ function evaluationFor(output, evaluationCase) {
   return Object.freeze(result);
 }
 
-export async function createSweepModelEvaluationReceipt({
+export async function createSweepModelEvaluationRecord({
   caseId,
   effort,
   host,
@@ -885,8 +898,8 @@ export async function createSweepModelEvaluationReceipt({
   const provenance = runnerEvidence === undefined
     ? Object.freeze({ kind: "synthetic" })
     : validateRunnerEvidence(runnerEvidence, invocationId, validatedOutput);
-  const receipt = Object.freeze({
-    receiptVersion: 1,
+  const record = Object.freeze({
+    recordVersion: 1,
     evaluationVersion: SWEEP_MODEL_EVALUATION_VERSION,
     caseId,
     suite: prepared.suite,
@@ -908,24 +921,25 @@ export async function createSweepModelEvaluationReceipt({
     sanitized: true,
   });
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= sweepModelEvaluationLimits.receiptBytes,
-    `receipt exceeds ${sweepModelEvaluationLimits.receiptBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= sweepModelEvaluationLimits.recordBytes,
+    `record exceeds ${sweepModelEvaluationLimits.recordBytes} bytes`,
   );
   return Object.freeze({
-    receipt,
+    record,
     evaluation: evaluationFor(validatedOutput, evaluationCase),
   });
 }
 
-export async function validateSweepModelEvaluationReceipt(
-  receipt,
+export async function validateSweepModelEvaluationRecord(
+  record,
   dependencies = {},
 ) {
+  record = normalizeLegacyRecordTerms(record);
   exactKeys(
-    receipt,
+    record,
     [
-      "receiptVersion",
+      "recordVersion",
       "evaluationVersion",
       "caseId",
       "suite",
@@ -936,32 +950,32 @@ export async function validateSweepModelEvaluationReceipt(
       "provenance",
       "sanitized",
     ],
-    "receipt",
+    "record",
   );
-  assertEvaluation(receipt.receiptVersion === 1, "receiptVersion must be 1");
+  assertEvaluation(record.recordVersion === 1, "recordVersion must be 1");
   assertEvaluation(
-    receipt.evaluationVersion === SWEEP_MODEL_EVALUATION_VERSION,
+    record.evaluationVersion === SWEEP_MODEL_EVALUATION_VERSION,
     "evaluationVersion does not match the active evaluation contract",
   );
-  const caseId = boundedText(receipt.caseId, "caseId");
-  const run = validateRun(receipt.run);
+  const caseId = boundedText(record.caseId, "caseId");
+  const run = validateRun(record.run);
   const prepared = await prepareSweepModelEvaluationRun(
     { caseId, run },
     dependencies,
   );
   const evaluationCase = findCase(caseId);
-  assertEvaluation(receipt.suite === prepared.suite, "suite does not match case");
+  assertEvaluation(record.suite === prepared.suite, "suite does not match case");
   exactKeys(
-    receipt.configuration,
+    record.configuration,
     ["host", "model", "effort", "contractVersion", "briefDigest"],
     "configuration",
   );
   const configuration = Object.freeze({
-    host: boundedText(receipt.configuration.host, "configuration.host"),
-    model: boundedText(receipt.configuration.model, "configuration.model"),
-    effort: boundedText(receipt.configuration.effort, "configuration.effort"),
-    contractVersion: receipt.configuration.contractVersion,
-    briefDigest: receipt.configuration.briefDigest,
+    host: boundedText(record.configuration.host, "configuration.host"),
+    model: boundedText(record.configuration.model, "configuration.model"),
+    effort: boundedText(record.configuration.effort, "configuration.effort"),
+    contractVersion: record.configuration.contractVersion,
+    briefDigest: record.configuration.briefDigest,
   });
   assertEvaluation(
     configuration.contractVersion === SWEEP_CONTRACT_VERSION,
@@ -973,34 +987,34 @@ export async function validateSweepModelEvaluationReceipt(
     "briefDigest does not match the active Sweep brief",
   );
   exactKeys(
-    receipt.invocation,
+    record.invocation,
     ["id", "inputDigest", "outputDigest"],
     "invocation",
   );
   const invocation = Object.freeze({
-    id: boundedText(receipt.invocation.id, "invocation.id"),
-    inputDigest: receipt.invocation.inputDigest,
-    outputDigest: receipt.invocation.outputDigest,
+    id: boundedText(record.invocation.id, "invocation.id"),
+    inputDigest: record.invocation.inputDigest,
+    outputDigest: record.invocation.outputDigest,
   });
   assertEvaluation(
     digestPattern.test(invocation.inputDigest)
       && invocation.inputDigest === prepared.inputDigest,
     "inputDigest does not match the prepared run",
   );
-  const output = validateSweepModelEvaluationOutput(receipt.output);
+  const output = validateSweepModelEvaluationOutput(record.output);
   assertEvaluation(
     digestPattern.test(invocation.outputDigest)
       && invocation.outputDigest === digestSweepModelEvaluationValue(output),
     "outputDigest does not match model output",
   );
-  assertEvaluation(receipt.sanitized === true, "sanitized must be true");
+  assertEvaluation(record.sanitized === true, "sanitized must be true");
   let provenance;
-  if (receipt.provenance?.kind === "synthetic") {
-    exactKeys(receipt.provenance, ["kind"], "provenance");
+  if (record.provenance?.kind === "synthetic") {
+    exactKeys(record.provenance, ["kind"], "provenance");
     provenance = Object.freeze({ kind: "synthetic" });
   } else {
     exactKeys(
-      receipt.provenance,
+      record.provenance,
       [
         "kind",
         "runner",
@@ -1013,29 +1027,29 @@ export async function validateSweepModelEvaluationReceipt(
       "provenance",
     );
     assertEvaluation(
-      receipt.provenance.kind === "codex-runner",
+      record.provenance.kind === "codex-runner",
       "provenance.kind is not supported",
     );
     provenance = validateRunnerEvidence({
-      runner: receipt.provenance.runner,
-      events: receipt.provenance.events,
-      rawOutput: receipt.provenance.rawOutput,
+      runner: record.provenance.runner,
+      events: record.provenance.events,
+      rawOutput: record.provenance.rawOutput,
     }, invocation.id, output);
     assertEvaluation(
-      receipt.provenance.eventCount === provenance.eventCount
-        && receipt.provenance.eventsDigest === provenance.eventsDigest
-        && receipt.provenance.rawOutputDigest === provenance.rawOutputDigest,
+      record.provenance.eventCount === provenance.eventCount
+        && record.provenance.eventsDigest === provenance.eventsDigest
+        && record.provenance.rawOutputDigest === provenance.rawOutputDigest,
       "provenance digests do not match the recorded runner evidence",
     );
   }
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipt), "utf8")
-      <= sweepModelEvaluationLimits.receiptBytes,
-    `receipt exceeds ${sweepModelEvaluationLimits.receiptBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(record), "utf8")
+      <= sweepModelEvaluationLimits.recordBytes,
+    `record exceeds ${sweepModelEvaluationLimits.recordBytes} bytes`,
   );
   return Object.freeze({
-    receipt: Object.freeze({
-      receiptVersion: 1,
+    record: Object.freeze({
+      recordVersion: 1,
       evaluationVersion: SWEEP_MODEL_EVALUATION_VERSION,
       caseId,
       suite: prepared.suite,
@@ -1054,53 +1068,53 @@ function runKey(value) {
   return `${value.caseId}:${value.run}`;
 }
 
-export async function validateSweepModelEvaluationReceiptSet(
-  receipts,
+export async function validateSweepModelEvaluationRecordSet(
+  records,
   dependencies = {},
 ) {
-  assertEvaluation(Array.isArray(receipts), "receipt set must be an array");
+  assertEvaluation(Array.isArray(records), "record set must be an array");
   assertEvaluation(
-    Buffer.byteLength(JSON.stringify(receipts), "utf8")
-      <= sweepModelEvaluationLimits.receiptSetBytes,
-    `receipt set exceeds ${sweepModelEvaluationLimits.receiptSetBytes} bytes`,
+    Buffer.byteLength(JSON.stringify(records), "utf8")
+      <= sweepModelEvaluationLimits.recordSetBytes,
+    `record set exceeds ${sweepModelEvaluationLimits.recordSetBytes} bytes`,
   );
   const expected = expectedRuns();
   assertEvaluation(
-    receipts.length === expected.length,
-    `receipt set must contain ${expected.length} runs`,
+    records.length === expected.length,
+    `record set must contain ${expected.length} runs`,
   );
   const validated = [];
-  for (const receipt of receipts) {
-    validated.push(await validateSweepModelEvaluationReceipt(receipt, dependencies));
+  for (const record of records) {
+    validated.push(await validateSweepModelEvaluationRecord(record, dependencies));
   }
   if (!dependencies.allowSynthetic) {
     assertEvaluation(
-      validated.every((result) => result.receipt.provenance.kind === "codex-runner"),
-      "release receipt set requires host-recorded runner evidence",
+      validated.every((result) => result.record.provenance.kind === "codex-runner"),
+      "release record set requires host-recorded runner evidence",
     );
   }
   const expectedKeys = new Set(expected.map(runKey));
   const actualKeys = new Set();
   const invocationIds = new Set();
   for (const result of validated) {
-    const key = runKey(result.receipt);
-    assertEvaluation(expectedKeys.has(key), `receipt set has unexpected run ${key}`);
-    assertEvaluation(!actualKeys.has(key), `receipt set repeats run ${key}`);
+    const key = runKey(result.record);
+    assertEvaluation(expectedKeys.has(key), `record set has unexpected run ${key}`);
+    assertEvaluation(!actualKeys.has(key), `record set repeats run ${key}`);
     actualKeys.add(key);
     assertEvaluation(
-      !invocationIds.has(result.receipt.invocation.id),
-      `receipt set repeats invocation ${result.receipt.invocation.id}`,
+      !invocationIds.has(result.record.invocation.id),
+      `record set repeats invocation ${result.record.invocation.id}`,
     );
-    invocationIds.add(result.receipt.invocation.id);
+    invocationIds.add(result.record.invocation.id);
   }
-  const first = validated[0].receipt.configuration;
+  const first = validated[0].record.configuration;
   for (const result of validated.slice(1)) {
-    const configuration = result.receipt.configuration;
+    const configuration = result.record.configuration;
     assertEvaluation(
       configuration.host === first.host
         && configuration.model === first.model
         && configuration.effort === first.effort,
-      "receipt set must use one host, model, and effort",
+      "record set must use one host, model, and effort",
     );
   }
   const passedRuns = validated.filter(
@@ -1121,9 +1135,9 @@ export async function validateSweepModelEvaluationReceiptSet(
       failedRuns: validated.length - passedRuns,
     }),
     runs: Object.freeze(validated.map((result) => Object.freeze({
-      caseId: result.receipt.caseId,
-      suite: result.receipt.suite,
-      run: result.receipt.run,
+      caseId: result.record.caseId,
+      suite: result.record.suite,
+      run: result.record.run,
         passed: result.evaluation.runPassed,
         categoryMatched: result.evaluation.categoryMatched,
         checkMatched: result.evaluation.checkMatched,

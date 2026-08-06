@@ -1,16 +1,26 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
+
 import { validateToxicReview } from "./validate.mjs";
 
 const digestPattern = /^sha256:[a-f0-9]{64}$/u;
 const evaluationVariants = Object.freeze(["legacy", "rules-only", "full"]);
 
-function assertReceipt(condition, message) {
+function assertRecord(condition, message) {
   if (!condition) {
-    throw new TypeError(`Invalid causal evaluation receipt: ${message}`);
+    throw new TypeError(`Invalid causal evaluation record: ${message}`);
   }
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  causalCompletenessEvaluationRecordLimits as causalCompletenessEvaluationReceiptLimits,
+  createCausalCompletenessEvaluationRecordTemplate as createCausalCompletenessEvaluationReceiptTemplate,
+  validateCausalCompletenessEvaluationRecord as validateCausalCompletenessEvaluationReceipt,
+  validateCausalCompletenessEvaluationRecordSet as validateCausalCompletenessEvaluationReceiptSet,
+};
 
 function canonicalValue(value) {
   if (Array.isArray(value)) return value.map(canonicalValue);
@@ -35,18 +45,18 @@ function digestText(value) {
 }
 
 function exactKeys(value, expected, label) {
-  assertReceipt(
+  assertRecord(
     value && typeof value === "object" && !Array.isArray(value),
     `${label} must be an object`,
   );
-  assertReceipt(
+  assertRecord(
     isDeepStrictEqual(Object.keys(value).sort(), [...expected].sort()),
     `${label} must contain exactly ${expected.join(", ")}`,
   );
 }
 
-function receiptText(value, label, { maximum = 16384, minimum = 1 } = {}) {
-  assertReceipt(
+function recordText(value, label, { maximum = 16384, minimum = 1 } = {}) {
+  assertRecord(
     typeof value === "string"
       && value.trim().length >= minimum
       && [...value].length <= maximum,
@@ -102,7 +112,7 @@ const requiredRubricIds = Object.freeze(
   causalCompletenessRubric.map((criterion) => criterion.id),
 );
 
-export const causalCompletenessEvaluationReceiptLimits = Object.freeze({
+export const causalCompletenessEvaluationRecordLimits = Object.freeze({
   bytes: 128 * 1024,
   evidenceItemsPerCriterion: 3,
   excerptCharacters: 2048,
@@ -143,7 +153,7 @@ export const causalCompletenessEvaluationProtocol = Object.freeze({
     "the evaluator and evaluation time",
   ]),
   storage:
-    "Keep bounded receipts under ignored test-results/ or equivalent release evidence. Never put private user sources in an evaluation receipt.",
+    "Keep bounded records under ignored test-results/ or equivalent release evidence. Never put private user sources in an evaluation record.",
   interpretation:
     "Report run success separately from correlated rubric criteria. These paired runs are Skill-based smoke evidence, not a CI model test or statistical guarantee.",
 });
@@ -459,15 +469,15 @@ export function prepareCausalCompletenessEvaluationRun({
 }
 
 function decodedPointer(root, pointer, label) {
-  receiptText(pointer, `${label}.pointer`, { maximum: 1024 });
-  assertReceipt(
+  recordText(pointer, `${label}.pointer`, { maximum: 1024 });
+  assertRecord(
     /^\/(?:causalAnalysis|findings|adjudications|summary|roles)\//u.test(pointer),
     `${label}.pointer must reference an authored review field`,
   );
   let value = root;
   for (const token of pointer.slice(1).split("/")) {
     const key = token.replace(/~1/gu, "/").replace(/~0/gu, "~");
-    assertReceipt(
+    assertRecord(
       value !== null
         && typeof value === "object"
         && Object.hasOwn(value, key),
@@ -475,7 +485,7 @@ function decodedPointer(root, pointer, label) {
     );
     value = value[key];
   }
-  assertReceipt(typeof value === "string", `${label}.pointer must resolve to text`);
+  assertRecord(typeof value === "string", `${label}.pointer must resolve to text`);
   return value;
 }
 
@@ -487,11 +497,11 @@ function assessmentMatchesOracle(assessment, oracle) {
 }
 
 function assertReviewMatchesPrepared(review, prepared) {
-  assertReceipt(
+  assertRecord(
     isDeepStrictEqual(review.target, prepared.hostInput.reviewBinding.target),
     "validatedReview target does not match the prepared case",
   );
-  assertReceipt(
+  assertRecord(
     isDeepStrictEqual(
       review.snapshot.sources,
       prepared.hostInput.reviewBinding.sources,
@@ -502,19 +512,19 @@ function assertReviewMatchesPrepared(review, prepared) {
 
 function assertReviewMatchesVariant(review, variant) {
   if (variant === "legacy") {
-    assertReceipt(
+    assertRecord(
       review.causalAnalysis === undefined,
       "legacy evaluation review must not contain causalAnalysis",
     );
     return;
   }
-  assertReceipt(
+  assertRecord(
     review.causalAnalysis !== undefined,
     `${variant} evaluation review must contain causalAnalysis`,
   );
 }
 
-export function createCausalCompletenessEvaluationReceiptTemplate({
+export function createCausalCompletenessEvaluationRecordTemplate({
   brief,
   caseId,
   variant,
@@ -530,9 +540,9 @@ export function createCausalCompletenessEvaluationReceiptTemplate({
     variant,
     run,
   });
-  receiptText(model, "configuration.model", { maximum: 256 });
-  receiptText(effort, "configuration.effort", { maximum: 256 });
-  receiptText(invocationId, "invocation.id", { maximum: 512 });
+  recordText(model, "configuration.model", { maximum: 256 });
+  recordText(effort, "configuration.effort", { maximum: 256 });
+  recordText(invocationId, "invocation.id", { maximum: 512 });
   assertReviewMatchesPrepared(validatedReview, prepared);
   assertReviewMatchesVariant(validatedReview, variant);
   const recordedAssessment = validatedReview.causalAnalysis
@@ -544,8 +554,8 @@ export function createCausalCompletenessEvaluationReceiptTemplate({
       })
     : null;
   return Object.freeze({
-    receipt: Object.freeze({
-      receiptVersion: 1,
+    record: Object.freeze({
+      recordVersion: 1,
       caseId,
       suite: prepared.suite,
       variant,
@@ -584,15 +594,16 @@ export function createCausalCompletenessEvaluationReceiptTemplate({
   });
 }
 
-export function validateCausalCompletenessEvaluationReceipt(receipt, { brief }) {
-  const encoded = JSON.stringify(receipt);
-  assertReceipt(
+export function validateCausalCompletenessEvaluationRecord(record, { brief }) {
+  record = normalizeLegacyRecordTerms(record);
+  const encoded = JSON.stringify(record);
+  assertRecord(
     Buffer.byteLength(encoded, "utf8")
-      <= causalCompletenessEvaluationReceiptLimits.bytes,
-    `receipt exceeds ${causalCompletenessEvaluationReceiptLimits.bytes} bytes`,
+      <= causalCompletenessEvaluationRecordLimits.bytes,
+    `record exceeds ${causalCompletenessEvaluationRecordLimits.bytes} bytes`,
   );
-  exactKeys(receipt, [
-    "receiptVersion",
+  exactKeys(record, [
+    "recordVersion",
     "caseId",
     "suite",
     "variant",
@@ -605,54 +616,54 @@ export function validateCausalCompletenessEvaluationReceipt(receipt, { brief }) 
     "evaluator",
     "evaluatedAt",
     "sanitized",
-  ], "receipt");
-  assertReceipt(receipt.receiptVersion === 1, "receiptVersion must be 1");
-  const evaluationCase = findEvaluationCase(receipt.caseId);
+  ], "record");
+  assertRecord(record.recordVersion === 1, "recordVersion must be 1");
+  const evaluationCase = findEvaluationCase(record.caseId);
   const prepared = prepareCausalCompletenessEvaluationRun({
     brief,
-    caseId: receipt.caseId,
-    run: receipt.run,
-    variant: receipt.variant,
+    caseId: record.caseId,
+    run: record.run,
+    variant: record.variant,
   });
-  assertReceipt(receipt.suite === evaluationCase.suite, "suite does not match case");
+  assertRecord(record.suite === evaluationCase.suite, "suite does not match case");
 
   exactKeys(
-    receipt.configuration,
+    record.configuration,
     ["model", "effort", "briefVersion", "briefDigest"],
     "configuration",
   );
-  receiptText(receipt.configuration.model, "configuration.model", { maximum: 256 });
-  receiptText(receipt.configuration.effort, "configuration.effort", { maximum: 256 });
-  assertReceipt(
-    receipt.configuration.briefVersion === String(prepared.brief.version),
+  recordText(record.configuration.model, "configuration.model", { maximum: 256 });
+  recordText(record.configuration.effort, "configuration.effort", { maximum: 256 });
+  assertRecord(
+    record.configuration.briefVersion === String(prepared.brief.version),
     "configuration.briefVersion does not match the prepared brief",
   );
-  assertReceipt(
-    receipt.configuration.briefDigest === prepared.briefDigest,
+  assertRecord(
+    record.configuration.briefDigest === prepared.briefDigest,
     "configuration.briefDigest does not match the prepared brief",
   );
 
   exactKeys(
-    receipt.invocation,
+    record.invocation,
     ["id", "inputDigest", "outputDigest"],
     "invocation",
   );
-  receiptText(receipt.invocation.id, "invocation.id", { maximum: 512 });
-  assertReceipt(
-    receipt.invocation.inputDigest === prepared.inputDigest,
+  recordText(record.invocation.id, "invocation.id", { maximum: 512 });
+  assertRecord(
+    record.invocation.inputDigest === prepared.inputDigest,
     "invocation.inputDigest does not match the prepared host input",
   );
-  assertReceipt(
-    digestPattern.test(receipt.invocation.outputDigest),
+  assertRecord(
+    digestPattern.test(record.invocation.outputDigest),
     "invocation.outputDigest must be a sha256 digest",
   );
 
-  assertReceipt(receipt.sanitized === true, "sanitized must be true");
-  receiptText(receipt.evaluator, "evaluator", { maximum: 512 });
-  assertReceipt(
-    typeof receipt.evaluatedAt === "string"
-      && Number.isFinite(Date.parse(receipt.evaluatedAt))
-      && new Date(receipt.evaluatedAt).toISOString() === receipt.evaluatedAt,
+  assertRecord(record.sanitized === true, "sanitized must be true");
+  recordText(record.evaluator, "evaluator", { maximum: 512 });
+  assertRecord(
+    typeof record.evaluatedAt === "string"
+      && Number.isFinite(Date.parse(record.evaluatedAt))
+      && new Date(record.evaluatedAt).toISOString() === record.evaluatedAt,
     "evaluatedAt must be a canonical ISO timestamp",
   );
 
@@ -661,97 +672,97 @@ export function validateCausalCompletenessEvaluationReceipt(receipt, { brief }) 
     resources: storedResources,
     observedMetrics,
     ...reviewInput
-  } = receipt.validatedReview ?? {};
-  assertReceipt(
+  } = record.validatedReview ?? {};
+  assertRecord(
     observedMetrics === undefined,
     "validatedReview must not contain trusted host metrics",
   );
   const revalidated = validateToxicReview(reviewInput, {
     inputFileBytes: storedResources?.inputFileBytes,
   });
-  assertReceipt(
+  assertRecord(
     isDeepStrictEqual(revalidated.result, storedResult)
       && isDeepStrictEqual(revalidated.resources, storedResources),
     "validatedReview does not match a fresh validation",
   );
   assertReviewMatchesPrepared(revalidated, prepared);
-  assertReviewMatchesVariant(revalidated, receipt.variant);
-  assertReceipt(
-    receipt.invocation.outputDigest === digestCausalEvaluationValue(revalidated),
+  assertReviewMatchesVariant(revalidated, record.variant);
+  assertRecord(
+    record.invocation.outputDigest === digestCausalEvaluationValue(revalidated),
     "invocation.outputDigest does not match validatedReview",
   );
 
   exactKeys(
-    receipt.assessment,
+    record.assessment,
     ["claimAssessment", "causeLevel", "candidateCount", "noMaterialIssueFound"],
     "assessment",
   );
-  assertReceipt(
+  assertRecord(
     ["supported", "unsupported", "honest-uncertainty"].includes(
-      receipt.assessment.claimAssessment,
+      record.assessment.claimAssessment,
     ),
     "assessment.claimAssessment is unknown",
   );
-  assertReceipt(
+  assertRecord(
     ["structural", "local", "mixed", "inconclusive"].includes(
-      receipt.assessment.causeLevel,
+      record.assessment.causeLevel,
     ),
     "assessment.causeLevel is unknown",
   );
-  assertReceipt(
-    Number.isSafeInteger(receipt.assessment.candidateCount)
-      && receipt.assessment.candidateCount >= 0
-      && receipt.assessment.candidateCount <= 32,
+  assertRecord(
+    Number.isSafeInteger(record.assessment.candidateCount)
+      && record.assessment.candidateCount >= 0
+      && record.assessment.candidateCount <= 32,
     "assessment.candidateCount must be between 0 and 32",
   );
-  assertReceipt(
-    typeof receipt.assessment.noMaterialIssueFound === "boolean",
+  assertRecord(
+    typeof record.assessment.noMaterialIssueFound === "boolean",
     "assessment.noMaterialIssueFound must be boolean",
   );
-  assertReceipt(
-    receipt.assessment.noMaterialIssueFound
+  assertRecord(
+    record.assessment.noMaterialIssueFound
       === revalidated.summary.noMaterialIssueFound,
     "assessment.noMaterialIssueFound must match validatedReview",
   );
-  if (receipt.variant !== "legacy") {
-    assertReceipt(
-      receipt.assessment.claimAssessment
+  if (record.variant !== "legacy") {
+    assertRecord(
+      record.assessment.claimAssessment
         === revalidated.causalAnalysis.claimAssessment
-        && receipt.assessment.causeLevel
+        && record.assessment.causeLevel
           === revalidated.causalAnalysis.causeLevel
-        && receipt.assessment.candidateCount
+        && record.assessment.candidateCount
           === revalidated.causalAnalysis.candidateCount,
       "assessment must match validatedReview.causalAnalysis",
     );
   }
 
-  assertReceipt(
-    Array.isArray(receipt.rubricResults)
-      && receipt.rubricResults.length === causalCompletenessRubric.length,
+  assertRecord(
+    Array.isArray(record.rubricResults)
+      && record.rubricResults.length === causalCompletenessRubric.length,
     `rubricResults must contain ${causalCompletenessRubric.length} items`,
   );
   const seenCriteria = new Set();
   const seenRationales = new Set();
-  for (const [index, result] of receipt.rubricResults.entries()) {
+  for (const [index, result] of record.rubricResults.entries()) {
     const label = `rubricResults[${index}]`;
     exactKeys(result, ["criterionId", "passed", "rationale", "evidence"], label);
-    assertReceipt(
+    assertRecord(
       requiredRubricIds.includes(result.criterionId)
         && !seenCriteria.has(result.criterionId),
       `${label}.criterionId must be unique and known`,
     );
     seenCriteria.add(result.criterionId);
-    assertReceipt(typeof result.passed === "boolean", `${label}.passed must be boolean`);
-    receiptText(result.rationale, `${label}.rationale`);
-    assertReceipt(
+    assertRecord(typeof result.passed === "boolean", `${label}.passed must be boolean`);
+    recordText(result.rationale, `${label}.rationale`);
+    assertRecord(
       !seenRationales.has(result.rationale),
       `${label}.rationale must explain this criterion instead of repeating another result`,
     );
     seenRationales.add(result.rationale);
-    assertReceipt(
+    assertRecord(
       Array.isArray(result.evidence)
         && result.evidence.length
-          <= causalCompletenessEvaluationReceiptLimits.evidenceItemsPerCriterion
+          <= causalCompletenessEvaluationRecordLimits.evidenceItemsPerCriterion
         && (!result.passed || result.evidence.length >= 1),
       `${label}.evidence must contain supporting fields for a passing criterion`,
     );
@@ -759,26 +770,26 @@ export function validateCausalCompletenessEvaluationReceipt(receipt, { brief }) 
       const evidenceLabel = `${label}.evidence[${evidenceIndex}]`;
       exactKeys(evidence, ["pointer", "excerpt"], evidenceLabel);
       const field = decodedPointer(revalidated, evidence.pointer, evidenceLabel);
-      receiptText(evidence.excerpt, `${evidenceLabel}.excerpt`, {
+      recordText(evidence.excerpt, `${evidenceLabel}.excerpt`, {
         minimum: 12,
-        maximum: causalCompletenessEvaluationReceiptLimits.excerptCharacters,
+        maximum: causalCompletenessEvaluationRecordLimits.excerptCharacters,
       });
-      assertReceipt(
+      assertRecord(
         field.includes(evidence.excerpt),
         `${evidenceLabel}.excerpt must appear in its decoded field`,
       );
     }
   }
 
-  const failedCriteria = receipt.rubricResults
+  const failedCriteria = record.rubricResults
     .filter((result) => !result.passed)
     .map((result) => result.criterionId);
   const oracleMatched = assessmentMatchesOracle(
-    receipt.assessment,
+    record.assessment,
     evaluationCase.oracle,
   );
   return Object.freeze({
-    ...receipt,
+    ...record,
     validatedReview: revalidated,
     evaluation: Object.freeze({
       failedCriteria: Object.freeze(failedCriteria),
@@ -788,48 +799,48 @@ export function validateCausalCompletenessEvaluationReceipt(receipt, { brief }) 
   });
 }
 
-export function validateCausalCompletenessEvaluationReceiptSet(
-  receipts,
+export function validateCausalCompletenessEvaluationRecordSet(
+  records,
   { brief },
 ) {
-  assertReceipt(Array.isArray(receipts), "receipt set must be an array");
+  assertRecord(Array.isArray(records), "record set must be an array");
   const expectedKeys = new Set(expectedRunKeys());
-  assertReceipt(
-    receipts.length === expectedKeys.size,
-    `receipt set must contain ${expectedKeys.size} runs`,
+  assertRecord(
+    records.length === expectedKeys.size,
+    `record set must contain ${expectedKeys.size} runs`,
   );
-  const validated = receipts.map((receipt) => (
-    validateCausalCompletenessEvaluationReceipt(receipt, { brief })
+  const validated = records.map((record) => (
+    validateCausalCompletenessEvaluationRecord(record, { brief })
   ));
   const seenRuns = new Set();
   const seenInvocations = new Set();
   const { model, effort } = validated[0].configuration;
-  for (const receipt of validated) {
-    const key = `${receipt.caseId}:${receipt.variant}:${receipt.run}`;
-    assertReceipt(
+  for (const record of validated) {
+    const key = `${record.caseId}:${record.variant}:${record.run}`;
+    assertRecord(
       expectedKeys.has(key) && !seenRuns.has(key),
-      `receipt set repeats or does not expect ${key}`,
+      `record set repeats or does not expect ${key}`,
     );
     seenRuns.add(key);
-    assertReceipt(
-      !seenInvocations.has(receipt.invocation.id),
-      `receipt set repeats invocation ${receipt.invocation.id}`,
+    assertRecord(
+      !seenInvocations.has(record.invocation.id),
+      `record set repeats invocation ${record.invocation.id}`,
     );
-    seenInvocations.add(receipt.invocation.id);
-    assertReceipt(
-      receipt.configuration.model === model
-        && receipt.configuration.effort === effort,
-      "receipt set must use one model and effort",
+    seenInvocations.add(record.invocation.id);
+    assertRecord(
+      record.configuration.model === model
+        && record.configuration.effort === effort,
+      "record set must use one model and effort",
     );
   }
-  const passedRuns = validated.filter((receipt) => receipt.evaluation.runPassed).length;
+  const passedRuns = validated.filter((record) => record.evaluation.runPassed).length;
   const passedCriteria = validated.reduce(
-    (total, receipt) => total
-      + receipt.rubricResults.filter((result) => result.passed).length,
+    (total, record) => total
+      + record.rubricResults.filter((result) => result.passed).length,
     0,
   );
   return Object.freeze({
-    receipts: Object.freeze(validated),
+    records: Object.freeze(validated),
     summary: Object.freeze({
       totalRuns: validated.length,
       passedRuns,

@@ -1,11 +1,11 @@
 import {
   createSweepApprovalCandidate,
-  createSweepApprovalReceipt,
+  createSweepApprovalRecord,
   sweepCompletionDigest,
   sweepPlanDigest,
   sweepApprovalStatementDigest,
 } from "../features/sweep/validate.mjs";
-import { createPolishReceipt } from "../features/polish/validate.mjs";
+import { createPolishRecord } from "../features/polish/validate.mjs";
 import { SWEEP_CATEGORY_CATALOG } from "../features/sweep/constants.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
@@ -157,7 +157,7 @@ export function makeSweepApprovalCandidate(plan = makeSweepPlan()) {
   return createSweepApprovalCandidate(plan, "remove-unused-helper");
 }
 
-export function makeSweepApprovalReceipt(
+export function makeSweepApprovalRecord(
   approvalCandidate = makeSweepApprovalCandidate(),
   decision = "approved",
 ) {
@@ -173,7 +173,7 @@ export function makeSweepApprovalReceipt(
     decision,
     authoritySource,
   };
-  return createSweepApprovalReceipt({
+  return createSweepApprovalRecord({
     ...approval,
     hostAttestation: {
       version: 1,
@@ -187,13 +187,13 @@ export function makeSweepApprovalReceipt(
 }
 
 export function makeSweepPolishRun(
-  approvalReceipt = makeSweepApprovalReceipt(),
+  approvalRecord = makeSweepApprovalRecord(),
 ) {
-  const candidate = approvalReceipt.approvalCandidate.candidate;
-  const executionContract = approvalReceipt.approvalCandidate.executionContract;
+  const candidate = approvalRecord.approvalCandidate.candidate;
+  const executionContract = approvalRecord.approvalCandidate.executionContract;
   const sources = [
-    ...approvalReceipt.approvalCandidate.sources.map((source) => ({ ...source })),
-    { ...approvalReceipt.authoritySource },
+    ...approvalRecord.approvalCandidate.sources.map((source) => ({ ...source })),
+    { ...approvalRecord.authoritySource },
   ];
   const targetId = candidate.targetSourceIds[0];
   const allSourceIds = sources.map((source) => source.id);
@@ -207,11 +207,11 @@ export function makeSweepPolishRun(
     },
     composition: {
       caller: "sweep",
-      sessionId: approvalReceipt.approvalCandidate.sessionId,
-      workUnitDigest: approvalReceipt.approvalCandidate.candidateDigest,
+      sessionId: approvalRecord.approvalCandidate.sessionId,
+      workUnitDigest: approvalRecord.approvalCandidate.candidateDigest,
       executionContractDigest:
-        approvalReceipt.approvalCandidate.executionContractDigest,
-      authorityReceiptDigest: approvalReceipt.receiptDigest,
+        approvalRecord.approvalCandidate.executionContractDigest,
+      authorityRecordDigest: approvalRecord.recordDigest,
     },
     target: {
       ...structuredClone(executionContract.target),
@@ -274,7 +274,7 @@ export function makeSweepPolishRun(
     ],
     application: {
       status: "applied",
-      authoritySourceIds: [approvalReceipt.authoritySource.id],
+      authoritySourceIds: [approvalRecord.authoritySource.id],
       comparison: candidate.preview.patch,
       beforeIdentityChecked: true,
       finalIdentityChecked: true,
@@ -287,11 +287,11 @@ export function makeSweepPolishRun(
 }
 
 export function makeSweepCompletion() {
-  const approvalReceipt = makeSweepApprovalReceipt();
-  const polishReceipt = createPolishReceipt(makeSweepPolishRun(approvalReceipt));
+  const approvalRecord = makeSweepApprovalRecord();
+  const polishRecord = createPolishRecord(makeSweepPolishRun(approvalRecord));
   const sources = [
-    ...approvalReceipt.approvalCandidate.sources.map((source) => ({ ...source })),
-    { ...approvalReceipt.authoritySource },
+    ...approvalRecord.approvalCandidate.sources.map((source) => ({ ...source })),
+    { ...approvalRecord.authoritySource },
   ];
   return {
     version: 1,
@@ -300,8 +300,8 @@ export function makeSweepCompletion() {
       capturedAt: "2026-08-04T00:05:00.000Z",
       sources,
     },
-    approvalReceipt,
-    polishReceipt,
+    approvalRecord,
+    polishRecord,
     outcome: {
       status: "applied",
       outputSnapshot: null,
@@ -318,7 +318,7 @@ export function makeSweepCompletion() {
         {
           id: "repository-tests",
           name: "Repository tests",
-          method: approvalReceipt.approvalCandidate.candidate.verification[0],
+          method: approvalRecord.approvalCandidate.candidate.verification[0],
           status: "passed",
           scope: "The example repository test suite.",
           detail: "Every repository test passed.",
@@ -327,7 +327,7 @@ export function makeSweepCompletion() {
         {
           id: "reference-check",
           name: "Reference check",
-          method: approvalReceipt.approvalCandidate.candidate.verification[1],
+          method: approvalRecord.approvalCandidate.candidate.verification[1],
           status: "passed",
           scope: "Package entry points and repository references.",
           detail: "No supported reference points to the removed target.",

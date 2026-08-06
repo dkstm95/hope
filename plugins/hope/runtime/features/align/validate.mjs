@@ -922,33 +922,33 @@ export function validateAlignState(value, {
     }
     if (polish.outcome === "revised") {
       if (polish.candidateDigest === polish.resultDigest) {
-        errors.push("a revised Polish receipt must change the candidate digest");
+        errors.push("a revised Polish record must change the candidate digest");
       }
       if (polish.changeSummary.length === 0) {
-        errors.push("a revised Polish receipt requires a change summary");
+        errors.push("a revised Polish record requires a change summary");
       }
       if (readiness.state !== "ready-proposed") {
         errors.push(
-          "a revised Polish receipt requires readiness.state ready-proposed",
+          "a revised Polish record requires readiness.state ready-proposed",
         );
       }
     } else if (polish.changeSummary.length > 0) {
       errors.push(
-        `${polish.outcome} Polish receipt cannot contain a change summary`,
+        `${polish.outcome} Polish record cannot contain a change summary`,
       );
     }
     if (
       polish.outcome === "no-change"
       && polish.candidateDigest !== polish.resultDigest
     ) {
-      errors.push("a no-change Polish receipt must keep the candidate digest");
+      errors.push("a no-change Polish record must keep the candidate digest");
     }
     if (
       polish.outcome === "no-change"
       && readiness.state !== "ready-proposed"
     ) {
       errors.push(
-        "a no-change Polish receipt requires readiness.state ready-proposed",
+        "a no-change Polish record requires readiness.state ready-proposed",
       );
     }
     if (
@@ -956,7 +956,7 @@ export function validateAlignState(value, {
       && readiness.state !== "interviewing"
     ) {
       errors.push(
-        "a needs-alignment Polish receipt requires readiness.state interviewing",
+        "a needs-alignment Polish record requires readiness.state interviewing",
       );
     }
   }

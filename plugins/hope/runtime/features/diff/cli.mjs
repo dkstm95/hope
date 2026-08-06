@@ -12,11 +12,11 @@ import {
   createDiffConfirmationFromFile,
   createDiffInvocationContract,
   createDiffInvocationExampleRemovalPlan,
-  createDiffInvocationExampleRemovalReceiptFromFile,
+  createDiffInvocationExampleRemovalRecordFromFile,
   createDiffInvocationEvaluationPlan,
-  createDiffInvocationEvaluationReceiptFromFile,
+  createDiffInvocationEvaluationRecordFromFile,
   createDiffInvocationProductionVerificationPlan,
-  createDiffInvocationProductionVerificationReceiptFromFile,
+  createDiffInvocationProductionVerificationRecordFromFile,
   DIFF_MODEL_ADAPTER_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
   finishDiff,
@@ -33,12 +33,12 @@ import {
   transitionDiffConfirmationFromFile,
   validateDiff,
   validateDiffInvocationExampleRemovalEvidenceFile,
-  validateDiffInvocationExampleRemovalReceiptFile,
-  validateDiffInvocationExampleRemovalReceiptSetFile,
-  validateDiffInvocationEvaluationReceiptFile,
-  validateDiffInvocationEvaluationReceiptSetFile,
-  validateDiffInvocationProductionVerificationReceiptFile,
-  validateDiffInvocationProductionVerificationReceiptSetFile,
+  validateDiffInvocationExampleRemovalRecordFile,
+  validateDiffInvocationExampleRemovalRecordSetFile,
+  validateDiffInvocationEvaluationRecordFile,
+  validateDiffInvocationEvaluationRecordSetFile,
+  validateDiffInvocationProductionVerificationRecordFile,
+  validateDiffInvocationProductionVerificationRecordSetFile,
 } from "./index.mjs";
 import { serializeInspectionPage } from "./run.mjs";
 import { parsePullRequestTargetArgument } from "./target.mjs";
@@ -53,21 +53,21 @@ function usage() {
     "  hope diff invocation-brief",
     "  hope diff invocation-example-removal-plan",
     "  hope diff invocation-example-removal-prepare --case <id> --batch <number> --run <number>",
-    "  hope diff invocation-example-removal-receipt --case <id> --batch <number> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope diff invocation-example-removal-validate --input <receipt.json>",
-    "  hope diff invocation-example-removal-validate-set --input <receipts.json>",
+    "  hope diff invocation-example-removal-record --case <id> --batch <number> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope diff invocation-example-removal-validate --input <record.json>",
+    "  hope diff invocation-example-removal-validate-set --input <records.json>",
     "  hope diff invocation-example-removal-validate-evidence --input <evidence.json>",
     "  hope diff invocation-evaluation-plan",
     "  hope diff invocation-evaluation-prepare --case <id> --variant <minimal|rules-only|full> --run <number>",
     "  hope diff invocation-evaluation-oracle --case <id>",
-    "  hope diff invocation-evaluation-receipt --case <id> --variant <variant> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope diff invocation-evaluation-validate --input <receipt.json>",
-    "  hope diff invocation-evaluation-validate-set --input <receipts.json>",
+    "  hope diff invocation-evaluation-record --case <id> --variant <variant> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope diff invocation-evaluation-validate --input <record.json>",
+    "  hope diff invocation-evaluation-validate-set --input <records.json>",
     "  hope diff invocation-production-verification-plan",
     "  hope diff invocation-production-verification-prepare --case <id> --run <number>",
-    "  hope diff invocation-production-verification-receipt --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope diff invocation-production-verification-validate --input <receipt.json>",
-    "  hope diff invocation-production-verification-validate-set --input <receipts.json>",
+    "  hope diff invocation-production-verification-record --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope diff invocation-production-verification-validate --input <record.json>",
+    "  hope diff invocation-production-verification-validate-set --input <records.json>",
     "  hope diff resolve-target [GitHub PR URL or PR number]",
     "  hope diff confirmation-create --input <private-input.json>",
     "  hope diff confirmation-transition --input <private-input.json>",
@@ -106,25 +106,31 @@ export function parseDiffArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
   }
-  const [command, ...rest] = argv;
+  const [requestedCommand, ...rest] = argv;
+  const command = ({
+    "invocation-evaluation-receipt": "invocation-evaluation-record",
+    "invocation-example-removal-receipt": "invocation-example-removal-record",
+    "invocation-production-verification-receipt":
+      "invocation-production-verification-record",
+  })[requestedCommand] ?? requestedCommand;
   if (![
     "prepare",
     "invocation-brief",
     "invocation-example-removal-plan",
     "invocation-example-removal-prepare",
-    "invocation-example-removal-receipt",
+    "invocation-example-removal-record",
     "invocation-example-removal-validate",
     "invocation-example-removal-validate-set",
     "invocation-example-removal-validate-evidence",
     "invocation-evaluation-plan",
     "invocation-evaluation-prepare",
     "invocation-evaluation-oracle",
-    "invocation-evaluation-receipt",
+    "invocation-evaluation-record",
     "invocation-evaluation-validate",
     "invocation-evaluation-validate-set",
     "invocation-production-verification-plan",
     "invocation-production-verification-prepare",
-    "invocation-production-verification-receipt",
+    "invocation-production-verification-record",
     "invocation-production-verification-validate",
     "invocation-production-verification-validate-set",
     "resolve-target",
@@ -185,7 +191,7 @@ export function parseDiffArguments(argv) {
       run: parseEvaluationRun(options.run),
     };
   }
-  if (command === "invocation-example-removal-receipt") {
+  if (command === "invocation-example-removal-record") {
     if (positionals.length > 0) throw new TypeError(usage());
     requireCommandOptions(options, {
       required: [
@@ -234,7 +240,7 @@ export function parseDiffArguments(argv) {
       run: parseEvaluationRun(options.run),
     };
   }
-  if (command === "invocation-production-verification-receipt") {
+  if (command === "invocation-production-verification-record") {
     if (positionals.length > 0) throw new TypeError(usage());
     requireCommandOptions(options, {
       required: [
@@ -278,7 +284,7 @@ export function parseDiffArguments(argv) {
       variant: options.variant,
     };
   }
-  if (command === "invocation-evaluation-receipt") {
+  if (command === "invocation-evaluation-record") {
     if (positionals.length > 0) throw new TypeError(usage());
     requireCommandOptions(options, {
       required: [
@@ -456,20 +462,20 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   } else if (options.command === "invocation-example-removal-prepare") {
     result = (dependencies.prepareInvocationExampleRemovalRun
       ?? prepareDiffInvocationExampleRemovalRun)(options);
-  } else if (options.command === "invocation-example-removal-receipt") {
+  } else if (options.command === "invocation-example-removal-record") {
     result = await (
-      dependencies.createInvocationExampleRemovalReceipt
-        ?? createDiffInvocationExampleRemovalReceiptFromFile
+      dependencies.createInvocationExampleRemovalRecord
+        ?? createDiffInvocationExampleRemovalRecordFromFile
     )(options, dependencies);
   } else if (options.command === "invocation-example-removal-validate") {
     result = await (
-      dependencies.validateInvocationExampleRemovalReceipt
-        ?? validateDiffInvocationExampleRemovalReceiptFile
+      dependencies.validateInvocationExampleRemovalRecord
+        ?? validateDiffInvocationExampleRemovalRecordFile
     )(options.inputPath, dependencies);
   } else if (options.command === "invocation-example-removal-validate-set") {
     result = await (
-      dependencies.validateInvocationExampleRemovalReceiptSet
-        ?? validateDiffInvocationExampleRemovalReceiptSetFile
+      dependencies.validateInvocationExampleRemovalRecordSet
+        ?? validateDiffInvocationExampleRemovalRecordSetFile
     )(options.inputPath, dependencies);
   } else if (
     options.command === "invocation-example-removal-validate-evidence"
@@ -487,20 +493,20 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   } else if (options.command === "invocation-evaluation-oracle") {
     result = (dependencies.getInvocationEvaluationOracle
       ?? getDiffInvocationEvaluationOracle)(options.caseId);
-  } else if (options.command === "invocation-evaluation-receipt") {
+  } else if (options.command === "invocation-evaluation-record") {
     result = await (
-      dependencies.createInvocationEvaluationReceipt
-        ?? createDiffInvocationEvaluationReceiptFromFile
+      dependencies.createInvocationEvaluationRecord
+        ?? createDiffInvocationEvaluationRecordFromFile
     )(options, dependencies);
   } else if (options.command === "invocation-evaluation-validate") {
     result = await (
-      dependencies.validateInvocationEvaluationReceipt
-        ?? validateDiffInvocationEvaluationReceiptFile
+      dependencies.validateInvocationEvaluationRecord
+        ?? validateDiffInvocationEvaluationRecordFile
     )(options.inputPath, dependencies);
   } else if (options.command === "invocation-evaluation-validate-set") {
     result = await (
-      dependencies.validateInvocationEvaluationReceiptSet
-        ?? validateDiffInvocationEvaluationReceiptSetFile
+      dependencies.validateInvocationEvaluationRecordSet
+        ?? validateDiffInvocationEvaluationRecordSetFile
     )(options.inputPath, dependencies);
   } else if (options.command === "invocation-production-verification-plan") {
     result = (dependencies.createInvocationProductionVerificationPlan
@@ -511,25 +517,25 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     result = (dependencies.prepareInvocationProductionVerificationRun
       ?? prepareDiffInvocationProductionVerificationRun)(options);
   } else if (
-    options.command === "invocation-production-verification-receipt"
+    options.command === "invocation-production-verification-record"
   ) {
     result = await (
-      dependencies.createInvocationProductionVerificationReceipt
-        ?? createDiffInvocationProductionVerificationReceiptFromFile
+      dependencies.createInvocationProductionVerificationRecord
+        ?? createDiffInvocationProductionVerificationRecordFromFile
     )(options, dependencies);
   } else if (
     options.command === "invocation-production-verification-validate"
   ) {
     result = await (
-      dependencies.validateInvocationProductionVerificationReceipt
-        ?? validateDiffInvocationProductionVerificationReceiptFile
+      dependencies.validateInvocationProductionVerificationRecord
+        ?? validateDiffInvocationProductionVerificationRecordFile
     )(options.inputPath, dependencies);
   } else if (
     options.command === "invocation-production-verification-validate-set"
   ) {
     result = await (
-      dependencies.validateInvocationProductionVerificationReceiptSet
-        ?? validateDiffInvocationProductionVerificationReceiptSetFile
+      dependencies.validateInvocationProductionVerificationRecordSet
+        ?? validateDiffInvocationProductionVerificationRecordSetFile
     )(options.inputPath, dependencies);
   } else if (options.command === "confirmation-create") {
     result = await (

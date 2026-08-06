@@ -99,7 +99,7 @@ export async function createAlignBrief({
     polishing: Object.freeze([
       "After validation reports contractReady and before asking for approval, prepare one Polish target for the exact candidate state.",
       "Invoke Hope Polish once for that candidate digest. Preserve every fact, source, decision, uncertainty, and meaning. Do not create a new product choice.",
-      "Consume the result through Align's complete-polish transition. Do not author a Polish receipt directly.",
+      "Consume the result through Align's complete-polish transition. Do not author a Polish record directly.",
       "If Polish returns a revision, increment the Align revision, record the change, and remain contract-ready before completing the transition.",
       "If Polish returns no-change, keep the candidate. If it returns needs-alignment, increment the revision, record a blocker, and continue the interview.",
       "The transition rejects a second pass over the same candidate digest. A user change creates a new candidate and may receive one new pass.",
@@ -308,7 +308,7 @@ export async function completeAlignPolish({
     });
     if (afterInput.value.polish !== undefined) {
       throw alignPolishError(
-        "The post-Polish Align state must not contain a pre-authored receipt",
+        "The post-Polish Align state must not contain a pre-authored record",
       );
     }
     const after = (dependencies.validateAlign ?? validateAlignState)(
@@ -353,7 +353,7 @@ export async function completeAlignPolish({
     });
     if (afterInput.value.polish !== undefined) {
       throw alignPolishError(
-        "The post-Polish Align state must not contain a pre-authored receipt",
+        "The post-Polish Align state must not contain a pre-authored record",
       );
     }
     const after = (dependencies.validateAlign ?? validateAlignState)(
@@ -375,7 +375,7 @@ export async function completeAlignPolish({
     )(after);
   }
 
-  const receipt = Object.freeze({
+  const record = Object.freeze({
     candidateDigest,
     resultDigest,
     outcome: polish.outcome.status,
@@ -388,11 +388,11 @@ export async function completeAlignPolish({
   });
   const state = {
     ...authoredState,
-    polish: receipt,
+    polish: record,
   };
   const validated = (dependencies.validateAlign ?? validateAlignState)(state);
   return Object.freeze({
-    receipt,
+    record,
     result: validated.result,
     state: Object.freeze(state),
   });

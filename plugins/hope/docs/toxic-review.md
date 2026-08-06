@@ -92,7 +92,7 @@ The role does not adjudicate findings or write the final response.
 
 Every attempt ends as `succeeded`, `failed`, or `cancelled`.
 
-A trusted host receipt records the host invocation identity and the exact output
+A trusted host record records the host invocation identity and the exact output
 digest for a successful attempt.
 
 A failed or cancelled attempt records its error and may be retried without
@@ -101,7 +101,7 @@ changing the role, target, or source binding.
 The retry gets a new attempt identity.
 
 The main reviewer may adjudicate only after every selected role has a valid
-successful receipt.
+successful record.
 
 An unstarted, failed, cancelled, stale, or mismatched role result cannot become
 an empty successful review.
@@ -109,7 +109,7 @@ an empty successful review.
 The final run result keeps the role selection reason, execution mode, binding
 digests, and the full ordered attempt history beside the validated review.
 
-Every attempt receipt keeps its input digest, status, and host invocation
+Every attempt record keeps its input digest, status, and host invocation
 identity.
 
 Successful attempts also keep the output digest, while failed or cancelled
@@ -401,10 +401,10 @@ After the host has returned its result, read that case's oracle and rubric with:
 hope toxic-review evaluation-oracle --case <id>
 ```
 
-After the host validates its Toxic Review result, create a receipt template with:
+After the host validates its Toxic Review result, create a record template with:
 
 ```text
-hope toxic-review evaluation-receipt \
+hope toxic-review evaluation-record \
   --case <id> --variant <variant> --run <number> \
   --input <review.json> --model <id> --effort <level> \
   --invocation <host-invocation-id>
@@ -435,16 +435,16 @@ It does not force one arbitrary grouping merely to make scoring exact.
 Each passing rubric result cites a JSON Pointer to one decoded authored text
 field and an exact excerpt from that field.
 
-Validate one receipt with:
+Validate one record with:
 
 ```text
-hope toxic-review evaluation-validate --input <receipt.json>
+hope toxic-review evaluation-validate --input <record.json>
 ```
 
 Validate the complete release evidence with:
 
 ```text
-hope toxic-review evaluation-validate-set --input <receipts.json>
+hope toxic-review evaluation-validate-set --input <records.json>
 ```
 
 Validation rechecks the Toxic Review result and binds it to the prepared case,
@@ -458,10 +458,10 @@ It retains valid failed runs instead of dropping them.
 The complete set uses one model and effort, covers every configured run, and
 reports run totals separately from correlated rubric totals.
 
-Store bounded receipts under ignored `test-results/` or equivalent release
+Store bounded records under ignored `test-results/` or equivalent release
 evidence.
 
-Never copy private user sources into an evaluation case or receipt.
+Never copy private user sources into an evaluation case or record.
 
 These paired Skill runs are smoke evidence, not a CI model test or statistical
 guarantee.

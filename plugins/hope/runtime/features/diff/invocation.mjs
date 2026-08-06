@@ -176,7 +176,7 @@ const pendingDiff = createDiffPendingConfirmation({
 });
 
 // Version 3 is a historical evaluation fixture. Keep these cases unchanged so
-// retained receipts continue to describe the exact brief that produced them.
+// retained records continue to describe the exact brief that produced them.
 export const DIFF_INVOCATION_EVALUATION_CASES = Object.freeze([
   Object.freeze({
     expectedDecision: "execute",

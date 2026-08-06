@@ -7,12 +7,13 @@ import {
   validateWorkSnapshot,
 } from "../work-snapshot/index.mjs";
 import { createResultValidation } from "../result-validation/index.mjs";
+import { normalizeLegacyRecordTerms } from "../record-compat/index.mjs";
 import {
   POLISH_APPLICATION_STATUSES,
   POLISH_CONTRACT_VERSION,
   POLISH_LIMITS,
   POLISH_OUTCOMES,
-  POLISH_RECEIPT_VERSION,
+  POLISH_RECORD_VERSION,
   POLISH_RISKS,
   POLISH_SUPPORTED_VERSIONS,
   POLISH_VERIFICATION_STATUSES,
@@ -40,6 +41,13 @@ function includesEvery(values, required) {
   const available = new Set(values);
   return required.every((value) => available.has(value));
 }
+
+// Deprecated version 1 compatibility aliases.
+export {
+  polishRecordDigest as polishReceiptDigest,
+  createPolishRecord as createPolishReceipt,
+  validatePolishRecord as validatePolishReceipt,
+};
 
 function sourceContentIdentity(source) {
   return source.digest ?? source.revision ?? "";
@@ -138,7 +146,7 @@ export function validatePolishRun(value, {
     unknownKeys(
       compositionInput,
       [
-        "authorityReceiptDigest",
+        "authorityRecordDigest",
         "caller",
         "executionContractDigest",
         "sessionId",
@@ -164,9 +172,9 @@ export function validatePolishRun(value, {
         "composition.executionContractDigest",
         errors,
       ),
-      authorityReceiptDigest: text(
-        compositionInput.authorityReceiptDigest,
-        "composition.authorityReceiptDigest",
+      authorityRecordDigest: text(
+        compositionInput.authorityRecordDigest,
+        "composition.authorityRecordDigest",
         errors,
       ),
     };
@@ -176,7 +184,7 @@ export function validatePolishRun(value, {
     for (const key of [
       "workUnitDigest",
       "executionContractDigest",
-      "authorityReceiptDigest",
+      "authorityRecordDigest",
     ]) {
       if (!digestPattern.test(composition[key])) {
         errors.push(`composition.${key} must use the sha256: format`);
@@ -687,7 +695,7 @@ export function validatePolishRun(value, {
 
   if (["revised", "no-change"].includes(status)) {
     if (verification.length === 0) {
-      errors.push(`${status} requires at least one verification receipt`);
+      errors.push(`${status} requires at least one verification result`);
     }
     for (let index = 0; index < preservation.length; index += 1) {
       if (preservation[index].verificationIds.length === 0) {
@@ -957,7 +965,7 @@ function polishRunRecord(run) {
   };
 }
 
-function polishReceiptPayload(value) {
+function polishRecordPayload(value) {
   return {
     feature: value.feature,
     version: value.version,
@@ -966,22 +974,22 @@ function polishReceiptPayload(value) {
   };
 }
 
-export function polishReceiptDigest(value) {
+export function polishRecordDigest(value) {
   return `sha256:${createHash("sha256")
-    .update(JSON.stringify(canonicalValue(polishReceiptPayload(value))))
+    .update(JSON.stringify(canonicalValue(polishRecordPayload(value))))
     .digest("hex")}`;
 }
 
-export function createPolishReceipt(value, options = {}) {
+export function createPolishRecord(value, options = {}) {
   const run = validatePolishRun(value, options);
   if (run.version !== POLISH_CONTRACT_VERSION) {
     throw new TypeError(
-      `Hope Polish receipts require run version ${POLISH_CONTRACT_VERSION}`,
+      `Hope Polish records require run version ${POLISH_CONTRACT_VERSION}`,
     );
   }
-  const receipt = {
-    feature: "polish-receipt",
-    version: POLISH_RECEIPT_VERSION,
+  const record = {
+    feature: "polish-record",
+    version: POLISH_RECORD_VERSION,
     run: polishRunRecord(run),
     result: {
       changed: run.result.changed,
@@ -990,63 +998,69 @@ export function createPolishReceipt(value, options = {}) {
     },
   };
   return deepFreeze({
-    ...receipt,
-    receiptDigest: polishReceiptDigest(receipt),
+    ...record,
+    recordDigest: polishRecordDigest(record),
   });
 }
 
-export function validatePolishReceipt(value) {
+export function validatePolishRecord(value) {
   const errors = [];
-  const input = object(value, "polishReceipt", errors);
-  unknownKeys(
-    input,
-    ["feature", "version", "run", "result", "receiptDigest"],
-    "polishReceipt",
-    errors,
-  );
-  const feature = text(input.feature, "polishReceipt.feature", errors);
-  const version = integer(
-    input.version,
-    "polishReceipt.version",
-    errors,
-    { minimum: POLISH_RECEIPT_VERSION },
-  );
-  if (feature !== "polish-receipt") {
-    errors.push("polishReceipt.feature must be polish-receipt");
+  const legacyDigestValid = value?.feature === "polish-receipt"
+    && value.receiptDigest === polishRecordDigest(value);
+  const input = normalizeLegacyRecordTerms(value);
+  if (legacyDigestValid) {
+    input.recordDigest = polishRecordDigest(input);
   }
-  if (version !== POLISH_RECEIPT_VERSION) {
-    errors.push(`polishReceipt.version must be ${POLISH_RECEIPT_VERSION}`);
+  const recordInput = object(input, "polishRecord", errors);
+  unknownKeys(
+    recordInput,
+    ["feature", "version", "run", "result", "recordDigest"],
+    "polishRecord",
+    errors,
+  );
+  const feature = text(recordInput.feature, "polishRecord.feature", errors);
+  const version = integer(
+    recordInput.version,
+    "polishRecord.version",
+    errors,
+    { minimum: POLISH_RECORD_VERSION },
+  );
+  if (feature !== "polish-record") {
+    errors.push("polishRecord.feature must be polish-record");
+  }
+  if (version !== POLISH_RECORD_VERSION) {
+    errors.push(`polishRecord.version must be ${POLISH_RECORD_VERSION}`);
   }
 
   let run;
   try {
-    run = validatePolishRun(input.run);
+    run = validatePolishRun(recordInput.run);
   } catch (error) {
-    errors.push(`polishReceipt.run: ${error.message}`);
+    errors.push(`polishRecord.run: ${error.message}`);
   }
   if (run && run.version !== POLISH_CONTRACT_VERSION) {
     errors.push(
-      `polishReceipt.run.version must be ${POLISH_CONTRACT_VERSION}`,
+      `polishRecord.run.version must be ${POLISH_CONTRACT_VERSION}`,
     );
   }
 
-  const resultInput = object(input.result, "polishReceipt.result", errors);
+  const resultInput = object(recordInput.result, "polishRecord.result", errors);
   unknownKeys(
     resultInput,
     ["changed", "status", "verificationStatus"],
-    "polishReceipt.result",
+    "polishRecord.result",
     errors,
   );
   const result = {
     changed: boolean(
       resultInput.changed,
-      "polishReceipt.result.changed",
+      "polishRecord.result.changed",
       errors,
     ),
     status: choice(
       resultInput.status,
       POLISH_OUTCOMES,
-      "polishReceipt.result.status",
+      "polishRecord.result.status",
       errors,
     ),
     verificationStatus: choice(
@@ -1057,7 +1071,7 @@ export function validatePolishReceipt(value) {
         "failed",
         "not-completed",
       ],
-      "polishReceipt.result.verificationStatus",
+      "polishRecord.result.verificationStatus",
       errors,
     ),
   };
@@ -1065,16 +1079,16 @@ export function validatePolishReceipt(value) {
     run
     && JSON.stringify(result) !== JSON.stringify(run.result)
   ) {
-    errors.push("polishReceipt.result must match the validated Polish run");
+    errors.push("polishRecord.result must match the validated Polish run");
   }
 
-  const receiptDigest = text(
-    input.receiptDigest,
-    "polishReceipt.receiptDigest",
+  const recordDigest = text(
+    recordInput.recordDigest,
+    "polishRecord.recordDigest",
     errors,
   );
-  if (receiptDigest && !digestPattern.test(receiptDigest)) {
-    errors.push("polishReceipt.receiptDigest must use the sha256: format");
+  if (recordDigest && !digestPattern.test(recordDigest)) {
+    errors.push("polishRecord.recordDigest must use the sha256: format");
   }
   const normalized = {
     feature,
@@ -1084,20 +1098,20 @@ export function validatePolishReceipt(value) {
   };
   if (
     run
-    && receiptDigest !== polishReceiptDigest(normalized)
+    && recordDigest !== polishRecordDigest(normalized)
   ) {
-    errors.push("polishReceipt.receiptDigest does not match its normalized run");
+    errors.push("polishRecord.recordDigest does not match its normalized run");
   }
   if (serializedJsonBytes(value) > POLISH_LIMITS.inputBytes) {
-    errors.push(`polishReceipt exceeds ${POLISH_LIMITS.inputBytes} bytes`);
+    errors.push(`polishRecord exceeds ${POLISH_LIMITS.inputBytes} bytes`);
   }
   if (errors.length > 0) {
     const error = new TypeError(
-      `Hope polish receipt is invalid:\n${errors.map((item) => `- ${item}`).join("\n")}`,
+      `Hope polish record is invalid:\n${errors.map((item) => `- ${item}`).join("\n")}`,
     );
-    error.code = "HOPE_POLISH_RECEIPT_INVALID";
+    error.code = "HOPE_POLISH_RECORD_INVALID";
     error.issues = Object.freeze([...errors]);
     throw error;
   }
-  return deepFreeze({ ...normalized, receiptDigest });
+  return deepFreeze({ ...normalized, recordDigest });
 }
