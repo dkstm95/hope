@@ -548,6 +548,56 @@ change.
 
 Do not teach the whole system.
 
+An analysis may add an optional `beginnerPrimer` when a reader needs a deeper
+starting point than the ordinary Background provides.
+
+Include it only when the task requires a named concept or deeper starting
+point that the ordinary Background cannot supply.
+
+A request written for a new reader does not by itself require a primer.
+
+Omit the primer when the ordinary Background, main explanation, or a selected
+teaching aid already gives the reader enough context.
+
+The primer is separate from the ordinary Background claims, and Hope includes
+it only when it has at least one item with grounded evidence.
+
+Every item has a title, plain-language text, and a `basis` of `stated`, `code`,
+or `inferred`.
+
+Use `code` when the item paraphrases a mechanism directly established by code
+evidence.
+
+Explaining that mechanism in plain language does not make it inferred.
+
+Use `inferred` only when the item's material meaning goes beyond what the cited
+evidence directly establishes.
+
+Split direct behavior from a broader definition when one basis cannot
+accurately cover both claims.
+
+Each item must include at least one evidence reference that is valid for that
+basis.
+
+An empty primer, `unknown` basis, empty evidence, or unsupported evidence is
+invalid.
+
+When the model cannot support the primer, it omits the field and the artifact
+shows no empty placeholder.
+
+The rendered primer stays inside Background as a native disclosure.
+
+It is closed by default so the ordinary reading path remains short.
+
+A fragment link to the primer or one of its evidence items opens every
+containing disclosure and moves focus to the target.
+
+The same content remains available without JavaScript, and print styles expand
+the closed primer.
+
+The summary control has an accessible name, supports keyboard operation, and
+keeps its content usable on wide and narrow screens.
+
 ### Core change
 
 Use the required core details to explain how the change works, which conditions
@@ -1078,6 +1128,18 @@ Use `included` when the analysis contains the aid, `omitted` when the aid was
 considered but prose or another aid already performs its teaching job, and
 `not-applicable` when the change has no matching relationship or prediction.
 
+Classify each aid in this order:
+
+1. Identify this aid's distinct teaching job from the task and evidence. Do not
+   infer one merely because the source contains a sequence, identifier, or
+   technical term.
+2. Use `not-applicable` when this aid has no distinct teaching job. The change
+   may still have behavior, and another aid may still be useful.
+3. Use `omitted` when the aid has a distinct teaching job but prose or another
+   selected aid already performs it clearly.
+4. Use `included` only when the aid still makes that job materially easier to
+   understand.
+
 Record a short reason for every decision.
 
 An included aid also records its distinct teaching job.
@@ -1115,10 +1177,52 @@ Generated plugin and harness preparation expose the same cases.
 Aggregate the per-aid inclusion counters across evaluation runs so an aid that
 is never selected is visible.
 
-Use a flow for a sequence, a decision table for meaningful branches, a sequence
-view for ordered interaction, and a component map for structure.
+Choose a visual from the task's teaching job, not from every relationship that
+happens to appear in the evidence.
+
+Use a flow when runtime data movement or control flow is the teaching job, a
+decision table for meaningful branches and outcomes, a sequence view only when
+time order or ordered messages are themselves the teaching job, and a component
+map for fixed components, responsibilities, calls, or handoffs.
+
+A call does not by itself make time order the teaching job.
+
+Do not add a visual when the task's only deeper need is a concept definition
+already handled by the beginner primer, or when the ordinary explanation makes
+a short relationship easy to follow.
+
+Use `not-applicable` for a presentation-only change with no flow, branch,
+component relationship, interaction, state transition, or prediction to
+visualize.
+
+Do not use `omitted` merely because the ordinary Background already explains
+that presentation-only change.
 
 A visual clarifies prose; it does not decorate the page.
+
+When a visual explains data movement or control flow, include concrete example
+values in its existing `caption`, `detail`, message-label, or table-cell text when
+those values make the relationship easier to follow.
+
+Ground each value in the review evidence and say when it is simplified or
+inferred.
+
+Use only the smallest set of concrete values needed for the visual's teaching
+job.
+
+Record one underlying evidence value once.
+
+Do not repeat it in cardinal, ordinal, or paraphrased form or for another
+visual field.
+
+Do not treat code identifiers, component names, or prose step labels as
+concrete example values merely because they appear in evidence.
+
+A static component relationship with no meaningful values does not need
+invented examples.
+
+This rule is part of teaching-aid contract version 6 and does not add a
+separate example-value field.
 
 The review may contain one optional microworld as a visually separate **Try
 it** block inside **Behavior flow**.

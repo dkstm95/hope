@@ -16,14 +16,19 @@ import {
   createDiffInvocationEvaluationRecordFromFile,
   createDiffInvocationProductionVerificationPlan,
   createDiffInvocationProductionVerificationRecordFromFile,
+  createDiffTeachingEvaluationFailureRecordFromOptions,
+  createDiffTeachingEvaluationPlan,
+  createDiffTeachingEvaluationRecordFromFile,
   DIFF_MODEL_ADAPTER_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
   finishDiff,
   getDiffInvocationEvaluationOracle,
+  getDiffTeachingEvaluationOracle,
   prepareDiff,
   prepareDiffInvocationExampleRemovalRun,
   prepareDiffInvocationEvaluationRun,
   prepareDiffInvocationProductionVerificationRun,
+  prepareDiffTeachingEvaluationRun,
   readDiffPage,
   readDiffWindow,
   readDiffLedger,
@@ -38,6 +43,8 @@ import {
   validateDiffInvocationEvaluationRecordSetFile,
   validateDiffInvocationProductionVerificationRecordFile,
   validateDiffInvocationProductionVerificationRecordSetFile,
+  validateDiffTeachingEvaluationRecordFile,
+  validateDiffTeachingEvaluationRecordSetFile,
 } from "./index.mjs";
 import { serializeInspectionPage } from "./run.mjs";
 import { parsePullRequestTargetArgument } from "./target.mjs";
@@ -67,6 +74,13 @@ function usage() {
     "  hope diff invocation-production-verification-record --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
     "  hope diff invocation-production-verification-validate --input <record.json>",
     "  hope diff invocation-production-verification-validate-set --input <records.json>",
+    "  hope diff teaching-evaluation-plan",
+    "  hope diff teaching-evaluation-prepare --case <id> --run <number>",
+    "  hope diff teaching-evaluation-oracle --case <id>",
+    "  hope diff teaching-evaluation-record --case <id> --run <number> --attempt <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope diff teaching-evaluation-failure-record --case <id> --run <number> --attempt <number> --code <code> --message <message> --retryable <true|false> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope diff teaching-evaluation-validate --input <record.json>",
+    "  hope diff teaching-evaluation-validate-set --input <records.json>",
     "  hope diff resolve-target [GitHub PR URL or PR number]",
     "  hope diff confirmation-create --input <private-input.json>",
     "  hope diff confirmation-transition --input <private-input.json>",
@@ -101,6 +115,11 @@ function parseEvaluationRun(value) {
   return run;
 }
 
+function parseEvaluationBoolean(value) {
+  if (value !== "true" && value !== "false") throw new TypeError(usage());
+  return value === "true";
+}
+
 export function parseDiffArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
@@ -132,6 +151,13 @@ export function parseDiffArguments(argv) {
     "invocation-production-verification-record",
     "invocation-production-verification-validate",
     "invocation-production-verification-validate-set",
+    "teaching-evaluation-plan",
+    "teaching-evaluation-prepare",
+    "teaching-evaluation-oracle",
+    "teaching-evaluation-record",
+    "teaching-evaluation-failure-record",
+    "teaching-evaluation-validate",
+    "teaching-evaluation-validate-set",
     "resolve-target",
     "confirmation-create",
     "confirmation-transition",
@@ -153,6 +179,7 @@ export function parseDiffArguments(argv) {
     || command === "invocation-example-removal-plan"
     || command === "invocation-evaluation-plan"
     || command === "invocation-production-verification-plan"
+    || command === "teaching-evaluation-plan"
   ) {
     if (rest.length > 0) throw new TypeError(usage());
     return { command };
@@ -174,6 +201,10 @@ export function parseDiffArguments(argv) {
       "model",
       "effort",
       "invocation",
+      "attempt",
+      "code",
+      "message",
+      "retryable",
     ],
     prefix: "Hope diff",
     repeatable: ["request"],
@@ -220,6 +251,86 @@ export function parseDiffArguments(argv) {
     command === "invocation-example-removal-validate"
     || command === "invocation-example-removal-validate-set"
     || command === "invocation-example-removal-validate-evidence"
+  ) {
+    if (positionals.length > 0) throw new TypeError(usage());
+    requireCommandOptions(options, { required: ["input"] });
+    return { command, inputPath: options.input };
+  }
+  if (command === "teaching-evaluation-prepare") {
+    if (positionals.length > 0) throw new TypeError(usage());
+    requireCommandOptions(options, { required: ["case", "run"] });
+    return {
+      command,
+      caseId: options.case,
+      run: parseEvaluationRun(options.run),
+    };
+  }
+  if (command === "teaching-evaluation-oracle") {
+    if (positionals.length > 0) throw new TypeError(usage());
+    requireCommandOptions(options, { required: ["case"] });
+    return { command, caseId: options.case };
+  }
+  if (command === "teaching-evaluation-record") {
+    if (positionals.length > 0) throw new TypeError(usage());
+    requireCommandOptions(options, {
+      required: [
+        "attempt",
+        "case",
+        "effort",
+        "host",
+        "input",
+        "invocation",
+        "model",
+        "run",
+      ],
+    });
+    return {
+      attempt: parseEvaluationRun(options.attempt),
+      caseId: options.case,
+      command,
+      effort: options.effort,
+      host: options.host,
+      inputPath: options.input,
+      invocationId: options.invocation,
+      model: options.model,
+      run: parseEvaluationRun(options.run),
+    };
+  }
+  if (command === "teaching-evaluation-failure-record") {
+    if (positionals.length > 0) throw new TypeError(usage());
+    requireCommandOptions(options, {
+      required: [
+        "attempt",
+        "case",
+        "code",
+        "effort",
+        "host",
+        "invocation",
+        "message",
+        "model",
+        "retryable",
+        "run",
+      ],
+    });
+    return {
+      attempt: parseEvaluationRun(options.attempt),
+      caseId: options.case,
+      command,
+      effort: options.effort,
+      failure: {
+        code: options.code,
+        message: options.message,
+        retryable: parseEvaluationBoolean(options.retryable),
+      },
+      host: options.host,
+      invocationId: options.invocation,
+      model: options.model,
+      run: parseEvaluationRun(options.run),
+    };
+  }
+  if (
+    command === "teaching-evaluation-validate"
+    || command === "teaching-evaluation-validate-set"
   ) {
     if (positionals.length > 0) throw new TypeError(usage());
     requireCommandOptions(options, { required: ["input"] });
@@ -325,6 +436,10 @@ export function parseDiffArguments(argv) {
     || options.model
     || options.effort
     || options.invocation
+    || options.attempt
+    || options.code
+    || options.message
+    || options.retryable
   ) {
     throw new TypeError(usage());
   }
@@ -483,6 +598,36 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       dependencies.validateInvocationExampleRemovalEvidence
         ?? validateDiffInvocationExampleRemovalEvidenceFile
     )(options.inputPath, dependencies);
+  } else if (options.command === "teaching-evaluation-plan") {
+    result = (dependencies.createTeachingEvaluationPlan
+      ?? createDiffTeachingEvaluationPlan)();
+  } else if (options.command === "teaching-evaluation-prepare") {
+    result = await (dependencies.prepareTeachingEvaluationRun
+      ?? prepareDiffTeachingEvaluationRun)(options);
+  } else if (options.command === "teaching-evaluation-oracle") {
+    result = (dependencies.getTeachingEvaluationOracle
+      ?? getDiffTeachingEvaluationOracle)(options.caseId);
+  } else if (options.command === "teaching-evaluation-record") {
+    result = await (dependencies.createTeachingEvaluationRecordFromFile
+      ?? createDiffTeachingEvaluationRecordFromFile)(options, dependencies);
+  } else if (options.command === "teaching-evaluation-failure-record") {
+    result = await (dependencies.createTeachingEvaluationFailureRecord
+      ?? createDiffTeachingEvaluationFailureRecordFromOptions)(
+      options,
+      dependencies,
+    );
+  } else if (options.command === "teaching-evaluation-validate") {
+    result = await (dependencies.validateTeachingEvaluationRecordFile
+      ?? validateDiffTeachingEvaluationRecordFile)(
+      options.inputPath,
+      dependencies,
+    );
+  } else if (options.command === "teaching-evaluation-validate-set") {
+    result = await (dependencies.validateTeachingEvaluationRecordSetFile
+      ?? validateDiffTeachingEvaluationRecordSetFile)(
+      options.inputPath,
+      dependencies,
+    );
   } else if (options.command === "invocation-evaluation-plan") {
     result = (dependencies.createInvocationEvaluationPlan
       ?? createDiffInvocationEvaluationPlan)();

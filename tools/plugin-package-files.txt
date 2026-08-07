@@ -51,6 +51,7 @@ runtime/features/diff/redact.mjs
 runtime/features/diff/render.mjs
 runtime/features/diff/run.mjs
 runtime/features/diff/target.mjs
+runtime/features/diff/teaching-aid-evaluation.mjs
 runtime/features/diff/teaching-aids.mjs
 runtime/features/diff/text.mjs
 runtime/features/diff/validate.mjs

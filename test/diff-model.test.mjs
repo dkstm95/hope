@@ -63,6 +63,69 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   );
 });
 
+test("beginner primer requires grounded items and stays optional", () => {
+  const snapshot = makeSnapshot();
+  const withoutPrimer = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
+  assert.deepEqual(withoutPrimer.beginnerPrimer, []);
+
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.beginnerPrimer = [{
+    basis: "code",
+    evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
+    text: "A retry boundary is the point where the branch passes its final failure to the caller.",
+    title: "Retry boundary",
+  }];
+  const validated = validateAnalysis(analysis, snapshot, { runId });
+  assert.equal(validated.beginnerPrimer.length, 1);
+  assert.equal(validated.beginnerPrimer[0].title, "Retry boundary");
+  assert.ok(validated.resources.authoredProseBytes > withoutPrimer.resources.authoredProseBytes);
+});
+
+test("beginner primer rejects empty, unknown, and mismatched grounding", () => {
+  const snapshot = makeSnapshot();
+  const cases = [
+    {
+      message: /beginnerPrimer needs at least 1 item/u,
+      value: [],
+    },
+    {
+      message: /beginnerPrimer\[0\]\.basis must be one of stated, code, inferred/u,
+      value: [{
+        basis: "unknown",
+        evidence: [],
+        text: "Unknown primer",
+        title: "Unknown",
+      }],
+    },
+    {
+      message: /beginnerPrimer\[0\]\.evidence must include evidence/u,
+      value: [{
+        basis: "inferred",
+        evidence: [],
+        text: "Ungrounded primer",
+        title: "Missing evidence",
+      }],
+    },
+    {
+      message: /beginnerPrimer\[0\] uses code as a stated-source basis/u,
+      value: [{
+        basis: "stated",
+        evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
+        text: "A stated primer cannot cite a patch.",
+        title: "Wrong source kind",
+      }],
+    },
+  ];
+  for (const { message, value } of cases) {
+    const analysis = makeAnalysis(snapshot, runId);
+    analysis.beginnerPrimer = value;
+    assert.throws(
+      () => validateAnalysis(analysis, snapshot, { runId }),
+      message,
+    );
+  }
+});
+
 test("only material collection limits make the review scope limited", () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);

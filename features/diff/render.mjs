@@ -482,6 +482,24 @@ function collapsibleSection({ id, title, content, initiallyOpen = false }) {
   </details>`;
 }
 
+function beginnerPrimerBlock(review, dictionary, codeHighlighter) {
+  if (review.beginnerPrimer.length === 0) return "";
+  const claims = review.beginnerPrimer.map(
+    (item) => titledClaim(item, dictionary, review, codeHighlighter),
+  );
+  return `<details class="beginner-primer" id="beginner-primer">
+    <summary class="beginner-primer-summary" aria-label="${html(label(dictionary, "background.beginnerPrimer"))}">
+      <span>${html(label(dictionary, "background.beginnerPrimer"))}</span>
+      <span class="beginner-primer-hint">${html(label(dictionary, "background.beginnerPrimerHint"))}</span>
+    </summary>
+    <div class="beginner-primer-content">
+      ${claims.length > 1
+        ? `<ul class="titled-claim-list">${claims.map((claim) => `<li>${claim}</li>`).join("")}</ul>`
+        : claims.join("")}
+    </div>
+  </details>`;
+}
+
 function teachingAidChoices(review, dictionary) {
   const choices = TEACHING_AID_NAMES.map((name) => {
     const choice = review.teachingAids[name];
@@ -920,17 +938,18 @@ function evidenceSection(review, dictionary, codeHighlighter) {
 
 function buildSections(review, dictionary, codeHighlighter) {
   const sections = [];
-  if (review.background.length > 0) {
+  if (review.background.length > 0 || review.beginnerPrimer.length > 0) {
     const backgroundClaims = review.background.map(
       (item) => titledClaim(item, dictionary, review, codeHighlighter),
     );
     sections.push({
       html: section({
-        content: backgroundClaims.length > 1
+        content: `${backgroundClaims.length > 1
           ? `<ul class="titled-claim-list">${backgroundClaims.map(
             (claim) => `<li>${claim}</li>`,
           ).join("")}</ul>`
-          : backgroundClaims.join(""),
+          : backgroundClaims.join("")
+        }${beginnerPrimerBlock(review, dictionary, codeHighlighter)}`,
         id: "background",
         title: label(dictionary, "section.background"),
       }),
@@ -1685,6 +1704,44 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .review-section-collapsible[open] > .section-heading::after {
   transform: rotate(90deg);
+}
+.beginner-primer {
+  margin-top: ${space4}px;
+  border: 1px solid var(--component-border);
+  border-radius: ${space2}px;
+  background: var(--panel);
+}
+.beginner-primer-summary {
+  display: flex;
+  min-height: 44px;
+  padding: ${space2}px ${space3}px;
+  align-items: center;
+  gap: ${space2}px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+}
+.beginner-primer-summary::-webkit-details-marker { display: none; }
+.beginner-primer-summary::after {
+  margin-left: auto;
+  content: "›";
+  color: var(--accent);
+  transition: transform 120ms ease;
+}
+.beginner-primer[open] > .beginner-primer-summary::after {
+  transform: rotate(90deg);
+}
+.beginner-primer-hint {
+  color: var(--muted);
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 400;
+}
+.beginner-primer-content {
+  padding: 0 ${space3}px ${space3}px;
+}
+.beginner-primer-content > .titled-claim-list,
+.beginner-primer-content > .explanation-step {
+  margin-top: ${space2}px;
 }
 .section-heading {
   display: flex;
@@ -2555,7 +2612,8 @@ td:first-child {
   }
   .review-item-compact .status,
   .review-item-compact .importance,
-  .review-empty {
+  .review-empty,
+  .beginner-primer-hint {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
     line-height: ${TYPE.supporting.narrow.lineHeight};
   }
@@ -2693,12 +2751,16 @@ ${syntaxStyles}
   .microworld,
   .quiz-question { break-inside: avoid; }
   .review-section-collapsible > .section-content,
+  .beginner-primer > .beginner-primer-content,
   .evidence-group > .evidence-group-content,
   .context-check > .disclosure-content,
   .scope-limit > .disclosure-content,
   .scope-limit-item > .scope-limit-item-content,
   .artifact-details > dl {
     display: block !important;
+  }
+  .beginner-primer::details-content {
+    content-visibility: visible;
   }
   .quiz-question > .quiz-workspace,
   .quiz-answer > .quiz-answer-content {

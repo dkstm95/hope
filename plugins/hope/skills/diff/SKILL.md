@@ -199,6 +199,55 @@ record set.
 
 Deterministic contract tests are not model-behavior evidence.
 
+## Evaluate teaching-aid and primer behavior
+
+Use this workflow only when the person explicitly asks to evaluate Diff's
+teaching-aid or beginner-primer behavior.
+
+Run `teaching-evaluation-plan` through the same runtime command.
+
+For every listed run, call `teaching-evaluation-prepare` with its case and run
+number.
+
+Give a fresh host only the returned `brief`, `hostInput`, and
+`outputContract`.
+
+Do not read the oracle or show it to that host before the host returns one JSON
+object or the attempt fails.
+
+After a valid host output, call `teaching-evaluation-oracle`, then create the
+attempt with `teaching-evaluation-record`.
+
+Pass the case, run, attempt, exact host, model, effort, invocation identity, and
+private output file.
+
+When the host fails, is cancelled, or returns malformed output, create the
+attempt with `teaching-evaluation-failure-record`.
+
+Record its code, message, retryability, and the same host-owned identities.
+
+Keep every record.
+
+Attempts for one run start at 1 and remain contiguous.
+
+Retry only a retryable failed attempt.
+
+Do not retry a valid output merely to replace an incorrect decision.
+
+Validate each record with `teaching-evaluation-validate` and the complete array
+with `teaching-evaluation-validate-set`.
+
+Records created by these CLI commands are synthetic diagnostic evidence.
+
+They cannot authorize release.
+
+Release evidence must use a configured trusted runner adapter that calls the
+same shared runtime with one verified host attestation per attempt and a second
+verification of the complete attempt ledger.
+
+Do not claim release readiness unless the complete set returns
+`release-ready`.
+
 ## Prepare
 
 If the person supplied a GitHub pull request URL, pass it to `prepare`.

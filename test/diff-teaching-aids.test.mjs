@@ -42,8 +42,52 @@ function controls({
 test("the shared teaching-aid contract owns selection and omission decisions", () => {
   const contract = createTeachingAidContract();
   assert.equal(contract.analysisVersion, 2);
-  assert.equal(contract.version, 2);
+  assert.equal(contract.version, 6);
+  assert.deepEqual(contract.visual.authoring.exampleValues.fields, [
+    "caption",
+    "detail",
+    "message label",
+    "row cell",
+  ]);
+  assert.match(
+    contract.visual.authoring.exampleValues.inclusion,
+    /concrete example values/u,
+  );
+  assert.match(
+    contract.visual.authoring.exampleValues.omission,
+    /Do not invent/u,
+  );
+  assert.match(
+    contract.visual.authoring.exampleValues.notValues,
+    /identifiers.*component names.*step labels/u,
+  );
+  assert.match(
+    contract.visual.authoring.exampleValues.deduplication,
+    /cardinal.*ordinal.*paraphrased/u,
+  );
+  assert.match(
+    contract.visual.authoring.kindSelection["component-map"],
+    /fixed components.*handoffs/u,
+  );
+  assert.match(
+    contract.visual.authoring.kindSelection.sequence,
+    /time order.*ordered messages/u,
+  );
+  assert.match(
+    contract.visual.authoring.selection.presentationOnly,
+    /not-applicable.*presentation-only.*not.*omitted/u,
+  );
+  assert.match(
+    contract.beginnerPrimer.omission,
+    /new reader.*does not.*require a primer/u,
+  );
+  assert.match(
+    contract.beginnerPrimer.grounding.code,
+    /directly established by code evidence/u,
+  );
   assert.deepEqual(contract.decisions.aids, ["visual", "microworld", "quiz"]);
+  assert.equal(contract.decisions.classificationOrder.length, 4);
+  assert.match(contract.omission.notApplicable, /specific aid/u);
   assert.deepEqual(
     contract.selectionOrder.map((item) => item.aid),
     ["microworld", "visual", "quiz"],
@@ -87,7 +131,7 @@ test("the shared teaching-aid contract owns selection and omission decisions", (
 
 test("the runtime creates an exhaustive bounded microworld skeleton", () => {
   const skeleton = createMicroworldSkeleton({ controls: controls() });
-  assert.equal(skeleton.version, 2);
+  assert.equal(skeleton.version, 6);
   assert.equal(skeleton.scenarios.length, 4);
   assert.deepEqual(
     skeleton.scenarios.map((scenario) => scenario.when),

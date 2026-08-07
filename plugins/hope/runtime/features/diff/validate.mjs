@@ -64,6 +64,7 @@ const analysisFields = Object.freeze([
   "coreChange",
   "contextChecks",
   "background",
+  "beginnerPrimer",
   "behavior",
   "codeSteps",
   "reviewItems",
@@ -337,6 +338,30 @@ function claim(value, name, sourceMap, { title = false } = {}) {
     evidence,
     text: text(value.text, `${name}.text`),
     ...(title ? { title: text(value.title, `${name}.title`) } : {}),
+  });
+}
+
+function primerClaim(value, name, sourceMap) {
+  object(value, name, ["title", "text", "basis", "evidence"]);
+  const basis = enumeration(value.basis, `${name}.basis`, aidBases);
+  const evidence = evidenceList(value.evidence, `${name}.evidence`, sourceMap);
+  if (
+    basis === "stated"
+    && evidence.some((item) => !statedSources.has(item.sourceKind))
+  ) {
+    throw new Error(`${name} uses code as a stated-source basis`);
+  }
+  if (
+    basis === "code"
+    && evidence.some((item) => !codeSources.has(item.sourceKind))
+  ) {
+    throw new Error(`${name} uses non-code evidence as a code basis`);
+  }
+  return Object.freeze({
+    basis,
+    evidence,
+    text: text(value.text, `${name}.text`),
+    title: text(value.title, `${name}.title`),
   });
 }
 
@@ -976,6 +1001,11 @@ function validateAnalysisValue(analysis, snapshot, {
     : array(analysis.background, "background", 8).map(
       (value, index) => claim(value, `background[${index}]`, sourceMap, { title: true }),
     );
+  const beginnerPrimer = analysis.beginnerPrimer === undefined
+    ? []
+    : boundedArray(analysis.beginnerPrimer, "beginnerPrimer", 1, 8).map(
+      (value, index) => primerClaim(value, `beginnerPrimer[${index}]`, sourceMap),
+    );
   let behavior;
   if (analysis.behavior !== undefined) {
     object(analysis.behavior, "behavior", [
@@ -1090,6 +1120,7 @@ function validateAnalysisValue(analysis, snapshot, {
       codeSteps,
       contextChecks,
       coreChange,
+      beginnerPrimer,
       purpose,
       quiz,
       reviewItems,
@@ -1119,6 +1150,7 @@ function validateAnalysisValue(analysis, snapshot, {
   return Object.freeze({
     analysisSchemaVersion: ANALYSIS_VERSION,
     background: Object.freeze(background),
+    beginnerPrimer: Object.freeze(beginnerPrimer),
     behavior,
     codeSteps: Object.freeze(codeSteps),
     contextChecks: Object.freeze(contextChecks),
@@ -1147,7 +1179,7 @@ function validateAnalysisValue(analysis, snapshot, {
 function analysisIssue(error, path) {
   const message = error instanceof Error ? error.message : String(error);
   const inferredPath = message.match(
-    /^(?:analysis|background|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|teachingAids)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
+    /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|teachingAids)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
   )?.[0] ?? "analysis";
   let code = "ANALYSIS_CONTRACT";
   if (message.includes("evidence limit")) code = "EVIDENCE_RANGE_LIMIT";
@@ -1247,6 +1279,16 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
     values?.forEach((value, index) => capture(
       `background[${index}]`,
       () => claim(value, `background[${index}]`, sourceMap, { title: true }),
+    ));
+  }
+  if (analysis.beginnerPrimer !== undefined) {
+    const values = capture(
+      "beginnerPrimer",
+      () => boundedArray(analysis.beginnerPrimer, "beginnerPrimer", 1, 8),
+    );
+    values?.forEach((value, index) => capture(
+      `beginnerPrimer[${index}]`,
+      () => primerClaim(value, `beginnerPrimer[${index}]`, sourceMap),
     ));
   }
   capture("behavior", () => {

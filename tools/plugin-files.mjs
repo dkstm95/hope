@@ -213,6 +213,7 @@ export const generatedPluginFiles = Object.freeze([
     "render.mjs",
     "run.mjs",
     "target.mjs",
+    "teaching-aid-evaluation.mjs",
     "teaching-aids.mjs",
     "text.mjs",
     "validate.mjs",

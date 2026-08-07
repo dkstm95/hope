@@ -337,6 +337,22 @@ The runtime also returns the versioned teaching-aid decision, selection, and
 authoring-safety contract with representative evaluation cases, and can generate
 the complete condition skeleton for a bounded microworld.
 
+The Diff core also owns a separate teaching-aid and beginner-primer evaluation
+protocol.
+
+It prepares five paired Korean and English cases with the exact active analysis
+schema, writing standard, and teaching-aid contract while keeping each oracle
+hidden from the reviewing host.
+
+The shared model-evaluation evidence boundary binds every successful or failed
+attempt to its configuration, invocation, input, output, and oracle result.
+
+Synthetic CLI records support deterministic tests and diagnostics but cannot
+authorize release.
+
+A trusted runner must attest every attempt and verify the complete contiguous
+ledger before the set can return `release-ready`.
+
 The validator keeps every decision and its reason.
 
 The renderer shows all three decisions, including intentional omissions, in the
