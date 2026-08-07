@@ -221,6 +221,12 @@ attempt with `teaching-evaluation-record`.
 Pass the case, run, attempt, exact host, model, effort, invocation identity, and
 private output file.
 
+When a configured trusted runner returns an attestation file, pass it
+separately with `--attestation`.
+
+Do not place the proof in model-authored output or construct, edit, or infer an
+attestation from that output.
+
 When the host fails, is cancelled, or returns malformed output, create the
 attempt with `teaching-evaluation-failure-record`.
 
@@ -244,6 +250,13 @@ They cannot authorize release.
 Release evidence must use a configured trusted runner adapter that calls the
 same shared runtime with one verified host attestation per attempt and a second
 verification of the complete attempt ledger.
+
+Set `HOPE_MODEL_EVALUATION_ATTESTATION_ADAPTER_MODULE` to that trusted local
+verifier module for record and validation commands.
+
+Use the same adapter and campaign for every attempt in the set.
+
+Do not fabricate a proof when the runner or adapter is unavailable.
 
 Do not claim release readiness unless the complete set returns
 `release-ready`.

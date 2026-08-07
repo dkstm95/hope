@@ -109,6 +109,76 @@ location.
 
 Never put private user content into a checked-in evaluation case or record.
 
+### Trusted host-attestation adapter
+
+Hope verifies host evidence but does not create it.
+
+The trusted runner owns the model invocation, fresh host context, immutable
+event identity, exact output or failure, campaign identity, private signing
+key, and complete attempt ledger. Hope never signs a record or claims that its
+CLI observed a host model run.
+
+Configure a local verifier module with
+`HOPE_MODEL_EVALUATION_ATTESTATION_ADAPTER_MODULE`.
+
+The value may be absolute or relative to the command's working directory.
+Loading the module executes trusted local code, so configure only a module
+controlled by the runner or release operator.
+
+The module must export `default` or `adapter` with this synchronous contract:
+
+```js
+{
+  version: 1,
+  issuer: "runner-controlled issuer",
+  capabilities: {
+    hostInvocationIdentity: true,
+    completeAttemptLedger: true,
+  },
+  verifyAttestation(attestation, boundStatement) { return true; },
+  verifyCompleteAttemptLedger(manifest) { return true; },
+}
+```
+
+Returning a promise, a truthy non-boolean value, or anything other than the
+literal `true` rejects the evidence.
+
+`verifyAttestation` must bind the runner campaign, immutable host event,
+issuer, issue time, and exact statement digest. The statement includes the
+declared configuration, evaluation contract, invocation identity, and run
+specification.
+
+`verifyCompleteAttemptLedger` must use runner-owned state to confirm the exact
+manifest presented by Hope. Its decision must cover every planned run and all
+attempts, including failures, cancellations, malformed outputs, and retries.
+It must reject a caller-selected subset even when every submitted record has a
+valid individual signature.
+
+Hope includes an Ed25519 verifier helper for adapters with one trusted public
+key. Attempt proofs use `ed25519:<base64url-signature>` over Hope's versioned
+attempt signing payload. A complete-ledger proof uses the same format over a
+versioned payload that binds `campaignId`, `issuer`, and the exact manifest
+digest. The adapter retains that signed complete-ledger record outside the
+submitted evaluation records.
+
+Check the active adapter without exposing its key or ledger:
+
+```text
+hope model-evaluation host-attestation-status
+```
+
+Record commands that support trusted evidence accept the runner's bounded
+attestation JSON separately:
+
+```text
+hope diff teaching-evaluation-record ... --attestation <runner-attestation.json>
+```
+
+Use the same configured adapter when validating individual records and the
+complete set. Without the adapter, an attestation is rejected. Without a
+verified complete ledger, individually attested records remain ineligible for
+release.
+
 ## Compare variants
 
 Start with one complete contract as the baseline.
@@ -253,6 +323,11 @@ ledger.
 CLI-created records are synthetic and cannot authorize release. A trusted
 runner must attest every exact statement and verify the complete attempt
 ledger. Validation fails closed when either verifier is missing.
+
+The teaching record and failure-record commands accept the runner's attestation
+through `--attestation`. The file remains separate from model-authored output.
+Set `HOPE_MODEL_EVALUATION_ATTESTATION_ADAPTER_MODULE` for record and validation
+commands so both paths use the same trust root.
 
 Release is ready only when the latest attempt for all ten runs passes and the
 complete set is host-attested.

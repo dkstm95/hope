@@ -4,6 +4,9 @@
 import { takeOptions } from "../command-options/index.mjs";
 import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
+  prepareHopeModelEvaluationEvidenceCommand,
+} from "../model-evaluation/host-attestation.mjs";
+import {
   addDiffContext,
   buildMicroworldSkeleton,
   cancelDiff,
@@ -78,8 +81,8 @@ function usage() {
     "  hope diff teaching-evaluation-plan",
     "  hope diff teaching-evaluation-prepare --case <id> --run <number>",
     "  hope diff teaching-evaluation-oracle --case <id>",
-    "  hope diff teaching-evaluation-record --case <id> --run <number> --attempt <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
-    "  hope diff teaching-evaluation-failure-record --case <id> --run <number> --attempt <number> --code <code> --message <message> --retryable <true|false> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope diff teaching-evaluation-record --case <id> --run <number> --attempt <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id> [--attestation <runner-attestation.json>]",
+    "  hope diff teaching-evaluation-failure-record --case <id> --run <number> --attempt <number> --code <code> --message <message> --retryable <true|false> --host <id> --model <id> --effort <level> --invocation <id> [--attestation <runner-attestation.json>]",
     "  hope diff teaching-evaluation-validate --input <record.json>",
     "  hope diff teaching-evaluation-validate-set --input <records.json>",
     "  hope diff resolve-target [GitHub PR URL or PR number]",
@@ -203,6 +206,7 @@ export function parseDiffArguments(argv) {
       "effort",
       "invocation",
       "attempt",
+      "attestation",
       "code",
       "message",
       "retryable",
@@ -274,6 +278,7 @@ export function parseDiffArguments(argv) {
   if (command === "teaching-evaluation-record") {
     if (positionals.length > 0) throw new TypeError(usage());
     requireCommandOptions(options, {
+      optional: ["attestation"],
       required: [
         "attempt",
         "case",
@@ -287,6 +292,9 @@ export function parseDiffArguments(argv) {
     });
     return {
       attempt: parseEvaluationRun(options.attempt),
+      ...(options.attestation
+        ? { attestationPath: options.attestation }
+        : {}),
       caseId: options.case,
       command,
       effort: options.effort,
@@ -300,6 +308,7 @@ export function parseDiffArguments(argv) {
   if (command === "teaching-evaluation-failure-record") {
     if (positionals.length > 0) throw new TypeError(usage());
     requireCommandOptions(options, {
+      optional: ["attestation"],
       required: [
         "attempt",
         "case",
@@ -315,6 +324,9 @@ export function parseDiffArguments(argv) {
     });
     return {
       attempt: parseEvaluationRun(options.attempt),
+      ...(options.attestation
+        ? { attestationPath: options.attestation }
+        : {}),
       caseId: options.case,
       command,
       effort: options.effort,
@@ -438,6 +450,7 @@ export function parseDiffArguments(argv) {
     || options.effort
     || options.invocation
     || options.attempt
+    || options.attestation
     || options.code
     || options.message
     || options.retryable
@@ -555,7 +568,7 @@ export function parseDiffArguments(argv) {
 }
 
 export async function main(argv = process.argv.slice(2), dependencies = {}) {
-  const options = parseDiffArguments(argv);
+  let options = parseDiffArguments(argv);
   const stdout = dependencies.stdout ?? process.stdout;
   let result;
   if (options.command === "help") {
@@ -567,6 +580,19 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
       options.arguments,
       dependencies,
     );
+  }
+  if ([
+    "teaching-evaluation-record",
+    "teaching-evaluation-failure-record",
+    "teaching-evaluation-validate",
+    "teaching-evaluation-validate-set",
+  ].includes(options.command)) {
+    const prepared = await (
+      dependencies.prepareEvidenceCommand
+        ?? prepareHopeModelEvaluationEvidenceCommand
+    )(options, dependencies);
+    options = prepared.options;
+    dependencies = prepared.dependencies;
   }
   if (options.command === "invocation-brief") {
     result = (dependencies.createInvocationContract
