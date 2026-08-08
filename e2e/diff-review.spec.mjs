@@ -971,8 +971,11 @@ test("highlighted code preserves source line breaks in the DOM", async ({ page }
   await openArtifact(page, viewports.desktop);
   const code = page.locator(".syntax-code code").filter({ hasText: "+const last" }).first();
   await code.evaluate((element) => {
-    const details = element.closest("details");
-    if (details) details.open = true;
+    let details = element.closest("details");
+    while (details) {
+      details.open = true;
+      details = details.parentElement?.closest("details");
+    }
   });
   await expect(code).toBeVisible();
   const text = (await code.innerText()).replaceAll("\r\n", "\n");
