@@ -51,6 +51,16 @@ test.beforeAll(async () => {
     digest: digestJson(snapshotValue),
   });
   const analysis = makeAnalysis(snapshot, runId);
+  analysis.beginnerPrimer = [{
+    basis: "code",
+    evidence: [{
+      endLine: 4,
+      sourceId: "source-3",
+      startLine: 2,
+    }],
+    text: "재시도 경계는 마지막 오류가 호출자에게 전달되는 지점입니다.",
+    title: "처음 보는 독자를 위한 재시도 경계",
+  }];
   const behaviorRanges = [
     [1, 1],
     [2, 2],
@@ -418,6 +428,15 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
   await expect(page.locator("#explore .flow")).toHaveCount(1);
   await expect(page.locator("#explore .flow-short")).toHaveCount(1);
+  const primer = page.locator("#beginner-primer");
+  await expect(primer).toHaveCount(1);
+  await expect(primer).not.toHaveAttribute("open", "");
+  await expect(primer.locator(".beginner-primer-content")).not.toBeVisible();
+  await primer.locator(":scope > summary").click();
+  await expect(primer).toHaveAttribute("open", "");
+  await expect(primer.locator(".beginner-primer-content")).toBeVisible();
+  await primer.locator(":scope > summary").click();
+  await expect(primer).not.toHaveAttribute("open", "");
   await expect(page.locator(".code-step-list > li")).toHaveCount(1);
   const itemHeadAlignment = await page.locator(
     ".review-items-full .item-head",
@@ -482,6 +501,10 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   }));
   expect(narrowFlow.display).toBe("grid");
   expect(narrowFlow.scrollWidth).toBeLessThanOrEqual(narrowFlow.clientWidth);
+
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator("#beginner-primer .beginner-primer-content")).toBeVisible();
+  await page.emulateMedia({ media: "screen" });
 
   for (const viewport of [
     viewports.breakpoint,
@@ -948,8 +971,11 @@ test("highlighted code preserves source line breaks in the DOM", async ({ page }
   await openArtifact(page, viewports.desktop);
   const code = page.locator(".syntax-code code").filter({ hasText: "+const last" }).first();
   await code.evaluate((element) => {
-    const details = element.closest("details");
-    if (details) details.open = true;
+    let details = element.closest("details");
+    while (details) {
+      details.open = true;
+      details = details.parentElement?.closest("details");
+    }
   });
   await expect(code).toBeVisible();
   const text = (await code.innerText()).replaceAll("\r\n", "\n");
@@ -963,6 +989,11 @@ test("highlighted code preserves source line breaks in the DOM", async ({ page }
 });
 
 test("fragment navigation opens details that contain the target", async ({ page }) => {
+  await openArtifact(page, viewports.desktop);
+  await page.goto(`${artifactUrl}#beginner-primer`);
+  await expect(page.locator("#beginner-primer")).toHaveAttribute("open", "");
+  await expect(page.locator("#beginner-primer")).toBeFocused();
+
   await openArtifact(page, viewports.desktop);
   const reference = page.locator('.evidence-reference a[href^="#evidence-"]').first();
   await reference.evaluate((element) => {
@@ -1017,6 +1048,12 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await page.goto(artifactUrl);
     await expect(page.locator("h1")).toBeVisible();
     await expect(page.locator("#synopsis")).toBeVisible();
+    const primer = page.locator("#beginner-primer");
+    await expect(primer).toBeVisible();
+    await expect(primer).not.toHaveAttribute("open", "");
+    await expect(primer.locator(".beginner-primer-content")).not.toBeVisible();
+    await primer.locator(":scope > summary").click();
+    await expect(primer.locator(".beginner-primer-content")).toBeVisible();
     const evidenceSection = page.locator("#evidence-and-scope");
     await expect(evidenceSection).toHaveAttribute("open", "");
     const sourceGroup = evidenceSection.locator("details.evidence-group").filter({

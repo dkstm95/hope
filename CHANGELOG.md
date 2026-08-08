@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.9.0 - 2026-08-08
+
+- Add grounded example values to Diff visuals when they make data or control
+  flow easier to understand, without inventing values for static relationships.
+- Add an optional, evidence-linked beginner primer that stays collapsed in the
+  ordinary Diff reading path and remains available without JavaScript and in
+  print.
+- Add a bilingual model-evaluation protocol for Diff teaching-aid and primer
+  decisions across the shared runtime, harness, and generated plugin.
+- Add a host-attestation adapter that verifies runner-issued Ed25519 attempt
+  proofs and one exact complete-attempt ledger without handling private keys.
+- Require a public trust root, a signed campaign issue-time range, unique event
+  identities, and an explicit trusted adapter module for release evidence.
+- Expose adapter status and separate attestation inputs through model-evaluation
+  commands while keeping evidence generation outside Hope.
+
 ## 1.8.0 - 2026-08-05
 
 - Make Sweep inventory the complete project-owned worktree, including tracked

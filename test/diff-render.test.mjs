@@ -388,6 +388,41 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.doesNotMatch(html, />explained</u);
 });
 
+test("beginner primer stays closed, localized, linkable, and print-visible", async () => {
+  const snapshot = makeSnapshot({ locale: "ko-KR" });
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.background = [{
+    basis: "code",
+    evidence: [{ endLine: 2, sourceId: "source-3", startLine: 2 }],
+    text: "The current branch forwards the failure after the retry.",
+    title: "현재 동작",
+  }];
+  analysis.beginnerPrimer = [{
+    basis: "code",
+    evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
+    text: "재시도 경계는 한 단계의 실패가 다음 호출자에게 전달되는 지점입니다.",
+    title: "처음 보는 독자를 위한 개념",
+  }];
+  const review = validateAnalysis(analysis, snapshot, { runId });
+  const html = (await renderReview(review)).bytes.toString("utf8");
+  const background = html.match(
+    /<section class="review-section" id="background">[\s\S]*?<\/section>/u,
+  )?.[0] ?? "";
+
+  assert.match(background, /<details class="beginner-primer" id="beginner-primer">/u);
+  assert.match(background, /aria-label="처음 보는 독자를 위한 설명"/u);
+  assert.match(background, />처음 보는 독자를 위한 설명<\/span>/u);
+  assert.match(background, /처음 보는 독자를 위한 개념/u);
+  assert.doesNotMatch(background, /<details class="beginner-primer"[^>]* open>/u);
+  assert.match(html, /id="beginner-primer"/u);
+  assert.match(html, /beginner-primer > \.beginner-primer-content[\s\S]*?display: block !important/u);
+  assert.match(html, /const revealTarget=target=>\{if\(target\.tagName==="DETAILS"\)target\.open=true;/u);
+
+  const absent = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
+  const absentHtml = (await renderReview(absent)).bytes.toString("utf8");
+  assert.doesNotMatch(absentHtml, /class="beginner-primer"/u);
+});
+
 test("the artifact shows every teaching-aid decision when all aids are omitted", async () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);

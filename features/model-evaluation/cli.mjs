@@ -31,6 +31,11 @@ import {
   validateHopeWriteProductionVerificationRecordFile,
   validateHopeWriteProductionVerificationRecordSetFile,
 } from "./index.mjs";
+import {
+  hopeModelEvaluationHostAttestationStatus,
+  loadHopeModelEvaluationHostAttestationAdapter,
+  prepareHopeModelEvaluationEvidenceCommand,
+} from "./host-attestation.mjs";
 
 export const HOPE_MODEL_EVALUATION_COMMAND_ERROR_CODE =
   "HOPE_MODEL_EVALUATION_COMMAND";
@@ -61,27 +66,28 @@ function usage() {
     "Use Hope model evaluations.",
     "",
     "Usage:",
+    "  hope model-evaluation host-attestation-status",
     "  hope model-evaluation feature-selection-plan",
     "  hope model-evaluation feature-selection-prepare --case <id> --variant <minimal|full> --run <number>",
     "  hope model-evaluation feature-selection-oracle --case <id>",
-    "  hope model-evaluation feature-selection-record --case <id> --variant <minimal|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope model-evaluation feature-selection-record --case <id> --variant <minimal|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id> [--attestation <runner-attestation.json>]",
     "  hope model-evaluation feature-selection-validate --input <record.json>",
     "  hope model-evaluation feature-selection-validate-set --input <records.json>",
     "  hope model-evaluation polish-preservation-plan",
     "  hope model-evaluation polish-preservation-prepare --case <id> --variant <invariants-only|full> --run <number>",
     "  hope model-evaluation polish-preservation-oracle --case <id>",
-    "  hope model-evaluation polish-preservation-record --case <id> --variant <invariants-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope model-evaluation polish-preservation-record --case <id> --variant <invariants-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id> [--attestation <runner-attestation.json>]",
     "  hope model-evaluation polish-preservation-validate --input <record.json>",
     "  hope model-evaluation polish-preservation-validate-set --input <records.json>",
     "  hope model-evaluation write-example-plan",
     "  hope model-evaluation write-example-prepare --case <id> --variant <rules-only|full> --run <number>",
     "  hope model-evaluation write-example-oracle --case <id>",
-    "  hope model-evaluation write-example-record --case <id> --variant <rules-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope model-evaluation write-example-record --case <id> --variant <rules-only|full> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id> [--attestation <runner-attestation.json>]",
     "  hope model-evaluation write-example-validate --input <record.json>",
     "  hope model-evaluation write-example-validate-set --input <records.json>",
     "  hope model-evaluation write-production-plan",
     "  hope model-evaluation write-production-prepare --case <id> --run <number>",
-    "  hope model-evaluation write-production-record --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id>",
+    "  hope model-evaluation write-production-record --case <id> --run <number> --input <output.json> --host <id> --model <id> --effort <level> --invocation <id> [--attestation <runner-attestation.json>]",
     "  hope model-evaluation write-production-validate --input <record.json>",
     "  hope model-evaluation write-production-validate-set --input <records.json>",
     "",
@@ -117,6 +123,7 @@ export function parseModelEvaluationArguments(argv) {
     "write-production-receipt": "write-production-record",
   })[requestedCommand] ?? requestedCommand;
   const commands = new Set([
+    "host-attestation-status",
     "feature-selection-oracle",
     "feature-selection-plan",
     "feature-selection-prepare",
@@ -143,7 +150,8 @@ export function parseModelEvaluationArguments(argv) {
   ]);
   if (!commands.has(command)) throw new TypeError(usage());
   if (
-    command === "feature-selection-plan"
+    command === "host-attestation-status"
+    || command === "feature-selection-plan"
     || command === "polish-preservation-plan"
     || command === "write-example-plan"
     || command === "write-production-plan"
@@ -163,9 +171,9 @@ export function parseModelEvaluationArguments(argv) {
     || command === "polish-preservation-oracle"
     || command === "write-example-oracle";
   const allowed = recordCommand
-    ? ["case", "effort", "host", "input", "invocation", "model", "run", "variant"]
+    ? ["attestation", "case", "effort", "host", "input", "invocation", "model", "run", "variant"]
     : productionRecord
-      ? ["case", "effort", "host", "input", "invocation", "model", "run"]
+      ? ["attestation", "case", "effort", "host", "input", "invocation", "model", "run"]
     : prepareCommand
       ? ["case", "run", "variant"]
       : productionPrepare
@@ -202,6 +210,9 @@ export function parseModelEvaluationArguments(argv) {
   }
   if (productionRecord) {
     return {
+      ...(options.attestation
+        ? { attestationPath: options.attestation }
+        : {}),
       caseId: required(options.case, "--case"),
       command,
       effort: required(options.effort, "--effort"),
@@ -230,6 +241,9 @@ export function parseModelEvaluationArguments(argv) {
   if (prepareCommand) return common;
   return {
     ...common,
+    ...(options.attestation
+      ? { attestationPath: options.attestation }
+      : {}),
     effort: required(options.effort, "--effort"),
     host: required(options.host, "--host"),
     inputPath: required(options.input, "--input"),
@@ -244,11 +258,33 @@ function writeJson(stdout, value) {
 }
 
 export async function main(argv = process.argv.slice(2), dependencies = {}) {
-  const options = parseModelEvaluationArguments(argv);
+  let options = parseModelEvaluationArguments(argv);
   const stdout = dependencies.stdout ?? process.stdout;
   if (options.command === "help") {
     stdout.write(`${usage()}\n`);
     return;
+  }
+  if (options.command === "host-attestation-status") {
+    const adapter = await (
+      dependencies.loadHostAttestationAdapter
+        ?? loadHopeModelEvaluationHostAttestationAdapter
+    )({
+      cwd: dependencies.cwd ?? process.cwd(),
+      environment: dependencies.environment ?? process.env,
+      importModule: dependencies.importModule,
+    });
+    return writeJson(stdout, hopeModelEvaluationHostAttestationStatus(adapter));
+  }
+  if (
+    options.command.endsWith("-record")
+    || options.command.includes("-validate")
+  ) {
+    const prepared = await (
+      dependencies.prepareEvidenceCommand
+        ?? prepareHopeModelEvaluationEvidenceCommand
+    )(options, dependencies);
+    options = prepared.options;
+    dependencies = prepared.dependencies;
   }
   if (options.command === "feature-selection-plan") {
     return writeJson(

@@ -10,6 +10,8 @@
   "artifact.repository": "Repository",
   "artifact.revalidatedAt": "Last checked",
   "artifact.theme": "Initial theme",
+  "background.beginnerPrimer": "For readers new to this topic",
+  "background.beginnerPrimerHint": "Optional deeper background",
   "basis.couldNotConfirm": "Could not confirm",
   "basis.inferred": "Inferred from evidence",
   "basis.observed": "Observed in execution",

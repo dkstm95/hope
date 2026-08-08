@@ -54,13 +54,38 @@ host-attested statement bindings through an injected trusted verifier, and
 requires a second trusted verifier for the complete attempt ledger before a
 set can support a release decision.
 
+`features/model-evaluation/host-attestation.mjs` owns the separate verifier
+adapter boundary.
+
+It loads one explicitly configured trusted local module, validates the adapter
+contract, reads bounded attestation inputs, and maps the adapter into the shared
+evidence verifiers.
+
+Its built-in Ed25519 helper verifies versioned attempt and complete-ledger
+signing payloads against a runner-owned public trust root.
+
+The external runner retains the private key, immutable host event source, and
+complete attempt ledger.
+
+Hope does not invoke a host through this adapter and does not mint attestations.
+
+This prevents a repository command from promoting its own synthetic record into
+release evidence.
+
 The harness and generated plugin fail closed when those host-owned verifiers
 are absent.
 
-The harness exposes those deterministic commands under `model-evaluation`.
+The harness exposes those deterministic commands and adapter status under
+`model-evaluation`.
 
 The generated plugin contains the same runtime, but no global evaluation Skill
 is published because that Skill would affect the selection boundary it tests.
+
+Diff teaching evaluation is the first feature CLI to accept a separate runner
+attestation file.
+
+It reaches the same shared adapter boundary from the harness and generated
+plugin runtime.
 
 [release.md](release.md) defines how a repository version becomes a verified
 public release.
@@ -336,6 +361,22 @@ passes one canonical URL to `prepare` without selector fallback.
 The runtime also returns the versioned teaching-aid decision, selection, and
 authoring-safety contract with representative evaluation cases, and can generate
 the complete condition skeleton for a bounded microworld.
+
+The Diff core also owns a separate teaching-aid and beginner-primer evaluation
+protocol.
+
+It prepares five paired Korean and English cases with the exact active analysis
+schema, writing standard, and teaching-aid contract while keeping each oracle
+hidden from the reviewing host.
+
+The shared model-evaluation evidence boundary binds every successful or failed
+attempt to its configuration, invocation, input, output, and oracle result.
+
+Synthetic CLI records support deterministic tests and diagnostics but cannot
+authorize release.
+
+A trusted runner must attest every attempt and verify the complete contiguous
+ledger before the set can return `release-ready`.
 
 The validator keeps every decision and its reason.
 

@@ -34,7 +34,7 @@ export const TEACHING_AID_EVALUATION_CASES = Object.freeze([
       visual: "included",
     }),
     id: "static-relationship",
-    situation: "A fixed branch, sequence, or component relationship is harder to follow in prose.",
+    situation: "A fixed branch, sequence, or component relationship is harder to follow in prose; add concrete values only when the relationship has meaningful values to follow.",
   }),
   Object.freeze({
     expectedDecisions: Object.freeze({
@@ -202,6 +202,12 @@ export function createTeachingAidContract() {
     analysisVersion: ANALYSIS_VERSION,
     decisions: Object.freeze({
       aids: TEACHING_AID_NAMES,
+      classificationOrder: Object.freeze([
+        "First identify the distinct teaching job for this specific aid from the task and evidence. Do not infer a teaching job merely because the source contains a sequence, identifier, or technical term.",
+        "Use not-applicable when this aid has no distinct teaching job, even if the change has behavior or another aid is useful.",
+        "Use omitted when this aid has a distinct teaching job but prose or another selected aid already performs it clearly.",
+        "Use included only when this aid still makes its distinct teaching job materially easier to understand.",
+      ]),
       includedRequires: Object.freeze(["reason", "teachingJob"]),
       required: true,
       states: TEACHING_AID_DECISIONS,
@@ -221,9 +227,43 @@ export function createTeachingAidContract() {
         when: "Use for one to five non-trivial predictions, preserved conditions, or failure cases that do not need an interactive model.",
       }),
     ]),
+    visual: Object.freeze({
+      authoring: Object.freeze({
+        exampleValues: Object.freeze({
+          fields: Object.freeze(["caption", "detail", "message label", "row cell"]),
+          grounding: "Ground each concrete value in review evidence and mark simplified or inferred values in the surrounding explanation.",
+          inclusion: "Use concrete example values when they make data movement or control flow easier to follow.",
+          deduplication: "Record one underlying evidence value once. Do not repeat it in cardinal, ordinal, or paraphrased form or for another visual field.",
+          minimum: "Use only the smallest set of concrete values needed for the visual's teaching job.",
+          notValues: "Do not list code identifiers, component names, or prose step labels as concrete example values merely because they appear in evidence.",
+          omission: "Do not invent example values for a static relationship that has no meaningful values.",
+        }),
+        kindSelection: Object.freeze({
+          "component-map": "Use for fixed components, responsibilities, calls, or handoffs when structure is the teaching job. A call does not by itself make timing or order the teaching job.",
+          "decision-table": "Use when comparing meaningful branches or conditions and their outcomes is the teaching job.",
+          flow: "Use when runtime data movement or control flow is the teaching job.",
+          sequence: "Use only when time order or ordered messages between participants are themselves the teaching job.",
+        }),
+        selection: Object.freeze({
+          noDuplicate: "Do not add a visual when the task's only deeper need is a concept definition handled by the beginner primer.",
+          presentationOnly: "Use not-applicable for a presentation-only change with no flow, branch, component relationship, interaction, state transition, or prediction to visualize. Do not use omitted merely because ordinary Background already explains that change.",
+          proseSufficient: "Do not add a visual for a short relationship that the ordinary explanation already makes easy to follow.",
+          taskFirst: "Choose a visual from the task's distinct teaching job, not from every relationship that happens to appear in the evidence.",
+        }),
+      }),
+    }),
     omission: Object.freeze({
-      notApplicable: "Use when the change has no behavior, branch, state, interaction, or prediction to teach.",
-      omitted: "Use when the aid was considered but prose or another aid already makes its distinct teaching job easy to understand.",
+      notApplicable: "Use when this specific aid has no matching distinct teaching job in the task and evidence. A change may have behavior while one aid remains not-applicable.",
+      omitted: "Use when this specific aid has a matching distinct teaching job, but prose or another selected aid already performs that job clearly.",
+    }),
+    beginnerPrimer: Object.freeze({
+      grounding: Object.freeze({
+        code: "Use code when the item paraphrases a mechanism directly established by code evidence. Plain-language explanation does not by itself make that mechanism inferred.",
+        inferred: "Use inferred only when the item's material meaning goes beyond what the cited evidence directly establishes.",
+        split: "Split direct behavior from a broader inferred definition when one basis cannot accurately cover both claims.",
+      }),
+      inclusion: "Include only when the task requires a named concept or deeper starting point that ordinary Background cannot supply.",
+      omission: "Omit when ordinary Background, the main explanation, or a selected aid already gives a new reader enough context. A request written for a new reader does not by itself require a primer.",
     }),
     microworld: Object.freeze({
       authoring: Object.freeze({

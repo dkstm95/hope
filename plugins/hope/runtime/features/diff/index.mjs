@@ -47,6 +47,13 @@ import {
   validateDiffInvocationProductionVerificationRecordSet,
 } from "./invocation-evaluation.mjs";
 import {
+  createDiffTeachingEvaluationFailureRecord,
+  createDiffTeachingEvaluationRecord,
+  diffTeachingEvaluationLimits,
+  validateDiffTeachingEvaluationRecord,
+  validateDiffTeachingEvaluationRecordSet,
+} from "./teaching-aid-evaluation.mjs";
+import {
   appendDiffRunPlan,
   checkpointDiffRun,
   checkpointDiffRunWindow,
@@ -105,6 +112,24 @@ export {
   validateDiffInvocationProductionVerificationRecord,
   validateDiffInvocationProductionVerificationRecordSet,
 } from "./invocation-evaluation.mjs";
+
+export {
+  createDiffTeachingEvaluationFailureRecord,
+  createDiffTeachingEvaluationPlan,
+  createDiffTeachingEvaluationRecord,
+  DIFF_TEACHING_EVALUATION_MAX_ATTEMPTS,
+  DIFF_TEACHING_EVALUATION_VERSION,
+  diffTeachingEvaluationCases,
+  diffTeachingEvaluationLimits,
+  diffTeachingEvaluationOutputContract,
+  diffTeachingEvaluationProtocol,
+  digestDiffTeachingEvaluationValue,
+  getDiffTeachingEvaluationOracle,
+  prepareDiffTeachingEvaluationRun,
+  validateDiffTeachingEvaluationOutput,
+  validateDiffTeachingEvaluationRecord,
+  validateDiffTeachingEvaluationRecordSet,
+} from "./teaching-aid-evaluation.mjs";
 
 export {
   createDiffInvocationExampleRemovalRecord as createDiffInvocationExampleRemovalReceipt,
@@ -308,6 +333,56 @@ export async function validateDiffInvocationEvaluationRecordSetFile(
     maximumBytes: diffInvocationEvaluationLimits.recordSetBytes,
   });
   return validateDiffInvocationEvaluationRecordSet(input.value);
+}
+
+export async function createDiffTeachingEvaluationRecordFromFile(
+  options,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(
+    options.inputPath,
+    {
+      label: "Hope diff teaching evaluation output",
+      maximumBytes: diffTeachingEvaluationLimits.outputBytes,
+    },
+  );
+  return await (dependencies.createTeachingEvaluationRecord
+    ?? createDiffTeachingEvaluationRecord)(
+    { ...options, output: input.value },
+    dependencies,
+  );
+}
+
+export async function createDiffTeachingEvaluationFailureRecordFromOptions(
+  options,
+  dependencies = {},
+) {
+  return await (dependencies.createTeachingEvaluationFailureRecord
+    ?? createDiffTeachingEvaluationFailureRecord)(options, dependencies);
+}
+
+export async function validateDiffTeachingEvaluationRecordFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff teaching evaluation record",
+    maximumBytes: diffTeachingEvaluationLimits.recordBytes,
+  });
+  return await (dependencies.validateTeachingEvaluationRecord
+    ?? validateDiffTeachingEvaluationRecord)(input.value, dependencies);
+}
+
+export async function validateDiffTeachingEvaluationRecordSetFile(
+  inputPath,
+  dependencies = {},
+) {
+  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
+    label: "Hope diff teaching evaluation record set",
+    maximumBytes: diffTeachingEvaluationLimits.recordSetBytes,
+  });
+  return await (dependencies.validateTeachingEvaluationRecordSet
+    ?? validateDiffTeachingEvaluationRecordSet)(input.value, dependencies);
 }
 
 async function readPrivateJson(path, {

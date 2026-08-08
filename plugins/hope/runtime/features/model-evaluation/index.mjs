@@ -25,6 +25,7 @@ import {
 
 export * from "./feature-selection.mjs";
 export * from "./evidence.mjs";
+export * from "./host-attestation.mjs";
 export * from "./polish-preservation.mjs";
 export * from "./write-examples.mjs";
 

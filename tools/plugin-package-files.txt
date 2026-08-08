@@ -51,12 +51,14 @@ runtime/features/diff/redact.mjs
 runtime/features/diff/render.mjs
 runtime/features/diff/run.mjs
 runtime/features/diff/target.mjs
+runtime/features/diff/teaching-aid-evaluation.mjs
 runtime/features/diff/teaching-aids.mjs
 runtime/features/diff/text.mjs
 runtime/features/diff/validate.mjs
 runtime/features/model-evaluation/cli.mjs
 runtime/features/model-evaluation/evidence.mjs
 runtime/features/model-evaluation/feature-selection.mjs
+runtime/features/model-evaluation/host-attestation.mjs
 runtime/features/model-evaluation/index.mjs
 runtime/features/model-evaluation/polish-preservation.mjs
 runtime/features/model-evaluation/write-examples.mjs
