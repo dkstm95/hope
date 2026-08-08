@@ -1,5 +1,6 @@
 // Generated from features/model-evaluation/host-attestation.mjs. Do not edit.
 import {
+  createPrivateKey,
   createPublicKey,
   verify as verifySignature,
 } from "node:crypto";
@@ -63,6 +64,18 @@ function exactObject(value, keys, label) {
 }
 
 function publicEd25519Key(value) {
+  if (value?.type === "private") {
+    throw invalidAdapter("publicKey must contain only public key material");
+  }
+  let privateKey;
+  try {
+    privateKey = createPrivateKey(value);
+  } catch {
+    // A public key cannot be loaded as a private key.
+  }
+  if (privateKey?.type === "private") {
+    throw invalidAdapter("publicKey must contain only public key material");
+  }
   let key;
   try {
     key = value?.type === "public" ? value : createPublicKey(value);
@@ -73,6 +86,34 @@ function publicEd25519Key(value) {
     throw invalidAdapter("publicKey must be an Ed25519 public key");
   }
   return key;
+}
+
+function canonicalTimestamp(value) {
+  if (typeof value !== "string") return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) return null;
+  try {
+    if (new Date(milliseconds).toISOString() !== value) return null;
+  } catch {
+    return null;
+  }
+  return Object.freeze({ milliseconds, value });
+}
+
+function requiredTimestamp(value, label) {
+  const normalized = canonicalTimestamp(value);
+  if (!normalized) {
+    throw invalidAdapter(`${label} must be a canonical ISO 8601 timestamp`);
+  }
+  return normalized;
+}
+
+function hasUniqueEventIdentities(manifest) {
+  if (!Array.isArray(manifest?.events)) return false;
+  const eventIds = manifest.events.map((event) => event?.eventId);
+  return eventIds.every((eventId) => (
+    typeof eventId === "string" && eventId.trim().length > 0
+  )) && new Set(eventIds).size === eventIds.length;
 }
 
 function signatureFromProof(value) {
@@ -111,6 +152,7 @@ export function hopeModelEvaluationLedgerSigningPayload(value) {
     "hope:model-evaluation:complete-ledger:v1",
     {
       campaignId: value.campaignId,
+      issuedAtRange: value.issuedAtRange,
       issuer: value.issuer,
       manifestDigest: value.manifestDigest,
       version: value.version,
@@ -121,13 +163,36 @@ export function hopeModelEvaluationLedgerSigningPayload(value) {
 function normalizeCompleteAttemptLedger(value, issuer) {
   exactObject(value, [
     "campaignId",
+    "issuedAtRange",
     "issuer",
     "manifestDigest",
     "proof",
     "version",
   ], "completeAttemptLedger");
+  exactObject(
+    value.issuedAtRange,
+    ["notAfter", "notBefore"],
+    "completeAttemptLedger.issuedAtRange",
+  );
+  const notBefore = requiredTimestamp(
+    value.issuedAtRange.notBefore,
+    "completeAttemptLedger.issuedAtRange.notBefore",
+  );
+  const notAfter = requiredTimestamp(
+    value.issuedAtRange.notAfter,
+    "completeAttemptLedger.issuedAtRange.notAfter",
+  );
+  if (notBefore.milliseconds > notAfter.milliseconds) {
+    throw invalidAdapter(
+      "completeAttemptLedger.issuedAtRange.notBefore must not be after notAfter",
+    );
+  }
   const normalized = Object.freeze({
     campaignId: boundedText(value.campaignId, "completeAttemptLedger.campaignId"),
+    issuedAtRange: Object.freeze({
+      notAfter: notAfter.value,
+      notBefore: notBefore.value,
+    }),
     issuer: boundedText(
       value.issuer,
       "completeAttemptLedger.issuer",
@@ -173,6 +238,12 @@ export function createHopeEd25519HostAttestationAdapter({
     completeAttemptLedger,
     normalizedIssuer,
   );
+  const issuedAtNotBefore = canonicalTimestamp(
+    ledger.issuedAtRange.notBefore,
+  ).milliseconds;
+  const issuedAtNotAfter = canonicalTimestamp(
+    ledger.issuedAtRange.notAfter,
+  ).milliseconds;
   return validateHopeModelEvaluationHostAttestationAdapter({
     capabilities: {
       completeAttemptLedger: true,
@@ -182,6 +253,14 @@ export function createHopeEd25519HostAttestationAdapter({
     verifyAttestation(attestation, boundStatement) {
       if (attestation.issuer !== normalizedIssuer) return false;
       if (attestation.campaignId !== ledger.campaignId) return false;
+      const attestationIssuedAt = canonicalTimestamp(attestation.issuedAt);
+      if (
+        !attestationIssuedAt
+        || attestationIssuedAt.milliseconds < issuedAtNotBefore
+        || attestationIssuedAt.milliseconds > issuedAtNotAfter
+      ) {
+        return false;
+      }
       if (
         boundStatement?.statementDigest !== attestation.statementDigest
         || boundStatement?.invocation?.id !== attestation.eventId
@@ -199,6 +278,7 @@ export function createHopeEd25519HostAttestationAdapter({
     verifyCompleteAttemptLedger(manifest) {
       if (manifest.issuer !== normalizedIssuer) return false;
       if (manifest.campaignId !== ledger.campaignId) return false;
+      if (!hasUniqueEventIdentities(manifest)) return false;
       if (
         digestHopeModelEvaluationEvidence(manifest)
         !== ledger.manifestDigest

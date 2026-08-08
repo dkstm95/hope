@@ -155,11 +155,34 @@ It must reject a caller-selected subset even when every submitted record has a
 valid individual signature.
 
 Hope includes an Ed25519 verifier helper for adapters with one trusted public
-key. Attempt proofs use `ed25519:<base64url-signature>` over Hope's versioned
+key. The helper rejects a private `KeyObject`, private PEM, or any other input
+that Node can load as a private key.
+
+Attempt proofs use `ed25519:<base64url-signature>` over Hope's versioned
 attempt signing payload. A complete-ledger proof uses the same format over a
-versioned payload that binds `campaignId`, `issuer`, and the exact manifest
-digest. The adapter retains that signed complete-ledger record outside the
-submitted evaluation records.
+versioned payload that binds `campaignId`, `issuer`, the exact manifest
+digest, and this inclusive issue-time range:
+
+```js
+issuedAtRange: {
+  notBefore: "2026-08-07T00:00:00.000Z",
+  notAfter: "2026-08-07T23:59:59.999Z",
+}
+```
+
+Both values must use the canonical ISO 8601 form produced by
+`Date.prototype.toISOString()`. The helper accepts an attempt only when its
+signed `issuedAt` falls inside the signed range. It does not compare evidence
+with the verifier's current clock, so later verification of an unchanged
+campaign stays deterministic.
+
+Verifying the same attestation more than once is idempotent. Reusing it for a
+different event or statement fails because the signed event identity and
+statement digest no longer match. The complete-ledger verifier also rejects
+repeated event identities, including a manifest whose digest and ledger proof
+are otherwise valid. It still allows separate retry events for one run key.
+The adapter retains the signed complete-ledger record outside the submitted
+evaluation records.
 
 Check the active adapter without exposing its key or ledger:
 

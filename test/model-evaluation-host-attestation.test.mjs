@@ -37,6 +37,10 @@ import { main as runHarness } from "../harness/hope.mjs";
 const issuer = "trusted-test-runner";
 const campaignId = "campaign-2026-08-07";
 const issuedAt = "2026-08-07T00:00:00.000Z";
+const issuedAtRange = Object.freeze({
+  notAfter: "2026-08-07T23:59:59.999Z",
+  notBefore: issuedAt,
+});
 
 function statement(eventId) {
   return Object.freeze({
@@ -103,6 +107,7 @@ function adapterFixture() {
   const manifest = manifestFor(attestations);
   const unsignedLedger = {
     campaignId,
+    issuedAtRange,
     issuer,
     manifestDigest: digestHopeModelEvaluationEvidence(manifest),
     version: 1,
@@ -157,6 +162,73 @@ test("the Ed25519 adapter verifies attempts and one exact complete ledger", () =
   );
 });
 
+test("the Ed25519 adapter accepts only public trust-root material", () => {
+  const fixture = adapterFixture();
+  for (const privateKey of [
+    fixture.privateKey,
+    fixture.privateKey.export({ format: "pem", type: "pkcs8" }),
+  ]) {
+    assert.throws(
+      () => createHopeEd25519HostAttestationAdapter({
+        completeAttemptLedger: fixture.completeAttemptLedger,
+        issuer,
+        publicKey: privateKey,
+      }),
+      /publicKey must contain only public key material/u,
+    );
+  }
+});
+
+test("the Ed25519 adapter enforces its signed issuance window", () => {
+  const fixture = adapterFixture();
+  const boundStatement = {
+    ...fixture.statements[0],
+    statementDigest: fixture.attestations[0].statementDigest,
+  };
+  const beforeWindow = signedAttestation(
+    fixture.statements[0],
+    fixture.privateKey,
+    { issuedAt: "2026-08-06T23:59:59.999Z" },
+  );
+  const afterWindow = signedAttestation(
+    fixture.statements[0],
+    fixture.privateKey,
+    { issuedAt: "2026-08-08T00:00:00.000Z" },
+  );
+
+  assert.equal(
+    fixture.adapter.verifyAttestation(fixture.attestations[0], boundStatement),
+    true,
+  );
+  assert.equal(
+    fixture.adapter.verifyAttestation(fixture.attestations[0], boundStatement),
+    true,
+  );
+  assert.equal(
+    fixture.adapter.verifyAttestation(beforeWindow, boundStatement),
+    false,
+  );
+  assert.equal(
+    fixture.adapter.verifyAttestation(afterWindow, boundStatement),
+    false,
+  );
+
+  assert.throws(
+    () => createHopeEd25519HostAttestationAdapter({
+      completeAttemptLedger: {
+        ...fixture.completeAttemptLedger,
+        issuedAtRange: {
+          notAfter: issuedAtRange.notBefore,
+          notBefore: issuedAtRange.notAfter,
+        },
+      },
+      issuer,
+      publicKey: fixture.publicKey,
+    }),
+    /notBefore must not be after notAfter/u,
+  );
+});
+
 test("the adapter rejects forged, replayed, and incomplete evidence", () => {
   const fixture = adapterFixture();
   const [valid] = fixture.attestations;
@@ -184,6 +256,29 @@ test("the adapter rejects forged, replayed, and incomplete evidence", () => {
   );
   assert.equal(fixture.adapter.verifyCompleteAttemptLedger(replayedManifest), false);
   assert.equal(fixture.adapter.verifyCompleteAttemptLedger(incompleteManifest), false);
+
+  const replayedLedger = {
+    campaignId,
+    issuedAtRange,
+    issuer,
+    manifestDigest: digestHopeModelEvaluationEvidence(replayedManifest),
+    version: 1,
+  };
+  const adapterWithSignedReplay = createHopeEd25519HostAttestationAdapter({
+    completeAttemptLedger: {
+      ...replayedLedger,
+      proof: signedProof(
+        hopeModelEvaluationLedgerSigningPayload(replayedLedger),
+        fixture.privateKey,
+      ),
+    },
+    issuer,
+    publicKey: fixture.publicKey,
+  });
+  assert.equal(
+    adapterWithSignedReplay.verifyCompleteAttemptLedger(replayedManifest),
+    false,
+  );
 
   const otherKeys = generateKeyPairSync("ed25519");
   const wrongTrustRoot = createHopeEd25519HostAttestationAdapter({
