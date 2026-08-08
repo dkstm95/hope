@@ -3,7 +3,9 @@ import {
   generateKeyPairSync,
   sign as signPayload,
 } from "node:crypto";
+import { resolve } from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
 import { parseDiffArguments } from "../features/diff/cli.mjs";
 import {
@@ -313,7 +315,10 @@ test("adapter loading is explicit and validates required capabilities", async ()
   assert.equal(loaded.issuer, issuer);
   assert.equal(
     loadedSpecifier,
-    "file:///trusted/config/runner-adapter.mjs",
+    pathToFileURL(resolve(
+      "/trusted/config",
+      "runner-adapter.mjs",
+    )).href,
   );
   assert.throws(
     () => validateHopeModelEvaluationHostAttestationAdapter({
