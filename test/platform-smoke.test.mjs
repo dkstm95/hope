@@ -40,7 +40,7 @@ test("the staged plugin runs from an external platform path", async (context) =>
   await mkdir(outsideRepository);
   const help = spawnSync(
     process.execPath,
-    [join(destination, "runtime", "features", "diff", "cli.mjs"), "--help"],
+    [join(destination, "skills", "diff", "scripts", "cli.mjs"), "--help"],
     {
       cwd: outsideRepository,
       encoding: "utf8",

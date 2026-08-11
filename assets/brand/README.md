@@ -8,6 +8,7 @@ The README and plugin logo use a byte-identical copy.
 The composer, Skill, and favicon icons are smaller PNG derivatives generated
 only from this original.
 
-`design/HopeFavicon.png` is the editable 128 × 128 favicon source.
+`plugins/hope/skills/diff/assets/HopeFavicon.png` is the editable 128 × 128
+favicon source.
 
-The plugin build copies it to the compact plugin icon and the Diff runtime.
+The plugin manifest and Diff renderer use that file directly.

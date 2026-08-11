@@ -1,4 +1,3 @@
-// Generated from features/diff/render.mjs. Do not edit.
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
@@ -9,7 +8,7 @@ import {
   LAYOUT,
   SPACE,
   TYPE,
-} from "../../design/tokens.mjs";
+} from "./design/tokens.mjs";
 import { label, loadLocale } from "./locales/index.mjs";
 import {
   LIMITS,
@@ -21,12 +20,12 @@ import { TEACHING_AID_NAMES } from "./teaching-aids.mjs";
 import { exposeBidiControls } from "./text.mjs";
 
 const fontUrls = Object.freeze({
-  code: new URL("../../design/fonts/HopeCode.woff2", import.meta.url),
-  sansBold: new URL("../../design/fonts/HopeSansBold.woff2", import.meta.url),
-  sansLight: new URL("../../design/fonts/HopeSansLight.woff2", import.meta.url),
-  sansMedium: new URL("../../design/fonts/HopeSansMedium.woff2", import.meta.url),
+  code: new URL("../assets/fonts/HopeCode.woff2", import.meta.url),
+  sansBold: new URL("../assets/fonts/HopeSansBold.woff2", import.meta.url),
+  sansLight: new URL("../assets/fonts/HopeSansLight.woff2", import.meta.url),
+  sansMedium: new URL("../assets/fonts/HopeSansMedium.woff2", import.meta.url),
 });
-const faviconUrl = new URL("../../design/HopeFavicon.png", import.meta.url);
+const faviconUrl = new URL("../assets/HopeFavicon.png", import.meta.url);
 
 const evidenceOccurrences = new WeakMap();
 const renderedCodeSources = new Set([

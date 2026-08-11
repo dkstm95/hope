@@ -7,32 +7,21 @@ import {
   loadLocale,
   normalizeLocale,
   resolveDisplayOptions,
-} from "../features/diff/locales/index.mjs";
-import {
-  generatedPluginFiles,
-  pluginPackageFiles,
-} from "../tools/plugin-files.mjs";
+} from "../plugins/hope/skills/diff/scripts/locales/index.mjs";
+import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 
 test("Diff owns its locale sources and packaged locale paths", () => {
-  const entries = generatedPluginFiles
-    .filter(({ source }) => source.includes("/locales/"))
-    .sort((left, right) => left.source.localeCompare(right.source));
   const sources = [
-    "features/diff/locales/en-US/common.json",
-    "features/diff/locales/en-US/diff.json",
-    "features/diff/locales/index.mjs",
-    "features/diff/locales/ko-KR/common.json",
-    "features/diff/locales/ko-KR/diff.json",
+    "skills/diff/scripts/locales/en-US/common.json",
+    "skills/diff/scripts/locales/en-US/diff.json",
+    "skills/diff/scripts/locales/index.mjs",
+    "skills/diff/scripts/locales/ko-KR/common.json",
+    "skills/diff/scripts/locales/ko-KR/diff.json",
   ];
 
-  assert.deepEqual(entries.map(({ source }) => source), sources);
-  assert.deepEqual(
-    entries.map(({ destination }) => destination),
-    sources.map((source) => `plugins/hope/runtime/${source}`),
-  );
   assert.deepEqual(
     pluginPackageFiles.filter((path) => path.includes("/locales/")),
-    sources.map((source) => `runtime/${source}`),
+    sources,
   );
 });
 

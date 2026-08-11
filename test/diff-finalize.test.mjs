@@ -13,7 +13,7 @@ import {
 import { join } from "node:path";
 import test, { after } from "node:test";
 
-import { finalizeReview } from "../features/diff/finalize.mjs";
+import { finalizeReview } from "../plugins/hope/skills/diff/scripts/finalize.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
 } from "../test-support/temporary-directory.mjs";

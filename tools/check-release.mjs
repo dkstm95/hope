@@ -47,29 +47,30 @@ const requiredFiles = [
   "docs/sweep.md",
   "docs/toxic-review.md",
   "docs/write.md",
-  "design/fonts/HopeCode.woff2",
-  "design/fonts/HopeSansBold.woff2",
-  "design/fonts/HopeSansLight.woff2",
-  "design/fonts/HopeSansMedium.woff2",
-  "design/fonts/OFL-D2Coding.txt",
-  "design/fonts/OFL-Gmarket.txt",
-  "design/fonts/SOURCE.md",
-  "design/fonts/rename-fonts.py",
-  "design/tokens.mjs",
-  "features/diff/analysis-v2.schema.json",
-  "features/diff/artifact.mjs",
-  "features/diff/cli.mjs",
-  "features/diff/code-evidence.mjs",
-  "features/diff/command-options.mjs",
-  "features/diff/index.mjs",
-  "features/diff/locales/index.mjs",
-  "features/diff/structured-input.mjs",
-  "entrypoint/index.mjs",
+  "plugins/hope/skills/diff/assets/HopeFavicon.png",
+  "plugins/hope/skills/diff/assets/fonts/HopeCode.woff2",
+  "plugins/hope/skills/diff/assets/fonts/HopeSansBold.woff2",
+  "plugins/hope/skills/diff/assets/fonts/HopeSansLight.woff2",
+  "plugins/hope/skills/diff/assets/fonts/HopeSansMedium.woff2",
+  "plugins/hope/skills/diff/assets/fonts/OFL-D2Coding.txt",
+  "plugins/hope/skills/diff/assets/fonts/OFL-Gmarket.txt",
+  "plugins/hope/skills/diff/assets/fonts/SOURCE.md",
+  "plugins/hope/skills/diff/scripts/analysis-v2.schema.json",
+  "plugins/hope/skills/diff/scripts/artifact.mjs",
+  "plugins/hope/skills/diff/scripts/cli.mjs",
+  "plugins/hope/skills/diff/scripts/code-evidence.mjs",
+  "plugins/hope/skills/diff/scripts/command-options.mjs",
+  "plugins/hope/skills/diff/scripts/design/tokens.mjs",
+  "plugins/hope/skills/diff/scripts/index.mjs",
+  "plugins/hope/skills/diff/scripts/locales/index.mjs",
+  "plugins/hope/skills/diff/scripts/structured-input.mjs",
   "tools/plugin-files.mjs",
   "tools/plugin-package-files.txt",
   "tools/check-plugin-version.mjs",
   "tools/install-plugin-dev.mjs",
+  "tools/entrypoint.mjs",
   "tools/prepare-release.mjs",
+  "tools/rename-diff-fonts.py",
   "tools/render-readme-assets.mjs",
   "tools/stage-plugin.mjs",
   "PRINCIPLES.md",
@@ -94,7 +95,10 @@ const retiredPaths = [
   "assets/readme/hope-align-work-ko.png",
   "docs/design-research.md",
   "docs/model-evaluation.md",
+  "design",
   "e2e/align-artifact.spec.mjs",
+  "entrypoint",
+  "features",
   "features/align",
   "features/artifact",
   "features/command-options",
@@ -136,10 +140,10 @@ const retiredPaths = [
   "plugins/hope/runtime/features/write",
   "plugins/hope/runtime/locales",
   "plugins/hope/runtime/settings",
+  "plugins/hope/runtime",
   "plugins/hope/skills/cleanup",
   "plugins/hope/skills/diff/references/change-request-v1.schema.json",
   "plugins/hope/skills/diff/references/review-model-v1.schema.json",
-  "plugins/hope/skills/diff/scripts",
   "plugins/hope/skills/settings",
   "plugins/hope/skills/write/references/plain-writing.md",
   "settings",
@@ -241,7 +245,7 @@ assert.equal(codexPlugin.skills, "./skills/");
 assert.equal(claudePlugin.skills, "./skills/");
 assert.equal(
   codexPlugin.interface.composerIcon,
-  "./assets/hope-protected-light-128.png",
+  "./skills/diff/assets/HopeFavicon.png",
 );
 assert.equal(
   codexPlugin.interface.logo,
@@ -260,8 +264,10 @@ assert.match(alignSkill, /^---\r?\nname: align\r?\ndescription: /u);
 assert.match(alignSkill, /Wait for an explicit user response/u);
 assert.doesNotMatch(alignSkill, /runtime\/features\//u);
 assert.match(skill, /^---\r?\nname: diff\r?\ndescription: /u);
-assert.match(skill, /runtime\/features\/diff\/cli\.mjs/u);
-assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/runtime\/features\/diff\/cli\.mjs/u);
+assert.match(skill, /skills\/diff\/scripts\/cli\.mjs/u);
+assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/skills\/diff\/scripts\/cli\.mjs/u);
+assert.match(skill, /<skill-dir>\/scripts\/cli\.mjs/u);
+assert.doesNotMatch(skill, /runtime\/features\//u);
 assert.match(skill, /references\/analysis\.md/u);
 assert.match(skill, /\.\.\/write\/references\/writing-standard\.md/u);
 assert.match(skill, /teaching-aid rules/u);

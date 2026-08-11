@@ -1,12 +1,20 @@
 ---
 name: polish
-description: Use for one bounded cleanup or refactor of a named completed work product while preserving intended behavior and meaning.
+description: Use only after someone asks to polish or refine one named, completed work product in a bounded pass that must preserve its settled behavior and meaning. Do not use for initial implementation, feature changes, architecture migrations, or broad restructuring.
 ---
 
 # Hope Polish
 
-Use the active Codex or Claude session to inspect, revise, and verify one named
-completed work product.
+Use the active Codex or Claude session only after a named work product exists,
+is complete for the current task, and the person asks to polish or refine it.
+
+Do not use Polish to implement the work product, add or change a feature,
+perform an architecture migration, or carry out broad restructuring.
+
+A requirement to preserve existing behavior does not turn ordinary
+implementation or restructuring into Polish.
+
+Inspect, revise, and verify the named completed result.
 
 Perform at most one bounded modification round.
 

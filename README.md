@@ -162,6 +162,11 @@ scope.
 It preserves settled behavior and meaning, reports what changed and what was
 checked, and stops when the work needs a material decision.
 
+It starts only after a result is complete and you ask to polish it.
+
+Initial implementation, feature changes, architecture migrations, and broad
+restructuring stay outside Polish.
+
 > Example: “Refine the current work product.”
 
 </details>

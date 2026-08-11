@@ -21,13 +21,13 @@ Before starting, read:
 Claude Code:
 
 ```text
-node "${CLAUDE_PLUGIN_ROOT}/runtime/features/diff/cli.mjs"
+node "${CLAUDE_PLUGIN_ROOT}/skills/diff/scripts/cli.mjs"
 ```
 
 Codex:
 
 ```text
-node <skill-dir>/../../runtime/features/diff/cli.mjs
+node <skill-dir>/scripts/cli.mjs
 ```
 
 For Codex, replace `<skill-dir>` with the absolute directory containing this

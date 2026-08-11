@@ -5,7 +5,7 @@ import {
   discoverGitHubPullRequest,
   parsePullRequestTargetArgument,
   resolveGitHubPullRequestNumber,
-} from "../features/diff/target.mjs";
+} from "../plugins/hope/skills/diff/scripts/target.mjs";
 
 function discoveryExec({ branch = "feature", pullRequests }) {
   return async (command, arguments_) => {

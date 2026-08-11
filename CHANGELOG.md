@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Make each Skill directory the single editable source for its feature, move
+  Diff's deterministic scripts and private design assets beside its
+  instructions, and remove the generated runtime mirror.
+- Restrict Polish to an explicitly requested finishing pass on a completed
+  result so implementation, feature changes, architecture migrations, and
+  broad restructuring no longer trigger it merely because behavior is
+  preserved.
+
 ## 2.0.0 - 2026-08-10
 
 - Make Hope an installable Codex and Claude plugin only, and remove the

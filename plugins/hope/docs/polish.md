@@ -2,12 +2,21 @@
 
 # Hope Polish
 
-Hope Polish performs one bounded cleanup or refactor of a named completed work
-product.
+Hope Polish refines one named, completed work product in a bounded finishing
+pass.
 
 It preserves intended behavior and meaning.
 
 ## Product boundary
+
+Use Polish only after the work product is complete for the current task and the
+person asks to polish or refine it.
+
+Do not use Polish for initial implementation, feature additions or changes,
+architecture migrations, or broad restructuring.
+
+A requirement to preserve existing behavior during those tasks does not make
+them Polish.
 
 Polish starts from an exact target that the active host can inspect.
 

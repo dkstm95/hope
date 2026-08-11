@@ -12,15 +12,21 @@ const fonts = Object.freeze({
 
 test("bundled fonts match the renamed OFL-reviewed files", async () => {
   const source = await readFile(
-    new URL("../design/fonts/SOURCE.md", import.meta.url),
+    new URL(
+      "../plugins/hope/skills/diff/assets/fonts/SOURCE.md",
+      import.meta.url,
+    ),
     "utf8",
   );
   for (const [filename, expected] of Object.entries(fonts)) {
-    const bytes = await readFile(new URL(`../design/fonts/${filename}`, import.meta.url));
+    const bytes = await readFile(new URL(
+      `../plugins/hope/skills/diff/assets/fonts/${filename}`,
+      import.meta.url,
+    ));
     const actual = createHash("sha256").update(bytes).digest("hex");
     assert.equal(actual, expected, filename);
     assert.match(source, new RegExp(expected, "u"), filename);
   }
   assert.match(source, /internal primary names/u);
-  assert.match(source, /rename-fonts\.py/u);
+  assert.match(source, /rename-diff-fonts\.py/u);
 });

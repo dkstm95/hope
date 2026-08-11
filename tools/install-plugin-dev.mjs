@@ -5,7 +5,7 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isEntrypoint } from "../entrypoint/index.mjs";
+import { isEntrypoint } from "./entrypoint.mjs";
 import { buildPlugin } from "./build-plugin.mjs";
 import { readPackageFileList } from "./stage-plugin.mjs";
 

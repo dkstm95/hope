@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { takeOptions } from "./command-options.mjs";
-import { isEntrypoint } from "../../entrypoint/index.mjs";
 import {
   addDiffContext,
   buildMicroworldSkeleton,
@@ -19,6 +21,15 @@ import {
 } from "./index.mjs";
 import { serializeInspectionPage } from "./run.mjs";
 import { parsePullRequestTargetArgument } from "./target.mjs";
+
+function isEntrypoint(moduleUrl, entryPath = process.argv[1]) {
+  if (!entryPath) return false;
+  try {
+    return realpathSync(fileURLToPath(moduleUrl)) === realpathSync(entryPath);
+  } catch {
+    return false;
+  }
+}
 
 function usage() {
   return [

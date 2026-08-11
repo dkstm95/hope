@@ -47,5 +47,9 @@ For a review, report material findings without editing files.
 
 Do not copy the writing standard or its checklist into the response.
 
-A request for one bounded structural cleanup or refactor of a named completed
-work product belongs to Hope Polish.
+A request to polish or refine one named, completed work product in a bounded
+finishing pass belongs to Hope Polish.
+
+Initial implementation, feature changes, architecture migrations, and broad
+restructuring remain ordinary work even when they must preserve existing
+behavior.

@@ -19,9 +19,9 @@ import {
   ANALYSIS_VERSION,
   LIMITS,
   RUN_VERSION,
-} from "../features/diff/constants.mjs";
-import { digestJson } from "../features/diff/hash.mjs";
-import { revalidateGitHubSnapshot } from "../features/diff/github.mjs";
+} from "../plugins/hope/skills/diff/scripts/constants.mjs";
+import { digestJson } from "../plugins/hope/skills/diff/scripts/hash.mjs";
+import { revalidateGitHubSnapshot } from "../plugins/hope/skills/diff/scripts/github.mjs";
 import {
   DIFF_REVALIDATION_RETRYABLE_CODE,
   DIFF_REVALIDATION_RETRYABLE_MESSAGE,
@@ -29,7 +29,7 @@ import {
   finishDiff,
   prepareDiff,
   validateDiff,
-} from "../features/diff/index.mjs";
+} from "../plugins/hope/skills/diff/scripts/index.mjs";
 import {
   buildInspectionPages,
   checkpointDiffRun,
@@ -41,7 +41,7 @@ import {
   removeDiffRun,
   replaceDiffRunPlan,
   serializeInspectionPage,
-} from "../features/diff/run.mjs";
+} from "../plugins/hope/skills/diff/scripts/run.mjs";
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
@@ -367,7 +367,7 @@ test("forced termination during inspection-plan generation preserves the previou
     { temporaryRoot },
   ).catch(() => {}));
   const revised = revisedSnapshot(snapshot, "The process will stop before commit.");
-  const runModule = new URL("../features/diff/run.mjs", import.meta.url).href;
+  const runModule = new URL("../plugins/hope/skills/diff/scripts/run.mjs", import.meta.url).href;
   const childScript = [
     'import { open } from "node:fs/promises";',
     'import { basename } from "node:path";',
@@ -1207,7 +1207,7 @@ test("a newer lease generation fences a suspended expiry cleanup", async () => {
 
 test("expiry cleanup reclaims a run terminated between private source writes", async () => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-run-forced-stop-");
-  const runModule = new URL("../features/diff/run.mjs", import.meta.url).href;
+  const runModule = new URL("../plugins/hope/skills/diff/scripts/run.mjs", import.meta.url).href;
   const fixtureModule = new URL("../test-support/diff-fixture.mjs", import.meta.url).href;
   const childScript = [
     'import { open } from "node:fs/promises";',

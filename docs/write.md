@@ -56,8 +56,12 @@ It does not delete, demote, or reorder a material claim without authority.
 
 It does not change files during a review.
 
-A request for one bounded structural cleanup or refactor of a completed work
-product belongs to Polish.
+A request to polish or refine one named, completed work product in a bounded
+finishing pass belongs to Polish.
+
+Initial implementation, feature changes, architecture migrations, and broad
+restructuring remain ordinary work even when they must preserve existing
+behavior.
 
 Other Hope Skills may apply the writing standard directly.
 

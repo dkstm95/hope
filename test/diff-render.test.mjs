@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { LIMITS } from "../features/diff/constants.mjs";
-import { digestJson } from "../features/diff/hash.mjs";
-import { renderReview } from "../features/diff/render.mjs";
-import { validateAnalysis } from "../features/diff/validate.mjs";
+import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
+import { digestJson } from "../plugins/hope/skills/diff/scripts/hash.mjs";
+import { renderReview } from "../plugins/hope/skills/diff/scripts/render.mjs";
+import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
 import {
   makeAnalysis,
   makeSnapshot,

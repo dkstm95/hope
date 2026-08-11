@@ -10,7 +10,7 @@ import {
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isEntrypoint } from "../entrypoint/index.mjs";
+import { isEntrypoint } from "./entrypoint.mjs";
 import {
   generatedPluginFiles,
   pluginPackageFiles,
@@ -34,14 +34,19 @@ export async function expectedPluginFile(entry) {
 }
 
 export async function buildPlugin() {
-  await rm(fileURLToPath(fromRoot("plugins/hope/docs")), {
-    force: true,
-    recursive: true,
-  });
-  await rm(fileURLToPath(fromRoot("plugins/hope/runtime")), {
-    force: true,
-    recursive: true,
-  });
+  await Promise.all([
+    rm(fileURLToPath(fromRoot("plugins/hope/docs")), {
+      force: true,
+      recursive: true,
+    }),
+    rm(fileURLToPath(fromRoot("plugins/hope/runtime")), {
+      force: true,
+      recursive: true,
+    }),
+    rm(fileURLToPath(fromRoot(
+      "plugins/hope/assets/hope-protected-light-128.png",
+    )), { force: true }),
+  ]);
   for (const entry of pluginBuildEntries) {
     const destination = fileURLToPath(fromRoot(entry.destination));
     await mkdir(dirname(destination), { recursive: true });

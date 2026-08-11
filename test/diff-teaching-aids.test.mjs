@@ -3,13 +3,13 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test, { after } from "node:test";
 
-import { buildMicroworldSkeleton } from "../features/diff/index.mjs";
+import { buildMicroworldSkeleton } from "../plugins/hope/skills/diff/scripts/index.mjs";
 import {
   createMicroworldSkeleton,
   TEACHING_AID_DECISIONS,
   TEACHING_AID_NAMES,
-} from "../features/diff/teaching-aids.mjs";
-import { validateAnalysis } from "../features/diff/validate.mjs";
+} from "../plugins/hope/skills/diff/scripts/teaching-aids.mjs";
+import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
 import {
   makeAnalysis,
   makeSnapshot,

@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "hope",
   "version": "2.0.0",
-  "description": "Adds alignment before implementation, read-only repository maintenance planning, bounded work polishing, evidence-based review, PR explanations, and clear writing. Requires Node.js 22 or newer.",
+  "description": "Adds alignment before implementation, read-only repository maintenance planning, completed-result polishing, evidence-based review, PR explanations, and clear writing. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -10,6 +10,6 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["alignment", "sweep", "maintenance", "dead-code", "polish", "refactoring", "review", "diff", "pull-request", "writing"],
+  "keywords": ["alignment", "sweep", "maintenance", "dead-code", "polish", "review", "diff", "pull-request", "writing"],
   "skills": "./skills/"
 }

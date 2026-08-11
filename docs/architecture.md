@@ -2,8 +2,10 @@
 
 Hope is one plugin package for Codex and Claude.
 
-The package contains focused Skills and the deterministic runtime needed by
-Hope Diff.
+Each Skill directory contains the instructions and resources for one feature.
+
+The Diff Skill also contains the deterministic scripts and private visual
+assets needed to publish its offline HTML artifact.
 
 There is no independent Hope CLI or harness.
 
@@ -28,7 +30,7 @@ flowchart LR
   C --> S["Shared Skill directories"]
   L --> S
   S --> I["Instructions and references"]
-  S --> D["Diff deterministic runtime"]
+  S --> D["Diff scripts and private assets"]
   D --> H["Self-contained HTML"]
 ```
 
@@ -52,46 +54,42 @@ hope/
 ├── .agents/             Codex local marketplace catalog
 ├── .claude-plugin/      Claude local marketplace catalog
 ├── assets/              Brand sources and README captures
-├── design/              Diff design tokens and fixed fonts
 ├── docs/                Product and architecture definitions
 ├── e2e/                 Diff browser acceptance tests
-├── entrypoint/          Direct script entry detection
-├── features/
-│   └── diff/            Diff runtime, bounded input, and safe publication
-│       └── locales/     Fixed Diff interface text
 ├── plugins/hope/        Installable Codex and Claude package
 ├── test/                Deterministic and package tests
+├── test-support/        Shared deterministic test fixtures
 └── tools/               Build, validation, staging, and release scripts
 ```
 
-`plugins/hope/skills/` is the editable source for every Skill.
+`plugins/hope/skills/` is the editable source for every feature.
 
 Do not generate Skill instructions from JavaScript.
 
-`features/diff/`, `design/`, and `entrypoint/` are editable sources for the
-packaged Diff runtime.
+The Diff Skill keeps deterministic code under `scripts/`, conditional analysis
+guidance under `references/`, and private fonts and images under `assets/`.
 
-`features/diff/locales/` contains fixed interface text used only by Diff.
+Its fixed interface text stays under `scripts/locales/` because only the Diff
+scripts consume it.
 
-Diff-only helpers stay inside `features/diff/` instead of presenting themselves
-as shared feature infrastructure.
+Diff-only helpers stay in the Diff Skill instead of presenting themselves as
+shared project infrastructure.
 
 `tools/build-plugin.mjs` generates `plugins/hope/docs/`,
-`plugins/hope/LICENSE`, `plugins/hope/THIRD_PARTY_NOTICES.md`, and
-`plugins/hope/runtime/`.
+`plugins/hope/LICENSE`, and `plugins/hope/THIRD_PARTY_NOTICES.md`.
 
 `tools/plugin-files.mjs` maps every generated file to its editable source and
 derives the exact package list.
 
-Generated JavaScript and product-document Markdown carry a visible source
-banner.
+Generated product-document Markdown carries a visible source banner.
 
-Markdown copied as a raw notice or source record does not:
-`THIRD_PARTY_NOTICES.md` and `design/fonts/SOURCE.md` keep their recorded
-content unchanged.
+Markdown copied as a raw notice does not: `THIRD_PARTY_NOTICES.md` keeps its
+recorded content unchanged.
 
-License text, schemas, and locale dictionaries are also copied without
-banners.
+License text is also copied without a banner.
+
+Skill instructions, references, scripts, schemas, locale dictionaries, and
+private assets are packaged directly from their editable paths.
 
 Do not edit generated plugin files by hand.
 
@@ -102,13 +100,13 @@ plugins/hope/
 ├── .codex-plugin/plugin.json
 ├── .claude-plugin/plugin.json
 ├── assets/
-├── runtime/                 Generated deterministic Diff code
 └── skills/
     ├── align/
     │   └── SKILL.md
     ├── diff/
     │   ├── SKILL.md
     │   ├── references/
+    │   ├── scripts/
     │   └── assets/
     ├── polish/
     │   └── SKILL.md
@@ -147,6 +145,18 @@ A Skill owns:
 - references that are needed only in some runs; and
 - how to use a deterministic script, when one exists.
 
+The plugin manifests package these features but do not define their behavior.
+
+A feature reference or script must not read a plugin manifest, marketplace
+configuration, installed-cache path, or host-specific root variable.
+
+Keep host-specific path resolution in `SKILL.md` or repository tooling.
+
+Do not pre-create architectural layers for a possible future extraction.
+
+If another delivery form earns its place, reorganize the feature without
+rewriting its behavior.
+
 A Skill does not need a schema merely to prove that the same model filled in a
 structured record correctly.
 
@@ -178,8 +188,13 @@ the task.
 
 ## Polish boundary
 
-Polish performs one bounded cleanup or refactor of a named completed work
-product.
+Polish refines one named, completed work product after the person asks for a
+bounded finishing pass.
+
+It does not perform initial implementation, feature changes, architecture
+migrations, or broad restructuring.
+
+Preserving existing behavior during those tasks does not make them Polish.
 
 It inspects the exact target, states a short preservation contract, makes at
 most one revision round, and verifies the checked scope.
@@ -269,13 +284,13 @@ Large pull requests may stop with a clear size or context limit.
 Hope does not need resumable multi-generation evaluation machinery merely to
 avoid reporting that limit.
 
-## Generated runtime
+## Self-contained Diff Skill
 
-The installed plugin cannot depend on a repository `node_modules/` directory
-or a network request while rendering.
+The Diff Skill cannot depend on a repository `node_modules/` directory or a
+network request while rendering.
 
-The build copies fixed fonts and deterministic Diff modules into
-`plugins/hope/runtime/`.
+Its deterministic modules, schemas, locales, fixed fonts, and favicon live
+beside its `SKILL.md` and ship from those editable paths.
 
 Code evidence uses escaped text and fixed patch-line roles, so rendering does
 not need a language grammar bundle.
@@ -293,8 +308,8 @@ Tests follow the supported boundaries.
   checks, bounded input, and safe publication.
 - Browser tests cover Diff layout, keyboard behavior, accessibility, responsive
   navigation, no-JavaScript behavior, and print.
-- Package tests compare generated runtime files with their editable sources and
-  verify the exact release allowlist.
+- Package tests verify the direct Skill sources, generated documents, and exact
+  release allowlist.
 
 There are no harness-parity, Settings, Model Evaluation, Align renderer, or
 legacy-record tests.

@@ -7,9 +7,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { chromium } from "@playwright/test";
 
-import { digestJson } from "../features/diff/hash.mjs";
-import { renderReview } from "../features/diff/render.mjs";
-import { validateAnalysis } from "../features/diff/validate.mjs";
+import { digestJson } from "../plugins/hope/skills/diff/scripts/hash.mjs";
+import { renderReview } from "../plugins/hope/skills/diff/scripts/render.mjs";
+import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const outputDirectory = join(root, "assets", "readme");

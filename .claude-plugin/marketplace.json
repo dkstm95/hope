@@ -9,14 +9,14 @@
     {
       "name": "hope",
       "source": "./plugins/hope",
-      "description": "Adds alignment, read-only maintenance planning, bounded polishing, evidence-based review, PR explanations, and clear writing. Requires Node.js 22 or newer.",
+      "description": "Adds alignment, read-only maintenance planning, completed-result polishing, evidence-based review, PR explanations, and clear writing. Requires Node.js 22 or newer.",
       "author": {
         "name": "SeungIl"
       },
       "homepage": "https://github.com/dkstm95/hope#readme",
       "repository": "https://github.com/dkstm95/hope",
       "license": "MIT",
-      "keywords": ["alignment", "sweep", "maintenance", "polish", "refactoring", "review", "diff", "pull-request", "writing"],
+      "keywords": ["alignment", "sweep", "maintenance", "polish", "review", "diff", "pull-request", "writing"],
       "category": "development"
     }
   ]

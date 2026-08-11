@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test, { after } from "node:test";
 
-import { addDiffContext } from "../features/diff/index.mjs";
+import { addDiffContext } from "../plugins/hope/skills/diff/scripts/index.mjs";
 import {
   checkpointDiffRun,
   checkpointDiffRunWindow,
@@ -9,7 +9,7 @@ import {
   inspectDiffRunWindow,
   loadDiffRun,
   removeDiffRun,
-} from "../features/diff/run.mjs";
+} from "../plugins/hope/skills/diff/scripts/run.mjs";
 import { makeSnapshot } from "../test-support/diff-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,

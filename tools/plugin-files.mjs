@@ -5,13 +5,6 @@ const generatedText = (source, destination, banner = "") => Object.freeze({
   source,
 });
 
-const generatedBinary = (source, destination) => Object.freeze({
-  banner: "",
-  binary: true,
-  destination,
-  source,
-});
-
 export const generatedPluginFiles = Object.freeze([
   generatedText("LICENSE", "plugins/hope/LICENSE"),
   generatedText(
@@ -53,52 +46,26 @@ export const generatedPluginFiles = Object.freeze([
     "plugins/hope/docs/write.md",
     "<!-- Generated from docs/write.md. Do not edit. -->\n\n",
   ),
-  generatedText(
-    "design/fonts/OFL-D2Coding.txt",
-    "plugins/hope/runtime/design/fonts/OFL-D2Coding.txt",
-  ),
-  generatedText(
-    "design/fonts/OFL-Gmarket.txt",
-    "plugins/hope/runtime/design/fonts/OFL-Gmarket.txt",
-  ),
-  generatedText(
-    "design/fonts/SOURCE.md",
-    "plugins/hope/runtime/design/fonts/SOURCE.md",
-  ),
-  generatedBinary(
-    "design/HopeFavicon.png",
-    "plugins/hope/assets/hope-protected-light-128.png",
-  ),
-  generatedBinary(
-    "design/HopeFavicon.png",
-    "plugins/hope/runtime/design/HopeFavicon.png",
-  ),
-  generatedBinary(
-    "design/fonts/HopeCode.woff2",
-    "plugins/hope/runtime/design/fonts/HopeCode.woff2",
-  ),
-  generatedBinary(
-    "design/fonts/HopeSansBold.woff2",
-    "plugins/hope/runtime/design/fonts/HopeSansBold.woff2",
-  ),
-  generatedBinary(
-    "design/fonts/HopeSansLight.woff2",
-    "plugins/hope/runtime/design/fonts/HopeSansLight.woff2",
-  ),
-  generatedBinary(
-    "design/fonts/HopeSansMedium.woff2",
-    "plugins/hope/runtime/design/fonts/HopeSansMedium.woff2",
-  ),
-  generatedText(
-    "design/tokens.mjs",
-    "plugins/hope/runtime/design/tokens.mjs",
-    "// Generated from design/tokens.mjs. Do not edit.\n",
-  ),
-  generatedText(
-    "entrypoint/index.mjs",
-    "plugins/hope/runtime/entrypoint/index.mjs",
-    "// Generated from entrypoint/index.mjs. Do not edit.\n",
-  ),
+]);
+
+export const staticPluginFiles = Object.freeze([
+  "plugins/hope/.claude-plugin/plugin.json",
+  "plugins/hope/.codex-plugin/plugin.json",
+  "plugins/hope/assets/hope-protected-light.png",
+  "plugins/hope/skills/align/SKILL.md",
+  "plugins/hope/skills/align/agents/openai.yaml",
+  "plugins/hope/skills/diff/SKILL.md",
+  "plugins/hope/skills/diff/agents/openai.yaml",
+  "plugins/hope/skills/diff/assets/HopeFavicon.png",
+  "plugins/hope/skills/diff/assets/fonts/HopeCode.woff2",
+  "plugins/hope/skills/diff/assets/fonts/HopeSansBold.woff2",
+  "plugins/hope/skills/diff/assets/fonts/HopeSansLight.woff2",
+  "plugins/hope/skills/diff/assets/fonts/HopeSansMedium.woff2",
+  "plugins/hope/skills/diff/assets/fonts/OFL-D2Coding.txt",
+  "plugins/hope/skills/diff/assets/fonts/OFL-Gmarket.txt",
+  "plugins/hope/skills/diff/assets/fonts/SOURCE.md",
+  "plugins/hope/skills/diff/assets/hope-protected-light.png",
+  "plugins/hope/skills/diff/references/analysis.md",
   ...[
     "analysis-v2.schema.json",
     "artifact.mjs",
@@ -118,41 +85,18 @@ export const generatedPluginFiles = Object.freeze([
     "redact.mjs",
     "render.mjs",
     "run.mjs",
+    "structured-input.mjs",
     "target.mjs",
     "teaching-aids.mjs",
     "text.mjs",
     "validate.mjs",
-    "structured-input.mjs",
-  ].map((name) => generatedText(
-    `features/diff/${name}`,
-    `plugins/hope/runtime/features/diff/${name}`,
-    name.endsWith(".mjs")
-      ? `// Generated from features/diff/${name}. Do not edit.\n`
-      : "",
-  )),
-  generatedText(
-    "features/diff/locales/index.mjs",
-    "plugins/hope/runtime/features/diff/locales/index.mjs",
-    "// Generated from features/diff/locales/index.mjs. Do not edit.\n",
-  ),
-  ...["en-US", "ko-KR"].flatMap((locale) => ["common", "diff"].map(
-    (name) => generatedText(
-      `features/diff/locales/${locale}/${name}.json`,
-      `plugins/hope/runtime/features/diff/locales/${locale}/${name}.json`,
-    ),
-  )),
-]);
-
-export const staticPluginFiles = Object.freeze([
-  "plugins/hope/.claude-plugin/plugin.json",
-  "plugins/hope/.codex-plugin/plugin.json",
-  "plugins/hope/assets/hope-protected-light.png",
-  "plugins/hope/skills/align/SKILL.md",
-  "plugins/hope/skills/align/agents/openai.yaml",
-  "plugins/hope/skills/diff/SKILL.md",
-  "plugins/hope/skills/diff/agents/openai.yaml",
-  "plugins/hope/skills/diff/assets/hope-protected-light.png",
-  "plugins/hope/skills/diff/references/analysis.md",
+  ].map((name) => `plugins/hope/skills/diff/scripts/${name}`),
+  "plugins/hope/skills/diff/scripts/design/tokens.mjs",
+  "plugins/hope/skills/diff/scripts/locales/en-US/common.json",
+  "plugins/hope/skills/diff/scripts/locales/en-US/diff.json",
+  "plugins/hope/skills/diff/scripts/locales/index.mjs",
+  "plugins/hope/skills/diff/scripts/locales/ko-KR/common.json",
+  "plugins/hope/skills/diff/scripts/locales/ko-KR/diff.json",
   "plugins/hope/skills/polish/SKILL.md",
   "plugins/hope/skills/polish/agents/openai.yaml",
   "plugins/hope/skills/sweep/SKILL.md",

@@ -7,9 +7,9 @@ import {
   checkpointDiffPage,
   checkpointDiffWindow,
   readDiffLedger,
-} from "../features/diff/index.mjs";
-import { diffLedgerView } from "../features/diff/checkpoint.mjs";
-import { LIMITS } from "../features/diff/constants.mjs";
+} from "../plugins/hope/skills/diff/scripts/index.mjs";
+import { diffLedgerView } from "../plugins/hope/skills/diff/scripts/checkpoint.mjs";
+import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
 import {
   checkpointDiffRun,
   checkpointDiffRunWindow,
@@ -18,7 +18,7 @@ import {
   inspectDiffRunWindow,
   loadDiffRun,
   removeDiffRun,
-} from "../features/diff/run.mjs";
+} from "../plugins/hope/skills/diff/scripts/run.mjs";
 import { makeSnapshot } from "../test-support/diff-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,

@@ -3,14 +3,14 @@ import test from "node:test";
 
 import {
   DIFF_REVALIDATION_RETRYABLE_CODE,
-} from "../features/diff/index.mjs";
+} from "../plugins/hope/skills/diff/scripts/index.mjs";
 import {
   diffErrorDetails,
   diffErrorReport,
   diffExitCode,
   main as runDiffCommand,
   parseDiffArguments,
-} from "../features/diff/cli.mjs";
+} from "../plugins/hope/skills/diff/scripts/cli.mjs";
 
 test("Diff parses every internal Skill command", () => {
   assert.deepEqual(parseDiffArguments([]), { command: "help" });

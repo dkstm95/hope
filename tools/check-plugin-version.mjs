@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { isEntrypoint } from "../entrypoint/index.mjs";
+import { isEntrypoint } from "./entrypoint.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 

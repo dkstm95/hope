@@ -11,7 +11,7 @@ import {
 import { dirname, isAbsolute, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isEntrypoint } from "../entrypoint/index.mjs";
+import { isEntrypoint } from "./entrypoint.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const pluginRoot = resolve(root, "plugins/hope");
 const packageFileList = new URL("./plugin-package-files.txt", import.meta.url);

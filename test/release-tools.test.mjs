@@ -351,7 +351,7 @@ test("the release package contains exactly the approved plugin files", async (co
   await mkdir(outsideRepository);
   const diffHelp = spawnSync(
     process.execPath,
-    [join(destination, "runtime/features/diff/cli.mjs"), "--help"],
+    [join(destination, "skills/diff/scripts/cli.mjs"), "--help"],
     {
       cwd: outsideRepository,
       encoding: "utf8",
@@ -361,13 +361,13 @@ test("the release package contains exactly the approved plugin files", async (co
   assert.match(diffHelp.stdout, /Use Hope Diff through its private Skill adapter/u);
 
   const stagedValidate = await import(pathToFileURL(
-    join(destination, "runtime/features/diff/validate.mjs"),
+    join(destination, "skills/diff/scripts/validate.mjs"),
   ));
   const stagedRender = await import(pathToFileURL(
-    join(destination, "runtime/features/diff/render.mjs"),
+    join(destination, "skills/diff/scripts/render.mjs"),
   ));
   const stagedCodeEvidence = await import(pathToFileURL(
-    join(destination, "runtime/features/diff/code-evidence.mjs"),
+    join(destination, "skills/diff/scripts/code-evidence.mjs"),
   ));
   const runId = "5".repeat(32);
   const snapshot = makeSnapshot();

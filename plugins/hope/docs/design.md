@@ -34,8 +34,8 @@ They are comparison material, not pixel-perfect specifications.
 
 They do not ship in the runtime plugin.
 
-`design/tokens.mjs` is the code source of truth for colors, type sizes,
-spacing, and layout limits.
+`plugins/hope/skills/diff/scripts/design/tokens.mjs` is the code source of
+truth for colors, type sizes, spacing, and layout limits.
 
 A renderer must read those tokens instead of copying their values.
 
@@ -318,7 +318,8 @@ Do not synthesize a missing font weight.
 Hope presents the converted files under Hope-owned family names because both
 source licenses reserve their original family names.
 
-Keep their source hashes, build commands, and licenses in `design/fonts/`.
+Keep their source hashes, build commands, and licenses beside the Diff Skill
+fonts under `plugins/hope/skills/diff/assets/fonts/`.
 
 Start with this compact scale and adjust it only through named tokens:
 
@@ -430,7 +431,8 @@ slightly brighter reading surface.
 
 It should feel softer than pure white without looking beige or gray.
 
-Exact Hope surface values live only in `design/tokens.mjs`.
+Exact Hope surface values live only in
+`plugins/hope/skills/diff/scripts/design/tokens.mjs`.
 
 Code is a separate visual surface with fixed Hope light and dark colors.
 

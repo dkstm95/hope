@@ -9,7 +9,7 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["alignment", "sweep", "maintenance", "dead-code", "polish", "refactoring", "review", "diff", "pull-request", "writing"],
+  "keywords": ["alignment", "sweep", "maintenance", "dead-code", "polish", "review", "diff", "pull-request", "writing"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
@@ -24,7 +24,7 @@
       "Use $hope:diff to explain the current pull request."
     ],
     "brandColor": "#087EA4",
-    "composerIcon": "./assets/hope-protected-light-128.png",
+    "composerIcon": "./skills/diff/assets/HopeFavicon.png",
     "logo": "./assets/hope-protected-light.png"
   }
 }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { renderCodeEvidence } from "../features/diff/code-evidence.mjs";
+import { renderCodeEvidence } from "../plugins/hope/skills/diff/scripts/code-evidence.mjs";
 
 test("code evidence stays escaped and line-addressable", () => {
   const rendered = renderCodeEvidence({

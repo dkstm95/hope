@@ -79,7 +79,15 @@ def rename_font(path: Path, replacements: dict[int, str]) -> None:
 
 
 def main() -> None:
-    font_directory = Path(__file__).resolve().parent
+    font_directory = (
+        Path(__file__).resolve().parent.parent
+        / "plugins"
+        / "hope"
+        / "skills"
+        / "diff"
+        / "assets"
+        / "fonts"
+    )
     for filename, replacements in FONT_NAMES.items():
         rename_font(font_directory / filename, replacements)
 
