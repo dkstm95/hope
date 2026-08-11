@@ -44,9 +44,9 @@ Start a new Codex task after installation.
 
 ## Record and submit the change
 
-- Add a concise item under `Unreleased` in [CHANGELOG.md](CHANGELOG.md).
-- Use a Conventional Commit subject as defined in
-  [docs/release.md](docs/release.md).
+- Use a concise, outcome-focused Conventional Commit subject as defined in
+  [docs/release.md](docs/release.md). Add a commit body only when the reason or
+  trade-off is not clear from the change.
 - Keep product documentation aligned with implemented behavior.
 - State which checks ran and any remaining verification gap in the pull
   request.

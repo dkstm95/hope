@@ -126,7 +126,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md package.json package-lock.json plugins/hope/.codex-plugin/plugin.json plugins/hope/.claude-plugin/plugin.json tools/plugin-package-files.txt
+          git add package.json package-lock.json plugins/hope/.codex-plugin/plugin.json plugins/hope/.claude-plugin/plugin.json tools/plugin-package-files.txt
           if ! git diff --cached --quiet; then
             git commit -m "chore: release Hope ${{ steps.release.outputs.version }}"
           fi

@@ -36,7 +36,6 @@ const [
   claudePlugin,
   codexMarketplace,
   claudeMarketplace,
-  changelog,
   packageLock,
 ] =
   await Promise.all([
@@ -44,7 +43,6 @@ const [
     readJson("plugins/hope/.claude-plugin/plugin.json"),
     readJson(".agents/plugins/marketplace.json"),
     readJson(".claude-plugin/marketplace.json"),
-    read("CHANGELOG.md"),
     readJson("package-lock.json"),
   ]);
 
@@ -79,13 +77,6 @@ const claudeMarketplaceEntry = claudeMarketplace.plugins.find(
 );
 assert.equal(claudeMarketplaceEntry.source, "./plugins/hope");
 assert.equal(claudeMarketplaceEntry.version, undefined);
-assert.match(
-  changelog,
-  new RegExp(
-    `^## ${currentVersion.replaceAll(".", "\\.")} - \\d{4}-\\d{2}-\\d{2}$`,
-    "mu",
-  ),
-);
 assert.equal(packageJson.scripts["plugin:dev:install"], "node tools/install-plugin-dev.mjs");
 assert.equal(
   packageJson.scripts["render:readme-assets"],

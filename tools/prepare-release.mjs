@@ -81,40 +81,6 @@ export function incrementVersion(version, releaseType) {
   return `${major}.${minor}.${patch}`;
 }
 
-export function promoteUnreleasedChangelog(content, version, date) {
-  if (!isSemanticVersion(version)) {
-    throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) {
-    throw new Error(`Expected a release date in YYYY-MM-DD form, received: ${date}`);
-  }
-  const headings = [...content.matchAll(/^## Unreleased\r?$/gmu)];
-  if (headings.length !== 1) {
-    throw new Error("CHANGELOG.md must contain exactly one Unreleased section");
-  }
-  if (new RegExp(`^## ${version.replaceAll(".", "\\.")} - `, "mu").test(content)) {
-    throw new Error(`CHANGELOG.md already contains a ${version} release section`);
-  }
-  const heading = headings[0];
-  const bodyStart = heading.index + heading[0].length;
-  const nextHeading = /^## /gmu;
-  nextHeading.lastIndex = bodyStart;
-  const next = nextHeading.exec(content);
-  const bodyEnd = next?.index ?? content.length;
-  const body = content.slice(bodyStart, bodyEnd).trim();
-  if (!/^[-*]\s+\S/mu.test(body)) {
-    throw new Error("CHANGELOG.md Unreleased section must contain at least one list item");
-  }
-  const suffix = next ? content.slice(next.index) : "";
-  return [
-    content.slice(0, heading.index),
-    "## Unreleased\n\n",
-    `## ${version} - ${date}\n\n`,
-    `${body}\n`,
-    suffix ? `\n${suffix}` : "",
-  ].join("");
-}
-
 export function withVersion(document, version) {
   if (!isSemanticVersion(version)) {
     throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
@@ -221,10 +187,7 @@ export async function prepareRelease(version) {
   process.stdout.write(`Hope ${version} is ready to review and commit.\n`);
 }
 
-export async function prepareAutomaticRelease(
-  baseRef,
-  { date = new Date().toISOString().slice(0, 10) } = {},
-) {
+export async function prepareAutomaticRelease(baseRef) {
   if (typeof baseRef !== "string" || !baseRef.trim()) {
     throw new Error("Automatic release requires a base Git reference");
   }
@@ -232,12 +195,6 @@ export async function prepareAutomaticRelease(
   const commitMessages = readCommitMessages(baseRef);
   const releaseType = releaseTypeForCommits(commitMessages);
   const version = incrementVersion(packageJson.version, releaseType);
-  const changelog = await readFile(fromRoot("CHANGELOG.md"), "utf8");
-  await writeFile(
-    fromRoot("CHANGELOG.md"),
-    promoteUnreleasedChangelog(changelog, version, date),
-    "utf8",
-  );
   await prepareRelease(version);
   process.stdout.write(
     `Selected Hope ${version} (${releaseType}) from ${commitMessages.length} commit${commitMessages.length === 1 ? "" : "s"}.\n`,

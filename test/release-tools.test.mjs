@@ -23,7 +23,6 @@ import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 import {
   incrementVersion,
   isSemanticVersion,
-  promoteUnreleasedChangelog,
   releaseTypeForCommit,
   releaseTypeForCommits,
   replaceVersion,
@@ -127,52 +126,6 @@ test("automatic releases derive the largest semantic change from commits", () =>
   assert.equal(incrementVersion("2.4.6", "major"), "3.0.0");
   assert.throws(() => incrementVersion("2.4.6-rc.1", "patch"), /stable/u);
   assert.throws(() => incrementVersion("2.4.6", "unknown"), /Unknown release type/u);
-});
-
-test("automatic releases promote a non-empty Unreleased Changelog section", () => {
-  const changelog = [
-    "# Changelog",
-    "",
-    "## Unreleased",
-    "",
-    "- Add one feature.",
-    "- Fix one boundary.",
-    "",
-    "## 2.0.0 - 2026-08-10",
-    "",
-    "- Previous release.",
-    "",
-  ].join("\n");
-  assert.equal(
-    promoteUnreleasedChangelog(changelog, "2.1.0", "2026-08-11"),
-    [
-      "# Changelog",
-      "",
-      "## Unreleased",
-      "",
-      "## 2.1.0 - 2026-08-11",
-      "",
-      "- Add one feature.",
-      "- Fix one boundary.",
-      "",
-      "## 2.0.0 - 2026-08-10",
-      "",
-      "- Previous release.",
-      "",
-    ].join("\n"),
-  );
-  assert.throws(
-    () => promoteUnreleasedChangelog(
-      "# Changelog\n\n## Unreleased\n\n## 2.0.0 - 2026-08-10\n",
-      "2.0.1",
-      "2026-08-11",
-    ),
-    /at least one list item/u,
-  );
-  assert.throws(
-    () => promoteUnreleasedChangelog(changelog, "2.0.0", "2026-08-11"),
-    /already contains/u,
-  );
 });
 
 test("development installation verifies the selected plugin and cache", async (context) => {
@@ -298,7 +251,7 @@ test("CI installs locked dependencies before running checks or builds", async ()
   );
   assert.match(
     release,
-    /git add CHANGELOG\.md [^\n]*tools\/plugin-package-files\.txt/u,
+    /git add package\.json [^\n]*tools\/plugin-package-files\.txt/u,
   );
   assert.match(release, /gh release create/u);
   assert.match(release, /--fail-on-no-commits/u);

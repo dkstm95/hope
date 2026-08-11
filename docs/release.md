@@ -11,8 +11,11 @@ version.
 
 A manual `Release` run records the normal release intent.
 
-Contributors add release notes under `Unreleased` in `CHANGELOG.md` and use a
-Conventional Commit subject for each change that reaches `main`.
+Use a concise, outcome-focused Conventional Commit subject for each change that
+reaches `main`.
+
+Add a commit body only when the reason or trade-off is not clear from the
+change.
 
 The workflow chooses the version increase from every commit after the current
 release:
@@ -23,12 +26,8 @@ release:
 
 The largest increase wins.
 
-The workflow stops instead of publishing when `Unreleased` has no list item.
-
 Use a patch increase for compatible fixes, a minor increase for compatible
 capability changes, and a major increase for incompatible public changes.
-
-The release promotes `Unreleased` to a dated version section.
 
 The public version files are:
 
@@ -60,13 +59,18 @@ The workflow installs locked dependencies, runs repository and browser checks,
 verifies generated plugin files, creates an annotated tag, stages the approved
 package files, records a checksum, and publishes the GitHub Release as latest.
 
+GitHub Release notes are the public version history.
+
+GitHub generates them from the commits and merged pull requests since the
+previous tag.
+
 ## Manual release
 
 A manual run uses the latest `main` commit.
 
 When the recorded version already has a GitHub Release, the workflow classifies
-the commits after its tag, chooses the next version, promotes `Unreleased`, and
-commits the prepared release files.
+the commits after its tag, chooses the next version, and commits the prepared
+release files.
 
 When no commit follows the current release, the run exits without changing or
 publishing anything.

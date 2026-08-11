@@ -35,6 +35,9 @@ Hope는 이런 순간마다 필요한 도구를 제공합니다.
 
 현재 Hope 배포판은 Codex와 Claude Code에 설치할 수 있습니다.
 
+버전별 변경 내역과 다운로드할 수 있는 패키지는 GitHub
+[Releases](https://github.com/dkstm95/hope/releases)에서 제공합니다.
+
 <p>
   <img alt="Codex 지원" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white">
   <img alt="Claude Code 지원" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white">

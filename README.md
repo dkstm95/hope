@@ -34,6 +34,9 @@ The current supported delivery is a plugin for Codex and Claude Code.
 
 Install the current Hope distribution in Codex or Claude Code.
 
+GitHub [Releases](https://github.com/dkstm95/hope/releases) provide version
+history and downloadable packages.
+
 <p>
   <img alt="Codex supported" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white">
   <img alt="Claude Code supported" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white">
