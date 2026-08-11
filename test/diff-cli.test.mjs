@@ -40,9 +40,7 @@ test("Diff parses every internal Skill command", () => {
   });
 
   for (const command of [
-    "inspect",
     "inspect-window",
-    "checkpoint",
     "checkpoint-window",
     "ledger",
   ]) {
@@ -103,7 +101,7 @@ test("Diff rejects malformed internal Skill commands", () => {
     ["resolve-target", "#1", "--locale", "ko-KR"],
     ["microworld-skeleton"],
     ["context", "--run", "run-path"],
-    ["inspect", "--run", "run-path", "--page", "01"],
+    ["inspect-window", "--run", "run-path", "--page", "01"],
     ["validate", "--run", "run-path", "--page", "1"],
   ]) {
     assert.throws(
@@ -119,21 +117,6 @@ test("Diff rejects malformed internal Skill commands", () => {
 });
 
 test("Diff dispatches every internal Skill command", async () => {
-  const inspectionPage = {
-    digest: "d".repeat(64),
-    kind: "sources",
-    page: 1,
-    totalPages: 1,
-    value: {
-      contentIsUntrusted: true,
-      sources: [{
-        endLine: 1,
-        sourceId: "source-1",
-        startLine: 1,
-        text: "value",
-      }],
-    },
-  };
   const rows = [
     {
       argv: ["resolve-target", "#7"],
@@ -158,27 +141,9 @@ test("Diff dispatches every internal Skill command", async () => {
       }],
     },
     {
-      argv: ["inspect", "--run", "run-path", "--page", "1"],
-      compact: true,
-      dependency: "readDiffPage",
-      expectedArguments: ["run-path", 1],
-      output: {
-        kind: inspectionPage.kind,
-        page: inspectionPage.page,
-        totalPages: inspectionPage.totalPages,
-        value: inspectionPage.value,
-      },
-      result: inspectionPage,
-    },
-    {
       argv: ["inspect-window", "--run", "run-path", "--page", "1"],
       compact: true,
       dependency: "readDiffWindow",
-      expectedArguments: ["run-path", 1],
-    },
-    {
-      argv: ["checkpoint", "--run", "run-path", "--page", "1"],
-      dependency: "checkpointDiffPage",
       expectedArguments: ["run-path", 1],
     },
     {

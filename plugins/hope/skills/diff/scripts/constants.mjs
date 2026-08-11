@@ -1,7 +1,7 @@
 export const CONTRACT_VERSION = 1;
 export const ANALYSIS_VERSION = 2;
 export const RENDERER_VERSION = 7;
-export const RUN_VERSION = 5;
+export const RUN_VERSION = 6;
 export const CHECKPOINT_VERSION = 1;
 export const MICROWORLD_SKELETON_VERSION = 6;
 

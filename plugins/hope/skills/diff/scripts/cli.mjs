@@ -8,18 +8,15 @@ import {
   addDiffContext,
   buildMicroworldSkeleton,
   cancelDiff,
-  checkpointDiffPage,
   checkpointDiffWindow,
   DIFF_REVALIDATION_RETRYABLE_CODE,
   finishDiff,
   prepareDiff,
-  readDiffPage,
   readDiffWindow,
   readDiffLedger,
   resolveDiffTarget,
   validateDiff,
 } from "./index.mjs";
-import { serializeInspectionPage } from "./run.mjs";
 import { parsePullRequestTargetArgument } from "./target.mjs";
 
 function isEntrypoint(moduleUrl, entryPath = process.argv[1]) {
@@ -38,8 +35,6 @@ function usage() {
     "Internal Skill subcommands:",
     "  resolve-target [GitHub PR URL or PR number]",
     "  prepare [GitHub PR URL or PR number] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
-    "  inspect --run <private-run-path> --page <number>",
-    "  checkpoint --run <private-run-path> --page <number>",
     "  inspect-window --run <private-run-path> --page <start-number>",
     "  checkpoint-window --run <private-run-path> --page <start-number>",
     "  ledger --run <private-run-path> --page <number>",
@@ -59,9 +54,7 @@ export function parseDiffArguments(argv) {
   if (![
     "prepare",
     "resolve-target",
-    "inspect",
     "inspect-window",
-    "checkpoint",
     "checkpoint-window",
     "ledger",
     "context",
@@ -161,9 +154,7 @@ export function parseDiffArguments(argv) {
     throw new TypeError(usage());
   }
   if (
-    command === "inspect"
-    || command === "inspect-window"
-    || command === "checkpoint"
+    command === "inspect-window"
     || command === "checkpoint-window"
     || command === "ledger"
   ) {
@@ -192,20 +183,8 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     );
   } else if (options.command === "prepare") {
     result = await (dependencies.prepareDiff ?? prepareDiff)(options, dependencies);
-  } else if (options.command === "inspect") {
-    result = await (dependencies.readDiffPage ?? readDiffPage)(
-      options.runPath,
-      options.page,
-      dependencies,
-    );
   } else if (options.command === "inspect-window") {
     result = await (dependencies.readDiffWindow ?? readDiffWindow)(
-      options.runPath,
-      options.page,
-      dependencies,
-    );
-  } else if (options.command === "checkpoint") {
-    result = await (dependencies.checkpointDiffPage ?? checkpointDiffPage)(
       options.runPath,
       options.page,
       dependencies,
@@ -245,9 +224,7 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
     result = await (dependencies.cancelDiff ?? cancelDiff)(options.runPath, dependencies);
   }
   if (result !== undefined) {
-    if (options.command === "inspect") {
-      stdout.write(serializeInspectionPage(result));
-    } else if (
+    if (
       options.command === "inspect-window"
       || options.command === "checkpoint-window"
     ) {

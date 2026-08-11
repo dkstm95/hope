@@ -19,7 +19,6 @@ skills/diff/references/analysis.md
 skills/diff/references/runtime.md
 skills/diff/scripts/analysis-v2.schema.json
 skills/diff/scripts/artifact.mjs
-skills/diff/scripts/checkpoint-v1.schema.json
 skills/diff/scripts/checkpoint-window-v1.schema.json
 skills/diff/scripts/checkpoint.mjs
 skills/diff/scripts/cli.mjs

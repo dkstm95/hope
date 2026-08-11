@@ -28,9 +28,7 @@ import { digestJson } from "./hash.mjs";
 
 const RUN_OWNER = "hope-diff-run";
 const RUN_TTL_MS = 24 * 60 * 60 * 1000;
-const FINALIZATION_CLAIM = ".finish.lock";
-const FINALIZATION_LEASE_TTL_MS = 60 * 60 * 1000;
-const FINALIZATION_HEARTBEAT_MS = 60 * 1000;
+const RUN_LOCK = ".change.lock";
 function validRunContractVersions(manifest) {
   return (
     manifest.runVersion === RUN_VERSION
@@ -64,31 +62,6 @@ function planFileNames(manifest) {
     pagesFile: manifest.pagesFile,
     snapshotFile: manifest.snapshotFile,
   };
-}
-
-function parseFinalizationClaim(value) {
-  let parsed;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    return undefined;
-  }
-  const keys = parsed && typeof parsed === "object" && !Array.isArray(parsed)
-    ? Object.keys(parsed).sort()
-    : [];
-  if (
-    keys.join(",") !== "pid,runId,token,version"
-    || parsed.version !== 2
-    || !Number.isSafeInteger(parsed.pid)
-    || parsed.pid < 1
-    || typeof parsed.runId !== "string"
-    || !/^[a-f0-9]{32}$/u.test(parsed.runId)
-    || typeof parsed.token !== "string"
-    || !/^[a-f0-9]{32}$/u.test(parsed.token)
-  ) {
-    return undefined;
-  }
-  return parsed;
 }
 
 function isInside(parent, candidate) {
@@ -229,118 +202,21 @@ async function readRunJson(path, name, {
   }
 }
 
-async function readFinalizationClaim(path) {
-  let info;
-  try {
-    info = await lstat(path);
-  } catch (error) {
-    if (error?.code === "ENOENT") return undefined;
-    throw error;
-  }
-  const reclaimable = info.isFile()
-    && !info.isSymbolicLink()
-    && (process.platform === "win32" || (info.mode & 0o077) === 0);
-  const invalid = {
-    mtimeMs: info.mtimeMs,
-    reclaimable,
-    valid: false,
-  };
-  if (!reclaimable || info.size > 256) return invalid;
-  const handle = await open(path, "r");
-  try {
-    const opened = await handle.stat();
-    if (
-      !opened.isFile()
-      || opened.dev !== info.dev
-      || opened.ino !== info.ino
-      || opened.size !== info.size
-    ) {
-      return { ...invalid, reclaimable: false };
-    }
-    const value = parseFinalizationClaim(await handle.readFile("utf8"));
-    if (!value) return invalid;
-    return {
-      mtimeMs: info.mtimeMs,
-      pid: value.pid,
-      reclaimable: true,
-      runId: value.runId,
-      token: value.token,
-      valid: true,
-    };
-  } finally {
-    await handle.close();
-  }
-}
-
-function finalizationClaimGeneration(name) {
-  if (name === FINALIZATION_CLAIM) return 0;
-  const match = /^\.finish\.lock\.([1-9][0-9]*)$/u.exec(name);
-  if (!match) return undefined;
-  const generation = Number(match[1]);
-  if (!Number.isSafeInteger(generation)) {
-    throw new Error("Hope diff finalization lease generation is unsafe");
-  }
-  return generation;
-}
-
-function finalizationClaimName(generation) {
-  return generation === 0
-    ? FINALIZATION_CLAIM
-    : `${FINALIZATION_CLAIM}.${generation}`;
-}
-
-async function readFinalizationClaims(runPath) {
-  const claims = [];
-  for (const name of await readdir(runPath)) {
-    const generation = finalizationClaimGeneration(name);
-    if (generation === undefined) continue;
-    const path = join(runPath, name);
-    claims.push({
-      ...await readFinalizationClaim(path),
-      generation,
-      path,
-    });
-  }
-  claims.sort((left, right) => left.generation - right.generation);
-  return claims;
-}
-
-function claimExistsError() {
-  const error = new Error("This Hope diff run already has a finalization claim");
-  error.code = "EEXIST";
-  return error;
-}
-
-export async function claimDiffRunFinalization(run, {
-  clearHeartbeat = clearInterval,
-  clock = () => new Date(),
+export async function claimDiffRunMutation(run, {
   openFile = open,
-  scheduleHeartbeat = setInterval,
   unlinkFile = unlink,
 } = {}) {
   const token = randomBytes(16).toString("hex");
-  const observedClaims = await readFinalizationClaims(run.path);
-  const observed = observedClaims.at(-1);
-  const observedAt = clock();
-  const observedStale = observed?.reclaimable
-    && Number.isFinite(observedAt.getTime())
-    && observedAt.getTime() - observed.mtimeMs >= FINALIZATION_LEASE_TTL_MS;
-  if (observed && !observedStale) throw claimExistsError();
-  if (observed?.generation === Number.MAX_SAFE_INTEGER) {
-    throw new Error("Hope diff finalization lease generation is exhausted");
-  }
-  const generation = observed ? observed.generation + 1 : 0;
-  const path = join(run.path, finalizationClaimName(generation));
+  const path = join(run.path, RUN_LOCK);
   let created = false;
   let handle;
   try {
     handle = await openFile(path, "wx", 0o600);
     created = true;
     await handle.writeFile(`${JSON.stringify({
-      pid: process.pid,
       runId: run.manifest.runId,
       token,
-      version: 2,
+      version: 1,
     })}\n`, "utf8");
     await handle.sync();
     await handle.close();
@@ -351,122 +227,38 @@ export async function claimDiffRunFinalization(run, {
     throw error;
   }
 
-  const currentClaim = async () => {
-    const claims = await readFinalizationClaims(run.path);
-    return claims.at(-1);
-  };
   const owns = (claim) => (
-    claim?.valid
-    && claim.generation === generation
+    claim
+    && typeof claim === "object"
+    && !Array.isArray(claim)
+    && Object.keys(claim).sort().join(",") === "runId,token,version"
+    && claim.version === 1
     && claim.runId === run.manifest.runId
     && claim.token === token
   );
-  let heartbeatError;
-  let heartbeatInFlight;
-  const assertOwned = async () => {
-    if (heartbeatError) {
-      throw new Error("Hope diff finalization lease could not be renewed", {
-        cause: heartbeatError,
-      });
-    }
-    const claim = await currentClaim();
-    if (!owns(claim)) {
-      throw new Error("Hope diff finalization lease was lost");
-    }
-    const now = clock();
-    if (
-      !Number.isFinite(now.getTime())
-      || now.getTime() - claim.mtimeMs >= FINALIZATION_LEASE_TTL_MS
-    ) {
-      throw new Error("Hope diff finalization lease expired");
-    }
-  };
-  const renew = async () => {
-    if (heartbeatInFlight) return await heartbeatInFlight;
-    heartbeatInFlight = (async () => {
-      let lease;
-      try {
-        lease = await open(path, "r+");
-      } catch (error) {
-        if (error?.code === "ENOENT") {
-          throw new Error("Hope diff finalization lease was lost", { cause: error });
-        }
-        throw error;
-      }
-      try {
-        const info = await lease.stat();
-        if (
-          !info.isFile()
-          || info.size > 256
-          || (process.platform !== "win32" && (info.mode & 0o077) !== 0)
-        ) {
-          throw new Error("Hope diff finalization lease is not a private regular file");
-        }
-        const now = clock();
-        if (
-          !Number.isFinite(now.getTime())
-          || now.getTime() - info.mtimeMs >= FINALIZATION_LEASE_TTL_MS
-        ) {
-          throw new Error("Hope diff finalization lease expired");
-        }
-        const value = parseFinalizationClaim(await lease.readFile("utf8"));
-        if (
-          !value
-          || value.runId !== run.manifest.runId
-          || value.token !== token
-          || !owns(await currentClaim())
-        ) {
-          throw new Error("Hope diff finalization lease was lost");
-        }
-        await lease.utimes(now, now);
-      } finally {
-        await lease.close();
-      }
-    })();
+  const currentClaim = async () => {
     try {
-      await heartbeatInFlight;
+      return await readRunJson(path, "run mutation lock", {
+        maximumBytes: 256,
+      });
     } catch (error) {
-      heartbeatError = error;
+      if (error?.code === "ENOENT") return undefined;
       throw error;
-    } finally {
-      heartbeatInFlight = undefined;
     }
   };
-  let timer;
-  try {
-    timer = scheduleHeartbeat(() => {
-      renew().catch(() => {});
-    }, FINALIZATION_HEARTBEAT_MS);
-  } catch (error) {
-    await unlinkFile(path).catch(() => {});
-    throw error;
-  }
-  timer?.unref?.();
+  const assertOwned = async () => {
+    if (!owns(await currentClaim())) {
+      throw new Error("Hope diff run mutation lock was lost");
+    }
+  };
 
   const release = async () => {
-    clearHeartbeat(timer);
-    await heartbeatInFlight?.catch(() => {});
-    const claims = await readFinalizationClaims(run.path).catch((error) => {
-      if (error?.code === "ENOENT") return [];
-      throw error;
+    if (!owns(await currentClaim())) return;
+    await unlinkFile(path).catch((error) => {
+      if (error?.code !== "ENOENT") throw error;
     });
-    const current = claims.at(-1);
-    const now = clock();
-    const currentExpired = (
-      !Number.isFinite(now.getTime())
-      || now.getTime() - current?.mtimeMs >= FINALIZATION_LEASE_TTL_MS
-    );
-    if (!owns(current) || currentExpired) return;
-    // Older generations are immutable fencing records. Remove them first and
-    // the authoritative generation last, so a concurrent claimant can never
-    // mistake a partially released run for an unlocked one.
-    for (const claim of claims) {
-      await unlinkFile(claim.path).catch((error) => {
-        if (error?.code !== "ENOENT") throw error;
-      });
-    }
   };
-  return Object.freeze({ assertOwned, release, renew });
+  return Object.freeze({ assertOwned, release });
 }
 
 function lineChunks(text, maxBytes) {
@@ -677,16 +469,13 @@ export function buildInspectionPages(snapshot, {
   return Object.freeze(values);
 }
 
-export function serializeInspectionPage(page) {
+function serializeInspectionPage(page) {
   return `${JSON.stringify(inspectionPageView(page))}\n`;
 }
 
-export function inspectionPageView(page, checkpointPath) {
+export function inspectionPageView(page) {
   const { digest: _digest, ...output } = page;
-  return Object.freeze({
-    ...output,
-    ...(checkpointPath ? { checkpointPath } : {}),
-  });
+  return Object.freeze(output);
 }
 
 function selectInspectionWindow(pages, startPage) {
@@ -785,10 +574,6 @@ function checkpointFileName(generation, page) {
   return `checkpoint.${generation}.${page}.json`;
 }
 
-export function diffCheckpointInputPath(runPath, generation, page) {
-  return join(runPath, `checkpoint-input.${generation}.${page}.json`);
-}
-
 export function diffCheckpointWindowInputPath(
   runPath,
   generation,
@@ -816,7 +601,6 @@ function createLedgerState(runId) {
     checkpointCount: 0,
     currentGeneration: 1,
     currentPage: 0,
-    digestChain: "0".repeat(64),
     evidenceBytes: 0,
     evidenceLines: 0,
     observations: 0,
@@ -836,7 +620,6 @@ function validateLedgerState(value, runId) {
       "checkpointCount",
       "currentGeneration",
       "currentPage",
-      "digestChain",
       "evidenceBytes",
       "evidenceLines",
       "observations",
@@ -854,7 +637,6 @@ function validateLedgerState(value, runId) {
     || value.currentGeneration < 1
     || !Number.isSafeInteger(value.currentPage)
     || value.currentPage < 0
-    || !/^[a-f0-9]{64}$/u.test(value.digestChain)
     || !Number.isSafeInteger(value.evidenceBytes)
     || value.evidenceBytes < 0
     || value.evidenceBytes > LIMITS.checkpointEvidenceTotalBytes
@@ -935,16 +717,10 @@ function advanceLedgerState(state, checkpoint) {
       });
     }
   }
-  const checkpointValue = { ...checkpoint };
-  delete checkpointValue.pageValue;
   return validateLedgerState({
     checkpointCount: state.checkpointCount + 1,
     currentGeneration: checkpoint.generation,
     currentPage: checkpoint.page,
-    digestChain: digestJson({
-      checkpointDigest: digestJson(checkpointValue),
-      previous: state.digestChain,
-    }),
     evidenceBytes,
     evidenceLines,
     observations: state.observations + checkpoint.observations.length,
@@ -1056,7 +832,6 @@ export async function cleanupExpiredRuns({
       if (
         manifest.owner !== RUN_OWNER
         || manifest.runId !== entry.name.slice(4)
-        || !validRunContractVersions(manifest)
       ) {
         continue;
       }
@@ -1064,27 +839,13 @@ export async function cleanupExpiredRuns({
       if (!Number.isFinite(createdAt)) continue;
       if (now - createdAt < RUN_TTL_MS) continue;
 
-      let cleanupClaim;
-      try {
-        cleanupClaim = await claimDiffRunFinalization({ manifest, path });
-      } catch {
-        continue;
-      }
-      try {
-        await onCleanupClaimed({ manifest, path });
-        // Cleanup can be suspended after it acquires a lease. Revalidate the
-        // authoritative generation immediately before the destructive step so
-        // a newer claimant fences the resumed cleanup process.
-        await cleanupClaim.renew();
-        await removeOwnedRunDirectory(path, directory, {
-          onRemoveReady,
-          removeDirectory,
-          renameDirectory,
-        });
-        removedPaths.push(path);
-      } finally {
-        await cleanupClaim.release().catch(() => {});
-      }
+      await onCleanupClaimed({ manifest, path });
+      await removeOwnedRunDirectory(path, directory, {
+        onRemoveReady,
+        removeDirectory,
+        renameDirectory,
+      });
+      removedPaths.push(path);
     } catch (error) {
       if (error?.code === "HOPE_DIFF_RUN_REPLACED") {
         preservedPaths.push(error.preservedPath);
@@ -1121,7 +882,6 @@ export async function createDiffRun(snapshot, {
     throw new Error("Hope could not verify the new private run directory");
   }
   const manifest = {
-    analysisAttempts: 0,
     analysisFile: "analysis.json",
     analysisVersion: ANALYSIS_VERSION,
     createdAt: clock().toISOString(),
@@ -1165,11 +925,6 @@ export async function createDiffRun(snapshot, {
   }
   return Object.freeze({
     analysisPath: join(path, manifest.analysisFile),
-    checkpointPath: diffCheckpointInputPath(path, 1, 1),
-    checkpointSchemaPath: fileURLToPath(
-      new URL("./checkpoint-v1.schema.json", import.meta.url),
-    ),
-    checkpointSchemaVersion: 1,
     checkpointWindowSchemaPath: fileURLToPath(
       new URL("./checkpoint-window-v1.schema.json", import.meta.url),
     ),
@@ -1212,16 +967,6 @@ async function readCheckpointLedger(path, manifest, snapshot, ledgerState) {
       { maximumBytes: LIMITS.checkpointBytes * 2 },
     ),
   ));
-  let digestChain = "0".repeat(64);
-  for (const checkpoint of checkpoints) {
-    digestChain = digestJson({
-      checkpointDigest: digestJson(checkpoint),
-      previous: digestChain,
-    });
-  }
-  if (digestChain !== ledgerState.digestChain) {
-    throw new Error("Hope diff checkpoint records do not match their digest chain");
-  }
   return validateDiffLedger({
     checkpoints,
     runId: manifest.runId,
@@ -1265,105 +1010,11 @@ export async function loadDiffRunIdentity(value, {
   return Object.freeze({ directory, manifest, manifestPath, path });
 }
 
-async function loadDiffTransition(runPath, page, {
-  onReadBytes,
-  temporaryRoot,
-} = {}) {
-  const identity = await loadDiffRunIdentity(runPath, {
-    onReadBytes,
-    temporaryRoot,
-  });
-  const { manifest, path } = identity;
-  if (
-    !Number.isSafeInteger(page)
-    || page < 1
-    || !Number.isSafeInteger(manifest.pageCount)
-    || page > manifest.pageCount
-    || !Number.isSafeInteger(manifest.deliveredPage)
-    || manifest.deliveredPage < 0
-    || manifest.deliveredPage > manifest.pageCount
-    || manifest.ledgerStateFile !== `ledger-state.${manifest.generation}.json`
-  ) {
-    throw new Error("Hope diff transition state is invalid");
-  }
-  const [ledgerState, pageValue] = await Promise.all([
-    readRunJson(join(path, manifest.ledgerStateFile), "checkpoint state", {
-      maximumBytes: LIMITS.ledgerStateBytes,
-      onBytes: onReadBytes,
-    }),
-    readRunJson(
-      join(path, inspectionPageFileName(manifest.snapshotDigest, page)),
-      "inspection page",
-      {
-        maximumBytes: LIMITS.inspectionPageBytes * 2,
-        onBytes: onReadBytes,
-      },
-    ),
-  ]);
-  validateLedgerState(ledgerState, manifest.runId);
-  const digestValue = { ...pageValue };
-  delete digestValue.digest;
-  if (
-    ledgerState.currentGeneration !== manifest.generation
-    || ledgerState.currentPage > manifest.deliveredPage
-    || pageValue.page !== page
-    || pageValue.generation !== manifest.generation
-    || pageValue.totalPages !== manifest.pageCount
-    || digestJson(digestValue) !== pageValue.digest
-  ) {
-    throw new Error("Hope diff transition state does not match its page");
-  }
-  return {
-    ...identity,
-    checkpointPath: diffCheckpointInputPath(
-      path,
-      manifest.generation,
-      page,
-    ),
-    ledgerState,
-    ledgerStatePath: join(path, manifest.ledgerStateFile),
-    page: pageValue,
-  };
-}
-
-export async function readDiffGenerationPage(runPath, {
-  generation,
-  page,
-  pageCount,
-  snapshotDigest,
-  temporaryRoot,
-}) {
-  const identity = await loadDiffRunIdentity(runPath, { temporaryRoot });
-  const value = await readRunJson(
-    join(identity.path, inspectionPageFileName(snapshotDigest, page)),
-    "inspection page",
-    { maximumBytes: LIMITS.inspectionPageBytes * 2 },
-  );
-  const digestValue = { ...value };
-  delete digestValue.digest;
-  if (
-    value.generation !== generation
-    || value.page !== page
-    || value.totalPages !== pageCount
-    || digestJson(digestValue) !== value.digest
-  ) {
-    throw new Error("Hope diff context record does not match its inspection page");
-  }
-  return Object.freeze({
-    ...value,
-    checkpointPath: diffCheckpointInputPath(
-      identity.path,
-      generation,
-      page,
-    ),
-  });
-}
-
 async function withDiffRunMutation(runPath, options, operation) {
   const identity = await loadDiffRunIdentity(runPath, options);
   let claim;
   try {
-    claim = await claimDiffRunFinalization(identity);
+    claim = await claimDiffRunMutation(identity);
   } catch (error) {
     if (error?.code === "EEXIST") {
       throw new Error("This Hope diff run is already being changed");
@@ -1535,13 +1186,6 @@ export async function loadDiffRun(value, {
   }
   return {
     analysisPath: join(path, manifest.analysisFile),
-    checkpointPath: diffCheckpointInputPath(
-      path,
-      manifest.generation,
-      ledgerState.currentPage < manifest.deliveredPage
-        ? ledgerState.currentPage + 1
-        : Math.min(manifest.deliveredPage + 1, manifest.pageCount),
-    ),
     directory,
     ledger,
     ledgerState,
@@ -1568,10 +1212,10 @@ export async function replaceDiffRunPlan(runValue, snapshot, {
   const loaded = await loadDiffRun(runPath, { temporaryRoot });
   let claim;
   try {
-    claim = await claimDiffRunFinalization(loaded);
+    claim = await claimDiffRunMutation(loaded);
   } catch (error) {
     if (error?.code === "EEXIST") {
-      throw new Error("This Hope diff run is already being finalized");
+      throw new Error("This Hope diff run is already being changed");
     }
     throw error;
   }
@@ -1580,7 +1224,7 @@ export async function replaceDiffRunPlan(runValue, snapshot, {
     const ready = run.manifest.phase === "prepared"
       && run.manifest.deliveredPage === 0
       && run.ledger.checkpoints.length === 0;
-    if (!ready || run.manifest.analysisAttempts !== 0) {
+    if (!ready) {
       throw new Error("Hope can replace an inspection plan only before analysis starts");
     }
     if (
@@ -1619,7 +1263,7 @@ export async function replaceDiffRunPlan(runValue, snapshot, {
     await writeJson(snapshotPath, snapshot);
     await writeJson(pagesPath, pages);
     await writeInspectionPageFiles(run.path, snapshot.digest, pages, writeJson);
-    await claim.renew();
+    await claim.assertOwned();
     // Generation files stay inert until this single atomic manifest swap.
     await replaceManifest(run.manifestPath, {
       ...run.manifest,
@@ -1689,10 +1333,10 @@ export async function appendDiffRunPlan(runValue, snapshot, {
   const loaded = await loadDiffRun(runPath, { temporaryRoot });
   let claim;
   try {
-    claim = await claimDiffRunFinalization(loaded);
+    claim = await claimDiffRunMutation(loaded);
   } catch (error) {
     if (error?.code === "EEXIST") {
-      throw new Error("This Hope diff run is already being finalized");
+      throw new Error("This Hope diff run is already being changed");
     }
     throw error;
   }
@@ -1702,7 +1346,7 @@ export async function appendDiffRunPlan(runValue, snapshot, {
       && run.manifest.deliveredPage === run.manifest.pageCount
       && checkpointCount(run.ledger, run.manifest.generation)
         === run.manifest.pageCount;
-    if (!ready || run.manifest.analysisAttempts !== 0) {
+    if (!ready) {
       throw new Error("Hope can append context only after checkpointing every current page");
     }
     if (
@@ -1774,7 +1418,7 @@ export async function appendDiffRunPlan(runValue, snapshot, {
     }, run.manifest.runId);
     const ledgerStateFile = `ledger-state.${generation}.json`;
     await writeJson(join(run.path, ledgerStateFile), ledgerState);
-    await claim.renew();
+    await claim.assertOwned();
     const operationRecord = contextOperation
       ? {
           collected: contextOperation.collected,
@@ -1815,46 +1459,6 @@ export async function appendDiffRunPlan(runValue, snapshot, {
   } finally {
     await claim.release();
   }
-}
-
-export async function inspectDiffRun(runPath, page, options = {}) {
-  return await withDiffRunMutation(runPath, options, async (claim) => {
-    const run = await loadDiffTransition(runPath, page, options);
-    if (
-      page > run.ledgerState.currentPage
-      && page <= run.manifest.deliveredPage
-    ) {
-      return Object.freeze({
-        ...run.page,
-        checkpointPath: run.checkpointPath,
-      });
-    }
-    const next = run.manifest.deliveredPage + 1;
-    if (page === next - 1 && page > 0) {
-      return Object.freeze({
-        ...run.page,
-        checkpointPath: run.checkpointPath,
-      });
-    }
-    if (page !== next) {
-      throw new Error(`Read inspection page ${next} next`);
-    }
-    if (run.ledgerState.currentPage !== run.manifest.deliveredPage) {
-      throw new Error(
-        `Checkpoint inspection page ${run.ledgerState.currentPage + 1} before reading page ${next}`,
-      );
-    }
-    await claim.assertOwned();
-    await replaceJson(run.manifestPath, {
-      ...run.manifest,
-      deliveredPage: page,
-      phase: "inspecting",
-    });
-    return Object.freeze({
-      ...run.page,
-      checkpointPath: run.checkpointPath,
-    });
-  });
 }
 
 function checkpointWindowRecordInput(checkpoint) {
@@ -2130,200 +1734,6 @@ export async function checkpointDiffRunWindow(
   });
 }
 
-export async function checkpointDiffRun(runPath, page, input, options = {}) {
-  return await withDiffRunMutation(runPath, options, async (claim) => {
-    const run = await loadDiffTransition(runPath, page, options);
-    const checkpointPath = join(
-      run.path,
-      checkpointFileName(run.manifest.generation, page),
-    );
-    if (page <= run.ledgerState.currentPage) {
-      const existing = await readRunJson(
-        checkpointPath,
-        "checkpoint record",
-        { maximumBytes: LIMITS.checkpointBytes * 2 },
-      );
-      let manifest = run.manifest;
-      let nextPage;
-      if (page < run.manifest.pageCount) {
-        nextPage = await readRunJson(
-          join(
-            run.path,
-            inspectionPageFileName(run.manifest.snapshotDigest, page + 1),
-          ),
-          "inspection page",
-          {
-            maximumBytes: LIMITS.inspectionPageBytes * 2,
-            onBytes: options.onReadBytes,
-          },
-        );
-        const value = { ...nextPage };
-        delete value.digest;
-        if (
-          nextPage.page !== page + 1
-          || nextPage.generation !== run.manifest.generation
-          || nextPage.totalPages !== run.manifest.pageCount
-          || digestJson(value) !== nextPage.digest
-        ) {
-          throw new Error("Hope diff inspection page plan is invalid");
-        }
-        if (run.manifest.deliveredPage < page + 1) {
-          manifest = {
-            ...run.manifest,
-            deliveredPage: page + 1,
-            phase: "inspecting",
-          };
-          await claim.assertOwned();
-          await replaceJson(run.manifestPath, manifest);
-        }
-      } else if (run.manifest.phase !== "inspected") {
-        manifest = {
-          ...run.manifest,
-          phase: "inspected",
-        };
-        await claim.assertOwned();
-        await replaceJson(run.manifestPath, manifest);
-      }
-      return Object.freeze({
-        checkpoint: existing,
-        checkpointPath: run.checkpointPath,
-        consumedInput: false,
-        ledgerState: run.ledgerState,
-        manifest,
-        nextPage: nextPage
-          ? Object.freeze({
-              ...nextPage,
-              checkpointPath: diffCheckpointInputPath(
-                run.path,
-                run.manifest.generation,
-                page + 1,
-              ),
-            })
-          : undefined,
-        replayed: true,
-      });
-    }
-    if (
-      page !== run.ledgerState.currentPage + 1
-      || run.manifest.deliveredPage < page
-    ) {
-      throw new Error(
-        `Checkpoint inspection page ${run.ledgerState.currentPage + 1} next`,
-      );
-    }
-    const inputValue = typeof input === "function"
-      ? await input(run.checkpointPath)
-      : input;
-    const checkpoint = createDiffCheckpoint(inputValue, {
-      generation: run.manifest.generation,
-      ledgerState: {
-        evidenceBytes: run.ledgerState.evidenceBytes,
-        evidenceLines: run.ledgerState.evidenceLines,
-        observations: run.ledgerState.observations,
-        requestKeys: run.ledgerState.requests.map(
-          (request) => `${request.revision}\u0000${request.path}`,
-        ),
-        requests: run.ledgerState.requests.length,
-        textBytes: run.ledgerState.textBytes,
-      },
-      page,
-      pageDigest: run.page.digest,
-      pageValue: run.page,
-      runId: run.manifest.runId,
-      snapshotDigest: run.manifest.snapshotDigest,
-    });
-    const state = advanceLedgerState(
-      run.ledgerState,
-      { ...checkpoint, pageValue: run.page },
-    );
-    try {
-      await writeNewJson(checkpointPath, checkpoint);
-    } catch (error) {
-      if (error?.code !== "EEXIST") throw error;
-      const orphan = await readRunJson(
-        checkpointPath,
-        "checkpoint record",
-        { maximumBytes: LIMITS.checkpointBytes * 2 },
-      );
-      if (digestJson(orphan) !== digestJson(checkpoint)) {
-        throw new Error("Hope diff found a conflicting checkpoint record");
-      }
-    }
-    await claim.assertOwned();
-    await replaceJson(run.ledgerStatePath, state);
-    let manifest = run.manifest;
-    let nextPage;
-    if (page === run.manifest.pageCount) {
-      manifest = {
-        ...run.manifest,
-        phase: "inspected",
-      };
-      await claim.assertOwned();
-      await replaceJson(run.manifestPath, manifest);
-    } else {
-      nextPage = await readRunJson(
-        join(
-          run.path,
-          inspectionPageFileName(run.manifest.snapshotDigest, page + 1),
-        ),
-        "inspection page",
-        {
-          maximumBytes: LIMITS.inspectionPageBytes * 2,
-          onBytes: options.onReadBytes,
-        },
-      );
-      const value = { ...nextPage };
-      delete value.digest;
-      if (
-        nextPage.page !== page + 1
-        || nextPage.generation !== run.manifest.generation
-        || nextPage.totalPages !== run.manifest.pageCount
-        || digestJson(value) !== nextPage.digest
-      ) {
-        throw new Error("Hope diff inspection page plan is invalid");
-      }
-      if (run.manifest.deliveredPage < page + 1) {
-        manifest = {
-          ...run.manifest,
-          deliveredPage: page + 1,
-          phase: "inspecting",
-        };
-        await claim.assertOwned();
-        await replaceJson(run.manifestPath, manifest);
-      }
-    }
-    return Object.freeze({
-      checkpoint,
-      checkpointPath: run.checkpointPath,
-      consumedInput: typeof input === "function",
-      ledgerState: state,
-      manifest,
-      nextPage: nextPage
-        ? Object.freeze({
-            ...nextPage,
-            checkpointPath: diffCheckpointInputPath(
-              run.path,
-              run.manifest.generation,
-              page + 1,
-            ),
-          })
-        : undefined,
-      replayed: false,
-    });
-  });
-}
-
-export async function recordAnalysisFailure(run, options = {}) {
-  run.manifest.analysisAttempts += 1;
-  run.manifest.phase = "analysis-invalid";
-  if (run.manifest.analysisAttempts >= 2) {
-    await removeDiffRun(run.path, options);
-    return { canRetry: false };
-  }
-  await replaceJson(run.manifestPath, run.manifest);
-  return { canRetry: true };
-}
-
 export async function removeDiffRun(runPath, options = {}) {
   const run = await loadDiffRun(runPath, options);
   await removeOwnedRunDirectory(run.path, run.directory, options);
@@ -2331,7 +1741,7 @@ export async function removeDiffRun(runPath, options = {}) {
 
 export async function cancelDiffRun(runPath, options = {}) {
   await withDiffRunMutation(runPath, options, async (claim) => {
-    await claim.renew();
+    await claim.assertOwned();
     await removeDiffRun(runPath, options);
   });
 }

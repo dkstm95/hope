@@ -188,13 +188,6 @@ Continue with the returned `nextWindow` until it is absent.
 Re-run the same checkpoint command after truncated output so Hope resumes the
 durable prefix.
 
-Do not alternate protocols merely to reread content.
-
-The single-page `inspect` and `checkpoint` commands are a fallback only when a
-host repeatedly truncates a window.
-
-Once selected for a generation, finish that generation one page at a time.
-
 ## Collect grounded context
 
 Use a pending context-request ID only for a material, grounded question about
@@ -280,8 +273,8 @@ Finalization needs the same authenticated GitHub access used by `prepare`:
 finish --run <run-path>
 ```
 
-If `HOPE_ANALYSIS_INVALID` returns `canRetry: true`, fix only the reported
-contract error and retry `finish` once.
+If `HOPE_ANALYSIS_INVALID` returns `canRetry: true`, return to `validate` and
+fix the reported contract errors before running `finish` again.
 
 If `HOPE_DIFF_REVALIDATION_RETRYABLE` returns `canRetry: true`, restore GitHub
 access and retry only the returned `command` with the returned `runPath`.

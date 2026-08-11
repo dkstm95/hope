@@ -3,7 +3,6 @@ import test, { after } from "node:test";
 
 import { addDiffContext } from "../plugins/hope/skills/diff/scripts/index.mjs";
 import {
-  checkpointDiffRun,
   checkpointDiffRunWindow,
   createDiffRun,
   inspectDiffRunWindow,
@@ -114,7 +113,7 @@ test("context collection atomically refreshes the snapshot and inspection plan",
   );
 
   assert.equal(result.collected, 1);
-  assert.equal(result.firstPage.page, 1);
+  assert.equal(result.firstWindow.pages[0].page, 1);
   assert.equal(result.limitsAdded, 0);
   assert.notEqual(result.snapshotDigest, created.snapshotDigest);
   const updated = await loadDiffRun(created.path, { temporaryRoot });
@@ -266,13 +265,17 @@ test("context plan replacement is bound to the inspected snapshot digest", async
           snapshot,
         };
       },
-      inspectRun: async () => ({
-        digest: "d".repeat(64),
+      inspectRunWindow: async () => ({
+        endPage: 1,
         generation: 2,
-        kind: "sources",
-        page: 1,
-        totalPages: 7,
-        value: { contentIsUntrusted: true, sources: [] },
+        pages: [{
+          generation: 2,
+          kind: "sources",
+          page: 1,
+          totalPages: 7,
+          value: { contentIsUntrusted: true, sources: [] },
+        }],
+        startPage: 1,
       }),
       temporaryRoot,
     },
@@ -323,66 +326,6 @@ test("a committed context operation replays without recollecting", async () => {
   assert.equal(replay.replayed, true);
   assert.equal(replay.generation, first.generation);
   assert.equal(replay.snapshotDigest, first.snapshotDigest);
-  assert.deepEqual(replay.firstPage, first.firstPage);
-  await removeDiffRun(created.path, { temporaryRoot });
-});
-
-test("a delayed checkpoint cannot roll back a context generation", async () => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-context-fence-");
-  const created = await createDiffRun(makeGroundedSnapshot(), { temporaryRoot });
-  const requestId = await inspectAll(created, temporaryRoot, {
-    path: "src/caller.js",
-    revision: "head",
-  });
-  const staleCheckpoint = {
-    generation: 1,
-    observations: [],
-    page: 1,
-    runId: created.runId,
-    schemaVersion: 1,
-    snapshotDigest: created.snapshotDigest,
-  };
-
-  const results = await Promise.allSettled([
-    checkpointDiffRun(
-      created.path,
-      1,
-      staleCheckpoint,
-      { temporaryRoot },
-    ),
-    addDiffContext(
-      created.path,
-      [requestId],
-      {
-        collectContext: async () => [{
-          kind: "context-file",
-          path: "src/caller.js",
-          revision: "b".repeat(40),
-          text: "export const caller = true",
-        }],
-        temporaryRoot,
-      },
-    ),
-  ]);
-
-  assert.ok(results.some((result) => result.status === "fulfilled"));
-  if (results[1].status === "rejected") {
-    await addDiffContext(
-      created.path,
-      [requestId],
-      {
-        collectContext: async () => [{
-          kind: "context-file",
-          path: "src/caller.js",
-          revision: "b".repeat(40),
-          text: "export const caller = true",
-        }],
-        temporaryRoot,
-      },
-    );
-  }
-  const run = await loadDiffRun(created.path, { temporaryRoot });
-  assert.equal(run.manifest.generation, 2);
-  assert.equal(run.snapshot.sources.at(-1).path, "src/caller.js");
+  assert.deepEqual(replay.firstWindow, first.firstWindow);
   await removeDiffRun(created.path, { temporaryRoot });
 });

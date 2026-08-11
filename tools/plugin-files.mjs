@@ -27,7 +27,6 @@ export const staticPluginFiles = Object.freeze([
   ...[
     "analysis-v2.schema.json",
     "artifact.mjs",
-    "checkpoint-v1.schema.json",
     "checkpoint-window-v1.schema.json",
     "checkpoint.mjs",
     "cli.mjs",

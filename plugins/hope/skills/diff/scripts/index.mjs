@@ -24,16 +24,11 @@ import { digestJson } from "./hash.mjs";
 import {
   appendDiffRunPlan,
   cancelDiffRun,
-  checkpointDiffRun,
   checkpointDiffRunWindow,
-  claimDiffRunFinalization,
+  claimDiffRunMutation,
   createDiffRun,
-  inspectDiffRun,
   inspectDiffRunWindow,
-  inspectionPageView,
   loadDiffRun,
-  readDiffGenerationPage,
-  recordAnalysisFailure,
   removeDiffRun,
 } from "./run.mjs";
 import {
@@ -77,13 +72,8 @@ async function readAnalysis(path, options = {}) {
 }
 
 function assertAnalysisReady(run) {
-  const analysisReady = run.manifest.phase === "inspected"
-    || (
-      run.manifest.phase === "analysis-invalid"
-      && run.manifest.analysisAttempts === 1
-    );
   if (
-    !analysisReady
+    run.manifest.phase !== "inspected"
     || run.manifest.deliveredPage !== run.manifest.pageCount
     || checkpointCount(run.ledger, run.manifest.generation)
       !== run.manifest.pageCount
@@ -205,10 +195,10 @@ function withCleanupFailure(error, cleanupError) {
   return combined;
 }
 
-function withFinalizationReleaseFailure(error, releaseError) {
+function withMutationReleaseFailure(error, releaseError) {
   const original = error instanceof Error ? error : new Error(String(error));
   const combined = new Error(
-    `${original.message} Hope also could not release its private finalization lease. `
+    `${original.message} Hope also could not release its private run lock. `
       + "A later Hope run will retry expiry cleanup.",
     { cause: original },
   );
@@ -306,67 +296,11 @@ export async function buildMicroworldSkeleton(inputPath, dependencies = {}) {
   return createMicroworldSkeleton(input.value);
 }
 
-export async function readDiffPage(runPath, page, dependencies = {}) {
-  return await (dependencies.inspectRun ?? inspectDiffRun)(runPath, page, {
-    temporaryRoot: dependencies.temporaryRoot,
-  });
-}
-
 export async function readDiffWindow(runPath, startPage, dependencies = {}) {
   return await (
     dependencies.inspectRunWindow ?? inspectDiffRunWindow
   )(runPath, startPage, {
     temporaryRoot: dependencies.temporaryRoot,
-  });
-}
-
-export async function checkpointDiffPage(runPath, page, dependencies = {}) {
-  const result = await (
-    dependencies.checkpointRun ?? checkpointDiffRun
-  )(
-    runPath,
-    page,
-    async (checkpointPath) => {
-      const input = await (
-        dependencies.readCheckpoint ?? readBoundedJson
-      )(checkpointPath, {
-        label: "Hope diff checkpoint",
-        maximumBytes: LIMITS.checkpointBytes,
-      });
-      return input.value;
-    },
-    { temporaryRoot: dependencies.temporaryRoot },
-  );
-  if (result.consumedInput) {
-    await (dependencies.removeCheckpoint ?? unlink)(result.checkpointPath)
-      .catch((error) => {
-        if (error?.code !== "ENOENT") throw error;
-      });
-  }
-  const pending = result.ledgerState.requests
-    .filter((request) => !request.collected)
-    .map(({ collected: _collected, ...request }) => Object.freeze(request));
-  const checkpointed = result.ledgerState.currentPage;
-  const checkpointRecord = Object.freeze({
-    generation: result.checkpoint.generation,
-    observationIds: result.checkpoint.observations.map(
-      (observation) => observation.id,
-    ),
-    page: result.checkpoint.page,
-    pageDigest: result.checkpoint.pageDigest,
-    requestIds: result.checkpoint.observations.flatMap(
-      (observation) => observation.contextRequests.map((request) => request.id),
-    ),
-    snapshotDigest: result.checkpoint.snapshotDigest,
-  });
-  return Object.freeze({
-    checkpoint: checkpointRecord,
-    checkpointCount: checkpointed,
-    nextPage: result.nextPage
-      ? inspectionPageView(result.nextPage)
-      : undefined,
-    pendingContextRequests: Object.freeze(pending),
-    replayed: result.replayed,
   });
 }
 
@@ -447,27 +381,13 @@ export async function addDiffContext(runPath, requestIds, dependencies = {}) {
       === operationKey,
   );
   if (priorOperation) {
-    let firstPage;
-    let firstWindow;
-    if (
-      priorOperation.generation === run.manifest.generation
-    ) {
-      firstWindow = await (
+    const firstWindow = priorOperation.generation === run.manifest.generation
+      ? await (
         dependencies.inspectRunWindow ?? inspectDiffRunWindow
-      )(run.path, 1, { temporaryRoot: dependencies.temporaryRoot });
-      firstPage = firstWindow.pages[0];
-    } else {
-      firstPage = await (
-        dependencies.readGenerationPage ?? readDiffGenerationPage
-      )(run.path, {
-        ...priorOperation,
-        page: 1,
-        temporaryRoot: dependencies.temporaryRoot,
-      });
-    }
+      )(run.path, 1, { temporaryRoot: dependencies.temporaryRoot })
+      : undefined;
     return Object.freeze({
       ...priorOperation,
-      firstPage: inspectionPageView(firstPage),
       ...(firstWindow ? { firstWindow } : {}),
       path: run.path,
       replayed: true,
@@ -546,7 +466,6 @@ export async function addDiffContext(runPath, requestIds, dependencies = {}) {
   )(updated.path, 1, { temporaryRoot: dependencies.temporaryRoot });
   return Object.freeze({
     collected: candidates.filter((candidate) => candidate.kind === "context-file").length,
-    firstPage: firstWindow.pages[0],
     firstWindow,
     generation: updated.manifest.generation,
     limitsAdded: candidates.filter(
@@ -590,10 +509,10 @@ export async function finishDiff(runPath, dependencies = {}) {
   const run = await (dependencies.loadRun ?? loadDiffRun)(runPath, {
     temporaryRoot: dependencies.temporaryRoot,
   });
-  let finalizationClaim;
+  let mutationClaim;
   try {
-    finalizationClaim = await (
-      dependencies.claimFinalization ?? claimDiffRunFinalization
+    mutationClaim = await (
+      dependencies.claimMutation ?? claimDiffRunMutation
     )(run);
   } catch (error) {
     if (error?.code === "EEXIST") {
@@ -609,12 +528,8 @@ export async function finishDiff(runPath, dependencies = {}) {
     try {
       validated = await validateRunAnalysis(run, dependencies);
     } catch (error) {
-      await finalizationClaim.renew();
-      const result = await (dependencies.recordFailure ?? recordAnalysisFailure)(run, {
-        temporaryRoot: dependencies.temporaryRoot,
-      });
       error.code = "HOPE_ANALYSIS_INVALID";
-      error.canRetry = result.canRetry;
+      error.canRetry = true;
       throw error;
     }
 
@@ -642,7 +557,7 @@ export async function finishDiff(runPath, dependencies = {}) {
         error.code = "HOPE_DIFF_STALE";
         throw error;
       }
-      await finalizationClaim.renew();
+      await mutationClaim.assertOwned();
       await (dependencies.removeRun ?? removeDiffRun)(run.path, {
         temporaryRoot: dependencies.temporaryRoot,
       });
@@ -668,7 +583,7 @@ export async function finishDiff(runPath, dependencies = {}) {
     } catch (error) {
       if (!runRemoved && !preserveRun) {
         try {
-          await finalizationClaim.renew();
+          await mutationClaim.assertOwned();
           await (dependencies.removeRun ?? removeDiffRun)(run.path, {
             temporaryRoot: dependencies.temporaryRoot,
           });
@@ -683,10 +598,10 @@ export async function finishDiff(runPath, dependencies = {}) {
     throw error;
   } finally {
     try {
-      await finalizationClaim.release();
+      await mutationClaim.release();
     } catch (releaseError) {
       if (primaryError) {
-        throw withFinalizationReleaseFailure(primaryError, releaseError);
+        throw withMutationReleaseFailure(primaryError, releaseError);
       }
       throw releaseError;
     }

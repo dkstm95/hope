@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Simplify Diff's private run protocol to one atomic mutation lock, window-only
+  inspection and checkpointing, stateless analysis repair, and version-neutral
+  expiry cleanup while retaining bounded resume state and safe publication.
 - Prefer simple, direct design, remove the redundant third-party notice index
   and unused brand-source copy, collapse duplicate private-input and package
   build paths, and retain license texts, provenance records, and assets with
