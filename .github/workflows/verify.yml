@@ -45,7 +45,6 @@ jobs:
         run: >-
           git diff --exit-code --
           plugins/hope/LICENSE
-          plugins/hope/THIRD_PARTY_NOTICES.md
           plugins/hope/runtime
           tools/plugin-package-files.txt
       - name: Check staged plugin paths

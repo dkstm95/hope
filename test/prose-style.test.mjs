@@ -13,7 +13,6 @@ const maintainedProsePaths = [
   "README.md",
   "README.ko.md",
   "SECURITY.md",
-  "assets/brand/README.md",
   "docs/align.md",
   "docs/architecture.md",
   "docs/design.md",

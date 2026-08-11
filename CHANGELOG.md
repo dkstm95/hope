@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Prefer simple, direct design, remove the redundant third-party notice index
+  and unused brand-source copy, and retain distributable license texts,
+  provenance records, and assets with real consumers.
 - Keep the root security policy focused on supported versions and private
   reporting, stop packaging unused copies of product documents, and remove
   migration history and prose wording from deterministic release checks.

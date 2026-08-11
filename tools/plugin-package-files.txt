@@ -1,7 +1,6 @@
 .claude-plugin/plugin.json
 .codex-plugin/plugin.json
 LICENSE
-THIRD_PARTY_NOTICES.md
 assets/hope-protected-light.png
 skills/align/SKILL.md
 skills/align/agents/openai.yaml

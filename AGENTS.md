@@ -63,6 +63,20 @@ feature behavior.
 
 Do not use Skill or manifest validation as evidence that product behavior works.
 
+## Change completion
+
+Before completing any change, apply the simple, direct design principle in
+[PRINCIPLES.md](PRINCIPLES.md).
+
+Confirm that every added or retained file, layer, copy, and check has a clear
+present purpose.
+
+When removing something, remove the generation, packaging, documentation, and
+tests that existed only to support it.
+
+Preserve separate parts when they meet an obligation, serve an independent
+consumer or distribution, or make ownership easier to understand.
+
 ## Task references
 
 - Repository and release workflow: [CONTRIBUTING.md](CONTRIBUTING.md)

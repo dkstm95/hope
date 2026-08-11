@@ -95,6 +95,23 @@ abstraction for a possible future need.
 
 Compatibility is a product choice, not a default cost.
 
+## Prefer simple, direct design
+
+Keep only files, layers, copies, and checks that serve a clear present purpose.
+
+Every part must define behavior, serve a real consumer, meet an obligation, or
+preserve information needed to reproduce the work.
+
+Prefer a direct path from the editable source to its consumer.
+
+When removing something, remove the generation, packaging, documentation, and
+tests that existed only to support it.
+
+Do not confuse fewer files with simpler design.
+
+Keep separate parts when they make ownership, behavior, or an independent
+distribution easier to understand.
+
 ## Test the remaining risks
 
 Test feature behavior with representative prompts.
