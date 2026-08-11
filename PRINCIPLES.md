@@ -104,6 +104,15 @@ preserve information needed to reproduce the work.
 
 Prefer a direct path from the editable source to its consumer.
 
+A different audience or folder does not by itself justify another description
+of the same behavior.
+
+Keep one authoritative statement and link to it unless another file owns a
+distinct contract, consumer, or obligation.
+
+Verify that distinction from the actual content and use, not from a document's
+name or intended audience.
+
 When removing something, remove the generation, packaging, documentation, and
 tests that existed only to support it.
 
@@ -121,6 +130,15 @@ Test Skill discovery as a contract of the current delivery.
 Test deterministic code at the boundaries it promises to enforce.
 
 Use browser tests for behavior that only a browser can verify.
+
+Add a deterministic check only when it detects a concrete failure without
+rejecting a valid design.
+
+Do not freeze wording, file names, or implementation shape as a proxy for a
+judgment the check cannot make.
+
+Leave meaning and design trade-offs to review when no reliable machine boundary
+exists.
 
 Do not preserve implementation complexity only because tests already exist.
 

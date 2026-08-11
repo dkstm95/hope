@@ -93,28 +93,7 @@ test("Diff scripts do not depend on the plugin package boundary", async () => {
   }
 });
 
-test("feature definitions stay independent of delivery adapters", async () => {
-  const featureDocuments = [
-    "align",
-    "diff",
-    "polish",
-    "sweep",
-    "toxic-review",
-    "write",
-  ];
-
-  for (const featureName of featureDocuments) {
-    const definition = await readFile(
-      resolve(root, `docs/${featureName}.md`),
-      "utf8",
-    );
-    assert.doesNotMatch(
-      definition,
-      /plugins\/hope|marketplace|Codex|Claude/u,
-      `${featureName} product behavior must not depend on a delivery adapter`,
-    );
-  }
-
+test("instruction-led feature guidance stays delivery-neutral", async () => {
   for (const skillName of instructionLedSkills) {
     const instructions = await readFile(
       resolve(skillsRoot, skillName, "SKILL.md"),

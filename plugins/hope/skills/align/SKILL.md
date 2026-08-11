@@ -90,6 +90,8 @@ before continuing.
 
 Keep the exchange conversational.
 
+Stop asking questions when another answer would not change the work.
+
 Show the current understanding and the remaining material choice.
 
 When alignment is complete, state the agreed implementation boundary and wait

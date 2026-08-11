@@ -6,7 +6,8 @@ Before changing Hope:
 - Follow the workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
 - Read [docs/architecture.md](docs/architecture.md) before changing a main
   folder, build boundary, or delivery structure.
-- Read the matching `docs/<feature>.md` before changing feature behavior.
+- Read the matching `plugins/hope/skills/<feature>/SKILL.md` before changing
+  feature behavior.
 - Read [docs/design.md](docs/design.md) before changing Diff's visual language.
 
 ## Writing
@@ -27,6 +28,9 @@ Before finishing, review the full changed scope against
 
 Remove support files, generation, packaging, documentation, and tests that no
 longer serve the remaining product.
+
+Link to one authority instead of keeping parallel behavior descriptions unless
+another file owns a distinct contract or obligation.
 
 Verify changed product behavior.
 

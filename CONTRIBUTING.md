@@ -8,7 +8,8 @@ control their work with AI.
 - Read [PRINCIPLES.md](PRINCIPLES.md) for project-wide product decisions.
 - Read [docs/architecture.md](docs/architecture.md) before changing a main
   folder or implementation boundary.
-- Read the matching file under `docs/` before changing feature behavior.
+- Read the matching `plugins/hope/skills/<feature>/SKILL.md` before changing
+  feature behavior.
 - Read [docs/release.md](docs/release.md) before changing packaging, versions,
   or release automation.
 - Follow [AGENTS.md](AGENTS.md) when an AI agent performs the work.

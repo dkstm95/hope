@@ -10,6 +10,12 @@
   Hope workflows, reserving Write for standalone language work.
 - Let ordinary plugin changes keep the recorded version until the automatic
   release, and fail closed when a release tag exists outside exact recovery.
+- Make each Skill the only feature-behavior source, remove parallel feature
+  documents, and keep `docs/` for cross-feature architecture, release, and
+  design contracts.
+- Require duplicate descriptions and deterministic checks to justify themselves
+  through distinct contracts or concrete failures instead of audiences, file
+  names, wording, or implementation shape.
 - Keep the root security policy focused on supported versions and private
   reporting, stop packaging unused copies of product documents, and remove
   migration history and prose wording from deterministic release checks.

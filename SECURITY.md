@@ -28,5 +28,5 @@ input.
 
 [Hope principles](PRINCIPLES.md) define authority and ownership.
 
-[Diff behavior](docs/diff.md#trust-and-failure) defines its source, rendering,
-temporary-state, and publication guarantees.
+[Diff's deterministic boundary](docs/architecture.md#diff-deterministic-boundary)
+defines its source, rendering, temporary-state, and publication guarantees.

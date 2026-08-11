@@ -1,10 +1,9 @@
 # Hope design
 
-This is the visual definition for the Hope Diff HTML artifact.
+This document defines the information structure and visual language of the
+Hope Diff HTML artifact.
 
-A feature document owns its information and reading order.
-
-This file owns the visual language used to present that information.
+The Diff Skill and its analysis reference own review judgment and prose.
 
 Diff is the only Hope feature that currently creates a visual artifact.
 
@@ -36,6 +35,42 @@ The Diff feature's `scripts/design/tokens.mjs` is the code source of truth for
 colors, type sizes, spacing, and layout limits.
 
 A renderer must read those tokens instead of copying their values.
+
+## Artifact structure
+
+The first screen should explain the shape and limits of the change in about 30
+seconds.
+
+Show the pull-request title, reviewed commit, goal, previous and new behavior,
+practical impact, the top one to three review items or a clear empty result,
+and material review limits.
+
+Keep internal source IDs, model details, token counts, and processing state out
+of the first screen.
+
+Do not repeat repository identity in multiple prominent places.
+
+After the first screen, use this order and omit a conditional section when it
+adds no value:
+
+1. Background
+2. Core change
+3. Behavior flow
+4. Teaching aid choices
+5. Code flow
+6. Review items
+7. Check understanding
+8. Evidence and scope
+
+Explain behavior before code.
+
+Show only the code excerpts needed for understanding instead of reproducing the
+full diff.
+
+Keep important evidence beside the claim it supports.
+
+Use Evidence and scope as the complete index of the captured snapshot, checked
+files, supporting sources, exclusions, and limits.
 
 ## GUI widgets
 

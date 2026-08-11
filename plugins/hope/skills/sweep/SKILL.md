@@ -53,6 +53,8 @@ Consider:
 - dead or stale code and content;
 - missing, repeated, or premature abstractions;
 - test gaps and documentation drift;
+- checks that freeze wording, file names, or implementation shape without
+  guarding a concrete failure;
 - dependency, security, license, and compatibility risk;
 - performance, package, build, and CI waste;
 - generated-source and release-boundary drift; and
