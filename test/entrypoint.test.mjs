@@ -4,7 +4,7 @@ import { join } from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { isEntrypoint } from "../entrypoint/index.mjs";
+import { isEntrypoint } from "../tools/entrypoint.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
 } from "../test-support/temporary-directory.mjs";

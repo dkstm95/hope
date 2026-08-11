@@ -15,11 +15,6 @@
   </strong>
 </p>
 
-<p align="center">
-  <a href="#install"><img alt="Codex supported" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white"></a>
-  <a href="#install"><img alt="Claude Code supported" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white"></a>
-</p>
-
 <p align="center"><a href="README.ko.md">한국어</a></p>
 
 AI can finish a task quickly without making its decisions, evidence, or
@@ -31,13 +26,25 @@ Use Hope to align before implementation, challenge a work product, understand a
 code change, sweep codebase maintenance, refine completed work, or clarify
 language without losing meaning.
 
+These features and their behavior define Hope.
+
+The current supported delivery is a plugin for Codex and Claude Code.
+
 ## Install
 
-Install the Hope plugin in Codex or Claude Code.
+Install the current Hope distribution in Codex or Claude Code.
+
+GitHub [Releases](https://github.com/dkstm95/hope/releases) provide version
+history and downloadable packages.
+
+<p>
+  <img alt="Codex supported" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white">
+  <img alt="Claude Code supported" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white">
+</p>
 
 You need:
 
-- Node.js 20 or newer
+- Node.js 22 or newer
 - An authenticated [GitHub CLI](https://cli.github.com/) to use Diff. Run
   `gh auth login` first if needed.
 
@@ -81,33 +88,17 @@ Choose the work you need.
 Misunderstandings about a task's goal, scope, behavior, or important choices can
 survive until implementation.
 
-Align reads available evidence, asks risk-adaptive questions, and keeps facts,
-decisions, proposals, assumptions, and open questions distinct.
+Align reads available evidence, teaches back the current understanding, and
+asks only about choices that can change the result.
 
-It renders one decision-centered HTML artifact with the goal, next action, and
-up to three primary agreements on the first screen.
-
-Supporting evidence and work details stay available without crowding the main
-reading path.
-
-When a task changes a user interface, Align compares wide and narrow previews
-from the same canonical screen content before implementation.
+It keeps facts, decisions, proposals, assumptions, open questions, and
+implementation-time checks distinct in the conversation.
 
 > [!NOTE]
 > Align waits for explicit approval and never implements the task.
 
 > Example: “I want to add a failed-upload recovery screen. Help me clarify the
 > retry behavior and layout before implementation.”
-
-![Hope Align example showing the goal, primary agreements, next action, scope, and success conditions for failed-upload recovery](assets/readme/hope-align-en.png)
-
-*An actual Align HTML artifact for a failed-upload recovery screen.*
-
-| Scope and success | Responsive preview |
-| --- | --- |
-| [![The work boundary and success conditions in an Align artifact](assets/readme/hope-align-scope-en.png)](assets/readme/hope-align-scope-en.png) | [![Wide and narrow recovery-screen previews built from the same content](assets/readme/hope-align-preview-en.png)](assets/readme/hope-align-preview-en.png) |
-| Agreements and supporting detail | Verifiable work |
-| [![Primary agreements, evidence, assumptions, and uncertainty in an Align artifact](assets/readme/hope-align-understanding-en.png)](assets/readme/hope-align-understanding-en.png) | [![The user change, scope, verification, and failure recovery in an Align artifact](assets/readme/hope-align-work-en.png)](assets/readme/hope-align-work-en.png) |
 
 </details>
 
@@ -118,6 +109,9 @@ A code change can be complete while its owner still cannot predict, explain, or
 judge it, and that gap is cognitive debt.
 
 Diff explains behavior before code and links important claims to evidence.
+
+Its analysis runs in a fresh context that receives the exact review request and
+pull request, not the conversation that produced the change.
 
 When active exploration would help, the review can use visuals, a microworld, or
 an evidence-backed quiz.
@@ -157,11 +151,12 @@ Toxic Review turns evidence-linked findings into one prioritized review.
 It is hard on the work, respectful toward people, and does not invent criticism.
 
 > [!NOTE]
-> Toxic Review uses one reviewer when a focused pass is enough and may run
-> multiple independent reviewers for distinct material risks.
+> Every reviewer runs in a fresh context, including a one-reviewer pass.
+> Toxic Review uses multiple independent reviewers only for distinct material
+> risks.
 >
-> Multi-reviewer runs make a separate model call for each reviewer, so parallel
-> execution can reduce elapsed time but not token usage.
+> Every reviewer makes a separate model call. Parallel multi-reviewer execution
+> can reduce elapsed time but not token usage.
 >
 > Ask Hope to limit the reviewer count when you want a smaller run.
 
@@ -178,6 +173,14 @@ scope.
 It preserves settled behavior and meaning, reports what changed and what was
 checked, and stops when the work needs a material decision.
 
+It starts only after a result is complete and you ask to polish it.
+
+One fresh worker receives the exact target and preservation contract without
+inheriting the conversation that produced the work.
+
+Initial implementation, feature changes, architecture migrations, and broad
+restructuring stay outside Polish.
+
 > Example: “Refine the current work product.”
 
 </details>
@@ -185,10 +188,11 @@ checked, and stops when the work needs a material decision.
 <details>
 <summary><strong>Sweep</strong> — Clean up and maintain a codebase safely</summary>
 
-Sweep runs one codebase maintenance task that adapts to the codebase instead of
-using schedule-based profiles.
+Sweep runs one read-only codebase maintenance review that adapts to the
+project.
 
-It inspects an exact snapshot and shows a bounded plan before changing files.
+It inventories the owned worktree, reports exclusions and evidence gaps, and
+returns an ordered plan.
 
 It checks broken references and configuration drift; dead or stale code, tests,
 documentation, and configuration; repeated, missing, or premature abstractions;
@@ -198,8 +202,12 @@ release, and recovery readiness.
 
 Incomplete evidence stays visible instead of being reported as complete.
 
-Sweep applies only approved behavior-preserving work and hands behavior,
-public-contract, or dependency changes to a separate implementation task.
+When Sweep divides the project into batches, each inspector receives a fresh,
+disjoint assignment without inherited conclusions.
+
+Sweep never edits files.
+
+Select a candidate from its plan to start a separate implementation task.
 
 > Example: “Sweep this codebase.”
 
@@ -218,17 +226,6 @@ Write's shared standard adapts George Orwell's six rules in
 [Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).
 
 > Example: “Make this incident update easier to understand.”
-
-</details>
-
-<details>
-<summary><strong>Settings</strong> — Set Hope's language and theme</summary>
-
-Settings stores a supported locale and initial `system`, `light`, or `dark`
-theme as shared defaults.
-
-The harness and installed plugin share these settings, and changes affect new
-artifacts only.
 
 </details>
 

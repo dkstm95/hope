@@ -1,4 +1,4 @@
 interface:
   display_name: "Hope Sweep"
-  short_description: "Plan approved codebase maintenance"
-  default_prompt: "Use $hope:sweep to inspect this codebase, show an exact plan, and change only approved work."
+  short_description: "Plan read-only codebase maintenance"
+  default_prompt: "Use $hope:sweep to inspect this codebase and return an evidence-linked maintenance plan without editing files."

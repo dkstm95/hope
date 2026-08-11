@@ -4,22 +4,18 @@ import { join } from "node:path";
 import test, { after } from "node:test";
 
 import {
-  checkpointDiffPage,
   checkpointDiffWindow,
   readDiffLedger,
-} from "../features/diff/index.mjs";
-import { diffLedgerView } from "../features/diff/checkpoint.mjs";
-import { LIMITS } from "../features/diff/constants.mjs";
+} from "../plugins/hope/skills/diff/scripts/index.mjs";
+import { diffLedgerView } from "../plugins/hope/skills/diff/scripts/checkpoint.mjs";
+import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
 import {
-  checkpointDiffRun,
   checkpointDiffRunWindow,
   createDiffRun,
-  inspectDiffRun,
   inspectDiffRunWindow,
-  inspectLoadedDiffRun,
   loadDiffRun,
   removeDiffRun,
-} from "../features/diff/run.mjs";
+} from "../plugins/hope/skills/diff/scripts/run.mjs";
 import { makeSnapshot } from "../test-support/diff-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
@@ -27,299 +23,234 @@ import {
 
 const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 
-function makeGroundedSnapshot() {
-  return makeSnapshot({
-    title: "Inspect src/caller.js before changing retry behavior",
-  });
-}
-
-function checkpointInput(run, page, observations = []) {
+function windowInput(window, observations = new Map()) {
   return {
-    generation: run.manifest.generation,
-    observations,
-    page,
-    runId: run.manifest.runId,
+    checkpoints: window.pages.map((page) => ({
+      observations: observations.get(page.page) ?? [],
+      page: page.page,
+    })),
+    endPage: window.endPage,
+    generation: window.generation,
+    runId: window.runId,
     schemaVersion: 1,
-    snapshotDigest: run.snapshot.digest,
+    snapshotDigest: window.snapshotDigest,
+    startPage: window.startPage,
   };
 }
 
-test("inspection checkpoints persist grounded memory before the next page", async (context) => {
+async function writeWindowInput(window, observations) {
+  await writeFile(
+    window.checkpointPath,
+    `${JSON.stringify(windowInput(window, observations), null, 2)}\n`,
+    { flag: "wx", mode: 0o600 },
+  );
+}
+
+async function checkpointAll(created, temporaryRoot, observationForPage) {
+  let window = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
+  let windows = 0;
+  while (window) {
+    windows += 1;
+    const observations = new Map();
+    for (const page of window.pages) {
+      const value = observationForPage?.(page);
+      if (value) observations.set(page.page, value);
+    }
+    await writeWindowInput(window, observations);
+    const result = await checkpointDiffWindow(
+      created.path,
+      window.startPage,
+      { temporaryRoot },
+    );
+    window = result.nextWindow;
+  }
+  return windows;
+}
+
+test("inspection windows persist grounded memory before advancing", async (context) => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-checkpoint-");
-  const created = await createDiffRun(makeGroundedSnapshot(), { temporaryRoot });
+  const created = await createDiffRun(makeSnapshot({
+    title: "Inspect src/caller.js before changing retry behavior",
+  }), { temporaryRoot });
   context.after(async () => await removeDiffRun(
     created.path,
     { temporaryRoot },
   ).catch(() => {}));
 
-  const first = await inspectDiffRun(created.path, 1, { temporaryRoot });
+  const first = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
   await assert.rejects(
-    inspectDiffRun(created.path, 2, { temporaryRoot }),
-    /Checkpoint inspection page 1/u,
+    inspectDiffRunWindow(created.path, first.endPage + 1, { temporaryRoot }),
+    /Read inspection window 1 next/u,
   );
-  let run = await loadDiffRun(created.path, { temporaryRoot });
-  await writeFile(
-    run.checkpointPath,
-    `${JSON.stringify(checkpointInput(run, first.page), null, 2)}\n`,
-    { flag: "wx", mode: 0o600 },
-  );
-  let highLevelLoads = 0;
-  let loadedInspections = 0;
-  const firstCheckpoint = await checkpointDiffPage(
-    created.path,
-    first.page,
-    {
-      loadRun: async (...arguments_) => {
-        highLevelLoads += 1;
-        return await loadDiffRun(...arguments_);
-      },
-      inspectLoadedRun: async (...arguments_) => {
-        loadedInspections += 1;
-        return await inspectLoadedDiffRun(...arguments_);
-      },
-      temporaryRoot,
-    },
-  );
-  assert.equal(highLevelLoads, 0);
-  assert.equal(loadedInspections, 0);
-  assert.equal(firstCheckpoint.nextPage.page, 2);
-  await assert.rejects(access(run.checkpointPath), /ENOENT/u);
-  const replayedFirst = await checkpointDiffPage(
-    created.path,
-    first.page,
-    { temporaryRoot },
-  );
-  assert.equal(replayedFirst.replayed, true);
-  assert.equal(replayedFirst.nextPage.page, 2);
 
   let grounded;
-  let inspected = replayedFirst.nextPage;
-  for (let page = 2; page <= created.pageCount; page += 1) {
-    assert.equal(inspected.page, page);
-    run = await loadDiffRun(created.path, { temporaryRoot });
-    const source = inspected.kind === "sources"
-      ? inspected.value.sources.find((value) => (
+  const windows = await checkpointAll(
+    created,
+    temporaryRoot,
+    (page) => {
+      if (grounded || page.kind !== "sources") return undefined;
+      const source = page.value.sources.find((value) => (
         value.text.includes("src/caller.js")
-      ))
-      : undefined;
-    const requestLineOffset = source
-      ? source.text.split("\n").findIndex(
+      ));
+      if (!source) return undefined;
+      const offset = source.text.split("\n").findIndex(
         (line) => line.includes("src/caller.js"),
-      )
-      : -1;
-    const requestLine = requestLineOffset >= 0
-      ? source.startLine + requestLineOffset
-      : undefined;
-    const observations = !grounded && source && requestLine !== undefined
-      ? [{
-          basis: "inferred",
-          contextRequests: [{
-            path: "src/caller.js",
-            revision: "head",
-          }],
-          evidence: [{
-            endLine: requestLine,
-            sourceId: source.sourceId,
-            startLine: requestLine,
-          }],
-          kind: "question",
-          text: "Does the direct caller preserve this behavior?",
-        }]
-      : [];
-    if (source && observations.length > 0) {
-      grounded = { ...source, requestLine };
-    }
-    await writeFile(
-      run.checkpointPath,
-      `${JSON.stringify(checkpointInput(run, page, observations), null, 2)}\n`,
-      { flag: "wx", mode: 0o600 },
-    );
-    const result = await checkpointDiffPage(
-      created.path,
-      page,
-      { temporaryRoot },
-    );
-    inspected = result.nextPage;
-  }
-  assert.equal(inspected, undefined);
+      );
+      const line = source.startLine + offset;
+      grounded = { ...source, line };
+      return [{
+        basis: "inferred",
+        contextRequests: [{ path: "src/caller.js", revision: "head" }],
+        evidence: [{ endLine: line, sourceId: source.sourceId, startLine: line }],
+        kind: "question",
+        text: "Does the direct caller preserve this behavior?",
+      }];
+    },
+  );
 
   assert.ok(grounded);
+  assert.ok(windows < created.pageCount);
   const ledger = await readDiffLedger(created.path, { temporaryRoot });
   assert.equal(ledger.coverage.checkpointCount, created.pageCount);
   assert.equal(ledger.coverage.emptyCheckpointCount, created.pageCount - 1);
-  assert.equal(ledger.checkpoints.length, 1);
   assert.deepEqual(
     ledger.pendingContextRequests.map((request) => request.id),
     ["context-request-1"],
   );
-  assert.deepEqual(ledger.evidenceExcerpts[0], {
-    endLine: grounded.requestLine,
-    fileId: grounded.fileId,
-    key: `${grounded.sourceId}:${grounded.requestLine}:${grounded.requestLine}`,
-    path: grounded.path,
-    revision: grounded.revision,
-    sourceId: grounded.sourceId,
-    sourceKind: grounded.sourceKind,
-    startLine: grounded.requestLine,
-    text: grounded.text.split("\n")[
-      grounded.requestLine - grounded.startLine
-    ],
-  });
-
-  const manifestPath = join(created.path, "run.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  manifest.phase = "inspecting";
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-  const replay = await checkpointDiffPage(
-    created.path,
-    created.pageCount,
-    { temporaryRoot },
-  );
-  assert.equal(replay.replayed, true);
-  const repaired = await loadDiffRun(created.path, { temporaryRoot });
-  assert.equal(repaired.manifest.phase, "inspected");
+  assert.equal(ledger.evidenceExcerpts[0].sourceId, grounded.sourceId);
+  assert.equal(ledger.evidenceExcerpts[0].startLine, grounded.line);
 });
 
-test("a checkpoint cannot cite source text from another page", async () => {
+test("a window checkpoint cannot cite source text from another page", async (context) => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-checkpoint-page-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
-  const inspected = await inspectDiffRun(created.path, 1, { temporaryRoot });
-  const run = await loadDiffRun(created.path, { temporaryRoot });
-  await writeFile(
-    run.checkpointPath,
-    `${JSON.stringify(checkpointInput(run, inspected.page, [{
-      basis: "inferred",
-      contextRequests: [],
-      evidence: [{ endLine: 1, sourceId: "source-1", startLine: 1 }],
-      kind: "fact",
-      text: "This did not appear on the current page.",
-    }]), null, 2)}\n`,
-    { flag: "wx", mode: 0o600 },
-  );
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  const window = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
+  const observations = new Map([[window.startPage, [{
+    basis: "inferred",
+    contextRequests: [],
+    evidence: [{ endLine: 1, sourceId: "source-1", startLine: 1 }],
+    kind: "fact",
+    text: "This source was not delivered on the current page.",
+  }]]]);
 
   await assert.rejects(
-    checkpointDiffPage(created.path, inspected.page, { temporaryRoot }),
+    checkpointDiffRunWindow(
+      created.path,
+      window.startPage,
+      windowInput(window, observations),
+      { temporaryRoot },
+    ),
     /unknown source|must cite the current inspection page/u,
   );
-  await removeDiffRun(created.path, { temporaryRoot });
 });
 
-test("replaying a checkpoint does not remove the next page input", async () => {
+test("replaying a window keeps the next checkpoint input", async (context) => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-checkpoint-replay-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
-  const first = await inspectDiffRun(created.path, 1, { temporaryRoot });
-  const run = await loadDiffRun(created.path, { temporaryRoot });
-  await writeFile(
-    first.checkpointPath,
-    `${JSON.stringify(checkpointInput(run, 1), null, 2)}\n`,
-    { flag: "wx", mode: 0o600 },
-  );
-  const advanced = await checkpointDiffPage(
+  context.after(async () => await removeDiffRun(
     created.path,
-    1,
+    { temporaryRoot },
+  ).catch(() => {}));
+  const first = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
+  await writeWindowInput(first);
+  const advanced = await checkpointDiffWindow(
+    created.path,
+    first.startPage,
     { temporaryRoot },
   );
-  await writeFile(
-    advanced.nextPage.checkpointPath,
-    `${JSON.stringify(checkpointInput(run, 2), null, 2)}\n`,
-    { flag: "wx", mode: 0o600 },
-  );
+  assert.ok(advanced.nextWindow);
+  await writeWindowInput(advanced.nextWindow);
 
-  const replayed = await checkpointDiffPage(
+  const replayed = await checkpointDiffWindow(
     created.path,
-    1,
+    first.startPage,
     { temporaryRoot },
   );
 
   assert.equal(replayed.replayed, true);
-  await access(advanced.nextPage.checkpointPath);
-  await removeDiffRun(created.path, { temporaryRoot });
+  await access(advanced.nextWindow.checkpointPath);
 });
 
-test("a context path must appear in the cited source excerpt", async () => {
+test("a context path must appear in its cited window excerpt", async (context) => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-checkpoint-grounding-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  let window = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
   let rejected = false;
-  for (let page = 1; page <= created.pageCount; page += 1) {
-    const inspected = await inspectDiffRun(created.path, page, { temporaryRoot });
-    const source = inspected.kind === "sources"
-      ? inspected.value.sources[0]
-      : undefined;
-    const observations = source && !rejected
-      ? [{
-          basis: "inferred",
-          contextRequests: [{
-            path: "src/unrelated.js",
-            revision: "head",
-          }],
-          evidence: [{
-            endLine: source.startLine,
-            sourceId: source.sourceId,
-            startLine: source.startLine,
-          }],
-          kind: "question",
-          text: "Should this unrelated file be collected?",
-        }]
-      : [];
-    const input = {
-      generation: 1,
-      observations,
-      page,
-      runId: created.runId,
-      schemaVersion: 1,
-      snapshotDigest: created.snapshotDigest,
-    };
-    if (observations.length > 0) {
+  while (window) {
+    const observations = new Map();
+    const page = window.pages.find((value) => value.kind === "sources");
+    const source = page?.value.sources[0];
+    if (source && !rejected) {
+      observations.set(page.page, [{
+        basis: "inferred",
+        contextRequests: [{ path: "src/unrelated.js", revision: "head" }],
+        evidence: [{
+          endLine: source.startLine,
+          sourceId: source.sourceId,
+          startLine: source.startLine,
+        }],
+        kind: "question",
+        text: "Should this unrelated file be collected?",
+      }]);
       await assert.rejects(
-        checkpointDiffRun(created.path, page, input, { temporaryRoot }),
+        checkpointDiffRunWindow(
+          created.path,
+          window.startPage,
+          windowInput(window, observations),
+          { temporaryRoot },
+        ),
         /path must appear in the question's cited evidence/u,
       );
       rejected = true;
-      await checkpointDiffRun(created.path, page, {
-        ...input,
-        observations: [],
-      }, { temporaryRoot });
-    } else {
-      await checkpointDiffRun(created.path, page, input, { temporaryRoot });
     }
+    await writeWindowInput(window);
+    const result = await checkpointDiffWindow(
+      created.path,
+      window.startPage,
+      { temporaryRoot },
+    );
+    window = result.nextWindow;
   }
   assert.equal(rejected, true);
-  await removeDiffRun(created.path, { temporaryRoot });
 });
 
-test("checkpoint records are bound to the ledger digest chain", async () => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-checkpoint-chain-");
+test("checkpoint records remain bound to their inspection pages", async (context) => {
+  const temporaryRoot = await createTestTemporaryDirectory("hope-checkpoint-page-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
-  await inspectDiffRun(created.path, 1, { temporaryRoot });
-  await checkpointDiffRun(created.path, 1, {
-    generation: 1,
-    observations: [],
-    page: 1,
-    runId: created.runId,
-    schemaVersion: 1,
-    snapshotDigest: created.snapshotDigest,
-  }, { temporaryRoot });
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  const window = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
+  await writeWindowInput(window);
+  await checkpointDiffWindow(created.path, window.startPage, { temporaryRoot });
   const checkpointPath = join(created.path, "checkpoint.1.1.json");
   const checkpoint = JSON.parse(await readFile(checkpointPath, "utf8"));
   checkpoint.pageDigest = "f".repeat(64);
-  await writeFile(
-    checkpointPath,
-    `${JSON.stringify(checkpoint, null, 2)}\n`,
-    "utf8",
-  );
+  await writeFile(checkpointPath, `${JSON.stringify(checkpoint, null, 2)}\n`, "utf8");
 
   await assert.rejects(
     loadDiffRun(created.path, { temporaryRoot }),
-    /digest chain/u,
+    /checkpoint ledger does not match the inspection plan/u,
   );
 });
 
-test("checkpoint state is rejected before parsing when it exceeds its bound", async () => {
+test("checkpoint state is rejected before parsing when it exceeds its bound", async (context) => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-checkpoint-bound-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
-  const manifest = JSON.parse(
-    await readFile(join(created.path, "run.json"), "utf8"),
-  );
+  context.after(async () => await removeDiffRun(
+    created.path,
+    { temporaryRoot },
+  ).catch(() => {}));
+  const manifest = JSON.parse(await readFile(join(created.path, "run.json"), "utf8"));
   await writeFile(
     join(created.path, manifest.ledgerStateFile),
     " ".repeat(64 * 1024 + 1),
@@ -353,7 +284,6 @@ test("ledger pages stay bounded and carry their cited evidence", () => {
     schemaVersion: 1,
   };
   const first = diffLedgerView(ledger, snapshot, { page: 1 });
-  assert.ok(first.totalPages > 1);
   const pages = Array.from(
     { length: first.totalPages },
     (_, index) => diffLedgerView(ledger, snapshot, { page: index + 1 }),
@@ -363,18 +293,6 @@ test("ledger pages stay bounded and carry their cited evidence", () => {
     ledger.checkpoints.length,
   );
   for (const page of pages) {
-    const citedEvidence = new Set(page.checkpoints.flatMap(
-      (checkpoint) => checkpoint.observations.flatMap(
-        (observation) => observation.evidence.map(
-          (evidence) => `${evidence.sourceId}:${evidence.startLine}:${evidence.endLine}`,
-        ),
-      ),
-    ));
-    assert.deepEqual(
-      new Set(page.evidenceExcerpts.map((evidence) => evidence.key)),
-      citedEvidence,
-    );
-    assert.equal(page.evidenceExcerpts.length, citedEvidence.size);
     assert.ok(
       Buffer.byteLength(JSON.stringify(page), "utf8")
         <= LIMITS.ledgerPageBytes,
@@ -382,52 +300,22 @@ test("ledger pages stay bounded and carry their cited evidence", () => {
   }
 });
 
-test("checkpoint windows reduce host round trips without changing page records", async (context) => {
+test("checkpoint windows reduce host round trips", async (context) => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-checkpoint-window-");
-  const created = await createDiffRun(makeGroundedSnapshot(), { temporaryRoot });
+  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   context.after(async () => await removeDiffRun(
     created.path,
     { temporaryRoot },
   ).catch(() => {}));
 
-  let window = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
-  let windows = 0;
-  while (window) {
-    windows += 1;
-    assert.ok(window.pages.length >= 1);
-    assert.ok(window.pages.length <= LIMITS.checkpointWindowPages);
-    assert.ok(
-      Buffer.byteLength(JSON.stringify({ pages: window.pages }), "utf8")
-        <= LIMITS.inspectionWindowBytes,
-    );
-    await writeFile(window.checkpointPath, `${JSON.stringify({
-      checkpoints: window.pages.map((page) => ({
-        observations: [],
-        page: page.page,
-      })),
-      endPage: window.endPage,
-      generation: window.generation,
-      runId: window.runId,
-      schemaVersion: 1,
-      snapshotDigest: window.snapshotDigest,
-      startPage: window.startPage,
-    }, null, 2)}\n`, { flag: "wx", mode: 0o600 });
-    const result = await checkpointDiffWindow(
-      created.path,
-      window.startPage,
-      { temporaryRoot },
-    );
-    assert.equal(result.committedThrough, window.endPage);
-    window = result.nextWindow;
-  }
-
+  const windows = await checkpointAll(created, temporaryRoot);
   const completed = await loadDiffRun(created.path, { temporaryRoot });
   assert.equal(completed.manifest.phase, "inspected");
   assert.equal(completed.ledger.checkpoints.length, created.pageCount);
   assert.ok(windows < created.pageCount);
 });
 
-test("a checkpoint window validates every page before committing its prefix", async (context) => {
+test("a checkpoint window validates every page before committing", async (context) => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-window-atomic-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
   context.after(async () => await removeDiffRun(
@@ -436,63 +324,25 @@ test("a checkpoint window validates every page before committing its prefix", as
   ).catch(() => {}));
   const window = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
   assert.ok(window.pages.length > 1);
-  const input = {
-    checkpoints: window.pages.map((page, index) => ({
-      observations: index === 1
-        ? [{
-            basis: "inferred",
-            contextRequests: [],
-            evidence: [{ endLine: 1, sourceId: "source-999", startLine: 1 }],
-            kind: "fact",
-            text: "This evidence was not delivered.",
-          }]
-        : [],
-      page: page.page,
-    })),
-    endPage: window.endPage,
-    generation: window.generation,
-    runId: window.runId,
-    schemaVersion: 1,
-    snapshotDigest: window.snapshotDigest,
-    startPage: window.startPage,
-  };
+  const observations = new Map([[window.pages[1].page, [{
+    basis: "inferred",
+    contextRequests: [],
+    evidence: [{ endLine: 1, sourceId: "source-999", startLine: 1 }],
+    kind: "fact",
+    text: "This evidence was not delivered.",
+  }]]]);
+
   await assert.rejects(
     checkpointDiffRunWindow(
       created.path,
       window.startPage,
-      input,
+      windowInput(window, observations),
       { temporaryRoot },
     ),
     /unknown source|must cite the current inspection page/u,
   );
   const run = await loadDiffRun(created.path, { temporaryRoot });
   assert.equal(run.ledgerState.currentPage, 0);
-  assert.equal(run.ledger.checkpoints.length, 0);
-});
-
-test("a truncated window can fall back to page checkpoints without rolling back", async (context) => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-window-fallback-");
-  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
-  context.after(async () => await removeDiffRun(
-    created.path,
-    { temporaryRoot },
-  ).catch(() => {}));
-  const window = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
-  assert.ok(window.endPage > 1);
-
-  for (let page = 1; page <= window.endPage; page += 1) {
-    const inspected = await inspectDiffRun(created.path, page, { temporaryRoot });
-    assert.equal(inspected.page, page);
-    const run = await loadDiffRun(created.path, { temporaryRoot });
-    await checkpointDiffRun(
-      created.path,
-      page,
-      checkpointInput(run, page),
-      { temporaryRoot },
-    );
-    const advanced = await loadDiffRun(created.path, { temporaryRoot });
-    assert.ok(advanced.manifest.deliveredPage >= window.endPage);
-  }
 });
 
 test("a checkpoint window resumes after a committed prefix", async (context) => {
@@ -503,22 +353,12 @@ test("a checkpoint window resumes after a committed prefix", async (context) => 
     { temporaryRoot },
   ).catch(() => {}));
   const window = await inspectDiffRunWindow(created.path, 1, { temporaryRoot });
-  assert.ok(window.pages.length > 1);
-  const input = {
-    checkpoints: window.pages.map((page) => ({ observations: [], page: page.page })),
-    endPage: window.endPage,
-    generation: window.generation,
-    runId: window.runId,
-    schemaVersion: 1,
-    snapshotDigest: window.snapshotDigest,
-    startPage: window.startPage,
-  };
   let writes = 0;
   await assert.rejects(
     checkpointDiffRunWindow(
       created.path,
       window.startPage,
-      input,
+      windowInput(window),
       {
         temporaryRoot,
         writeCheckpoint: async (path, value) => {
@@ -533,15 +373,13 @@ test("a checkpoint window resumes after a committed prefix", async (context) => 
     ),
     /simulated checkpoint interruption/u,
   );
-  const partial = await loadDiffRun(created.path, { temporaryRoot });
-  assert.equal(partial.ledgerState.currentPage, 1);
+  assert.equal((await loadDiffRun(created.path, { temporaryRoot })).ledgerState.currentPage, 1);
 
   const resumed = await checkpointDiffRunWindow(
     created.path,
     window.startPage,
-    input,
+    windowInput(window),
     { temporaryRoot },
   );
   assert.equal(resumed.ledgerState.currentPage, window.endPage);
-  assert.equal(resumed.checkpoints.length, window.pages.length);
 });

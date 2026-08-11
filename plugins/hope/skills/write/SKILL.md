@@ -1,72 +1,55 @@
 ---
 name: write
-description: Use for a standalone language-only draft, edit, or review that must preserve meaning, facts, uncertainty, and voice.
+description: Use to improve language in any task, including drafts, edits, reviews, prompts, documentation, plans, instructions, product text, errors, comments, names, and responses; preserve meaning, facts, uncertainty, citations, exact text, and voice.
 ---
 
-# Hope write
+# Hope Write
 
-Use the active Claude or Codex session to apply the writing pass.
+Use the active host session to draft, edit, review, or improve language within a
+broader task.
 
-Let the Hope runtime provide the current writing standard and mode contract.
+Read [references/writing-standard.md](references/writing-standard.md) before
+doing the work.
 
-## Choose the command
+## Choose the mode
 
-Claude Code:
-
-```text
-node "${CLAUDE_PLUGIN_ROOT}/runtime/features/write/cli.mjs"
-```
-
-Codex:
-
-```text
-node <skill-dir>/../../runtime/features/write/cli.mjs
-```
-
-For Codex, replace `<skill-dir>` with the absolute directory that contains this
-file.
-
-Pass every argument as a separate shell argument.
-
-Never pass the placeholder or build a command from the person's text.
-
-## Get the writing brief
-
-Choose the mode from the requested action:
-
-- Use `draft` to create new prose.
+- Use `draft` for new prose.
 - Use `edit` to change existing prose or files.
-- Use `review` to report findings without changing files.
+- Use `review` to report clarity, meaning, or flow problems without changing
+  the target.
 
 Do not ask for a mode when the request already makes the action clear.
 
-Run:
+## Preserve the work
 
-```text
-brief --mode <draft|edit|review>
-```
+Keep the person's meaning, facts, uncertainty, citations, exact text, and
+intended voice.
 
-The returned JSON is Hope's complete writing brief.
+Do not silently narrow, expand, or resolve a material ambiguity.
 
-Follow its `standard`, `decisionExamples`, and mode-specific `response`.
+Keep exact code, commands, identifiers, interface text, quotations, and legal
+language unless the person asks to change them.
 
-Use a decision example only when its situation matches.
+Write in the current language unless the person or project asks for another
+one.
 
-The examples guide decisions; they are not evaluation results.
+For translated or parallel text, first read the target version on its own for
+naturalness, then compare the versions for meaning drift.
 
-Also follow the person's request and any more specific project rule.
+## Apply the mode
 
-Use Write for a standalone language-only draft, edit, or review.
+For a draft, lead with the requested result and use only the context needed to
+support it.
 
-Use Hope Polish when the person instead asks for one bounded revision of a named
-completed work product that may include structural cleanup, refactoring,
-consolidation, or supported removal.
+For an edit, change the requested target and report the completed result.
 
-Write in the current language unless the person or project asks for another one.
+For a review, report material findings without editing files.
 
-Preserve exact text when the brief requires it.
+Do not copy the writing standard or its checklist into the response.
 
-When clarifying an input prompt, do not silently change its scope or resolve a
-material ambiguity.
+A request to polish or refine one named, completed work product in a bounded
+finishing pass belongs to Hope Polish.
 
-Do not copy the brief or its checklist into the result.
+Initial implementation, feature changes, architecture migrations, and broad
+restructuring remain ordinary work even when they must preserve existing
+behavior.

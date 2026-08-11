@@ -1,0 +1,9 @@
+{
+  "source.default": "기본값",
+  "source.host": "실행 환경",
+  "source.override": "이번 실행",
+  "source.system": "시스템",
+  "theme.dark": "다크",
+  "theme.light": "라이트",
+  "theme.system": "시스템"
+}

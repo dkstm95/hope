@@ -1,36 +1,24 @@
 {
   "name": "hope",
-  "version": "1.9.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "An AI work harness with independent harness and plugin entry points.",
+  "description": "Hope plugin source and release tooling for AI-assisted work.",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
-  },
-  "bin": {
-    "hope": "./harness/hope.mjs"
+    "node": ">=22"
   },
   "scripts": {
     "build:plugin": "node tools/build-plugin.mjs",
-    "evaluate:sweep": "node tools/run-sweep-model-evaluation.mjs",
-    "check:plugin-version": "node tools/check-plugin-version.mjs",
-    "hope": "node harness/hope.mjs",
     "plugin:dev:install": "node tools/install-plugin-dev.mjs",
     "render:readme-assets": "node tools/render-readme-assets.mjs",
     "release:prepare": "node tools/prepare-release.mjs",
     "test": "node --test",
     "test:browser": "playwright test",
     "check:release": "node tools/check-release.mjs",
-    "check": "npm run check:plugin-version && npm run check:release && npm test"
-  },
-  "dependencies": {
-    "@shikijs/langs": "4.3.1",
-    "@shikijs/themes": "4.3.1",
-    "shiki": "4.3.1"
+    "check": "npm run check:release && npm test"
   },
   "devDependencies": {
-    "@playwright/test": "1.61.1",
-    "esbuild": "0.28.1"
+    "@playwright/test": "1.61.1"
   }
 }

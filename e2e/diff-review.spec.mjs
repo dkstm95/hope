@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { digestJson } from "../features/diff/hash.mjs";
-import { renderReview } from "../features/diff/render.mjs";
-import { validateAnalysis } from "../features/diff/validate.mjs";
+import { digestJson } from "../plugins/hope/skills/diff/scripts/hash.mjs";
+import { renderReview } from "../plugins/hope/skills/diff/scripts/render.mjs";
+import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
 import {
   makeAnalysis,
   makeSnapshot,
@@ -363,6 +363,10 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     borderStyle: "none",
     paddingLeft: "0px",
   });
+  await expect(
+    page.locator("#synopsis .review-item-compact h4 a").first(),
+  ).toHaveCSS("text-decoration-line", "underline");
+  await expect(page.locator('a[target="_blank"]')).toHaveCount(0);
   const synopsisLayouts = await page.evaluate(() => {
     const purpose = document.querySelector(".synopsis-row");
     const review = document.querySelector(".synopsis-review");
@@ -394,20 +398,46 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     (element) => {
       const before = element.querySelector(".shift-before").getBoundingClientRect();
       const after = element.querySelector(".shift-now").getBoundingClientRect();
-      const arrow = element.querySelector(".shift-arrow").getBoundingClientRect();
+      const beforeTitle = element.querySelector(".shift-before h3").getBoundingClientRect();
+      const beforeValue = element.querySelector(
+        ".shift-before .synopsis-value",
+      ).getBoundingClientRect();
+      const afterTitle = element.querySelector(".shift-now h3").getBoundingClientRect();
+      const afterValue = element.querySelector(
+        ".shift-now .synopsis-value",
+      ).getBoundingClientRect();
       return {
         afterTop: after.top,
-        arrowWidth: arrow.width,
+        afterContentLeft: afterValue.left,
+        afterTitleBottom: afterTitle.bottom,
+        afterTitleLeft: afterTitle.left,
+        afterValueTop: afterValue.top,
+        beforeContentLeft: beforeValue.left,
         beforeTop: before.top,
+        beforeTitleBottom: beforeTitle.bottom,
+        beforeTitleLeft: beforeTitle.left,
+        beforeValueTop: beforeValue.top,
         columns: getComputedStyle(element).gridTemplateColumns,
         display: getComputedStyle(element).display,
+        pseudoContent: getComputedStyle(
+          element.querySelector(".shift-now"),
+          "::before",
+        ).content,
       };
     },
   );
   expect(changeShift.display).toBe("grid");
-  expect(changeShift.columns.split(" ")).toHaveLength(3);
-  expect(changeShift.arrowWidth).toBe(40);
+  expect(changeShift.columns.split(" ")).toHaveLength(2);
   expect(Math.abs(changeShift.beforeTop - changeShift.afterTop)).toBeLessThanOrEqual(1);
+  expect(changeShift.beforeTitleLeft).toBe(changeShift.beforeContentLeft);
+  expect(changeShift.afterTitleLeft).toBe(changeShift.afterContentLeft);
+  expect(changeShift.beforeValueTop).toBeGreaterThan(changeShift.beforeTitleBottom);
+  expect(changeShift.afterValueTop).toBeGreaterThan(changeShift.afterTitleBottom);
+  expect(changeShift.pseudoContent).toBe("none");
+  await expect(page.locator("#synopsis .shift-arrow")).toHaveCount(0);
+  await expect(page.locator("#synopsis .change-shift")).toHaveAccessibleName(
+    "AS-IS TO-BE",
+  );
   await expect(page.locator(".topbar")).toHaveCSS("position", "sticky");
   await expect(
     page.locator('.toc-desktop a[href="#synopsis"]'),
@@ -579,11 +609,25 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   await expect(page.locator("#explore .behavior-visual")).toBeVisible();
   await expect(page.locator("#explore .decision-table")).toBeVisible();
 
-  const controls = world.locator("select.microworld-control");
-  await expect(controls).toHaveCount(2);
-  await expect(world.getByLabel("마지막 시도")).toHaveValue("failed");
-  await expect(world.getByLabel("저장된 오류")).toHaveValue("present");
-  const controlHeights = await controls.evaluateAll((items) => (
+  const groups = world.locator(".microworld-control-group");
+  await expect(groups).toHaveCount(2);
+  const controls = world.locator('input[type="radio"].microworld-control');
+  await expect(controls).toHaveCount(4);
+  const attemptGroup = world.getByRole("group", {
+    exact: true,
+    name: "마지막 시도",
+  });
+  const savedErrorGroup = world.getByRole("group", {
+    exact: true,
+    name: "저장된 오류",
+  });
+  const failed = attemptGroup.getByRole("radio", { name: "실패" });
+  const succeeded = attemptGroup.getByRole("radio", { name: "성공" });
+  const present = savedErrorGroup.getByRole("radio", { name: "있음" });
+  const missing = savedErrorGroup.getByRole("radio", { name: "없음" });
+  await expect(failed).toBeChecked();
+  await expect(present).toBeChecked();
+  const controlHeights = await world.locator(".microworld-option").evaluateAll((items) => (
     items.map((item) => item.getBoundingClientRect().height)
   ));
   expect(controlHeights.every((height) => height >= 44)).toBe(true);
@@ -593,20 +637,19 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   await expect(visibleScenario).toContainText("실패했고 저장된 오류가 있음");
   await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
 
-  const attempt = world.getByLabel("마지막 시도");
-  const savedError = world.getByLabel("저장된 오류");
-  await attempt.focus();
-  await expect(attempt).toBeFocused();
+  await failed.focus();
+  await expect(failed).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(savedError).toBeFocused();
-  await attempt.selectOption("succeeded");
-  await expect(attempt).toHaveValue("succeeded");
+  await expect(present).toBeFocused();
+  await succeeded.check();
+  await expect(succeeded).toBeChecked();
   await expect(visibleScenario).toContainText("성공했고 저장된 오류가 있음");
   await expect(world.locator("[data-microworld-status]")).toContainText(
     "마지막 시도: 성공",
   );
 
-  await savedError.selectOption("missing");
+  await missing.check();
+  await expect(missing).toBeChecked();
   await expect(visibleScenario).toContainText("성공했고 저장된 오류가 없음");
   await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
 
@@ -967,9 +1010,9 @@ test("the evidence appendix starts open while its groups and code evidence stay 
   await expect(changedFilesGroup).toContainText("변경 조각 · 4줄");
 });
 
-test("highlighted code preserves source line breaks in the DOM", async ({ page }) => {
+test("code evidence preserves source line breaks in the DOM", async ({ page }) => {
   await openArtifact(page, viewports.desktop);
-  const code = page.locator(".syntax-code code").filter({ hasText: "+const last" }).first();
+  const code = page.locator(".code-evidence code").filter({ hasText: "+const last" }).first();
   await code.evaluate((element) => {
     let details = element.closest("details");
     while (details) {
@@ -1067,7 +1110,7 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await expect(evidenceSection).toContainText("그 밖의 수집 출처");
     await expect(evidenceSection).toContainText("관련 맥락");
     await expect(evidenceSection).toContainText("변경 파일");
-    await expect(page.locator(".syntax-code code").first()).toContainText(
+    await expect(page.locator(".code-evidence code").first()).toContainText(
       "throw new Error()",
     );
     const world = page.locator("#explore .microworld");
@@ -1080,7 +1123,9 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
       "실패했고 저장된 오류가 있음",
     );
     await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
-    await expect(world.locator("select.microworld-control").first()).toBeDisabled();
+    const defaultControl = world.locator('input[type="radio"].microworld-control').first();
+    await expect(defaultControl).toBeDisabled();
+    await expect(defaultControl).toBeChecked();
     const quizQuestion = page.locator(".quiz > details.quiz-question").first();
     await quizQuestion.locator(":scope > summary").click();
     await expect(quizQuestion.locator("textarea")).toBeVisible();

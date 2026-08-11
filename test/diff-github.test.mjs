@@ -5,11 +5,21 @@ import {
   collectGitHubPullRequest,
   parseGitHubPullRequestUrl,
   revalidateGitHubSnapshot,
-} from "../features/diff/github.mjs";
-import { LIMITS } from "../features/diff/constants.mjs";
+} from "../plugins/hope/skills/diff/scripts/github.mjs";
+import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
 
 function response(value) {
   return { stdout: JSON.stringify(value) };
+}
+
+function smallChangedFiles(count) {
+  return Array.from({ length: count }, (_, index) => ({
+    additions: 1,
+    deletions: 1,
+    filename: `src/generated/file-${index + 1}.js`,
+    patch: "@@ -1 +1 @@\n-old\n+new",
+    status: "modified",
+  }));
 }
 
 function fakeGitHub({
@@ -63,7 +73,12 @@ function fakeGitHub({
       return response({ merge_base_commit: { sha: "c".repeat(40) } });
     }
     if (path.includes("/pulls/1/files?")) {
-      return response(missingFiles ? [] : changedFiles);
+      const page = Number.parseInt(
+        new URL(path, "https://github.com").searchParams.get("page") ?? "1",
+        10,
+      );
+      const values = missingFiles ? [] : changedFiles;
+      return response(values.slice((page - 1) * 100, page * 100));
     }
     if (path.includes("/pulls/1/commits?")) {
       return response([{
@@ -137,6 +152,41 @@ test("GitHub collection binds the exact snapshot and all changed files", async (
     owner: "example",
   });
   assert.match(snapshot.digest, /^[a-f0-9]{64}$/u);
+});
+
+test("GitHub collection accepts 500 small changed files", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    {
+      gh: fakeGitHub({ providerFiles: smallChangedFiles(500) }),
+      locale: "en-US",
+      theme: "system",
+    },
+  );
+
+  assert.equal(snapshot.files.length, 500);
+  assert.equal(snapshot.sources.filter((source) => source.kind === "patch").length, 500);
+});
+
+test("GitHub collection rejects 501 changed files before pagination", async () => {
+  const requests = [];
+  const github = fakeGitHub({ providerFiles: smallChangedFiles(501) });
+
+  await assert.rejects(
+    collectGitHubPullRequest(
+      "https://github.com/example/repo/pull/1",
+      {
+        gh: async (command, arguments_) => {
+          requests.push(arguments_.at(-1));
+          return await github(command, arguments_);
+        },
+        locale: "en-US",
+        theme: "system",
+      },
+    ),
+    /has 501 files; Hope supports 500/u,
+  );
+  assert.deepEqual(requests, ["/repos/example/repo/pulls/1"]);
 });
 
 test("GitHub collection preserves a fork head repository identity", async () => {
@@ -577,6 +627,53 @@ test("provider control characters stay inert without changing line coordinates",
   assert.match(source.text, /\\u202Ehidden/u);
   assert.doesNotMatch(source.text, /\u202E/u);
   assert.equal(source.lineCount, 3);
+});
+
+test("revalidation confirms an unchanged exact snapshot", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    { gh: fakeGitHub(), locale: "en-US", theme: "system" },
+  );
+
+  const result = await revalidateGitHubSnapshot(snapshot, {
+    clock: () => new Date("2026-07-23T00:01:00.000Z"),
+    gh: fakeGitHub(),
+  });
+
+  assert.deepEqual(result, {
+    current: {
+      base: "a".repeat(40),
+      head: "b".repeat(40),
+      mergeBase: "c".repeat(40),
+    },
+    matches: true,
+    revalidatedAt: "2026-07-23T00:01:00.000Z",
+  });
+});
+
+test("revalidation detects a changed merge base", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    { gh: fakeGitHub(), locale: "en-US", theme: "system" },
+  );
+  const github = fakeGitHub();
+  const changedMergeBase = "d".repeat(40);
+  const gh = async (command, arguments_) => {
+    const path = arguments_.at(-1);
+    if (path.includes("/compare/")) {
+      return response({ merge_base_commit: { sha: changedMergeBase } });
+    }
+    return await github(command, arguments_);
+  };
+
+  const result = await revalidateGitHubSnapshot(snapshot, { gh });
+
+  assert.deepEqual(result.current, {
+    base: snapshot.snapshot.base,
+    head: snapshot.snapshot.head,
+    mergeBase: changedMergeBase,
+  });
+  assert.equal(result.matches, false);
 });
 
 test("revalidation skips the comparison after the base or head changes", async () => {

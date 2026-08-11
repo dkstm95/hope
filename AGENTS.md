@@ -1,72 +1,41 @@
 # AI work instructions
 
-Read [PRINCIPLES.md](PRINCIPLES.md) before changing Hope.
+Before changing Hope:
 
-Read [docs/architecture.md](docs/architecture.md) before adding a feature or
-changing a main folder.
+- Read [PRINCIPLES.md](PRINCIPLES.md).
+- Follow the workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
+- Read [docs/architecture.md](docs/architecture.md) before changing a main
+  folder, build boundary, or delivery structure.
+- Read the matching `plugins/hope/skills/<feature>/SKILL.md` before changing
+  feature behavior.
+- Read [docs/design.md](docs/design.md) before changing Diff's visual language.
 
-## Required Hope Write pass
+## Writing
 
-Use the Hope Write Skill whenever a task would benefit from clearer writing.
+Apply the shared
+[writing standard](plugins/hope/skills/write/references/writing-standard.md)
+to language-bearing work.
 
-When unsure, use it.
+Use the Hope Write Skill for a standalone language-only draft, edit, or review.
 
-This rule applies throughout the task, not only to a final prose cleanup.
+During implementation or another Hope workflow, apply the standard directly
+instead of invoking Write as a second workflow.
 
-It includes:
+## Completion
 
-- documentation, READMEs, product copy, prompts, instructions, schemas, and
-  release notes;
-- plans, explanations, reviews, intermediate updates, and final responses in
-  any format;
-- implementation code when Write can improve its names, comments, errors,
-  user-facing strings, model-facing text, or other language-bearing structure;
-  and
-- the person's input prompt when clarifying its wording would improve the work.
+Before finishing, review the full changed scope against
+[Prefer simple, direct design](PRINCIPLES.md#prefer-simple-direct-design).
 
-Choose the Write mode from the action, get the current brief from the shared
-runtime, and follow its writing standard.
+Remove support files, generation, packaging, documentation, and tests that no
+longer serve the remaining product.
 
-Preserve the person's meaning, facts, uncertainty, citations, exact text, and
-intended voice.
+Link to one authority instead of keeping parallel behavior descriptions unless
+another file owns a distinct contract or obligation.
 
-Do not silently resolve a material ambiguity while rewriting an input prompt.
+Verify changed product behavior.
 
-Apply the standard while doing the work and again before sending any response.
+Skill discovery and manifest validity alone are not evidence that behavior
+works.
 
-Do not claim that reading the writing standard alone is the same as using the
-Write Skill.
-
-If the Skill is unavailable, say so and use the shared Write runtime brief as
-the explicit fallback.
-
-## Feature completion
-
-A plugin or Skill is an entry point, not a feature implementation.
-
-Before calling a feature complete:
-
-1. Define its product behavior under `docs/`.
-2. Put shared behavior under `features/<name>/` or another documented core
-   boundary.
-3. Expose that boundary through `harness/`, unless the product definition
-   records why the feature intentionally belongs to one entry path.
-4. Generate any plugin runtime from the same source.
-5. Keep each Skill as a thin adapter to that runtime.
-6. Test that every supported entry path reaches the same boundary.
-
-Do not use successful Skill or plugin validation as evidence that these steps
-are complete.
-
-## Task references
-
-- Repository and release workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Release behavior: [docs/release.md](docs/release.md)
-- System structure: [docs/architecture.md](docs/architecture.md)
-- Align behavior: [docs/align.md](docs/align.md)
-- Diff behavior: [docs/diff.md](docs/diff.md)
-- Sweep behavior: [docs/sweep.md](docs/sweep.md)
-- Toxic Review behavior: [docs/toxic-review.md](docs/toxic-review.md)
-- Write behavior: [docs/write.md](docs/write.md)
-- Model behavior evaluation: [docs/model-evaluation.md](docs/model-evaluation.md)
-- Shared design language: [docs/design.md](docs/design.md)
+Run the relevant checks from [CONTRIBUTING.md](CONTRIBUTING.md) and report any
+remaining verification gap.

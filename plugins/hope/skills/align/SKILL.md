@@ -1,115 +1,100 @@
 ---
 name: align
-description: Use when someone asks for a pre-implementation shared-understanding check or wants requirements, scope, design, or expected behavior clarified before coding.
+description: Use before implementation when requirements, scope, design, expected behavior, or an important assumption needs shared agreement.
 ---
 
-# Hope align
+# Hope Align
 
-Use the active Claude or Codex session for repository inspection and the
-interview.
+Use the active host session to inspect the task and build a shared understanding
+with the person.
 
-Let the Hope runtime own the interview contract, readiness checks, resource
-limits, and HTML rendering.
+Align does not implement the task.
 
-## Locate the command
+## Inspect first
 
-Claude Code:
+Read available repository, document, and conversation evidence before asking a
+question.
 
-```text
-node "${CLAUDE_PLUGIN_ROOT}/runtime/features/align/cli.mjs"
-```
+Do not ask the person to repeat a fact that the available evidence can answer.
 
-Codex:
+Keep these kinds of information distinct:
 
-```text
-node <skill-dir>/../../runtime/features/align/cli.mjs
-```
+- repository facts;
+- user decisions;
+- AI proposals;
+- assumptions;
+- open questions; and
+- uncertainty that belongs to research or implementation.
 
-For Codex, replace `<skill-dir>` with the absolute directory that contains this
-file.
+Do not fill a missing requirement with a recommended design during the
+teach-back.
 
-Pass every argument as a separate shell argument.
+Label any proposed success condition, scope exclusion, or expected behavior as
+an AI proposal and keep it open until the person confirms it.
 
-Never pass the placeholder or build a command from the person's text.
+## Teach back
 
-## Get the brief
+Start with a short account of:
 
-Classify task risk as `low`, `medium`, or `high`.
+- the goal;
+- success conditions;
+- in-scope and out-of-scope work;
+- expected behavior;
+- important assumptions; and
+- the next material choice.
 
-Mark UI work with `--ui yes`; otherwise use `--ui no`.
+Match the detail to the task risk.
 
-Run:
+Do not turn a small reversible task into a long interview.
 
-```text
-brief --risk <risk> --ui <yes|no>
-```
+## Ask only material questions
 
-Add `--host-locale <locale>` when the host provides one.
+Ask about intent, preference, work rules, expected behavior, or a choice that
+would change the result.
 
-The returned JSON is the complete Align workflow.
+Explain why the answer matters.
 
-Follow its `snapshot`, `interview`, `state`, `polishing`, `approval`,
-`rendering`, `response`, `lifecycle`, `writingStandard`, `schemaPath`, and
-`limits` fields.
+Offer realistic options and a recommendation when one choice is a sensible
+default.
 
-Use `writingStandard.text` for user-facing language and use
-`writingStandard.decisionExamples` only when a situation matches.
+Let the person delegate a reversible low-impact choice.
 
-The examples guide decisions; they are not evaluation results.
+Ask one question at a time when that makes the decision easier.
 
-Do not replace those rules with another static interview contract in this Skill.
+Do not repeat a closed question in different words.
 
-## Run the host workflow
+Use an example, edge case, or counterexample only when it tests the shared
+mental model.
 
-Use the active host session for the repository inspection and adaptive interview
-described by the brief.
+Leave research and implementation checks open when the conversation cannot
+honestly settle them.
 
-Maintain the private version 1 state required by `schemaPath`, then validate it
-with:
+## Decide readiness
 
-```text
-validate --input <private-state.json>
-```
+Propose implementation only when:
 
-When validation reports `contractReady`, prepare the exact approval candidate:
+- the goal and success conditions are clear enough to judge the result;
+- scope boundaries are visible;
+- important expected behavior is understood;
+- no material question or open assumption remains; and
+- the work can be divided into verifiable pieces.
 
-```text
-polish-candidate --input <private-state.json>
-```
+Model confidence is not approval.
 
-Follow the returned candidate and the brief's `polishing` contract.
+Wait for an explicit user response before implementation.
 
-Invoke the Polish runtime at `runtime/features/polish/cli.mjs` once for that
-exact digest.
+If the person changes a material decision, teach back the changed understanding
+before continuing.
 
-Then consume the result through the shared transition:
+## Respond
 
-```text
-complete-polish --before <candidate-state.json> --polish <private-run.json> [--after <resulting-state.json>]
-```
+Keep the exchange conversational.
 
-Supply `--after` for `revised` and `needs-alignment`; omit it for `no-change`.
+Stop asking questions when another answer would not change the work.
 
-Replace the private Align state with the returned `state`, which contains the
-validated record.
+Show the current understanding and the remaining material choice.
 
-Do not author the record yourself.
+When alignment is complete, state the agreed implementation boundary and wait
+for approval.
 
-A revised state must already include its incremented revision and change record.
-
-If the transition returns an interviewing state after `needs-alignment`,
-continue the interview.
-
-Render when the brief requires it:
-
-```text
-render --input <private-state.json>
-```
-
-Add `--output <new-path>` only when the person selected one.
-
-Use the validated result and rendered artifact in the conversation.
-
-Follow the brief's approval boundary before continuing to implementation.
-
-Align itself does not implement the task.
+Do not create HTML, a private JSON state, an approval record, or a Polish run.

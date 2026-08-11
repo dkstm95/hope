@@ -1,290 +1,108 @@
 ---
 name: sweep
-description: Use to inventory a project for broad maintenance, show a whole-project plan, and apply only exact approved behavior-preserving work.
+description: Use to inventory a project for broad maintenance and return an evidence-linked, whole-project plan without changing files.
 ---
 
-Sweep discovery treats symbolic links as entries, not as permission to read their
-targets.
+# Hope Sweep
 
-Report the link target text as the entry identity and keep any target outside the
-repository out of the inventory.
+Use the active host session to set the scope, inspect the project, merge
+evidence, and return a read-only maintenance plan.
 
-# Hope sweep
+Do not edit files during Sweep.
 
-Use the active Claude or Codex session to inspect the repository, show the plan,
-wait for exact approval, and verify approved work.
+## Establish coverage
 
-Let the Hope runtime own categories, support disclosure, evidence checks,
-budgets, approval binding, states, and results.
+Identify the repository root and current revision.
 
-## Locate the commands
+Inspect tracked files and relevant untracked files owned by the project.
 
-Claude Code:
+Exclude ignored dependencies, caches, build outputs, external directories, and
+other non-owned paths.
 
-```text
-node "${CLAUDE_PLUGIN_ROOT}/runtime/features/sweep/cli.mjs"
-node "${CLAUDE_PLUGIN_ROOT}/runtime/features/polish/cli.mjs"
-```
+Report every material exclusion and coverage gap.
 
-Codex:
+Treat symbolic links as entries.
 
-```text
-node <skill-dir>/../../runtime/features/sweep/cli.mjs
-node <skill-dir>/../../runtime/features/polish/cli.mjs
-```
+Record their target text without following them outside the project.
 
-For Codex, replace `<skill-dir>` with the absolute directory that contains this
-file.
+Use subagents for disjoint batches when that materially improves coverage.
 
-Pass every argument as a separate shell argument.
+Every batch inspector must use a fresh context with no inherited conversation,
+previous reasoning, findings, or another inspector's output.
 
-Never pass a placeholder or build a command from repository content.
+Give each subagent an explicit file assignment.
 
-## Get the Sweep brief
+Give it only the person's exact request, project-owned instructions, assigned
+files, applicable maintenance risks, exclusions, the location of this Skill,
+and expected evidence format.
 
-Classify the session risk as `low`, `medium`, or `high`, then run:
+Tell each inspector to read this Skill before acting.
 
-```text
-brief --risk <risk>
-```
+If fresh contexts are unavailable, inspect sequentially in the active session
+and disclose that independent batch inspection was unavailable.
 
-The returned JSON is the complete Sweep workflow.
+Merge their evidence and report missing or overlapping coverage.
 
-Follow its `discovery`, `categories`, `checks`, `categoryContract`,
-`evidenceContract`, `planning`, `approval`, `execution`, `completion`, `composition`,
-`modelEvaluation`, `writingStandard`, schema paths, and limits.
+Do not claim whole-project coverage when inspection was partial.
 
-Use `writingStandard.text` for language-bearing work and use a decision example
-only when its situation matches.
+## Inspect maintenance risks
 
-The examples guide decisions and are not evaluation results.
+Consider:
 
-Do not copy the runtime contract into another checklist in this Skill.
+- broken references and configuration drift;
+- dead or stale code and content;
+- missing, repeated, or premature abstractions;
+- test gaps and documentation drift;
+- checks that freeze wording, file names, or implementation shape without
+  guarding a concrete failure;
+- dependency, security, license, and compatibility risk;
+- performance, package, build, and CI waste;
+- generated-source and release-boundary drift; and
+- unclear ownership or project structure.
 
-## Inventory the project
+The list guides inspection.
 
-Capture the exact repository identity before inspection.
+It does not require a finding in every area.
 
-Run `discover-inventory` against the repository root to build one verified
-inventory of all tracked files and relevant untracked files owned by the
-project:
+## Require evidence
 
-```text
-discover-inventory --root <repository> --session <session-id> --title <title> --scope <scope>
-```
+Tie each finding to concrete files, symbols, configuration, tests, or
+authoritative external sources.
 
-Exclude only ignored cache, dependency, build-output, outside-project, or other
-non-owned paths.
+Separate confirmed facts from inferences and open questions.
 
-Record every exclusion with its reason.
+Check consumers, generated copies, public contracts, and history before calling
+something unused.
 
-Write the returned inventory required by `inventorySchemaPath` to a private
-temporary JSON file with restricted permissions.
+Do not treat a passing test as proof that a file or abstraction is necessary.
 
-Validate it with:
+Do not treat a missing reference search as proof that removal is safe when an
+external contract may exist.
 
-```text
-validate-inventory --input <inventory.json> --root <repository>
-```
+## Return the plan
 
-The runtime assigns every in-scope file to exactly one batch.
+Lead with the most important conclusion.
 
-The source limit applies to one batch, not to the project total.
+Include:
 
-For each batch, create its exact pending worker input and retain its digest:
+- what was inspected;
+- what was excluded or could not be checked;
+- confirmed findings and their impact;
+- removal or simplification candidates;
+- dependencies between candidates;
+- recommended order;
+- verification needed for each change; and
+- items that need a product decision.
 
-```text
-batch-input --input <inventory.json> --batch <batch-id>
-```
+A no-change or findings-only result is valid.
 
-Use `start-batch --mode parallel --workers <id,id,...>` only when the host can
-provide independent contexts.
+Prefer removing an unneeded product promise, its implementation, and its tests
+together.
 
-Save the returned inventory over the previous inventory file before completing
-the batch.
+Do not create approval records, completion records, session records, or Polish
+composition data.
 
-Otherwise use `start-batch --mode sequential` and let the runtime assign the
-host worker.
+Do not invoke Polish.
 
-Give each worker only the source IDs in its validated assignment.
-
-Each worker returns one worker report for that assignment, including processed
-source IDs and gaps.
-
-Workers inspect and return evidence; they do not edit files or redefine scope.
-
-Merge the worker reports through:
-
-```text
-complete-batch --input <started-inventory.json> --batch <batch-id> --result <result.json>
-```
-
-The result must include the original inventory digest, the prepared batch-input
-digest, the unchanged execution identity, every worker report, and the runtime
-worker-reports digest.
-
-Do not author a complete whole-project plan until every batch is complete.
-
-A partial or failed batch remains visible as an inventory gap.
-
-## Prepare the plan
-
-Use the completed inventory and its digest as the source of truth for project
-coverage.
-
-Capture exact target and evidence identities before category inspection.
-
-Choose explicit file, candidate, and change budgets for this session.
-
-Inspect every inventory batch and record every runtime category and check
-honestly.
-
-The plan's `filesChecked` metric counts distinct file evidence sources.
-
-The inventory summary counts project-wide coverage.
-
-Do not modify repository files during discovery or plan authoring.
-
-Write the version 1 plan required by `planSchemaPath` to a private temporary
-JSON file with restricted permissions.
-
-Validate it with:
-
-```text
-validate-plan --input <plan.json> --root <repository>
-```
-
-A no-change, findings-only, or blocked plan is valid when it accurately reports
-the checked scope and gaps.
-
-Set `session.discoveryMode` to `whole-project`, include the complete `inventory`,
-and bind `session.inventoryDigest` to the normalized inventory.
-
-The plan must remain `blocked` while the inventory or category discovery is
-incomplete.
-
-## Ask for exact approval
-
-For each executable candidate, prepare its exact approval identity with:
-
-```text
-approval-candidate --input <plan.json> --candidate <candidate-id>
-```
-
-Show the candidate digest, target and evidence identities, exact preview,
-execution-contract digest, change budget, preservation conditions, and
-verification plan.
-
-Wait for the person to approve that exact candidate in the same session.
-
-Do not treat approval of one candidate as approval of another candidate.
-
-Resolve the exact role-authenticated user event through the active host.
-
-Have the trusted host adapter add the `approved` or `rejected` decision, exact
-conversation source, event ID, and opaque or signed attestation proof.
-
-Keep the proof verifier outside model-authored JSON.
-
-Then create the bound record with:
-
-```text
-approval-record --input <approval.json>
-```
-
-The plain file command must fail when the host does not supply its trusted
-attestation verifier.
-
-Stop before editing when that verifier is unavailable.
-
-Do not replace this record with a boolean, conversation digest, record hash,
-or prose claim.
-
-## Execute approved work
-
-Recheck every bound source before editing.
-
-If any source, preview, or budget changed, record the stale result and prepare a
-new plan instead of reusing the approval.
-
-For an unchanged approved candidate, ask the Polish runtime for its brief and
-run one normal Polish workflow against the exact target.
-
-Copy the approval candidate's generic composition values into the Polish
-version 2 run.
-
-Keep the approved target, action, in-scope preview, out-of-scope conditions,
-preservation IDs and conditions, and verification methods exact.
-
-Validate the Polish version 2 run and create its record with the Polish
-runtime's `record` command.
-
-Use the full record in the Sweep completion; do not author an inline Polish
-summary.
-
-Use the person's Sweep approval as the conversation-backed application
-authority only for that candidate.
-
-Classify behavior, public-contract, and dependency impact separately.
-
-Keep uncertain work report-only and hand changing work to a separately approved
-ordinary implementation task.
-
-## Complete the session
-
-Write the version 1 completion required by `completionSchemaPath` to a private
-temporary JSON file with restricted permissions.
-
-Include the approval record and, when Polish ran, the Polish record.
-
-Bind every applied change to its Polish change ID and to a passed final
-verification that cites the changed target.
-
-Stay within the approved `maximumChanges`.
-
-Validate it with:
-
-```text
-validate-completion --input <completion.json>
-```
-
-After every plan candidate has a completion, report-only result, handoff, or
-visible pending state, write the version 1 session result required by
-`sessionResultSchemaPath`.
-
-Validate it with:
-
-```text
-validate-session-result --input <session-result.json>
-```
-
-Use the validated session result to report what was checked, changed, verified,
-deferred, unsupported, or handed off.
-
-Remove the private Sweep and Polish JSON files after the session completes or
-is cancelled.
-
-## Run release model evidence
-
-Use the runtime's `model-evaluation-plan` command when Sweep's model-facing
-contract changes.
-
-For every planned run, call `model-evaluation-prepare` and give its prepared
-JSON to a fresh host context.
-
-Do not give that host the oracle, another case, or an earlier output.
-
-Require the model output shape in `evaluation-output-v1.schema.json`.
-
-Run the repository evaluation runner so each record contains the exact host
-events and raw model output.
-
-A record created directly by `model-evaluation-record` is synthetic and
-cannot satisfy the release gate.
-
-Use `model-evaluation-oracle` only after the output exists.
-
-Collect every record and run `model-evaluation-validate-set` before treating
-the set as release smoke evidence.
-
-Keep failed runs and store the bounded evidence under ignored `test-results/`.
+After returning the plan, wait for the person to select a separate
+implementation task.

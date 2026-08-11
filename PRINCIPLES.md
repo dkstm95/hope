@@ -8,40 +8,57 @@ These principles guide the whole project.
 A feature, interface, or outside reference may support them, but does not define
 Hope by itself.
 
-## Grow into a harness
+## Keep delivery secondary
 
-Hope is growing into an AI work harness.
+Hope is a set of focused features for working with AI.
 
-This is the long-term direction of the project.
+Their user goals, behavior, safety boundaries, and results define the product.
 
-The harness will bring tools, context, workflows, state, and results into one
-consistent environment.
+This repository currently delivers those features as Skills in one plugin for
+Codex and Claude Code.
 
-It will grow from useful work instead of empty framework parts.
+Plugins, marketplaces, manifests, hosts, CLIs, and harnesses are delivery
+mechanisms.
 
-## Support two ways to use Hope
+They may expose Hope, but they must not define feature behavior.
 
-People should be able to use Hope in either of these ways:
+The current distribution does not include an independent CLI or harness.
 
-- use the Hope harness as a complete working environment;
-- use selected Hope plugins and skills in a supported host such as Claude or
-  Codex.
+Add another delivery path only after a real user need justifies its product and
+maintenance cost.
 
-Plugins and skills are not temporary.
+## Start with instructions
 
-They stay useful for people who want one capability without the full harness.
+In the current Skill-based delivery, put model judgment, conversation flow, and
+writing guidance in a short `SKILL.md`.
 
-The two paths use the same feature code and rules.
+Move detailed guidance to a reference that the Skill reads only when needed.
 
-A host adapter stays thin.
+Use code only when Hope must control external state or produce a deterministic
+result.
 
-Hope does not keep a separate implementation for each host or entry point.
+Examples include exact Git revisions, bounded input, source citations, safe file
+publication, and self-contained HTML.
 
-Not every feature must appear in both paths.
+Do not wrap prose in JavaScript merely to return it to the model.
 
-A harness-only feature is valid when it needs the wider environment.
+## Keep each feature close together
 
-A feature that is useful on its own can also be offered as a plugin or skill.
+A feature is the default unit of product behavior and ownership.
+
+While the plugin is the only supported delivery, keep its editable
+implementation in one Skill directory.
+
+Keep the feature's instructions, references, scripts, and private assets
+together.
+
+Do not make feature behavior depend on a manifest, marketplace, installed-cache
+path, or host brand.
+
+Shared code needs two real consumers with the same invariant.
+
+Generated package files must name their editable source and must never be edited
+by hand.
 
 ## Keep the person in control
 
@@ -54,15 +71,79 @@ Show the reason and evidence when they matter.
 
 Do not present a generated claim as a verified fact.
 
+## Own what Hope creates
+
+Hope records the files or private state it creates.
+
+It never guesses ownership from a name or prefix.
+
+Destructive work needs a clear target, the person's authority, and a final
+identity check.
+
+When Hope is uncertain, it leaves the item in place.
+
+Hope never treats an existing artifact as safe to replace merely because it
+created a similar one.
+
 ## Build from real work
 
 Start with a clear user goal and the smallest useful feature.
 
-Use the feature, learn from it, and then improve the harness.
+Use the feature, learn from it, and then improve it.
 
-Do not add an abstract layer for a possible future need.
+Do not add a state machine, compatibility layer, evaluation framework, or
+abstraction for a possible future need.
 
-Share a rule only when two real features need the same rule.
+Compatibility is a product choice, not a default cost.
+
+## Prefer simple, direct design
+
+Keep only files, layers, copies, and checks that serve a clear present purpose.
+
+Every part must define behavior, serve a real consumer, meet an obligation, or
+preserve information needed to reproduce the work.
+
+Prefer a direct path from the editable source to its consumer.
+
+A different audience or folder does not by itself justify another description
+of the same behavior.
+
+Keep one authoritative statement and link to it unless another file owns a
+distinct contract, consumer, or obligation.
+
+Verify that distinction from the actual content and use, not from a document's
+name or intended audience.
+
+When removing something, remove the generation, packaging, documentation, and
+tests that existed only to support it.
+
+Do not confuse fewer files with simpler design.
+
+Keep separate parts when they make ownership, behavior, or an independent
+distribution easier to understand.
+
+## Test the remaining risks
+
+Test feature behavior with representative prompts.
+
+Test Skill discovery as a contract of the current delivery.
+
+Test deterministic code at the boundaries it promises to enforce.
+
+Use browser tests for behavior that only a browser can verify.
+
+Add a deterministic check only when it detects a concrete failure without
+rejecting a valid design.
+
+Do not freeze wording, file names, or implementation shape as a proxy for a
+judgment the check cannot make.
+
+Leave meaning and design trade-offs to review when no reliable machine boundary
+exists.
+
+Do not preserve implementation complexity only because tests already exist.
+
+Remove obsolete behavior and its tests together.
 
 ## Use plain language and clear boundaries
 
@@ -70,32 +151,20 @@ Use short sentences and familiar words in code, commands, and documents.
 
 Name a thing after the job it does or the data it holds.
 
-Each feature owns its behavior and state.
-
-Entry points such as plugins, skills, and future harness interfaces call that
-feature instead of copying it.
-
-## Own what Hope creates
-
-Hope records the files, state, worktrees, or branches it creates.
-
-It never guesses ownership from a name or prefix.
-
-Destructive work needs a preview, clear confirmation, and a final identity
-check.
-
-When Hope is uncertain, it leaves the item in place.
+Keep facts, user decisions, AI proposals, assumptions, and uncertainty distinct.
 
 ## Test a new decision
 
-Before adding a feature or shared layer, ask:
+Before adding a feature or layer, ask:
 
 - What clear user goal does it serve?
-- Does it belong in the harness, work on its own, or both?
-- Can every entry point use the same feature code?
-- Can the person see and control important state and choices?
+- Can instructions handle it honestly?
+- What external state or deterministic result requires code?
+- Can the person see and control important choices?
 - Does Hope know exactly what it created and may clean up?
-- Has the added complexity earned its place through real use?
+- What smallest test would catch a real failure?
+- Has the complexity earned its place through use?
+- Does the feature remain understandable without its current delivery adapter?
 
 ## Learn without copying
 

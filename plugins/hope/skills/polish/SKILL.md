@@ -1,108 +1,112 @@
 ---
 name: polish
-description: Use for one bounded cleanup or refactor of a named completed work product while preserving behavior and meaning.
+description: Use only after someone asks to polish or refine one named, completed work product in a bounded pass that must preserve its settled behavior and meaning. Do not use for initial implementation, feature changes, architecture migrations, or broad restructuring.
 ---
 
-# Hope polish
+# Hope Polish
 
-Use the active Claude or Codex session to inspect, revise, and verify the work.
+Use the active host session only to bind the task, start one fresh worker, and
+report the result.
 
-Let the Hope runtime own the snapshot, preservation, plan, result, and
-verification contract.
+The fresh worker must not inherit the conversation that produced the work.
 
-## Locate the command
+Do not let the active session inspect, revise, or verify the target as the
+Polish worker.
 
-Claude Code:
+Do not use Polish to implement the work product, add or change a feature,
+perform an architecture migration, or carry out broad restructuring.
 
-```text
-node "${CLAUDE_PLUGIN_ROOT}/runtime/features/polish/cli.mjs"
-```
+A requirement to preserve existing behavior does not turn ordinary
+implementation or restructuring into Polish.
 
-Codex:
-
-```text
-node <skill-dir>/../../runtime/features/polish/cli.mjs
-```
-
-For Codex, replace `<skill-dir>` with the absolute directory that contains this
-file.
-
-Pass every argument as a separate shell argument.
-
-Never pass the placeholder or build a command from the person's text.
-
-## Get the brief
-
-Classify the risk as `low`, `medium`, or `high`, then run:
-
-```text
-brief --risk <risk>
-```
-
-The returned JSON is the complete Polish workflow.
-
-Follow its `snapshot`, `contract`, `planning`, `editing`, `verification`,
-`resultPreparation`, `stopping`, `writingStandard`, `schemaPath`, and `limits`
-fields.
-
-Use `writingStandard.text` for user-facing language and use
-`writingStandard.decisionExamples` only when a situation matches.
-
-Use both `schemaPath` and `recordSchemaPath` when the run is composed by
-another Hope feature.
-
-The examples guide decisions; they are not evaluation results.
-
-Do not copy those rules into another checklist in this Skill.
-
-## Run the host workflow
-
-Capture the exact target and the authority sources required by the brief.
-
-Inspect them before creating one run-specific plan.
-
-A no-change result is valid.
-
-Return `needs-alignment` instead of deciding a material ambiguity or calling
-Align.
+The fresh worker inspects, revises, and verifies the named completed result.
 
 Perform at most one bounded modification round.
 
-Use the returned writing standard directly for language-bearing changes; do not
-invoke Write as another feature pass.
+## Create an isolated handoff
 
-Recheck the target identity before writing.
+Before editing, confirm that the host can start a subagent with no inherited
+conversation context.
 
-Record a revision as `proposed` until it has been applied.
+If it cannot, stop and explain that Polish requires a fresh worker.
 
-Record it as `applied` only when the person's request or explicit approval
-authorizes the write, the authority is captured as a conversation source, and
-the before-and-after comparison and identity checks succeeded.
+Give the worker only:
 
-Write the version 2 run required by `schemaPath` to a private temporary JSON
-file with restricted permissions.
+- the person's exact request;
+- the exact target and its purpose;
+- settled behavior and meaning, facts, uncertainty, citations, intended voice,
+  and public contracts;
+- in-scope and out-of-scope work plus the granted write authority;
+- the location of this Skill;
+- direct evidence locations; and
+- the verification methods.
 
-List deleted targets in `outcome.removedSourceIds`.
+Do not pass previous reasoning, drafts, failed approaches, implementation
+narrative, or another agent's conclusions.
 
-Keep every surviving target in `outcome.outputSnapshot`, and use `null` when
-every target was removed.
+Tell the worker to read this Skill before acting.
 
-Validate it with:
+## Establish the boundary
 
-```text
-validate --input <private-run.json>
-```
+The fresh worker inspects the exact target before planning.
 
-When another Hope feature consumes the result, create the record from the
-same validated run:
+State:
 
-```text
-record --input <private-run.json>
-```
+- the target and its purpose;
+- what is in and out of scope;
+- the behavior, meaning, facts, uncertainty, citations, and public contracts
+  that must stay unchanged;
+- the small set of planned changes; and
+- how the checked scope will be verified.
 
-Do not write or summarize a composition record by hand.
+Use the person's request as write authority only for work clearly inside that
+boundary.
 
-Use the validated result to report the revised work, change summary, checked
-scope, and uncertainty.
+Ask before a removal or consolidation that is not clearly authorized.
 
-Remove the private JSON after validation or cancellation.
+Return `needs alignment` instead of silently choosing a material product
+behavior or public-contract change.
+
+## Revise once
+
+The fresh worker creates a short plan from the inspected target.
+
+Every change needs a concrete reason.
+
+Removing or merging content is allowed only when available evidence shows that
+it is unnecessary or duplicative.
+
+Similar tests, repeated documentation, and apparently unused code may protect
+different boundaries.
+
+Keep them when their purpose cannot be established.
+
+A no-change result is valid.
+
+Recheck the target before writing.
+
+Stop when it changed after inspection or its identity is uncertain.
+
+Apply the Hope Write standard directly to language-bearing changes.
+
+Do not invoke Write as another workflow.
+
+## Verify and report
+
+Run the smallest checks that can detect a regression in the changed scope.
+
+The fresh worker reports:
+
+- what changed;
+- what was checked;
+- what passed or failed;
+- what remains uncertain; and
+- whether no change was needed.
+
+Passing checks prove only their stated scope.
+
+Do not create a private JSON run, schema record, digest ledger, or composition
+receipt.
+
+Do not commit, push, open a pull request, or merge unless the person asks for
+that separate action.

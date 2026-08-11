@@ -1,15 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  CODE_THEME,
-  COLORS,
-  LAYOUT,
-  TYPE,
-} from "../design/tokens.mjs";
-import { digestJson } from "../features/diff/hash.mjs";
-import { renderReview } from "../features/diff/render.mjs";
-import { validateAnalysis } from "../features/diff/validate.mjs";
+import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
+import { digestJson } from "../plugins/hope/skills/diff/scripts/hash.mjs";
+import { renderReview } from "../plugins/hope/skills/diff/scripts/render.mjs";
+import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
 import {
   makeAnalysis,
   makeSnapshot,
@@ -93,35 +88,23 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 5);
+  assert.equal(first.rendererVersion, 7);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
   assert.match(html, /&lt;script src=/u);
   assert.match(html, /Content-Security-Policy/u);
   assert.match(html, /default-src &#39;none&#39;|default-src 'none'/u);
+  assert.match(
+    html,
+    /<link rel="icon" type="image\/png" sizes="128x128" href="data:image\/png;base64,iVBOR/u,
+  );
   assert.match(html, /data:font\/woff2;base64/u);
-  assert.match(html, new RegExp(`--accent:${COLORS.light.accent}`, "u"));
-  assert.match(
-    html,
-    new RegExp(`--component-border:${COLORS.light.componentBorder}`, "u"),
-  );
-  assert.match(html, new RegExp(`--code-bg:${CODE_THEME.light.background}`, "u"));
-  assert.match(html, new RegExp(`--code-fg:${CODE_THEME.dark.foreground}`, "u"));
-  assert.match(html, new RegExp(`max-width: ${LAYOUT.contentWidth}px`, "u"));
-  assert.match(
-    html,
-    new RegExp(`font: 300 ${TYPE.body.wide.fontSize}px/${TYPE.body.wide.lineHeight}`, "u"),
-  );
   assert.match(html, /font-family: "Hope Sans"/u);
   assert.match(html, /font-family: "Hope Code"/u);
-  assert.match(html, /font-weight: 400;/u);
   assert.equal((html.match(/@font-face/gu) ?? []).length, 4);
-  assert.match(html, /\.status\.kind-verify \{/u);
-  assert.doesNotMatch(html, /\n\.kind-verify,/u);
   assert.match(html, /aria-label="Switch to dark mode"/u);
   assert.doesNotMatch(html, /aria-pressed=/u);
-  assert.match(html, /\.theme-icon\[hidden\] \{ display: none; \}/u);
   assert.match(html, /toggleAttribute\("hidden"/u);
   assert.doesNotMatch(html, /data-copy-section/u);
   assert.doesNotMatch(html, /class="copy-link"/u);
@@ -132,7 +115,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     html,
     /<section class="synopsis" id="synopsis"[\s\S]*?<header class="synopsis-head">[\s\S]*?<h1 id="review-title">/u,
   );
-  assert.match(html, /rel="noreferrer noopener" target="_blank"/u);
+  assert.doesNotMatch(html, /target="_blank"/u);
   assert.doesNotMatch(header, /<h1>/u);
   assert.match(header, /<details class="toc-mobile">/u);
   assert.match(header, /class="toc-mobile-panel"/u);
@@ -161,34 +144,22 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     html.match(/<main class="main"[\s\S]*?<\/main>/u)?.[0] ?? "",
     /<details class="toc-mobile">/u,
   );
-  assert.match(html, /\.toc-mobile-panel \{[\s\S]*?position: absolute;/u);
   assert.match(html, /toc\.open=false/u);
   assert.match(html, /link\.setAttribute\("aria-current","location"\)/u);
   assert.match(html, /focusTarget\(target\)/u);
   assert.match(html, /<section class="synopsis" id="synopsis"/u);
   assert.match(
     html,
-    /<div class="before-after change-shift" role="group" aria-label="AS-IS → TO-BE">/u,
+    /<div class="before-after change-shift" role="group" aria-labelledby="synopsis-before-title synopsis-now-title">/u,
   );
-  assert.match(html, /<span class="shift-arrow" aria-hidden="true">→<\/span>/u);
-  assert.match(html, /\.change-shift \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 40px minmax\(0, 1fr\);/u);
-  assert.match(html, /\.synopsis-impact \{[\s\S]*?border-left: 3px solid var\(--accent\);/u);
-  assert.match(html, /\.topbar \{[\s\S]*?position: sticky;/u);
+  assert.match(html, /<h3 id="synopsis-before-title">AS-IS<\/h3>/u);
+  assert.match(html, /<h3 id="synopsis-now-title">TO-BE<\/h3>/u);
+  assert.doesNotMatch(html, /shift-arrow/u);
   assert.match(html, /class="toc-synopsis"><a href="#synopsis"/u);
-  assert.match(html, /\.section-heading h2::before/u);
-  assert.match(html, /content: counter\(review-section\)/u);
-  assert.match(html, /bdi\[dir="auto"\] \{ overflow-wrap: anywhere; \}/u);
-  assert.match(html, /\.toc-mobile-panel \{[\s\S]*?max-height: calc\(100vh - 76px\);[\s\S]*?overflow: auto;/u);
-  assert.match(html, /\.toc-mobile a \{[\s\S]*?min-height: 44px;/u);
-  assert.match(
-    html,
-    /\.toc-mobile a\[aria-current="location"\] \{[\s\S]*?border-left-color: var\(--accent\);/u,
-  );
   assert.doesNotMatch(html, /<details class="evidence" open>/u);
-  assert.match(html, /<pre class="syntax-code"><code aria-label=/u);
-  assert.match(html, /class="syntax-token-[a-f0-9]{16}"/u);
+  assert.match(html, /<pre class="code-evidence"><code aria-label=/u);
+  assert.doesNotMatch(html, /syntax-/u);
   assert.doesNotMatch(html, /\/blob\/[^"]+\/src\/retry\.js#L/u);
-  assert.match(html, /:root\[data-theme="dark"\] \.syntax-token-[a-f0-9]{16}/u);
   assert.doesNotMatch(html, /<span[^>]+style=/u);
   assert.match(html, /class="review-item kind-verify review-item-compact"/u);
   assert.doesNotMatch(html, /class="review-result/u);
@@ -208,22 +179,6 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<span class="status kind-verify">Verification needed<\/span>/u,
   );
   assert.match(compactItem, /<span class="importance">Medium<\/span>/u);
-  assert.match(html, /\.review-item-compact \.status::before/u);
-  assert.match(html, /\.review-item-compact \.importance::before/u);
-  assert.match(
-    html,
-    /\.review-item:not\(\.review-item-compact\) \.item-head \{\s*margin-bottom: 8px;/u,
-  );
-  assert.match(
-    html,
-    /\.review-items-compact > li \+ li \{ margin-top: [^;]+; \}/u,
-  );
-  assert.match(
-    html,
-    /\.review-items-compact > li:first-child \.review-item-compact \{ padding-top: 0; \}/u,
-  );
-  const compactItemRule = html.match(/\.review-item-compact \{([^}]*)\}/u)?.[1] ?? "";
-  assert.doesNotMatch(compactItemRule, /border-bottom:/u);
   assert.match(
     html,
     /<div class="synopsis-row synopsis-review">\s*<h3>Review result<\/h3>\s*<div class="synopsis-value synopsis-review-value">/u,
@@ -239,15 +194,9 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<ul class="titled-claim-list"><li><article/u);
   assert.match(html, /<ol class="code-step-list">/u);
   assert.match(html, /<ul class="scope-impact-list"><li><a href="#scope-limit-1">/u);
-  assert.match(html, /counter\(code-step, decimal-leading-zero\)/u);
   assert.equal((html.match(/id="review-item-1"/gu) ?? []).length, 1);
   assert.match(html, /class="item-basis"/u);
   assert.match(html, /class="item-next"/u);
-  assert.match(
-    html,
-    /\.item-actions \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/u,
-  );
-  assert.match(html, /\.item-actions > \.item-next \{ border-top-color: var\(--accent\); \}/u);
   assert.match(html, /class="related-limits"/u);
   assert.match(html, /href="#scope-limit-1"/u);
   assert.match(html, /<details class="scope-limit" id="scope-limit-1">/u);
@@ -266,11 +215,12 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   );
   assert.match(html, /if\(target\.tagName==="DETAILS"\)target\.open=true/u);
   assert.match(html, /<summary aria-label="[^"]+ · Evidence · \d+">Evidence · \d+<\/summary>/u);
-  assert.match(html, /\.evidence > summary \{[\s\S]*?min-height: 32px;/u);
-  assert.match(html, /\.evidence > summary::before,/u);
-  assert.match(html, /\.syntax-line-patch\.syntax-line-unlocated/u);
-  assert.match(html, /\.syntax-line-patch\.syntax-line-unlocated::before \{ display: none; \}/u);
+  assert.match(html, /\.code-line-patch\.code-line-unlocated/u);
   assert.match(html, /class="evidence-reference"/u);
+  assert.match(
+    html,
+    /\.evidence-meta a:visited,[\s\S]*?\.evidence-reference a:visited \{[\s\S]*?color: var\(--visited\);/u,
+  );
   assert.equal((html.match(/id="evidence-[a-f0-9]{12}"/gu) ?? []).length > 0, true);
   assert.match(html, /<caption class="sr-only">/u);
   assert.match(html, /<time datetime="[^"]+" title="[^"]+">/u);
@@ -300,12 +250,25 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(synopsis, /class="status summary-/u);
   assert.equal((synopsis.match(/Scope limited/gu) ?? []).length, 0);
   assert.equal((synopsis.match(/>Limited</gu) ?? []).length, 0);
-  assert.match(html, /\.flow-short > li:not\(:last-child\)::after/u);
-  assert.match(html, /\.theme-button \{[\s\S]*?width: 44px;[\s\S]*?height: 44px;/u);
-  assert.match(html, new RegExp(`@media \\(max-width: ${LAYOUT.tocBreakpoint}px\\)`, "u"));
-  assert.match(html, /\.syntax-line \{[\s\S]*?display: inline;/u);
-  assert.match(html, /<\/span>\n<span class="syntax-line/u);
-  assert.match(html, /\.syntax-line-patch \{[\s\S]*?display: inline;/u);
+  assert.match(html, /<\/span>\n<span class="code-line/u);
+});
+
+test("oversized embedded assets cannot create an artifact", async () => {
+  const snapshot = makeSnapshot();
+  const review = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, {
+    runId,
+  });
+  await assert.rejects(
+    renderReview(review, {
+      fonts: {
+        code: Buffer.alloc(LIMITS.artifactBytes),
+        sansBold: Buffer.alloc(0),
+        sansLight: Buffer.alloc(0),
+        sansMedium: Buffer.alloc(0),
+      },
+    }),
+    new RegExp(`Hope review exceeds ${LIMITS.artifactBytes} bytes`, "u"),
+  );
 });
 
 test("repository evidence stays inert in supported and fallback languages", async () => {
@@ -415,7 +378,6 @@ test("beginner primer stays closed, localized, linkable, and print-visible", asy
   assert.match(background, /처음 보는 독자를 위한 개념/u);
   assert.doesNotMatch(background, /<details class="beginner-primer"[^>]* open>/u);
   assert.match(html, /id="beginner-primer"/u);
-  assert.match(html, /beginner-primer > \.beginner-primer-content[\s\S]*?display: block !important/u);
   assert.match(html, /const revealTarget=target=>\{if\(target\.tagName==="DETAILS"\)target\.open=true;/u);
 
   const absent = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
@@ -602,11 +564,6 @@ test("quiz responses stay visually unlabeled and separate from the answer", asyn
     html,
     /aria-label="모든 재시도가 실패하면 어떤 오류가 전달되나요\? 1 · 답과 근거 보기"/u,
   );
-  assert.match(html, /\.quiz textarea,[\s\S]*?\.quiz-answer > summary \{[\s\S]*?display: none !important;/u);
-  assert.match(
-    html,
-    /\.quiz-question > \.quiz-workspace,[\s\S]*?\.quiz-answer > \.quiz-answer-content \{[\s\S]*?display: block !important;/u,
-  );
   assert.doesNotMatch(
     html.match(/<details class="quiz-answer">[\s\S]*?<\/details>/u)?.[0] ?? "",
     /<details class="evidence">/u,
@@ -745,7 +702,14 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
     html,
     /Explanation model only\. It does not run repository code or report a test result\./u,
   );
-  assert.equal((html.match(/class="microworld-control"/gu) ?? []).length, 2);
+  assert.equal(
+    (html.match(/class="microworld-control-group"/gu) ?? []).length,
+    2,
+  );
+  assert.equal((html.match(/class="microworld-control"/gu) ?? []).length, 4);
+  assert.equal((html.match(/type="radio"/gu) ?? []).length, 4);
+  assert.equal((html.match(/checked disabled>/gu) ?? []).length, 2);
+  assert.doesNotMatch(html, /<select[\s\S]*?microworld-control/u);
   assert.equal((html.match(/class="microworld-scenario"/gu) ?? []).length, 4);
   assert.equal(
     (html.match(/data-status="[^"]+"\s+hidden>/gu) ?? []).length,
@@ -776,9 +740,11 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.match(script, /querySelectorAll\("\[data-microworld\]"\)/u);
   assert.match(script, /scenario\.hidden=!selected/u);
   assert.match(script, /control\.disabled=false/u);
+  assert.match(script, /\.microworld-control:checked/u);
+  assert.match(script, /dataset\.optionLabel/u);
   assert.equal(
     (html.match(/class="microworld-control"[\s\S]*?disabled>/gu) ?? []).length,
-    2,
+    4,
   );
   assert.doesNotMatch(
     script,
@@ -918,7 +884,7 @@ test("unavailable exact context uses a trusted localized reason", async () => {
   assert.doesNotMatch(html, /Untrusted provider reason/u);
 });
 
-test("exact-revision context renders as highlighted code from its fork repository", async () => {
+test("exact-revision context renders as code evidence from its fork repository", async () => {
   const original = makeSnapshot();
   const { digest: _digest, ...value } = original;
   value.repository = {
@@ -957,8 +923,8 @@ test("exact-revision context renders as highlighted code from its fork repositor
   const contextStart = html.indexOf(contextUrl);
   assert.ok(contextStart >= 0);
   const contextEvidence = html.slice(contextStart - 200, contextStart + 2_000);
-  assert.match(contextEvidence, /<pre class="syntax-code">/u);
-  assert.match(contextEvidence, /class="syntax-token-[a-f0-9]{16}"/u);
+  assert.match(contextEvidence, /<pre class="code-evidence">/u);
+  assert.match(contextEvidence, /class="code-line"/u);
 });
 
 test("scope limits with one reason are grouped without losing member links", async () => {

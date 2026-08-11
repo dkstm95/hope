@@ -1,0 +1,9 @@
+{
+  "source.default": "default",
+  "source.host": "host",
+  "source.override": "this run",
+  "source.system": "system",
+  "theme.dark": "Dark",
+  "theme.light": "Light",
+  "theme.system": "System"
+}
