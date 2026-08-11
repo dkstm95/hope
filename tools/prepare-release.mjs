@@ -19,8 +19,7 @@ export const versionFiles = Object.freeze([
 
 const semanticVersion = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/u;
 const stableVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
-const conventionalSubject = /^(?:build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(?:\([^()\r\n]+\))?(!)?: \S.*$/u;
-const featureSubject = /^feat(?:\([^()\r\n]+\))?(!)?: \S.*$/u;
+const conventionalSubject = /^(?<type>build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(?:\([^()\r\n]+\))?(?<breaking>!)?: \S.*$/u;
 const breakingFooter = /^BREAKING(?: CHANGE|-CHANGE):[ \t]+\S.*$/mu;
 const releaseTypePriority = Object.freeze({ patch: 0, minor: 1, major: 2 });
 
@@ -41,8 +40,8 @@ export function releaseTypeForCommit(message) {
   }
   const [subject = ""] = message.split(/\r?\n/u, 1);
   const conventional = conventionalSubject.exec(subject);
-  if (breakingFooter.test(message) || conventional?.[1] === "!") return "major";
-  if (featureSubject.test(subject)) return "minor";
+  if (breakingFooter.test(message) || conventional?.groups?.breaking === "!") return "major";
+  if (conventional?.groups?.type === "feat") return "minor";
   return "patch";
 }
 
