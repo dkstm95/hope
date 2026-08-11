@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep the root security policy focused on supported versions and private
+  reporting, stop packaging unused copies of product documents, and remove
+  migration history and prose wording from deterministic release checks.
 - Define Hope by its features instead of its current plugin delivery, keep
   adapter concerns out of product behavior, reduce the contributor guide to a
   linked entry point, and define where repository-wide, topic-specific, and

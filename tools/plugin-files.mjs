@@ -11,41 +11,6 @@ export const generatedPluginFiles = Object.freeze([
     "THIRD_PARTY_NOTICES.md",
     "plugins/hope/THIRD_PARTY_NOTICES.md",
   ),
-  generatedText(
-    "docs/align.md",
-    "plugins/hope/docs/align.md",
-    "<!-- Generated from docs/align.md. Do not edit. -->\n\n",
-  ),
-  generatedText(
-    "docs/design.md",
-    "plugins/hope/docs/design.md",
-    "<!-- Generated from docs/design.md. Do not edit. -->\n\n",
-  ),
-  generatedText(
-    "docs/diff.md",
-    "plugins/hope/docs/diff.md",
-    "<!-- Generated from docs/diff.md. Do not edit. -->\n\n",
-  ),
-  generatedText(
-    "docs/polish.md",
-    "plugins/hope/docs/polish.md",
-    "<!-- Generated from docs/polish.md. Do not edit. -->\n\n",
-  ),
-  generatedText(
-    "docs/sweep.md",
-    "plugins/hope/docs/sweep.md",
-    "<!-- Generated from docs/sweep.md. Do not edit. -->\n\n",
-  ),
-  generatedText(
-    "docs/toxic-review.md",
-    "plugins/hope/docs/toxic-review.md",
-    "<!-- Generated from docs/toxic-review.md. Do not edit. -->\n\n",
-  ),
-  generatedText(
-    "docs/write.md",
-    "plugins/hope/docs/write.md",
-    "<!-- Generated from docs/write.md. Do not edit. -->\n\n",
-  ),
 ]);
 
 export const staticPluginFiles = Object.freeze([

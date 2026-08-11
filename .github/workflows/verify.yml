@@ -47,7 +47,6 @@ jobs:
           plugins/hope/LICENSE
           plugins/hope/THIRD_PARTY_NOTICES.md
           plugins/hope/runtime
-          plugins/hope/docs
           tools/plugin-package-files.txt
       - name: Check staged plugin paths
         run: node --test test/platform-smoke.test.mjs

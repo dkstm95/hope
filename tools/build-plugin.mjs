@@ -4,7 +4,6 @@ import {
   chmod,
   mkdir,
   readFile,
-  rm,
   writeFile,
 } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -34,19 +33,6 @@ export async function expectedPluginFile(entry) {
 }
 
 export async function buildPlugin() {
-  await Promise.all([
-    rm(fileURLToPath(fromRoot("plugins/hope/docs")), {
-      force: true,
-      recursive: true,
-    }),
-    rm(fileURLToPath(fromRoot("plugins/hope/runtime")), {
-      force: true,
-      recursive: true,
-    }),
-    rm(fileURLToPath(fromRoot(
-      "plugins/hope/assets/hope-protected-light-128.png",
-    )), { force: true }),
-  ]);
   for (const entry of pluginBuildEntries) {
     const destination = fileURLToPath(fromRoot(entry.destination));
     await mkdir(dirname(destination), { recursive: true });

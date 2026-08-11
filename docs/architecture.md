@@ -95,18 +95,18 @@ scripts consume it.
 Diff-only helpers stay in the Diff Skill instead of presenting themselves as
 shared project infrastructure.
 
-`tools/build-plugin.mjs` generates `plugins/hope/docs/`,
-`plugins/hope/LICENSE`, and `plugins/hope/THIRD_PARTY_NOTICES.md`.
+`tools/build-plugin.mjs` copies `LICENSE` and `THIRD_PARTY_NOTICES.md` into the
+current delivery package.
 
-`tools/plugin-files.mjs` maps every generated file to its editable source and
-derives the exact package list.
+`tools/plugin-files.mjs` maps those two generated files to their editable source
+and derives the exact package list.
 
-Generated product-document Markdown carries a visible source banner.
+Product definitions under `docs/` stay in the repository.
 
-Markdown copied as a raw notice does not: `THIRD_PARTY_NOTICES.md` keeps its
-recorded content unchanged.
+The installed features use their own `SKILL.md` files and references instead of
+shipping another copy of those definitions.
 
-License text is also copied without a banner.
+License and notice text are copied without a banner.
 
 Skill instructions, references, scripts, schemas, locale dictionaries, and
 private assets are packaged directly from their editable paths.
@@ -363,8 +363,8 @@ Tests follow the supported boundaries.
   checks, bounded input, and safe publication.
 - Browser tests cover Diff layout, keyboard behavior, accessibility, responsive
   navigation, no-JavaScript behavior, and print.
-- Package tests verify the direct Skill sources, generated documents, and exact
-  release allowlist.
+- Package tests verify the direct Skill sources, generated legal files, and
+  exact release allowlist.
 
 There are no harness-parity, Settings, Model Evaluation, Align renderer, or
 legacy-record tests.

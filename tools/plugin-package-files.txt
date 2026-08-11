@@ -3,13 +3,6 @@
 LICENSE
 THIRD_PARTY_NOTICES.md
 assets/hope-protected-light.png
-docs/align.md
-docs/design.md
-docs/diff.md
-docs/polish.md
-docs/sweep.md
-docs/toxic-review.md
-docs/write.md
 skills/align/SKILL.md
 skills/align/agents/openai.yaml
 skills/diff/SKILL.md
