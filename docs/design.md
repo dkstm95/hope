@@ -1,7 +1,13 @@
 # Hope design
 
-This document defines the information structure and visual language of the
-Hope Diff HTML artifact.
+This document defines Hope's project-wide GUI guidance and the visual contract
+of the current Diff HTML artifact.
+
+The Project GUI widgets section applies whenever a Hope feature introduces or
+changes a matching control or interaction.
+
+The remaining sections apply to the Diff artifact unless they explicitly say
+otherwise.
 
 The Diff Skill and its analysis reference own review judgment and prose.
 
@@ -9,9 +15,9 @@ Diff is the only Hope feature that currently creates a visual artifact.
 
 Do not build a general component framework for a possible future artifact.
 
-## Direction
+## Diff artifact direction
 
-Hope artifacts should feel:
+The Diff artifact should feel:
 
 - direct;
 - compact;
@@ -36,7 +42,7 @@ colors, type sizes, spacing, and layout limits.
 
 A renderer must read those tokens instead of copying their values.
 
-## Artifact structure
+## Diff artifact structure
 
 The first screen should explain the shape and limits of the change in about 30
 seconds.
@@ -72,7 +78,7 @@ Keep important evidence beside the claim it supports.
 Use Evidence and scope as the complete index of the captured snapshot, checked
 files, supporting sources, exclusions, and limits.
 
-## GUI widgets
+## Project GUI widgets
 
 Use the relevant group below whenever Hope introduces or changes that widget or
 interaction.
@@ -291,7 +297,7 @@ in Hope's language.
 5. **GUI-86 — Visible keyboard focus.** Give keyboard navigation a visible
    focus indicator.
 
-## Layout
+## Diff artifact layout
 
 Use one linear document in every viewport.
 
@@ -331,7 +337,7 @@ update itself.
 A complex drawer is allowed only after its focus, keyboard, scroll, and deep
 link behavior is tested.
 
-## Type
+## Diff artifact type
 
 Use three clear roles.
 
@@ -372,7 +378,7 @@ Text-bearing controls use a minimum height and grow when text is enlarged.
 
 They must not create page-level horizontal scrolling.
 
-## Space and boundaries
+## Diff artifact space and boundaries
 
 Use a small, consistent spacing scale.
 
@@ -455,7 +461,7 @@ Use the same text and order in both layouts.
 Use a normal numbered list for five or more steps or when any step is longer
 than 80 characters.
 
-## Color and themes
+## Diff artifact color and themes
 
 Generate one artifact that supports light and dark themes.
 
@@ -505,7 +511,7 @@ Importance stays in text.
 
 Never use color as the only status signal.
 
-## Interaction
+## Diff artifact interaction
 
 Every interaction must still leave useful content when JavaScript is disabled.
 
@@ -572,7 +578,7 @@ success feedback.
 
 Do not add task completion, assignment, comments, or hidden persistence.
 
-## Accessibility
+## Diff artifact accessibility
 
 Target WCAG 2.2 AA.
 
@@ -598,7 +604,7 @@ Body prose keeps the light face.
 
 Test the final file through `file://`, not only through a web server.
 
-## Implementation boundary
+## Diff artifact implementation boundary
 
 Repository, provider, and model content is untrusted.
 

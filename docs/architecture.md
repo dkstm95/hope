@@ -19,8 +19,8 @@ There is no independent Hope CLI or harness.
 - [release.md](release.md) defines the public package and release process.
 - This document defines repository structure and dependency boundaries.
 
-The `docs/` directory is for contracts that cross feature boundaries or govern
-the repository.
+The `docs/` directory is for topic-specific repository contracts that become
+relevant after the kind of work is known.
 
 It must not contain another description of behavior already owned by a Skill.
 
@@ -59,7 +59,7 @@ hope/
 ├── .agents/             Codex local marketplace catalog
 ├── .claude-plugin/      Claude local marketplace catalog
 ├── assets/              README captures
-├── docs/                Cross-feature architecture, release, and design
+├── docs/                Topic-specific repository, release, and design contracts
 ├── e2e/                 Diff browser acceptance tests
 ├── plugins/hope/        Installable Codex and Claude package
 ├── test/                Deterministic and package tests
@@ -67,8 +67,12 @@ hope/
 └── tools/               Build, validation, staging, and release scripts
 ```
 
-Keep a Markdown file at the repository root when it governs the whole project,
-must be found before a topic is chosen, or uses a conventional fixed path.
+Keep a Markdown file at the repository root when a tool or common convention
+expects it there, or when nearly every contribution must find it before the
+kind of work is known.
+
+Keep a topic-specific repository contract under `docs/` even when it governs
+several folders or the whole repository within that topic.
 
 Keep directory-local guidance beside the files it governs.
 

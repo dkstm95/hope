@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Define root Markdown as universal or conventionally discovered entry points,
+  keep topic-specific repository contracts under `docs/`, and distinguish
+  project GUI guidance from the current Diff artifact contract.
 - Simplify Diff's private run protocol to one atomic mutation lock, window-only
   inspection and checkpointing, stateless analysis repair, and version-neutral
   expiry cleanup while retaining bounded resume state and safe publication.
