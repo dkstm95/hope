@@ -16,6 +16,7 @@ skills/diff/assets/fonts/OFL-Gmarket.txt
 skills/diff/assets/fonts/SOURCE.md
 skills/diff/assets/hope-protected-light.png
 skills/diff/references/analysis.md
+skills/diff/references/runtime.md
 skills/diff/scripts/analysis-v2.schema.json
 skills/diff/scripts/artifact.mjs
 skills/diff/scripts/checkpoint-v1.schema.json

@@ -13,6 +13,9 @@
 - Make each Skill the only feature-behavior source, remove parallel feature
   documents, and keep `docs/` for cross-feature architecture, release, and
   design contracts.
+- Keep only Diff's code ownership boundary in the architecture guide and move
+  its deterministic source, trust, state, and publication guarantees beside
+  the Diff Skill.
 - Require duplicate descriptions and deterministic checks to justify themselves
   through distinct contracts or concrete failures instead of audiences, file
   names, wording, or implementation shape.

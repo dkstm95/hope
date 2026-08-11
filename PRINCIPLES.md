@@ -82,7 +82,8 @@ identity check.
 
 When Hope is uncertain, it leaves the item in place.
 
-Diff never replaces an existing HTML artifact.
+Hope never treats an existing artifact as safe to replace merely because it
+created a similar one.
 
 ## Build from real work
 

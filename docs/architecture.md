@@ -14,8 +14,8 @@ There is no independent Hope CLI or harness.
 - [PRINCIPLES.md](../PRINCIPLES.md) defines the project direction.
 - Each `plugins/hope/skills/<feature>/SKILL.md` defines one feature's behavior.
 - A Skill's `references/` directory owns detailed or conditional guidance.
-- [design.md](design.md) defines the Diff artifact's information structure and
-  visual language.
+- [design.md](design.md) defines Hope's GUI guidance and the Diff artifact's
+  visual contract.
 - [release.md](release.md) defines the public package and release process.
 - This document defines repository structure and dependency boundaries.
 
@@ -123,44 +123,21 @@ layer, or second delivery path for a possible future need.
 If another delivery form earns its place, reorganize the feature without
 rewriting its behavior.
 
-## Diff deterministic boundary
+## Deterministic code boundary
 
-Diff is the only feature with a deterministic runtime.
+Diff is the only feature that currently needs deterministic code.
 
-Its scripts:
+Its scripts live beside the Diff Skill and do not form a shared runtime.
 
-1. resolve one exact GitHub pull request;
-2. capture its base, head, merge base, changed files, patches, and bounded
-   context;
-3. expose stable source identifiers to a fresh analysis worker;
-4. validate analysis citations against captured sources;
-5. render escaped authored content into one self-contained HTML file;
-6. recheck the pull-request revisions before publication; and
-7. publish through a new-file-only operation.
+The Skill and its references own workflow and model judgment.
 
-Repository content, provider data, paths, model output, and URLs are untrusted
-input.
+The scripts own external source identity, bounds, validation, rendering,
+temporary state, and publication.
 
-Diff bounds input size, structure depth, generated prose, evidence, snapshots,
-and the final artifact.
+[Diff's runtime contract](../plugins/hope/skills/diff/references/runtime.md)
+defines the feature-specific guarantees enforced at that boundary.
 
-It keeps private working state in a restricted temporary directory owned by one
-run.
-
-It removes that state only after rechecking ownership.
-
-A failed collection, validation, render, revalidation, or publication never
-publishes a partial review or replaces an existing file.
-
-The renderer needs no repository `node_modules/` directory or network request.
-
-Its modules, schemas, locales, fixed fonts, and favicon ship beside the Diff
-Skill.
-
-The analysis reference owns review judgment and teaching-aid guidance.
-
-The runtime owns source identity, bounds, validation, deterministic rendering,
-temporary-state ownership, and safe publication.
+Extract shared code only after another feature needs the same invariant.
 
 ## Package boundary
 
@@ -178,8 +155,6 @@ An unrelated file under `plugins/hope/` cannot enter a release accidentally.
 
 Do not edit generated package files by hand.
 
-Hope has no Settings Skill or product-wide Model Evaluation framework.
-
 ## Verification
 
 - Skill tests cover discovery metadata and packaged references.
@@ -195,7 +170,7 @@ Linux runs the deterministic suite on Node.js 22 and 24.
 macOS and Windows run focused Node.js 22 package and path smoke tests.
 
 Representative prompts for instruction-led Skills are development and product
-smoke checks, not automated release or model-evaluation gates.
+smoke checks, not automated release gates.
 
 Skill discovery and manifest validation do not prove feature behavior.
 

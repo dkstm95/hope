@@ -28,5 +28,5 @@ input.
 
 [Hope principles](PRINCIPLES.md) define authority and ownership.
 
-[Diff's deterministic boundary](docs/architecture.md#diff-deterministic-boundary)
+[Diff's runtime contract](plugins/hope/skills/diff/references/runtime.md)
 defines its source, rendering, temporary-state, and publication guarantees.

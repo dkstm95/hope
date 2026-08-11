@@ -23,6 +23,7 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/diff/assets/fonts/SOURCE.md",
   "plugins/hope/skills/diff/assets/hope-protected-light.png",
   "plugins/hope/skills/diff/references/analysis.md",
+  "plugins/hope/skills/diff/references/runtime.md",
   ...[
     "analysis-v2.schema.json",
     "artifact.mjs",

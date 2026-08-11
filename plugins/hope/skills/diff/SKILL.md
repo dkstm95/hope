@@ -19,6 +19,10 @@ The fresh worker reads these files before starting:
 - `references/analysis.md` in this Skill directory; and
 - `../write/references/writing-standard.md` relative to this Skill directory.
 
+`references/runtime.md` records the deterministic guarantees enforced by the
+Diff scripts for maintainers. It is not analysis guidance and the fresh worker
+does not need to read it.
+
 ## Isolate the analysis
 
 Before `prepare`, confirm that the host can start a subagent with no inherited
