@@ -5,8 +5,13 @@ description: Use only after someone asks to polish or refine one named, complete
 
 # Hope Polish
 
-Use the active Codex or Claude session only after a named work product exists,
-is complete for the current task, and the person asks to polish or refine it.
+Use the active Codex or Claude session only to bind the task, start one fresh
+worker, and report the result.
+
+The fresh worker must not inherit the conversation that produced the work.
+
+Do not let the active session inspect, revise, or verify the target as the
+Polish worker.
 
 Do not use Polish to implement the work product, add or change a feature,
 perform an architecture migration, or carry out broad restructuring.
@@ -14,13 +19,36 @@ perform an architecture migration, or carry out broad restructuring.
 A requirement to preserve existing behavior does not turn ordinary
 implementation or restructuring into Polish.
 
-Inspect, revise, and verify the named completed result.
+The fresh worker inspects, revises, and verifies the named completed result.
 
 Perform at most one bounded modification round.
 
+## Create an isolated handoff
+
+Before editing, confirm that the host can start a subagent with no inherited
+conversation context.
+
+If it cannot, stop and explain that Polish requires a fresh worker.
+
+Give the worker only:
+
+- the person's exact request;
+- the exact target and its purpose;
+- settled behavior and meaning, facts, uncertainty, citations, intended voice,
+  and public contracts;
+- in-scope and out-of-scope work plus the granted write authority;
+- the location of this Skill;
+- direct evidence locations; and
+- the verification methods.
+
+Do not pass previous reasoning, drafts, failed approaches, implementation
+narrative, or another agent's conclusions.
+
+Tell the worker to read this Skill before acting.
+
 ## Establish the boundary
 
-Inspect the exact target before planning.
+The fresh worker inspects the exact target before planning.
 
 State:
 
@@ -41,7 +69,7 @@ behavior or public-contract change.
 
 ## Revise once
 
-Create a short plan from the inspected target.
+The fresh worker creates a short plan from the inspected target.
 
 Every change needs a concrete reason.
 
@@ -67,7 +95,7 @@ Do not invoke Write as another workflow.
 
 Run the smallest checks that can detect a regression in the changed scope.
 
-Report:
+The fresh worker reports:
 
 - what changed;
 - what was checked;

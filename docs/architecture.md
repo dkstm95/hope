@@ -38,8 +38,10 @@ Most Hope features are instruction-led.
 
 Their behavior lives in a concise `SKILL.md` and optional references.
 
-The active host inspects evidence, makes model judgments, uses its normal tools,
-and speaks with the person.
+The selected Skill assigns model judgment either to the active host or to a
+fresh worker according to the conversation context boundary below.
+
+Both use the host's normal tools, and the active host speaks with the person.
 
 Diff also needs deterministic code.
 
@@ -168,6 +170,28 @@ Keep the selected `SKILL.md` short.
 Move detailed analysis methods, writing standards, and rare procedures into
 `references/`.
 
+## Conversation context boundary
+
+Align and Write use the active conversation because shared decisions, meaning,
+uncertainty, and voice are part of their product input.
+
+Polish and Diff delegate their work to a fresh subagent that does not inherit
+the conversation.
+
+Every Toxic Review reviewer uses a fresh context, including a one-role review.
+
+Sweep uses fresh contexts for disjoint batch inspectors while the active host
+may inspect sequentially and merge evidence.
+
+A fresh-worker handoff may contain the exact request, target, settled
+contracts, explicit scope, direct evidence locations, and verification method.
+
+It must not contain previous reasoning, drafts, failed approaches,
+implementation narrative, prior conclusions, or another worker's output.
+
+When fresh context is required but unavailable, the Skill stops instead of
+performing the same judgment in the active conversation.
+
 ## Align boundary
 
 Align finds material misunderstandings before implementation.
@@ -203,7 +227,10 @@ It stops when a material product choice is required.
 
 A no-change result is valid.
 
-Polish uses the active host's normal file tools and does not create a private
+The active host delegates the pass through a task-local handoff and does not
+inspect, revise, or verify the target as the Polish worker.
+
+The fresh worker uses the host's normal file tools and does not create a private
 runtime record.
 
 ## Sweep boundary
@@ -224,12 +251,12 @@ Toxic Review is strict about the work and respectful toward people.
 
 The active host chooses the smallest useful reviewer role set.
 
-Use fresh subagent contexts for distinct roles when the host supports them.
+Every reviewer role uses a fresh subagent context.
 
 One focused review is valid when additional roles would repeat evidence.
 
-The active host adjudicates findings by evidence and impact rather than reviewer
-votes.
+The active host adjudicates findings by scoped evidence and impact rather than
+reviewer votes or hidden conversation context.
 
 No finding is a valid result.
 
@@ -259,13 +286,16 @@ The deterministic path then:
 
 1. resolves one pull request;
 2. captures its base, head, merge base, files, patches, and bounded context;
-3. exposes stable source IDs to the active host;
+3. exposes stable source IDs to the fresh analysis worker;
 4. validates analysis references against the captured sources;
 5. renders one offline HTML file with escaped authored content;
 6. rechecks the pull-request revisions before publication; and
 7. creates a new output file without replacing an existing one.
 
-The active host owns review judgment and prose.
+The fresh analysis worker owns review judgment and prose.
+
+The active host owns target confirmation, explicit display choices, and final
+artifact handoff.
 
 The runtime owns source identity, input bounds, deterministic rendering, and
 safe publication.

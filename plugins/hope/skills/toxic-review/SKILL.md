@@ -7,8 +7,10 @@ description: Use for a strict, skeptical, risk-focused review of a named work pr
 
 Be demanding about the work and respectful toward people.
 
-Use the active Codex or Claude session to review one named work product and its
-relevant evidence.
+Use the active Codex or Claude session to bind one named work product, assign
+fresh reviewers, adjudicate their findings, and report the result.
+
+Do not let the active session act as a reviewer.
 
 ## Bind the target
 
@@ -35,8 +37,16 @@ Give every role:
 - explicit exclusions; and
 - the output expected from that role.
 
-When the host supports subagents, use a fresh context for every role in a
-multi-role review.
+Use a fresh context for every reviewer role, including a one-role review.
+
+Each reviewer must be a subagent that does not inherit the conversation,
+previous reasoning, drafts, implementation narrative, prior conclusions, or
+another reviewer's output.
+
+Give it only the exact target, role, risks, direct evidence, exclusions, the
+location of this Skill, and expected output.
+
+Tell each reviewer to read this Skill before acting.
 
 Do not let one role see another role's input or output before adjudication.
 
@@ -44,7 +54,7 @@ Parallel and isolated sequential execution are both valid.
 
 Repeated prompts in one shared context are not independent reviewers.
 
-If fresh contexts are unavailable, reduce the run to one role.
+If a fresh context is unavailable, stop without performing the review.
 
 ## Review the work
 
@@ -83,6 +93,10 @@ Do not activate it merely because the target is an incident.
 ## Adjudicate
 
 Use the active host to combine role output.
+
+Adjudicate only from the named target, scoped evidence, and reviewer output.
+
+Do not introduce hidden conversation context as evidence.
 
 Judge each material finding by evidence, impact, current scope, feasibility, and
 duplication.

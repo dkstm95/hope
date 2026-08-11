@@ -18,12 +18,26 @@ architecture migrations, or broad restructuring.
 A requirement to preserve existing behavior during those tasks does not make
 them Polish.
 
-Polish starts from an exact target that the active host can inspect.
+The active host binds the task and delegates the finishing pass to one fresh
+worker that did not inherit the conversation that produced the work.
+
+The active host does not perform the inspection, revision, or verification.
+
+If the host cannot create a fresh context, Polish stops before editing.
+
+The worker receives only the exact request, target, settled behavior and
+meaning, facts, uncertainty, citations, intended voice, public contracts,
+scope, write authority, direct evidence, and verification methods.
+
+Do not give it previous reasoning, drafts, failed approaches, implementation
+narrative, or another agent's conclusions.
+
+Polish starts from an exact target that the fresh worker can inspect.
 
 The target may be code, tests, documentation, prompts, comments, examples, or
 another completed work product.
 
-Before editing, state:
+Before editing, the fresh worker states:
 
 - the target and its purpose;
 - what is in and out of scope;

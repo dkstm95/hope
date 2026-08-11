@@ -25,6 +25,20 @@ Resolve one exact repository and pull request before collection.
 
 Do not silently substitute another pull request after confirmation.
 
+The active host confirms the target and display options, then delegates the
+review to one fresh analysis worker.
+
+The worker does not inherit the conversation that produced or discussed the
+pull request.
+
+It receives only the exact review request, target, display choices, Skill
+location, and explicit focus or exclusions.
+
+Do not give it previous reasoning, implementation narrative, drafts, failed
+approaches, or another agent's conclusions.
+
+If the host cannot create a fresh context, stop before collection.
+
 ## Product boundary
 
 Hope Diff reviews one exact GitHub code snapshot.
@@ -82,7 +96,7 @@ of publishing it as current.
 
 ## Bounded inspection
 
-Give the active host stable source IDs and bounded evidence.
+Give the fresh analysis worker stable source IDs and bounded evidence.
 
 An ordinary review accepts at most 500 provider-reported changed files.
 
@@ -90,7 +104,7 @@ This file-count allowance does not relax the separate limits for commits,
 changed lines, source bodies, inspection input, model output, snapshots, or the
 HTML artifact.
 
-The host may request additional context only when a material claim cannot be
+The worker may request additional context only when a material claim cannot be
 judged from the captured patch.
 
 Collect requested context at the captured head or merge-base revision.
@@ -105,7 +119,7 @@ that limit.
 
 ## Review analysis
 
-The active host writes the analysis.
+The fresh worker writes the analysis.
 
 It separates:
 

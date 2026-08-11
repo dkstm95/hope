@@ -5,16 +5,42 @@ description: Use when someone asks to explain or review a GitHub pull request as
 
 # Hope Diff
 
-Use the active Claude or Codex session to inspect the bounded evidence and write
-the analysis.
+Use the active Claude or Codex session to confirm the exact target and display
+options, start one fresh analysis worker, and report the artifact.
+
+The fresh worker must not inherit the conversation that produced or discussed
+the pull request.
 
 Let Hope collect the pull request, protect the snapshot, validate the analysis,
 revalidate the target, and publish the local HTML artifact.
 
-Before starting, read:
+The fresh worker reads these files before starting:
 
 - `references/analysis.md` in this Skill directory; and
 - `../write/references/writing-standard.md` relative to this Skill directory.
+
+## Isolate the analysis
+
+Before `prepare`, confirm that the host can start a subagent with no inherited
+conversation context.
+
+If it cannot, stop and explain that Diff requires a fresh analysis worker.
+
+Give the worker only:
+
+- the person's exact review request;
+- the exact repository and pull-request number or URL;
+- explicit locale, theme, and output choices;
+- the location of this Skill; and
+- any explicit review focus or scope exclusion.
+
+Do not pass previous reasoning, implementation narrative, drafts, failed
+approaches, or another agent's conclusions.
+
+Tell the worker to read this Skill and run `prepare` through `finish`.
+
+The active session must not inspect evidence, write analysis, repair analysis,
+or substitute its own review judgment.
 
 ## Run the runtime
 
@@ -64,6 +90,9 @@ Use the latest target the person explicitly authorized.
 A new target replaces an earlier one; do not silently fall back to automatic
 discovery after a confirmation.
 
+Resolve automatic discovery to one exact pull request before creating the
+fresh-worker handoff.
+
 ## Prepare
 
 Run:
@@ -74,15 +103,15 @@ prepare [GitHub PR URL or PR number] [--host-locale <locale>] [--locale <locale>
 
 Pass the authorized URL or positive integer without `#`.
 
-If no target was supplied and the original request clearly authorized
-discovery, omit it so Hope selects from the current repository context.
+Always pass the exact authorized target from the fresh-worker handoff.
 
 Pass `--host-locale ko-KR` for a Korean conversation and `--host-locale en-US`
 for an English conversation.
 
 Use `--locale`, `--theme`, or `--output` only for an explicit one-run request.
 
-Tell the person which pull request Hope selected before continuing.
+The active session tells the person which pull request was selected before
+starting the worker.
 
 Keep the returned run path, analysis path, schema paths, snapshot digest, and
 locale.

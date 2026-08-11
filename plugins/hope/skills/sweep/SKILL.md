@@ -5,8 +5,8 @@ description: Use to inventory a project for broad maintenance and return an evid
 
 # Hope Sweep
 
-Use the active Codex or Claude session to inspect the project and return a
-read-only maintenance plan.
+Use the active Codex or Claude session to set the scope, inspect the project,
+merge evidence, and return a read-only maintenance plan.
 
 Do not edit files during Sweep.
 
@@ -25,10 +25,21 @@ Treat symbolic links as entries.
 
 Record their target text without following them outside the project.
 
-Use independent subagents for disjoint batches when that materially improves
-coverage.
+Use subagents for disjoint batches when that materially improves coverage.
+
+Every batch inspector must use a fresh context with no inherited conversation,
+previous reasoning, findings, or another inspector's output.
 
 Give each subagent an explicit file assignment.
+
+Give it only the person's exact request, project-owned instructions, assigned
+files, applicable maintenance risks, exclusions, the location of this Skill,
+and expected evidence format.
+
+Tell each inspector to read this Skill before acting.
+
+If fresh contexts are unavailable, inspect sequentially in the active session
+and disclose that independent batch inspection was unavailable.
 
 Merge their evidence and report missing or overlapping coverage.
 

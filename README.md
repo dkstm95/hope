@@ -103,6 +103,9 @@ judge it, and that gap is cognitive debt.
 
 Diff explains behavior before code and links important claims to evidence.
 
+Its analysis runs in a fresh context that receives the exact review request and
+pull request, not the conversation that produced the change.
+
 When active exploration would help, the review can use visuals, a microworld, or
 an evidence-backed quiz.
 
@@ -141,11 +144,12 @@ Toxic Review turns evidence-linked findings into one prioritized review.
 It is hard on the work, respectful toward people, and does not invent criticism.
 
 > [!NOTE]
-> Toxic Review uses one reviewer when a focused pass is enough and may run
-> multiple independent reviewers for distinct material risks.
+> Every reviewer runs in a fresh context, including a one-reviewer pass.
+> Toxic Review uses multiple independent reviewers only for distinct material
+> risks.
 >
-> Multi-reviewer runs make a separate model call for each reviewer, so parallel
-> execution can reduce elapsed time but not token usage.
+> Every reviewer makes a separate model call. Parallel multi-reviewer execution
+> can reduce elapsed time but not token usage.
 >
 > Ask Hope to limit the reviewer count when you want a smaller run.
 
@@ -163,6 +167,9 @@ It preserves settled behavior and meaning, reports what changed and what was
 checked, and stops when the work needs a material decision.
 
 It starts only after a result is complete and you ask to polish it.
+
+One fresh worker receives the exact target and preservation contract without
+inheriting the conversation that produced the work.
 
 Initial implementation, feature changes, architecture migrations, and broad
 restructuring stay outside Polish.
@@ -187,6 +194,9 @@ risks; performance, package, build, and CI waste; and architecture, support,
 release, and recovery readiness.
 
 Incomplete evidence stays visible instead of being reported as complete.
+
+When Sweep divides the project into batches, each inspector receives a fresh,
+disjoint assignment without inherited conclusions.
 
 Sweep never edits files.
 

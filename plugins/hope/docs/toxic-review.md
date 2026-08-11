@@ -26,12 +26,17 @@ Use one focused role when it covers the important question.
 
 Use multiple roles only when they test distinct risks.
 
-When the host supports subagents, give every role a fresh context with only the
-evidence it needs.
+Give every reviewer role a fresh context, including a one-role review.
+
+A reviewer does not inherit the conversation, previous reasoning, drafts,
+implementation narrative, prior conclusions, or another reviewer's output.
+
+It receives only the exact target, role, risks, direct evidence, exclusions,
+and expected output.
 
 Do not describe repeated prompts in one shared context as independent review.
 
-If fresh contexts are unavailable, reduce the run to one role.
+If a fresh context is unavailable, stop without performing the review.
 
 ## Findings
 
@@ -59,6 +64,11 @@ Do not turn uncertainty into an established defect.
 ## Adjudication
 
 The active host combines reviewer output into one result.
+
+It adjudicates only from the named target, scoped evidence, and reviewer
+output.
+
+Hidden conversation context is not review evidence.
 
 Judge findings by evidence, impact, current scope, feasibility, and duplication.
 

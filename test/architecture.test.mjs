@@ -126,6 +126,41 @@ test("Toxic Review keeps its conditional causal method in a reference", async ()
   assert.match(causalReview, /material causal\s+claim/u);
 });
 
+test("judgment-sensitive Skills isolate prior conversation context", async () => {
+  const [diff, polish, sweep, toxicReview, architecture] = await Promise.all([
+    readFile(resolve(skillsRoot, "diff/SKILL.md"), "utf8"),
+    readFile(resolve(skillsRoot, "polish/SKILL.md"), "utf8"),
+    readFile(resolve(skillsRoot, "sweep/SKILL.md"), "utf8"),
+    readFile(resolve(skillsRoot, "toxic-review/SKILL.md"), "utf8"),
+    readFile(resolve(root, "docs/architecture.md"), "utf8"),
+  ]);
+
+  assert.match(diff, /fresh analysis worker/u);
+  assert.match(diff, /subagent with no inherited\s+conversation context/u);
+  assert.match(diff, /must not inspect evidence, write analysis/u);
+  assert.match(polish, /fresh worker must not inherit the conversation/u);
+  assert.match(polish, /requires a fresh worker/u);
+  assert.match(polish, /Do not pass previous reasoning, drafts/u);
+  assert.match(
+    toxicReview,
+    /fresh context for every reviewer role, including a one-role review/u,
+  );
+  assert.match(
+    toxicReview,
+    /fresh context is unavailable, stop without performing the review/u,
+  );
+  assert.match(sweep, /Every batch inspector must use a fresh context/u);
+  assert.match(
+    sweep,
+    /fresh contexts are unavailable, inspect sequentially in the active session/u,
+  );
+  assert.match(architecture, /Align and Write use the active conversation/u);
+  assert.match(
+    architecture,
+    /When fresh context is required but unavailable,[\s\S]*stops/u,
+  );
+});
+
 test("instruction-led Skills keep their product boundaries visible", async () => {
   const [align, polish, polishProduct, sweep, write] = await Promise.all([
     readFile(resolve(skillsRoot, "align/SKILL.md"), "utf8"),
@@ -138,7 +173,7 @@ test("instruction-led Skills keep their product boundaries visible", async () =>
   assert.match(align, /Do not create HTML/u);
   assert.match(
     polish,
-    /only after a named work product exists,[\s\S]*the person asks to polish or refine it/u,
+    /description: Use only after someone asks to polish or refine one named, completed work product/u,
   );
   assert.match(
     polish,

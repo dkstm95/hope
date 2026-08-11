@@ -23,6 +23,16 @@ Record their target text without following them outside the project.
 
 Do not claim whole-project coverage when inspection was partial.
 
+When disjoint batch inspection improves coverage, every batch inspector uses a
+fresh context with no inherited conversation, previous reasoning, findings, or
+another inspector's output.
+
+Each inspector receives only the exact request, project-owned instructions,
+assigned files, applicable risks, exclusions, and expected evidence format.
+
+If fresh contexts are unavailable, inspect sequentially in the active session
+and disclose that independent batch inspection was unavailable.
+
 ## Review areas
 
 Consider these areas when they apply:

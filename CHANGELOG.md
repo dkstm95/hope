@@ -9,6 +9,9 @@
   result so implementation, feature changes, architecture migrations, and
   broad restructuring no longer trigger it merely because behavior is
   preserved.
+- Isolate judgment-sensitive work from its authoring conversation: require
+  fresh workers for Polish, Diff analysis, and every Toxic Review role, and use
+  fresh inspectors for parallel Sweep batches.
 
 ## 2.0.0 - 2026-08-10
 
