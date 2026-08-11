@@ -24,20 +24,11 @@ await Promise.all(pluginPackageFiles.map(
 
 for (const entry of pluginBuildEntries) {
   const expected = await expectedPluginFile(entry);
-  const actual = await readBytes(entry.destination);
-  if (Buffer.isBuffer(expected)) {
-    assert.deepEqual(
-      actual,
-      expected,
-      `${entry.destination} must be rebuilt from ${entry.source}`,
-    );
-  } else {
-    assert.equal(
-      actual.toString("utf8").replace(/\r\n?/gu, "\n"),
-      expected,
-      `${entry.destination} must be rebuilt from ${entry.source}`,
-    );
-  }
+  assert.equal(
+    normalizeLineEndings(await read(entry.destination)),
+    expected,
+    `${entry.destination} must be rebuilt from ${entry.source}`,
+  );
 }
 
 const [
@@ -95,13 +86,12 @@ assert.match(
     "mu",
   ),
 );
-assert.equal(packageJson.scripts["check:plugin-version"], "node tools/check-plugin-version.mjs");
 assert.equal(packageJson.scripts["plugin:dev:install"], "node tools/install-plugin-dev.mjs");
 assert.equal(
   packageJson.scripts["render:readme-assets"],
   "node tools/render-readme-assets.mjs",
 );
-assert.match(packageJson.scripts.check, /check:plugin-version/u);
+assert.equal(packageJson.scripts.check, "npm run check:release && npm test");
 assert.equal(
   normalizeLineEndings(await read("tools/plugin-package-files.txt")),
   `${pluginPackageFiles.join("\n")}\n`,

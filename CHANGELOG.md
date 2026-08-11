@@ -3,8 +3,13 @@
 ## Unreleased
 
 - Prefer simple, direct design, remove the redundant third-party notice index
-  and unused brand-source copy, and retain distributable license texts,
-  provenance records, and assets with real consumers.
+  and unused brand-source copy, collapse duplicate private-input and package
+  build paths, and retain license texts, provenance records, and assets with
+  real consumers.
+- Apply the shared writing standard directly during implementation and other
+  Hope workflows, reserving Write for standalone language work.
+- Let ordinary plugin changes keep the recorded version until the automatic
+  release, and fail closed when a release tag exists outside exact recovery.
 - Keep the root security policy focused on supported versions and private
   reporting, stop packaging unused copies of product documents, and remove
   migration history and prose wording from deterministic release checks.

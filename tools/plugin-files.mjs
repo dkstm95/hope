@@ -1,12 +1,8 @@
-const generatedText = (source, destination, banner = "") => Object.freeze({
-  banner,
-  binary: false,
-  destination,
-  source,
-});
-
 export const generatedPluginFiles = Object.freeze([
-  generatedText("LICENSE", "plugins/hope/LICENSE"),
+  Object.freeze({
+    destination: "plugins/hope/LICENSE",
+    source: "LICENSE",
+  }),
 ]);
 
 export const staticPluginFiles = Object.freeze([

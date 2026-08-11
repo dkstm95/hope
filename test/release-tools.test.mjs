@@ -16,9 +16,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
 import { normalizeLineEndings } from "../tools/build-plugin.mjs";
 import {
-  assertReleasedPluginVersionIsImmutable,
-} from "../tools/check-plugin-version.mjs";
-import {
   parseInstallResult,
   verifyInstalledPlugin,
 } from "../tools/install-plugin-dev.mjs";
@@ -223,28 +220,6 @@ test("development installation verifies the selected plugin and cache", async (c
   );
 });
 
-test("a released plugin package requires a new public version", () => {
-  const missingTag = assertReleasedPluginVersionIsImmutable("1.0.0", {
-    git: () => ({ status: 1, stderr: "" }),
-  });
-  assert.deepEqual(missingTag, { released: false, tag: "v1.0.0" });
-
-  const matchingTag = assertReleasedPluginVersionIsImmutable("1.0.0", {
-    git: () => ({ status: 0, stderr: "" }),
-  });
-  assert.deepEqual(matchingTag, { released: true, tag: "v1.0.0" });
-
-  assert.throws(
-    () => assertReleasedPluginVersionIsImmutable("1.0.0", {
-      git: (arguments_) => ({
-        status: arguments_[0] === "diff" ? 1 : 0,
-        stderr: "",
-      }),
-    }),
-    /already released as v1\.0\.0/u,
-  );
-});
-
 test("the package file list rejects ambiguous or unsafe paths", () => {
   assert.throws(() => parsePackageFileList("b\na\n"), /sorted/u);
   assert.throws(() => parsePackageFileList("a\na\n"), /duplicate/u);
@@ -310,6 +285,12 @@ test("CI installs locked dependencies before running checks or builds", async ()
   assert.match(release, /echo "version=\$\{RELEASE_VERSION\}"/u);
   assert.match(release, /gh release view/u);
   assert.match(release, /git checkout --detach/u);
+  assert.match(release, /already exists unexpectedly/u);
+  assert.match(
+    release,
+    /test "\$\(git rev-parse HEAD\)" = "\$\(git rev-parse "\$\{RELEASE_TAG\}\^\{commit\}"\)"/u,
+  );
+  assert.match(release, /steps\.plan\.outputs\.mode \}\}.*!= "resume"/u);
   assert.match(release, /git push --atomic origin HEAD:main/u);
   assert.match(
     release,

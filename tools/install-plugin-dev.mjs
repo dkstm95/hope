@@ -109,7 +109,6 @@ export async function verifyInstalledPlugin(installedPath) {
 
 export async function installDevPlugin({ codexCommand = "codex" } = {}) {
   await buildPlugin();
-  run(process.execPath, ["tools/check-plugin-version.mjs"]);
   run(process.execPath, ["tools/check-release.mjs"]);
 
   const manifest = JSON.parse(await readFile(sourceManifest, "utf8"));

@@ -39,13 +39,12 @@ test("bounded structured input rejects excessive nesting", async () => {
   );
 });
 
-test("bounded structured input returns the exact file digest", async () => {
-  const root = await createTestTemporaryDirectory("hope-work-digest-");
+test("bounded structured input returns the parsed value and file size", async () => {
+  const root = await createTestTemporaryDirectory("hope-work-input-");
   const inputPath = join(root, "input.json");
-  await writeFile(inputPath, "{}\n");
+  const source = '{"ready":true}\n';
+  await writeFile(inputPath, source);
   const input = await readBoundedJson(inputPath);
-  assert.equal(
-    input.digest,
-    "sha256:ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
-  );
+  assert.deepEqual(input.value, { ready: true });
+  assert.equal(input.fileBytes, Buffer.byteLength(source));
 });

@@ -1,4 +1,4 @@
-import { lstat, open, unlink } from "node:fs/promises";
+import { unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { resolveDisplayOptions } from "./locales/index.mjs";
@@ -68,60 +68,12 @@ export async function resolveDiffTarget({
   );
 }
 
-async function readPrivateJson(path, {
-  label,
-  maximumBytes = LIMITS.modelBytes,
-} = {}) {
-  const info = await lstat(path);
-  if (!info.isFile() || info.isSymbolicLink()) {
-    throw new Error(`Hope ${label} is not a regular file`);
-  }
-  if (info.size > maximumBytes) {
-    throw new Error(`Hope ${label} exceeds ${maximumBytes} bytes`);
-  }
-  const handle = await open(path, "r");
-  try {
-    const opened = await handle.stat();
-    if (
-      !opened.isFile()
-      || opened.dev !== info.dev
-      || opened.ino !== info.ino
-      || opened.size !== info.size
-    ) {
-      throw new Error(`Hope ${label} changed while being opened`);
-    }
-    const bytes = await handle.readFile();
-    const completed = await handle.stat();
-    if (
-      !completed.isFile()
-      || completed.dev !== opened.dev
-      || completed.ino !== opened.ino
-      || completed.size !== opened.size
-      || completed.mtimeMs !== opened.mtimeMs
-      || completed.ctimeMs !== opened.ctimeMs
-      || bytes.length !== completed.size
-    ) {
-      throw new Error(`Hope ${label} changed while being read`);
-    }
-    if (bytes.length > maximumBytes) {
-      throw new Error(`Hope ${label} exceeds ${maximumBytes} bytes`);
-    }
-    return Object.freeze({
-      fileBytes: bytes.length,
-      value: JSON.parse(bytes.toString("utf8")),
-    });
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error(`Hope ${label} is not valid JSON`, { cause: error });
-    }
-    throw error;
-  } finally {
-    await handle.close();
-  }
-}
-
 async function readAnalysis(path, options = {}) {
-  return await readPrivateJson(path, { ...options, label: "analysis" });
+  return await readBoundedJson(path, {
+    maximumBytes: LIMITS.modelBytes,
+    ...options,
+    label: "Hope diff analysis",
+  });
 }
 
 function assertAnalysisReady(run) {
@@ -376,10 +328,10 @@ export async function checkpointDiffPage(runPath, page, dependencies = {}) {
     page,
     async (checkpointPath) => {
       const input = await (
-        dependencies.readCheckpoint ?? readPrivateJson
+        dependencies.readCheckpoint ?? readBoundedJson
       )(checkpointPath, {
-      label: "checkpoint",
-      maximumBytes: LIMITS.checkpointBytes,
+        label: "Hope diff checkpoint",
+        maximumBytes: LIMITS.checkpointBytes,
       });
       return input.value;
     },
@@ -445,9 +397,9 @@ export async function checkpointDiffWindow(
     startPage,
     async (checkpointPath) => {
       const input = await (
-        dependencies.readCheckpointWindow ?? readPrivateJson
+        dependencies.readCheckpointWindow ?? readBoundedJson
       )(checkpointPath, {
-        label: "checkpoint window",
+        label: "Hope diff checkpoint window",
         maximumBytes: LIMITS.checkpointWindowBytes,
       });
       return input.value;

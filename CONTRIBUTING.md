@@ -28,6 +28,9 @@ npm run check
 
 Run `npm run test:browser` when Diff layout or interaction changes.
 
+Run `npm run render:readme-assets` and inspect the updated captures when a Diff
+rendering change affects the README examples.
+
 Install the current delivery for an end-to-end development smoke test with:
 
 ```bash

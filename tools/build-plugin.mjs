@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import {
-  chmod,
   mkdir,
   readFile,
   writeFile,
@@ -22,25 +21,16 @@ export const normalizeLineEndings = (content) => content.replace(/\r\n?/gu, "\n"
 export const pluginBuildEntries = generatedPluginFiles;
 
 export async function expectedPluginFile(entry) {
-  const source = await readFile(fromRoot(entry.source));
-  if (entry.binary) return source;
-  const text = normalizeLineEndings(source.toString("utf8"));
-  if (text.startsWith("#!")) {
-    const firstLineEnd = text.indexOf("\n") + 1;
-    return `${text.slice(0, firstLineEnd)}${entry.banner}${text.slice(firstLineEnd)}`;
-  }
-  return `${entry.banner}${text}`;
+  return normalizeLineEndings(
+    await readFile(fromRoot(entry.source), "utf8"),
+  );
 }
 
 export async function buildPlugin() {
   for (const entry of pluginBuildEntries) {
     const destination = fileURLToPath(fromRoot(entry.destination));
     await mkdir(dirname(destination), { recursive: true });
-    await writeFile(destination, await expectedPluginFile(entry));
-    await chmod(
-      destination,
-      entry.destination.endsWith("/cli.mjs") ? 0o755 : 0o644,
-    );
+    await writeFile(destination, await expectedPluginFile(entry), "utf8");
   }
   await writeFile(
     fromRoot("tools/plugin-package-files.txt"),

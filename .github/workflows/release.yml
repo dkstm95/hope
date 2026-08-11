@@ -98,14 +98,18 @@ jobs:
           RELEASE_VERSION="$(node -p "require('./package.json').version")"
           RELEASE_TAG="v${RELEASE_VERSION}"
           if git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}^{commit}" > /dev/null; then
-            TAG_EXISTS=true
-          else
-            TAG_EXISTS=false
+            if [ "${MODE}" != "resume" ]; then
+              echo "Release tag ${RELEASE_TAG} already exists unexpectedly" >&2
+              exit 1
+            fi
+            test "$(git rev-parse HEAD)" = "$(git rev-parse "${RELEASE_TAG}^{commit}")"
+          elif [ "${MODE}" = "resume" ]; then
+            echo "Release tag ${RELEASE_TAG} disappeared before recovery" >&2
+            exit 1
           fi
           {
             echo "version=${RELEASE_VERSION}"
             echo "tag=${RELEASE_TAG}"
-            echo "tag-exists=${TAG_EXISTS}"
           } >> "${GITHUB_OUTPUT}"
       - if: steps.plan.outputs.publish == 'true'
         run: npx playwright install --with-deps chromium
@@ -129,7 +133,7 @@ jobs:
       - name: Tag and push release commit
         if: steps.plan.outputs.publish == 'true'
         run: |
-          if [ "${{ steps.release.outputs.tag-exists }}" = "false" ]; then
+          if [ "${{ steps.plan.outputs.mode }}" != "resume" ]; then
             git tag -a "${{ steps.release.outputs.tag }}" -m "Hope ${{ steps.release.outputs.tag }}"
             git push --atomic origin HEAD:main "${{ steps.release.outputs.tag }}"
           fi

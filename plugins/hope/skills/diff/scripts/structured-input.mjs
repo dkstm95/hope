@@ -1,5 +1,4 @@
 // Diff owns this bounded reader for private structured input.
-import { createHash } from "node:crypto";
 import { lstat, open } from "node:fs/promises";
 
 const STRUCTURE_LIMITS = Object.freeze({
@@ -11,9 +10,7 @@ function inspectStructuredValue(value, {
   maximumDepth = STRUCTURE_LIMITS.depth,
   maximumNodes = STRUCTURE_LIMITS.nodes,
 } = {}) {
-  let total = 0;
   let nodes = 0;
-  const seen = new WeakSet();
   const stack = [{ depth: 0, item: value }];
   while (stack.length > 0) {
     const { depth, item } = stack.pop();
@@ -28,21 +25,12 @@ function inspectStructuredValue(value, {
         `Hope structured input exceeds ${maximumDepth} nesting levels`,
       );
     }
-    if (typeof item === "string") {
-      total += Buffer.byteLength(item, "utf8");
-      continue;
-    }
     if (!item || typeof item !== "object") continue;
-    if (seen.has(item)) {
-      throw new TypeError("Hope structured input contains a cycle");
-    }
-    seen.add(item);
     const entries = Array.isArray(item) ? item : Object.values(item);
     for (let index = entries.length - 1; index >= 0; index -= 1) {
       stack.push({ depth: depth + 1, item: entries[index] });
     }
   }
-  return Object.freeze({ nodes, stringBytes: total });
 }
 
 export async function readBoundedJson(path, {
@@ -87,7 +75,6 @@ export async function readBoundedJson(path, {
       const value = JSON.parse(bytes.toString("utf8"));
       inspectStructuredValue(value);
       return Object.freeze({
-        digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
         fileBytes: bytes.length,
         value,
       });

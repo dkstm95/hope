@@ -59,7 +59,7 @@ overwriting an existing file.
 hope/
 ├── .agents/             Codex local marketplace catalog
 ├── .claude-plugin/      Claude local marketplace catalog
-├── assets/              Brand sources and README captures
+├── assets/              README captures
 ├── docs/                Product and architecture definitions
 ├── e2e/                 Diff browser acceptance tests
 ├── plugins/hope/        Installable Codex and Claude package
