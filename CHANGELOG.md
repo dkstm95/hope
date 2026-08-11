@@ -32,8 +32,11 @@
   as radio groups, distinguish visited evidence links, and embed a local
   favicon in Diff artifacts.
 - Derive major, minor, or patch releases from Conventional Commits and promote
-  the pending Changelog section without asking the releaser to select a version.
+  the `Unreleased` Changelog section without asking the releaser to select a
+  version.
 - Keep Codex composer suggestions within the host's three-prompt package limit.
+- Raise Diff's changed-file ceiling from 200 to 500 while keeping its existing
+  changed-line, source-body, inspection, model, snapshot, and artifact limits.
 
 ## 1.9.0 - 2026-08-08
 

@@ -174,7 +174,7 @@
     },
     "fileDispositions": {
       "type": "array",
-      "maxItems": 200,
+      "maxItems": 500,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -189,7 +189,7 @@
     },
     "limitImpacts": {
       "type": "array",
-      "maxItems": 214,
+      "maxItems": 514,
       "items": {
         "type": "object",
         "additionalProperties": false,

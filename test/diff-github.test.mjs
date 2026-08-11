@@ -12,6 +12,16 @@ function response(value) {
   return { stdout: JSON.stringify(value) };
 }
 
+function smallChangedFiles(count) {
+  return Array.from({ length: count }, (_, index) => ({
+    additions: 1,
+    deletions: 1,
+    filename: `src/generated/file-${index + 1}.js`,
+    patch: "@@ -1 +1 @@\n-old\n+new",
+    status: "modified",
+  }));
+}
+
 function fakeGitHub({
   afterContent = "new",
   beforeContent = "old",
@@ -63,7 +73,12 @@ function fakeGitHub({
       return response({ merge_base_commit: { sha: "c".repeat(40) } });
     }
     if (path.includes("/pulls/1/files?")) {
-      return response(missingFiles ? [] : changedFiles);
+      const page = Number.parseInt(
+        new URL(path, "https://github.com").searchParams.get("page") ?? "1",
+        10,
+      );
+      const values = missingFiles ? [] : changedFiles;
+      return response(values.slice((page - 1) * 100, page * 100));
     }
     if (path.includes("/pulls/1/commits?")) {
       return response([{
@@ -137,6 +152,41 @@ test("GitHub collection binds the exact snapshot and all changed files", async (
     owner: "example",
   });
   assert.match(snapshot.digest, /^[a-f0-9]{64}$/u);
+});
+
+test("GitHub collection accepts 500 small changed files", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    {
+      gh: fakeGitHub({ providerFiles: smallChangedFiles(500) }),
+      locale: "en-US",
+      theme: "system",
+    },
+  );
+
+  assert.equal(snapshot.files.length, 500);
+  assert.equal(snapshot.sources.filter((source) => source.kind === "patch").length, 500);
+});
+
+test("GitHub collection rejects 501 changed files before pagination", async () => {
+  const requests = [];
+  const github = fakeGitHub({ providerFiles: smallChangedFiles(501) });
+
+  await assert.rejects(
+    collectGitHubPullRequest(
+      "https://github.com/example/repo/pull/1",
+      {
+        gh: async (command, arguments_) => {
+          requests.push(arguments_.at(-1));
+          return await github(command, arguments_);
+        },
+        locale: "en-US",
+        theme: "system",
+      },
+    ),
+    /has 501 files; Hope supports 500/u,
+  );
+  assert.deepEqual(requests, ["/repos/example/repo/pulls/1"]);
 });
 
 test("GitHub collection preserves a fork head repository identity", async () => {

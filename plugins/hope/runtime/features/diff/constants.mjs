@@ -9,7 +9,7 @@ export const MICROWORLD_SKELETON_VERSION = 6;
 export const LIMITS = Object.freeze({
   analysisProseBytes: 48 * 1024,
   artifactBytes: 6 * 1024 * 1024,
-  changedFiles: 200,
+  changedFiles: 500,
   changedLines: 20_000,
   checkpointBytes: 32 * 1024,
   checkpointEvidence: 8,

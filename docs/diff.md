@@ -84,6 +84,12 @@ of publishing it as current.
 
 Give the active host stable source IDs and bounded evidence.
 
+An ordinary review accepts at most 500 provider-reported changed files.
+
+This file-count allowance does not relax the separate limits for commits,
+changed lines, source bodies, inspection input, model output, snapshots, or the
+HTML artifact.
+
 The host may request additional context only when a material claim cannot be
 judged from the captured patch.
 
