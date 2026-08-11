@@ -1,7 +1,11 @@
 # Hope releases
 
-Hope publishes one verified plugin package and matching source tag for each
-public version.
+This document defines the release of Hope's current plugin distribution.
+
+It does not define feature behavior.
+
+Hope publishes one verified package and matching source tag for each public
+version.
 
 ## Release intent
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Define Hope by its features instead of its current plugin delivery, keep
+  adapter concerns out of product behavior, reduce the contributor guide to a
+  linked entry point, and define where repository-wide, topic-specific, and
+  directory-local guidance belongs.
 - Make each Skill directory the single editable source for its feature, move
   Diff's deterministic scripts and private design assets beside its
   instructions, and remove the generated runtime mirror.

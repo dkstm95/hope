@@ -1,13 +1,15 @@
 # Hope architecture
 
-Hope is one plugin package for Codex and Claude.
+Hope is a set of focused features for working with AI.
 
-Each Skill directory contains the instructions and resources for one feature.
+The features and their product behavior are the core boundary.
 
-The Diff Skill also contains the deterministic scripts and private visual
-assets needed to publish its offline HTML artifact.
+This repository currently distributes them as one plugin for Codex and Claude
+Code.
 
-There is no independent Hope CLI or harness.
+The delivery adapters expose the features but do not define their behavior.
+
+There is no independent Hope CLI or harness in the current distribution.
 
 ## Product definitions
 
@@ -21,24 +23,26 @@ There is no independent Hope CLI or harness.
 - [design.md](design.md) defines the visual language used by Diff HTML.
 - [release.md](release.md) defines the public package boundary.
 
-## One package, two kinds of feature
+## Product core and current delivery
 
 ```mermaid
 flowchart LR
-  U1["Codex user"] --> C["Codex plugin"]
-  U2["Claude user"] --> L["Claude plugin"]
-  C --> S["Shared Skill directories"]
-  L --> S
-  S --> I["Instructions and references"]
-  S --> D["Diff scripts and private assets"]
+  C["Codex delivery"] --> F["Hope features"]
+  L["Claude Code delivery"] --> F
+  F --> I["Instructions and references"]
+  F --> D["Diff deterministic code and assets"]
   D --> H["Self-contained HTML"]
 ```
+
+The arrows point from each delivery adapter toward the same product behavior.
+
+Hope features must not need to know which adapter exposed them.
 
 Most Hope features are instruction-led.
 
 Their behavior lives in a concise `SKILL.md` and optional references.
 
-The selected Skill assigns model judgment either to the active host or to a
+The selected feature assigns model judgment either to the active host or to a
 fresh worker according to the conversation context boundary below.
 
 Both use the host's normal tools, and the active host speaks with the person.
@@ -64,7 +68,21 @@ hope/
 └── tools/               Build, validation, staging, and release scripts
 ```
 
-`plugins/hope/skills/` is the editable source for every feature.
+Keep a Markdown file at the repository root when it governs the whole project,
+must be found before a topic is chosen, or is discovered from a conventional
+fixed path.
+
+Put detailed product, feature, design, architecture, and release definitions
+under `docs/`.
+
+Keep guidance that applies only to one directory beside the files it governs.
+
+Do not choose a documentation location from importance or file size alone.
+
+`plugins/hope/skills/` is the current editable implementation of every feature.
+
+That physical location reflects the one supported delivery, not the product
+identity.
 
 Do not generate Skill instructions from JavaScript.
 
@@ -95,7 +113,7 @@ private assets are packaged directly from their editable paths.
 
 Do not edit generated plugin files by hand.
 
-## Plugin package
+## Current delivery package
 
 ```text
 plugins/hope/
@@ -136,9 +154,9 @@ Hope has no product or release Model Evaluation framework.
 Instruction-led Skill behavior is exercised manually with representative
 prompts and normal product use.
 
-## Skill boundary
+## Feature boundary
 
-A Skill owns:
+A feature owns:
 
 - when it should activate;
 - the user's goal and supported scope;
@@ -147,12 +165,19 @@ A Skill owns:
 - references that are needed only in some runs; and
 - how to use a deterministic script, when one exists.
 
+The current Skill owns the feature's activation and workflow instructions.
+
 The plugin manifests package these features but do not define their behavior.
 
 A feature reference or script must not read a plugin manifest, marketplace
 configuration, installed-cache path, or host-specific root variable.
 
 Keep host-specific path resolution in `SKILL.md` or repository tooling.
+
+Use generic host language in feature behavior and references.
+
+Keep host names, manifests, marketplace steps, and cache paths in delivery
+instructions or repository tooling.
 
 Do not pre-create architectural layers for a possible future extraction.
 

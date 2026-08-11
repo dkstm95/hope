@@ -27,8 +27,8 @@ Do not ask for a mode when the action is already clear.
 
 ## Writing standard
 
-The complete standard lives in
-`plugins/hope/skills/write/references/writing-standard.md`.
+The complete standard lives in the Write feature's
+`references/writing-standard.md`.
 
 The main rules are:
 

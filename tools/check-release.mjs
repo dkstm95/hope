@@ -297,7 +297,7 @@ assert.match(diff, /Use the conversation language/u);
 assert.match(toxicReview, /^# Hope Toxic Review\r?\n/u);
 assert.match(toxicReview, /Do not count reviewer votes/u);
 assert.match(write, /^# Hope Write\r?\n/u);
-assert.match(write, /skills\/write\/references\/writing-standard\.md/u);
+assert.match(write, /Write feature's[\s\S]*references\/writing-standard\.md/u);
 assert.match(write, /They do not need a runtime brief/u);
 assert.match(releaseDefinition, /^# Hope releases\r?$/mu);
 assert.match(releaseDefinition, /Conventional Commit/u);

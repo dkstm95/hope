@@ -64,8 +64,7 @@ change an external system without a separate explicit request.
 
 The artifact works offline.
 
-Review generation still uses the active Codex or Claude host under that host's
-data policy.
+Review generation still uses the active AI host under that host's data policy.
 
 Do not imply that private source stays on the local machine.
 

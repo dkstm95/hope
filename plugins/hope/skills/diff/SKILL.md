@@ -5,8 +5,8 @@ description: Use when someone asks to explain or review a GitHub pull request as
 
 # Hope Diff
 
-Use the active Claude or Codex session to confirm the exact target and display
-options, start one fresh analysis worker, and report the artifact.
+Use the active host session to confirm the exact target and display options,
+start one fresh analysis worker, and report the artifact.
 
 The fresh worker must not inherit the conversation that produced or discussed
 the pull request.

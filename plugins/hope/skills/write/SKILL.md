@@ -5,8 +5,8 @@ description: Use to improve language in any task, including drafts, edits, revie
 
 # Hope Write
 
-Use the active Codex or Claude session to draft, edit, review, or improve
-language within a broader task.
+Use the active host session to draft, edit, review, or improve language within a
+broader task.
 
 Read [references/writing-standard.md](references/writing-standard.md) before
 doing the work.

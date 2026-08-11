@@ -8,22 +8,29 @@ These principles guide the whole project.
 A feature, interface, or outside reference may support them, but does not define
 Hope by itself.
 
-## Be a focused plugin
+## Keep delivery secondary
 
-Hope is a plugin made of focused Skills.
+Hope is a set of focused features for working with AI.
 
-Codex and Claude may expose the package differently, but they use the same Skill
-instructions and the same packaged deterministic code.
+Their user goals, behavior, safety boundaries, and results define the product.
 
-Hope does not maintain an independent CLI or harness.
+This repository currently delivers those features as Skills in one plugin for
+Codex and Claude Code.
 
-Add another entry path only after a real user need justifies its product and
+Plugins, marketplaces, manifests, hosts, CLIs, and harnesses are delivery
+mechanisms.
+
+They may expose Hope, but they must not define feature behavior.
+
+The current distribution does not include an independent CLI or harness.
+
+Add another delivery path only after a real user need justifies its product and
 maintenance cost.
 
 ## Start with instructions
 
-Put model judgment, conversation flow, and writing guidance in a short
-`SKILL.md`.
+In the current Skill-based delivery, put model judgment, conversation flow, and
+writing guidance in a short `SKILL.md`.
 
 Move detailed guidance to a reference that the Skill reads only when needed.
 
@@ -37,9 +44,16 @@ Do not wrap prose in JavaScript merely to return it to the model.
 
 ## Keep each feature close together
 
-A Skill directory is the default feature boundary.
+A feature is the default unit of product behavior and ownership.
 
-Keep its instructions, references, scripts, and private assets together.
+While the plugin is the only supported delivery, keep its editable
+implementation in one Skill directory.
+
+Keep the feature's instructions, references, scripts, and private assets
+together.
+
+Do not make feature behavior depend on a manifest, marketplace, installed-cache
+path, or host brand.
 
 Shared code needs two real consumers with the same invariant.
 
@@ -83,7 +97,9 @@ Compatibility is a product choice, not a default cost.
 
 ## Test the remaining risks
 
-Test Skill discovery with representative prompts.
+Test feature behavior with representative prompts.
+
+Test Skill discovery as a contract of the current delivery.
 
 Test deterministic code at the boundaries it promises to enforce.
 
@@ -112,6 +128,7 @@ Before adding a feature or layer, ask:
 - Does Hope know exactly what it created and may clean up?
 - What smallest test would catch a real failure?
 - Has the complexity earned its place through use?
+- Does the feature remain understandable without its current delivery adapter?
 
 ## Learn without copying
 

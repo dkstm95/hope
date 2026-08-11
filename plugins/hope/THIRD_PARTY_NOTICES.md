@@ -9,4 +9,5 @@ documented beside the Diff Skill fonts in `assets/fonts/SOURCE.md`.
 The complete SIL Open Font License texts are distributed beside the font files
 as `OFL-Gmarket.txt` and `OFL-D2Coding.txt`.
 
-The plugin carries the records, licenses, and fonts together in the Diff Skill.
+The current distribution carries the records, licenses, and fonts together with
+Diff.

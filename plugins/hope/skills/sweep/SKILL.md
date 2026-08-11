@@ -5,8 +5,8 @@ description: Use to inventory a project for broad maintenance and return an evid
 
 # Hope Sweep
 
-Use the active Codex or Claude session to set the scope, inspect the project,
-merge evidence, and return a read-only maintenance plan.
+Use the active host session to set the scope, inspect the project, merge
+evidence, and return a read-only maintenance plan.
 
 Do not edit files during Sweep.
 

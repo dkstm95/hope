@@ -15,11 +15,6 @@
   </strong>
 </p>
 
-<p align="center">
-  <a href="#설치"><img alt="Codex 지원" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white"></a>
-  <a href="#설치"><img alt="Claude Code 지원" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white"></a>
-</p>
-
 <p align="center"><a href="README.md">English</a></p>
 
 AI가 작업을 빠르게 끝내더라도 무엇이 결정되었는지, 어떤 근거가 있는지,
@@ -32,9 +27,18 @@ Hope는 이런 순간마다 필요한 도구를 제공합니다.
 이해하고, 코드베이스 유지보수를 점검하고, 완성한 작업물을 다듬고, 의미를 잃지
 않으면서 글을 명확하게 만듭니다.
 
+이 기능들과 그 동작이 Hope를 정의합니다.
+
+현재 지원하는 전달 방식은 Codex와 Claude Code용 플러그인입니다.
+
 ## 설치
 
-Hope 플러그인은 Codex와 Claude Code에 설치할 수 있습니다.
+현재 Hope 배포판은 Codex와 Claude Code에 설치할 수 있습니다.
+
+<p>
+  <img alt="Codex 지원" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white">
+  <img alt="Claude Code 지원" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white">
+</p>
 
 다음 항목들이 필요합니다.
 

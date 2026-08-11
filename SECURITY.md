@@ -5,10 +5,12 @@ credentials, private pull-request data, or executable generated content.
 
 Use GitHub's private security advisory flow for this repository.
 
-## Plugin boundary
+## Host boundary
 
-Hope's instruction-led Skills run through the active Codex or Claude host and
-inherit that host's tool, permission, and approval boundaries.
+Hope's instruction-led features run through the active host and inherit its
+tool, permission, and approval boundaries.
+
+The current plugin distribution grants no authority beyond that host.
 
 A Skill instruction does not authorize an unrelated write, command, network
 request, publication, or message.

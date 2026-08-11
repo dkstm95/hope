@@ -87,8 +87,8 @@ Keep deferred risk visible.
 Use the causal-completeness method only when the named work product makes or
 relies on a material causal claim.
 
-The detailed method lives in
-`plugins/hope/skills/toxic-review/references/causal-review.md`.
+The detailed method lives in the Toxic Review feature's
+`references/causal-review.md`.
 
 Do not run that method merely because the target is an incident.
 

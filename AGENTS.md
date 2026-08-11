@@ -39,7 +39,10 @@ fallback.
 
 ## Feature completion
 
-A Skill directory is Hope's default feature boundary.
+A feature is Hope's product boundary.
+
+While the plugin is the only supported delivery, its Skill directory is the
+editable implementation boundary.
 
 Before calling a feature complete:
 
@@ -52,8 +55,11 @@ Before calling a feature complete:
    generation step.
 6. Test Skill discovery and every deterministic promise that remains.
 
-Do not add an independent harness, global settings system, model-evaluation
+Do not add another delivery adapter, global settings system, model-evaluation
 framework, or compatibility layer without a new documented product decision.
+
+Do not let manifests, marketplaces, host brands, or installed paths define
+feature behavior.
 
 Do not use Skill or manifest validation as evidence that product behavior works.
 

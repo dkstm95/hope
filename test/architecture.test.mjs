@@ -70,6 +70,10 @@ test("Diff-only resources and generated-output boundaries stay explicit", async 
   assert.match(architecture, /packaged directly from their editable paths/u);
   assert.match(architecture, /must not read a plugin manifest/u);
   assert.match(architecture, /Do not pre-create architectural layers/u);
+  assert.match(architecture, /Markdown file at the repository root/u);
+  assert.match(architecture, /definitions\s+under `docs\/`/u);
+  assert.match(architecture, /one directory beside the files it governs/u);
+  assert.match(architecture, /importance or file size alone/u);
 });
 
 test("Diff scripts do not depend on the plugin package boundary", async () => {
@@ -106,6 +110,42 @@ test("Diff scripts do not depend on the plugin package boundary", async () => {
         `${relative(root, path)} imports outside its Skill: ${match[1]}`,
       );
     }
+  }
+});
+
+test("feature definitions stay independent of delivery adapters", async () => {
+  const featureDocuments = [
+    "align",
+    "diff",
+    "polish",
+    "sweep",
+    "toxic-review",
+    "write",
+  ];
+
+  for (const featureName of featureDocuments) {
+    const definition = await readFile(
+      resolve(root, `docs/${featureName}.md`),
+      "utf8",
+    );
+    assert.doesNotMatch(
+      definition,
+      /plugins\/hope|marketplace|Codex|Claude/u,
+      `${featureName} product behavior must not depend on a delivery adapter`,
+    );
+  }
+
+  for (const skillName of instructionLedSkills) {
+    const instructions = await readFile(
+      resolve(skillsRoot, skillName, "SKILL.md"),
+      "utf8",
+    );
+    assert.match(instructions, /active host session/u);
+    assert.doesNotMatch(
+      instructions,
+      /plugins\/hope|marketplace|Codex|Claude/u,
+      `${skillName} behavior must use delivery-neutral host language`,
+    );
   }
 });
 

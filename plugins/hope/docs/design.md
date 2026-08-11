@@ -32,10 +32,10 @@ They show the intended density and tone.
 
 They are comparison material, not pixel-perfect specifications.
 
-They do not ship in the runtime plugin.
+They are design sources and do not ship with the current runtime.
 
-`plugins/hope/skills/diff/scripts/design/tokens.mjs` is the code source of
-truth for colors, type sizes, spacing, and layout limits.
+The Diff feature's `scripts/design/tokens.mjs` is the code source of truth for
+colors, type sizes, spacing, and layout limits.
 
 A renderer must read those tokens instead of copying their values.
 
@@ -318,8 +318,8 @@ Do not synthesize a missing font weight.
 Hope presents the converted files under Hope-owned family names because both
 source licenses reserve their original family names.
 
-Keep their source hashes, build commands, and licenses beside the Diff Skill
-fonts under `plugins/hope/skills/diff/assets/fonts/`.
+Keep their source hashes, build commands, and licenses beside the Diff feature's
+fonts under `assets/fonts/`.
 
 Start with this compact scale and adjust it only through named tokens:
 
@@ -431,8 +431,8 @@ slightly brighter reading surface.
 
 It should feel softer than pure white without looking beige or gray.
 
-Exact Hope surface values live only in
-`plugins/hope/skills/diff/scripts/design/tokens.mjs`.
+Exact Hope surface values live only in the Diff feature's
+`scripts/design/tokens.mjs`.
 
 Code is a separate visual surface with fixed Hope light and dark colors.
 
@@ -453,7 +453,7 @@ The initial theme comes from the resolved Diff display option:
 
 The theme control changes only the open document.
 
-It does not write plugin configuration or browser storage.
+It does not write host configuration or browser storage.
 
 Reloading returns to the generated initial theme.
 

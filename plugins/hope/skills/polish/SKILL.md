@@ -5,8 +5,8 @@ description: Use only after someone asks to polish or refine one named, complete
 
 # Hope Polish
 
-Use the active Codex or Claude session only to bind the task, start one fresh
-worker, and report the result.
+Use the active host session only to bind the task, start one fresh worker, and
+report the result.
 
 The fresh worker must not inherit the conversation that produced the work.
 

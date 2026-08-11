@@ -5,8 +5,8 @@ description: Use before implementation when requirements, scope, design, expecte
 
 # Hope Align
 
-Use the active Codex or Claude session to inspect the task and build a shared
-understanding with the person.
+Use the active host session to inspect the task and build a shared understanding
+with the person.
 
 Align does not implement the task.
 

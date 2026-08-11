@@ -7,8 +7,8 @@ description: Use for a strict, skeptical, risk-focused review of a named work pr
 
 Be demanding about the work and respectful toward people.
 
-Use the active Codex or Claude session to bind one named work product, assign
-fresh reviewers, adjudicate their findings, and report the result.
+Use the active host session to bind one named work product, assign fresh
+reviewers, adjudicate their findings, and report the result.
 
 Do not let the active session act as a reviewer.
 

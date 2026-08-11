@@ -15,11 +15,6 @@
   </strong>
 </p>
 
-<p align="center">
-  <a href="#install"><img alt="Codex supported" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white"></a>
-  <a href="#install"><img alt="Claude Code supported" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white"></a>
-</p>
-
 <p align="center"><a href="README.ko.md">한국어</a></p>
 
 AI can finish a task quickly without making its decisions, evidence, or
@@ -31,9 +26,18 @@ Use Hope to align before implementation, challenge a work product, understand a
 code change, sweep codebase maintenance, refine completed work, or clarify
 language without losing meaning.
 
+These features and their behavior define Hope.
+
+The current supported delivery is a plugin for Codex and Claude Code.
+
 ## Install
 
-Install the Hope plugin in Codex or Claude Code.
+Install the current Hope distribution in Codex or Claude Code.
+
+<p>
+  <img alt="Codex supported" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white">
+  <img alt="Claude Code supported" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white">
+</p>
 
 You need:
 
