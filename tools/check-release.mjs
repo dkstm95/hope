@@ -231,6 +231,7 @@ assert.equal(packageJson.bin, undefined);
 assert.equal(packageJson.scripts.hope, undefined);
 assert.equal(codexPlugin.name, "hope");
 assert.equal(codexPlugin.version, currentVersion);
+assert.equal(codexPlugin.interface.defaultPrompt.length, 3);
 assert.equal(claudePlugin.name, "hope");
 assert.equal(claudePlugin.version, currentVersion);
 if (process.env.GITHUB_REF_TYPE === "tag") {
@@ -293,11 +294,14 @@ assert.match(write, /^# Hope Write\r?\n/u);
 assert.match(write, /skills\/write\/references\/writing-standard\.md/u);
 assert.match(write, /They do not need a runtime brief/u);
 assert.match(releaseDefinition, /^# Hope releases\r?$/mu);
-assert.match(releaseDefinition, /public version files reach `main`/u);
-assert.match(releaseDefinition, /never chooses or increases a version/u);
+assert.match(releaseDefinition, /Conventional Commit/u);
+assert.match(releaseDefinition, /`BREAKING CHANGE` footer selects major/u);
+assert.match(releaseDefinition, /`feat` selects minor/u);
+assert.match(releaseDefinition, /every other commit selects patch/u);
+assert.match(releaseDefinition, /promotes `Unreleased`/u);
 assert.match(
   releaseDefinition,
-  /already has a GitHub Release, the run exits without/u,
+  /person starting the run does not choose a version or increase type/u,
 );
 assert.match(
   changelog,
@@ -318,10 +322,12 @@ assert.match(
   release,
   /github\.event_name == 'workflow_dispatch' && 'main' \|\| github\.sha/u,
 );
-assert.doesNotMatch(release, /\bincrement\b|next-release-version/u);
-assert.doesNotMatch(release, /RELEASE_VERSION|inputs:/u);
-assert.match(release, /echo "version=\$\{CURRENT_VERSION\}"/u);
-assert.match(release, /echo "tag=\$\{CURRENT_TAG\}"/u);
+assert.match(release, /MODE=increment/u);
+assert.match(release, /BASE_TAG="\$\{CURRENT_TAG\}"/u);
+assert.match(release, /npm run release:prepare -- --automatic "\$\{BASE_TAG\}"/u);
+assert.doesNotMatch(release, /workflow_dispatch:\s+inputs:/su);
+assert.match(release, /echo "current-version=\$\{CURRENT_VERSION\}"/u);
+assert.match(release, /echo "version=\$\{RELEASE_VERSION\}"/u);
 assert.match(release, /gh release view/u);
 assert.match(release, /git checkout --detach/u);
 assert.match(release, /git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
@@ -337,7 +343,7 @@ assert.match(
 );
 assert.match(
   release,
-  /git add [^\n]*tools\/plugin-package-files\.txt/u,
+  /git add CHANGELOG\.md [^\n]*tools\/plugin-package-files\.txt/u,
 );
 assert.match(release, /node tools\/stage-plugin\.mjs/u);
 assert.match(release, /diff -u tools\/plugin-package-files\.txt/u);

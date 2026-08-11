@@ -27,28 +27,29 @@ Do not add a root CLI, independent harness, global preference store, model
 evaluation framework, or host-specific feature implementation without a new
 documented product decision.
 
-## Prepare a release
+## Record a release change
 
-Use semantic versioning.
+Add a concise list item under `Unreleased` in `CHANGELOG.md`.
 
-Use patch for compatible fixes, minor for compatible capability changes, and
-major for incompatible public changes.
+Use a Conventional Commit subject for the commit that reaches `main`.
 
-Prepare the version and update its Changelog entry in the same pull request:
+- Add `!` after the type or a `BREAKING CHANGE` footer for an incompatible
+  public change.
+- Use `feat` for a compatible capability change.
+- Use another conventional type for a compatible fix or maintenance change.
 
-```bash
-npm run release:prepare -- 2.0.0
-```
+The manual `Release` workflow examines all commits after the current tag.
 
-The preparation command updates the public version files, builds the plugin,
-checks the package, and runs the deterministic test suite.
+It chooses major when any commit is breaking, minor when any remaining commit
+uses `feat`, and patch otherwise.
 
-Merging the public version files into `main` starts the Release workflow.
+The workflow promotes `Unreleased`, updates every public version file, builds
+and tests the package, commits the release, and publishes it.
 
-The workflow publishes the version already recorded in the repository when
-that version has no GitHub Release.
+Do not edit a public version file for a normal release.
 
-A later manual run increases an already released version.
+An explicitly prepared, untagged version is still published when its public
+version files reach `main`.
 
 Do not add files to a release by changing the zip command.
 

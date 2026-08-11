@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 2.0.0 - 2026-08-10
 
 - Make Hope an installable Codex and Claude plugin only, and remove the
@@ -29,6 +31,9 @@
 - Adopt all 86 conditional GUI widget guidelines, show small microworld choices
   as radio groups, distinguish visited evidence links, and embed a local
   favicon in Diff artifacts.
+- Derive major, minor, or patch releases from Conventional Commits and promote
+  the pending Changelog section without asking the releaser to select a version.
+- Keep Codex composer suggestions within the host's three-prompt package limit.
 
 ## 1.9.0 - 2026-08-08
 

@@ -24,7 +24,11 @@ import {
 } from "../tools/install-plugin-dev.mjs";
 import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 import {
+  incrementVersion,
   isSemanticVersion,
+  promoteUnreleasedChangelog,
+  releaseTypeForCommit,
+  releaseTypeForCommits,
   replaceVersion,
   withPackageLockVersion,
   withVersion,
@@ -91,6 +95,86 @@ test("release versions use one supported form", () => {
   assert.throws(
     () => withPackageLockVersion({ packages: {} }, "1.0.0"),
     /root package/u,
+  );
+});
+
+test("automatic releases derive the largest semantic change from commits", () => {
+  assert.equal(releaseTypeForCommit("fix: keep the cache bounded"), "patch");
+  assert.equal(releaseTypeForCommit("README wording"), "patch");
+  assert.equal(releaseTypeForCommit("feat(diff): add a focused view"), "minor");
+  assert.equal(releaseTypeForCommit("feat!: replace the public input\n"), "major");
+  assert.equal(
+    releaseTypeForCommit("refactor: simplify the boundary\n\nBREAKING CHANGE: remove v1"),
+    "major",
+  );
+  assert.equal(
+    releaseTypeForCommits([
+      "fix: correct an error",
+      "feat: add a capability",
+      "docs: explain it",
+    ]),
+    "minor",
+  );
+  assert.equal(
+    releaseTypeForCommits([
+      "feat: add a capability",
+      "refactor!: remove the old boundary",
+    ]),
+    "major",
+  );
+  assert.throws(() => releaseTypeForCommit(""), /non-empty commit/u);
+  assert.throws(() => releaseTypeForCommits([]), /at least one commit/u);
+
+  assert.equal(incrementVersion("2.4.6", "patch"), "2.4.7");
+  assert.equal(incrementVersion("2.4.6", "minor"), "2.5.0");
+  assert.equal(incrementVersion("2.4.6", "major"), "3.0.0");
+  assert.throws(() => incrementVersion("2.4.6-rc.1", "patch"), /stable/u);
+  assert.throws(() => incrementVersion("2.4.6", "unknown"), /Unknown release type/u);
+});
+
+test("automatic releases promote a non-empty Unreleased Changelog section", () => {
+  const changelog = [
+    "# Changelog",
+    "",
+    "## Unreleased",
+    "",
+    "- Add one feature.",
+    "- Fix one boundary.",
+    "",
+    "## 2.0.0 - 2026-08-10",
+    "",
+    "- Previous release.",
+    "",
+  ].join("\n");
+  assert.equal(
+    promoteUnreleasedChangelog(changelog, "2.1.0", "2026-08-11"),
+    [
+      "# Changelog",
+      "",
+      "## Unreleased",
+      "",
+      "## 2.1.0 - 2026-08-11",
+      "",
+      "- Add one feature.",
+      "- Fix one boundary.",
+      "",
+      "## 2.0.0 - 2026-08-10",
+      "",
+      "- Previous release.",
+      "",
+    ].join("\n"),
+  );
+  assert.throws(
+    () => promoteUnreleasedChangelog(
+      "# Changelog\n\n## Unreleased\n\n## 2.0.0 - 2026-08-10\n",
+      "2.0.1",
+      "2026-08-11",
+    ),
+    /at least one list item/u,
+  );
+  assert.throws(
+    () => promoteUnreleasedChangelog(changelog, "2.0.0", "2026-08-11"),
+    /already contains/u,
   );
 });
 
@@ -182,7 +266,7 @@ test("CI installs locked dependencies before running checks or builds", async ()
 
   const verifyInstall = verify.indexOf("- run: npm ci");
   const releaseInstall = release.indexOf("run: npm ci");
-  const releasePrepare = release.indexOf("run: npm run release:prepare");
+  const releasePrepare = release.indexOf("npm run release:prepare");
   assert.ok(verifyInstall >= 0, "verify workflow must install dependencies");
   assert.ok(releaseInstall >= 0, "release workflow must install dependencies");
   assert.ok(releasePrepare >= 0, "release workflow must prepare the release");
@@ -217,12 +301,13 @@ test("CI installs locked dependencies before running checks or builds", async ()
     /ref: \$\{\{ github\.event_name == 'workflow_dispatch' && 'main' \|\| github\.sha \}\}/u,
   );
   assert.match(release, /test "\$\(git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
-  assert.match(release, /publish=\$\{PUBLISH\}/u);
-  assert.match(release, /steps\.version\.outputs\.publish == 'true'/u);
-  assert.doesNotMatch(release, /\bincrement\b|next-release-version/u);
-  assert.doesNotMatch(release, /RELEASE_VERSION|inputs:/u);
-  assert.match(release, /echo "version=\$\{CURRENT_VERSION\}"/u);
-  assert.match(release, /echo "tag=\$\{CURRENT_TAG\}"/u);
+  assert.match(release, /MODE=increment/u);
+  assert.match(release, /BASE_TAG="\$\{CURRENT_TAG\}"/u);
+  assert.match(release, /npm run release:prepare -- --automatic "\$\{BASE_TAG\}"/u);
+  assert.match(release, /steps\.plan\.outputs\.publish == 'true'/u);
+  assert.doesNotMatch(release, /workflow_dispatch:\s+inputs:/su);
+  assert.match(release, /echo "current-version=\$\{CURRENT_VERSION\}"/u);
+  assert.match(release, /echo "version=\$\{RELEASE_VERSION\}"/u);
   assert.match(release, /gh release view/u);
   assert.match(release, /git checkout --detach/u);
   assert.match(release, /git push --atomic origin HEAD:main/u);
@@ -232,7 +317,7 @@ test("CI installs locked dependencies before running checks or builds", async ()
   );
   assert.match(
     release,
-    /git add [^\n]*tools\/plugin-package-files\.txt/u,
+    /git add CHANGELOG\.md [^\n]*tools\/plugin-package-files\.txt/u,
   );
   assert.match(release, /gh release create/u);
   assert.match(release, /--fail-on-no-commits/u);

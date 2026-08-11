@@ -20,11 +20,8 @@
     "capabilities": ["Read", "Write", "Interactive"],
     "defaultPrompt": [
       "Use $hope:align to build a shared understanding before implementation.",
-      "Use $hope:sweep to inspect this codebase and return a maintenance plan without editing files.",
-      "Use $hope:polish to refine completed work without changing its meaning or behavior.",
       "Use $hope:toxic-review to challenge this plan.",
-      "Use $hope:diff to explain the current pull request.",
-      "Use $hope:write wherever clearer language would improve this task."
+      "Use $hope:diff to explain the current pull request."
     ],
     "brandColor": "#087EA4",
     "composerIcon": "./assets/hope-protected-light-128.png",
