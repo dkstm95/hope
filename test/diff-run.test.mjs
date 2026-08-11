@@ -3,14 +3,16 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import {
   access,
+  mkdir,
   readFile,
+  rename,
   rm,
   symlink,
   unlink,
   utimes,
   writeFile,
 } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import test, { after } from "node:test";
 
 import {
@@ -23,6 +25,7 @@ import { revalidateGitHubSnapshot } from "../features/diff/github.mjs";
 import {
   DIFF_REVALIDATION_RETRYABLE_CODE,
   DIFF_REVALIDATION_RETRYABLE_MESSAGE,
+  cancelDiff,
   finishDiff,
   prepareDiff,
   validateDiff,
@@ -101,7 +104,7 @@ test("an invalid explicit output fails before GitHub collection", async () => {
         preflightOutput: async () => {
           throw new Error("output already exists");
         },
-        resolveSettings: async () => ({
+        resolveDisplayOptions: async () => ({
           locale: "en-US",
           localeSource: "default",
           theme: "system",
@@ -110,35 +113,6 @@ test("an invalid explicit output fails before GitHub collection", async () => {
       },
     ),
     /output already exists/u,
-  );
-  assert.equal(collected, false);
-});
-
-test("a missing writing standard fails before GitHub collection", async () => {
-  let collected = false;
-  await assert.rejects(
-    prepareDiff(
-      {
-        url: "https://github.com/example/hope/pull/142",
-      },
-      {
-        collect: async () => {
-          collected = true;
-          return makeSnapshot();
-        },
-        loadWritingStandard: async () => {
-          throw new Error("writing standard unavailable");
-        },
-        preflightOutput: async () => undefined,
-        resolveSettings: async () => ({
-          locale: "en-US",
-          localeSource: "default",
-          theme: "system",
-          themeSource: "default",
-        }),
-      },
-    ),
-    /writing standard unavailable/u,
   );
   assert.equal(collected, false);
 });
@@ -974,13 +948,173 @@ test("expiry cleanup leaves an actively finalized old run in place", async () =>
   const run = await loadDiffRun(created.path, { temporaryRoot });
   const claim = await claimDiffRunFinalization(run);
   try {
-    const removed = await cleanupExpiredRuns({ temporaryRoot });
-    assert.deepEqual(removed, []);
+    const cleanup = await cleanupExpiredRuns({ temporaryRoot });
+    assert.deepEqual(cleanup, { preservedPaths: [], removedPaths: [] });
     await access(created.path);
   } finally {
     await claim.release();
     await removeDiffRun(created.path, { temporaryRoot });
   }
+});
+
+test("cancelling a run removes only the owned private directory", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-cancel-");
+  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+
+  await cancelDiff(created.path, { temporaryRoot });
+
+  await assert.rejects(access(created.path), /ENOENT/u);
+});
+
+test("cancelling does not interrupt active finalization", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory(
+    "hope-run-cancel-active-",
+  );
+  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+  const run = await loadDiffRun(created.path, { temporaryRoot });
+  const claim = await claimDiffRunFinalization(run);
+  try {
+    await assert.rejects(
+      cancelDiff(created.path, { temporaryRoot }),
+      /already being changed/u,
+    );
+    await access(created.path);
+  } finally {
+    await claim.release();
+    await removeDiffRun(created.path, { temporaryRoot });
+  }
+});
+
+test("cancelling preserves a replaced run directory", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory(
+    "hope-run-cancel-replaced-",
+  );
+  const created = await createDiffRun(makeSnapshot(), { temporaryRoot });
+  const originalPath = join(dirname(created.path), ".original-run");
+  let preservedPath;
+
+  await assert.rejects(
+    cancelDiff(created.path, {
+      onRemoveReady: async () => {
+        await rename(created.path, originalPath);
+        await mkdir(created.path, { mode: 0o700 });
+        await writeFile(join(created.path, "foreign.txt"), "keep\n", "utf8");
+      },
+      temporaryRoot,
+    }),
+    (error) => {
+      assert.equal(error.code, "HOPE_DIFF_RUN_REPLACED");
+      preservedPath = error.preservedPath;
+      return true;
+    },
+  );
+
+  await access(originalPath);
+  assert.equal(preservedPath, created.path);
+  assert.equal(
+    await readFile(join(preservedPath, "foreign.txt"), "utf8"),
+    "keep\n",
+  );
+});
+
+test("expiry cleanup preserves a directory replaced after its lease check", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory(
+    "hope-run-expiry-replaced-",
+  );
+  const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const created = await createDiffRun(makeSnapshot(), {
+    clock: () => old,
+    temporaryRoot,
+  });
+  const originalPath = join(dirname(created.path), ".expired-original-run");
+  const cleanup = await cleanupExpiredRuns({
+    onRemoveReady: async () => {
+      await rename(created.path, originalPath);
+      await mkdir(created.path, { mode: 0o700 });
+      await writeFile(join(created.path, "foreign.txt"), "keep\n", "utf8");
+    },
+    temporaryRoot,
+  });
+
+  assert.deepEqual(cleanup, {
+    preservedPaths: [created.path],
+    removedPaths: [],
+  });
+  await access(originalPath);
+  assert.equal(
+    await readFile(join(created.path, "foreign.txt"), "utf8"),
+    "keep\n",
+  );
+});
+
+test("expiry cleanup reports a directory replaced during its removal claim", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory(
+    "hope-run-expiry-claim-replaced-",
+  );
+  const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const created = await createDiffRun(makeSnapshot(), {
+    clock: () => old,
+    temporaryRoot,
+  });
+  const originalPath = join(dirname(created.path), ".claimed-original-run");
+  let claimedPath;
+
+  const cleanup = await cleanupExpiredRuns({
+    renameDirectory: async (source, target) => {
+      claimedPath = target;
+      await rename(source, target);
+      await rename(target, originalPath);
+      await mkdir(target, { mode: 0o700 });
+      await writeFile(join(target, "foreign.txt"), "keep\n", "utf8");
+    },
+    temporaryRoot,
+  });
+
+  assert.deepEqual(cleanup, {
+    preservedPaths: [claimedPath],
+    removedPaths: [],
+  });
+  await access(originalPath);
+  assert.equal(
+    await readFile(join(claimedPath, "foreign.txt"), "utf8"),
+    "keep\n",
+  );
+});
+
+test("run creation rollback preserves a replaced directory", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory(
+    "hope-run-create-replaced-",
+  );
+  let originalPath;
+  let replacedPath;
+
+  await assert.rejects(
+    createDiffRun(makeSnapshot(), {
+      temporaryRoot,
+      writeJson: async (path) => {
+        const runPath = dirname(path);
+        replacedPath = runPath;
+        originalPath = join(dirname(runPath), ".create-original-run");
+        await rename(runPath, originalPath);
+        await mkdir(runPath, { mode: 0o700 });
+        await writeFile(join(runPath, "foreign.txt"), "keep\n", "utf8");
+        throw new Error("private write failed");
+      },
+    }),
+    (error) => {
+      assert.match(error.message, /private write failed/u);
+      assert.equal(error.cleanupPending, undefined);
+      assert.equal(error.cleanupError?.code, "HOPE_DIFF_RUN_REPLACED");
+      assert.equal(error.preservedPath, replacedPath);
+      return true;
+    },
+  );
+
+  await access(originalPath);
+  assert.equal(
+    await readFile(join(replacedPath, "foreign.txt"), "utf8"),
+    "keep\n",
+  );
 });
 
 test("expiry cleanup leaves unknown run and analysis version pairs in place", async (context) => {
@@ -1027,8 +1161,8 @@ test("expiry cleanup leaves unknown run and analysis version pairs in place", as
     paths.push(created.path);
   }
 
-  const removed = await cleanupExpiredRuns({ temporaryRoot });
-  assert.deepEqual(removed, []);
+  const cleanup = await cleanupExpiredRuns({ temporaryRoot });
+  assert.deepEqual(cleanup, { preservedPaths: [], removedPaths: [] });
   for (const path of paths) await access(path);
 });
 
@@ -1064,7 +1198,7 @@ test("a newer lease generation fences a suspended expiry cleanup", async () => {
   await replacement.assertOwned();
   continueCleanup();
 
-  assert.deepEqual(await cleanup, []);
+  assert.deepEqual(await cleanup, { preservedPaths: [], removedPaths: [] });
   await access(created.path);
   await replacement.assertOwned();
   await replacement.release();
@@ -1132,11 +1266,14 @@ test("expiry cleanup reclaims a run terminated between private source writes", a
   await access(join(runPath, "snapshot.json"));
   await assert.rejects(access(join(runPath, "pages.json")), /ENOENT/u);
 
-  const removed = await cleanupExpiredRuns({
+  const cleanup = await cleanupExpiredRuns({
     clock: () => new Date("2026-07-22T00:00:00.000Z"),
     temporaryRoot,
   });
-  assert.deepEqual(removed, [runPath]);
+  assert.deepEqual(cleanup, {
+    preservedPaths: [],
+    removedPaths: [runPath],
+  });
   await assert.rejects(access(runPath), /ENOENT/u);
 });
 
@@ -1153,8 +1290,8 @@ test("a heartbeat keeps a long finalization lease active", async () => {
   await utimes(join(created.path, ".finish.lock"), dueForHeartbeat, dueForHeartbeat);
   await claim.renew();
 
-  const removed = await cleanupExpiredRuns({ temporaryRoot });
-  assert.deepEqual(removed, []);
+  const cleanup = await cleanupExpiredRuns({ temporaryRoot });
+  assert.deepEqual(cleanup, { preservedPaths: [], removedPaths: [] });
   await access(created.path);
   await claim.release();
   await removeDiffRun(created.path, { temporaryRoot });
@@ -1175,8 +1312,11 @@ test("expiry cleanup reclaims a stale lease even when its PID is reused", async 
   await utimes(join(created.path, ".finish.lock"), stale, stale);
   await assert.rejects(claim.renew(), /lease expired/u);
 
-  const removed = await cleanupExpiredRuns({ temporaryRoot });
-  assert.deepEqual(removed, [created.path]);
+  const cleanup = await cleanupExpiredRuns({ temporaryRoot });
+  assert.deepEqual(cleanup, {
+    preservedPaths: [],
+    removedPaths: [created.path],
+  });
   await assert.rejects(access(created.path), /ENOENT/u);
   await claim.release();
 });
@@ -1220,8 +1360,11 @@ test("expiry cleanup reclaims an old incomplete finalization claim", async () =>
   const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
   await utimes(claimPath, stale, stale);
 
-  const removed = await cleanupExpiredRuns({ temporaryRoot });
-  assert.deepEqual(removed, [created.path]);
+  const cleanup = await cleanupExpiredRuns({ temporaryRoot });
+  assert.deepEqual(cleanup, {
+    preservedPaths: [],
+    removedPaths: [created.path],
+  });
   await assert.rejects(access(created.path), /ENOENT/u);
 });
 
@@ -1265,8 +1408,11 @@ test("expiry cleanup reclaims an old run with an abandoned lease generation", as
   await utimes(initialPath, stale, stale);
   await utimes(abandonedPath, stale, stale);
 
-  const removed = await cleanupExpiredRuns({ temporaryRoot });
-  assert.deepEqual(removed, [created.path]);
+  const cleanup = await cleanupExpiredRuns({ temporaryRoot });
+  assert.deepEqual(cleanup, {
+    preservedPaths: [],
+    removedPaths: [created.path],
+  });
   await assert.rejects(access(created.path), /ENOENT/u);
 });
 

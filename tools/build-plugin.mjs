@@ -9,7 +9,6 @@ import {
 } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build as esbuild } from "esbuild";
 
 import { isEntrypoint } from "../entrypoint/index.mjs";
 import {
@@ -21,29 +20,9 @@ const root = new URL("../", import.meta.url);
 const fromRoot = (path) => new URL(path, root);
 
 export const normalizeLineEndings = (content) => content.replace(/\r\n?/gu, "\n");
-export const pluginBundleEntries = generatedPluginFiles;
+export const pluginBuildEntries = generatedPluginFiles;
 
 export async function expectedPluginFile(entry) {
-  if (entry.bundle) {
-    const result = await esbuild({
-      absWorkingDir: fileURLToPath(root),
-      bundle: true,
-      charset: "utf8",
-      entryPoints: [entry.source],
-      format: "esm",
-      legalComments: "inline",
-      minify: true,
-      platform: "node",
-      target: "node20",
-      treeShaking: true,
-      write: false,
-    });
-    if (result.outputFiles.length !== 1) {
-      throw new Error(`Expected one bundled output for ${entry.source}`);
-    }
-    const text = normalizeLineEndings(result.outputFiles[0].text);
-    return `${entry.banner}${text}`;
-  }
   const source = await readFile(fromRoot(entry.source));
   if (entry.binary) return source;
   const text = normalizeLineEndings(source.toString("utf8"));
@@ -63,7 +42,7 @@ export async function buildPlugin() {
     force: true,
     recursive: true,
   });
-  for (const entry of pluginBundleEntries) {
+  for (const entry of pluginBuildEntries) {
     const destination = fileURLToPath(fromRoot(entry.destination));
     await mkdir(dirname(destination), { recursive: true });
     await writeFile(destination, await expectedPluginFile(entry));

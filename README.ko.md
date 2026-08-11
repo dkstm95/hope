@@ -38,7 +38,7 @@ Hope 플러그인은 Codex와 Claude Code에 설치할 수 있습니다.
 
 다음 항목들이 필요합니다.
 
-- Node.js 20 이상
+- Node.js 22 이상
 - Diff를 사용하려면 인증된 [GitHub CLI](https://cli.github.com/)가
   필요합니다. 필요하다면 먼저 `gh auth login`을 실행하세요.
 
@@ -81,29 +81,15 @@ claude plugin install hope@hope
 
 목표, 범위, 예상 동작, 중요한 선택에 대한 오해는 구현이 시작될 때까지 남을 수 있습니다.
 
-Align은 확인 가능한 근거를 먼저 읽고 작업의 위험도에 맞춰 질문하며, 사실, 결정, 제안, 가정, 열린 질문을 구분합니다.
+Align은 확인 가능한 근거를 먼저 읽고 현재 이해를 짧게 설명한 뒤, 결과를 바꿀 수 있는 선택만 질문합니다.
 
-현재 공유된 이해는 목표, 다음 행동, 핵심 합의 세 가지를 첫 화면에 담은 하나의 HTML 결과물이 됩니다.
-
-근거와 작업 세부 내용은 기본 흐름을 복잡하게 만들지 않으면서 필요할 때 확인할 수 있습니다.
-
-사용자 화면이 달라지는 작업은 구현 전에 하나의 표준 화면 내용을 넓은 화면과 좁은 화면으로 비교합니다.
+대화 안에서 사실, 결정, 제안, 가정, 열린 질문, 구현 중 확인할 내용을 구분합니다.
 
 > [!NOTE]
 > Align은 명시적인 승인을 기다리며 작업을 직접 구현하지 않습니다.
 
 > 예시: “실패한 업로드 복구 화면을 추가하려고 해요. 구현 전에 재시도 동작과
 > 화면 배치를 함께 정리해 주세요.”
-
-![실패한 업로드 복구 화면의 목표, 핵심 합의, 다음 행동, 범위, 성공 조건을 보여 주는 Hope Align 예시](assets/readme/hope-align-ko.png)
-
-*실패한 업로드 복구 화면을 위한 실제 Align HTML 결과물입니다.*
-
-| 범위와 성공 조건 | 반응형 미리보기 |
-| --- | --- |
-| [![Align 결과의 작업 범위와 성공 조건](assets/readme/hope-align-scope-ko.png)](assets/readme/hope-align-scope-ko.png) | [![같은 화면 내용을 사용한 넓은 화면과 좁은 화면의 복구 화면 미리보기](assets/readme/hope-align-preview-ko.png)](assets/readme/hope-align-preview-ko.png) |
-| 핵심 합의와 보조 정보 | 검증 가능한 작업 |
-| [![Align 결과의 핵심 합의, 근거, 가정, 불확실성](assets/readme/hope-align-understanding-ko.png)](assets/readme/hope-align-understanding-ko.png) | [![Align 결과의 사용자 변화, 범위, 검증, 실패 복구](assets/readme/hope-align-work-ko.png)](assets/readme/hope-align-work-ko.png) |
 
 </details>
 
@@ -177,9 +163,9 @@ Polish는 바꾸지 않을 내용을 먼저 정하고 명확한 범위 안에서
 <details>
 <summary><strong>Sweep</strong> — 코드베이스를 청소하고 안전하게 유지보수합니다</summary>
 
-Sweep은 주기별 프로필 대신 코드베이스에 맞춘 유지보수 작업을 한 번 실행합니다.
+Sweep은 코드베이스에 맞춘 읽기 전용 유지보수 검토를 한 번 수행합니다.
 
-정확한 스냅샷을 점검하고 파일을 바꾸기 전에 제한된 계획을 보여 줍니다.
+프로젝트가 소유한 작업 트리를 조사하고 제외 범위와 근거 공백을 밝힌 뒤 작업 순서를 제안합니다.
 
 깨진 참조와 설정 불일치, 사용하지 않거나 오래된 코드·테스트·문서·설정,
 반복되거나 부족하거나 성급한 추상화, 테스트와 문서 공백, 의존성·보안·라이선스·
@@ -188,8 +174,9 @@ Sweep은 주기별 프로필 대신 코드베이스에 맞춘 유지보수 작�
 
 불완전한 근거는 문제가 없는 것처럼 표시하지 않습니다.
 
-Sweep은 승인한 행동 보존형 작업만 적용하며, 행동·공개 계약·의존성 변경은
-별도 구현 작업으로 넘깁니다.
+Sweep은 파일을 바꾸지 않습니다.
+
+계획에서 후보를 선택하면 별도의 구현 작업을 시작합니다.
 
 > 예시: “이 코드베이스를 Sweep해 주세요.”
 
@@ -207,15 +194,6 @@ Write의 공통 기준은 조지 오웰의
 담긴 여섯 가지 원칙을 바탕으로 합니다.
 
 > 예시: “이 장애 상황 공지를 이해하기 쉽게 고쳐 주세요.”
-
-</details>
-
-<details>
-<summary><strong>Settings</strong> — Hope의 언어와 테마를 설정합니다</summary>
-
-Settings는 지원되는 언어와 초기 `system`, `light`, `dark` 테마를 공통 기본값으로 저장합니다.
-
-하네스와 설치된 플러그인이 이 설정을 함께 사용하며, 변경 사항은 새 결과물에만 적용됩니다.
 
 </details>
 

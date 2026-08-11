@@ -1,4 +1,4 @@
-export const DESIGN_VERSION = 1;
+export const DESIGN_VERSION = 2;
 
 export const COLORS = Object.freeze({
   dark: Object.freeze({
@@ -13,6 +13,7 @@ export const COLORS = Object.freeze({
     scope: "#94a8bc",
     text: "#edf1f5",
     verify: "#65aaf2",
+    visited: "#c4a7e7",
   }),
   light: Object.freeze({
     accent: "#087596",
@@ -26,6 +27,7 @@ export const COLORS = Object.freeze({
     scope: "#4f6578",
     text: "#1b1b18",
     verify: "#145da0",
+    visited: "#6b4f8a",
   }),
 });
 
@@ -44,7 +46,7 @@ export const CODE_THEME = Object.freeze({
     hunkBackground: "#ddf4ff",
     removedBackground: "#ffebe9",
   }),
-  name: "github",
+  name: "hope",
 });
 
 export const SPACE = Object.freeze([4, 8, 12, 16, 24, 32]);

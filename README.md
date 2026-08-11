@@ -37,7 +37,7 @@ Install the Hope plugin in Codex or Claude Code.
 
 You need:
 
-- Node.js 20 or newer
+- Node.js 22 or newer
 - An authenticated [GitHub CLI](https://cli.github.com/) to use Diff. Run
   `gh auth login` first if needed.
 
@@ -81,33 +81,17 @@ Choose the work you need.
 Misunderstandings about a task's goal, scope, behavior, or important choices can
 survive until implementation.
 
-Align reads available evidence, asks risk-adaptive questions, and keeps facts,
-decisions, proposals, assumptions, and open questions distinct.
+Align reads available evidence, teaches back the current understanding, and
+asks only about choices that can change the result.
 
-It renders one decision-centered HTML artifact with the goal, next action, and
-up to three primary agreements on the first screen.
-
-Supporting evidence and work details stay available without crowding the main
-reading path.
-
-When a task changes a user interface, Align compares wide and narrow previews
-from the same canonical screen content before implementation.
+It keeps facts, decisions, proposals, assumptions, open questions, and
+implementation-time checks distinct in the conversation.
 
 > [!NOTE]
 > Align waits for explicit approval and never implements the task.
 
 > Example: “I want to add a failed-upload recovery screen. Help me clarify the
 > retry behavior and layout before implementation.”
-
-![Hope Align example showing the goal, primary agreements, next action, scope, and success conditions for failed-upload recovery](assets/readme/hope-align-en.png)
-
-*An actual Align HTML artifact for a failed-upload recovery screen.*
-
-| Scope and success | Responsive preview |
-| --- | --- |
-| [![The work boundary and success conditions in an Align artifact](assets/readme/hope-align-scope-en.png)](assets/readme/hope-align-scope-en.png) | [![Wide and narrow recovery-screen previews built from the same content](assets/readme/hope-align-preview-en.png)](assets/readme/hope-align-preview-en.png) |
-| Agreements and supporting detail | Verifiable work |
-| [![Primary agreements, evidence, assumptions, and uncertainty in an Align artifact](assets/readme/hope-align-understanding-en.png)](assets/readme/hope-align-understanding-en.png) | [![The user change, scope, verification, and failure recovery in an Align artifact](assets/readme/hope-align-work-en.png)](assets/readme/hope-align-work-en.png) |
 
 </details>
 
@@ -185,10 +169,11 @@ checked, and stops when the work needs a material decision.
 <details>
 <summary><strong>Sweep</strong> — Clean up and maintain a codebase safely</summary>
 
-Sweep runs one codebase maintenance task that adapts to the codebase instead of
-using schedule-based profiles.
+Sweep runs one read-only codebase maintenance review that adapts to the
+project.
 
-It inspects an exact snapshot and shows a bounded plan before changing files.
+It inventories the owned worktree, reports exclusions and evidence gaps, and
+returns an ordered plan.
 
 It checks broken references and configuration drift; dead or stale code, tests,
 documentation, and configuration; repeated, missing, or premature abstractions;
@@ -198,8 +183,9 @@ release, and recovery readiness.
 
 Incomplete evidence stays visible instead of being reported as complete.
 
-Sweep applies only approved behavior-preserving work and hands behavior,
-public-contract, or dependency changes to a separate implementation task.
+Sweep never edits files.
+
+Select a candidate from its plan to start a separate implementation task.
 
 > Example: “Sweep this codebase.”
 
@@ -218,17 +204,6 @@ Write's shared standard adapts George Orwell's six rules in
 [Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).
 
 > Example: “Make this incident update easier to understand.”
-
-</details>
-
-<details>
-<summary><strong>Settings</strong> — Set Hope's language and theme</summary>
-
-Settings stores a supported locale and initial `system`, `light`, or `dark`
-theme as shared defaults.
-
-The harness and installed plugin share these settings, and changes affect new
-artifacts only.
 
 </details>
 

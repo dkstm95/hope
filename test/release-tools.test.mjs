@@ -29,7 +29,6 @@ import {
   withPackageLockVersion,
   withVersion,
 } from "../tools/prepare-release.mjs";
-import { nextReleaseVersion } from "../tools/next-release-version.mjs";
 import {
   parsePackageFileList,
   readPackageFileList,
@@ -93,17 +92,6 @@ test("release versions use one supported form", () => {
     () => withPackageLockVersion({ packages: {} }, "1.0.0"),
     /root package/u,
   );
-});
-
-test("release increments preserve semantic version meaning", () => {
-  assert.equal(nextReleaseVersion("1.2.3", "patch"), "1.2.4");
-  assert.equal(nextReleaseVersion("1.2.3", "minor"), "1.3.0");
-  assert.equal(nextReleaseVersion("1.2.3", "major"), "2.0.0");
-  assert.throws(
-    () => nextReleaseVersion("1.2.3-alpha", "patch"),
-    /stable semantic version/u,
-  );
-  assert.throws(() => nextReleaseVersion("1.2.3", "next"), /patch, minor, major/u);
 });
 
 test("development installation verifies the selected plugin and cache", async (context) => {
@@ -194,31 +182,65 @@ test("CI installs locked dependencies before running checks or builds", async ()
 
   const verifyInstall = verify.indexOf("- run: npm ci");
   const releaseInstall = release.indexOf("run: npm ci");
+  const releasePrepare = release.indexOf("run: npm run release:prepare");
   assert.ok(verifyInstall >= 0, "verify workflow must install dependencies");
   assert.ok(releaseInstall >= 0, "release workflow must install dependencies");
+  assert.ok(releasePrepare >= 0, "release workflow must prepare the release");
   assert.ok(verifyInstall < verify.indexOf("- run: npm run check"));
-  assert.ok(releaseInstall < release.indexOf("run: npm run check"));
-  assert.ok(releaseInstall < release.indexOf("npm run build:plugin"));
-  assert.match(verify, /needs: \[check, browser\]/u);
+  assert.ok(releaseInstall < releasePrepare);
+  const checkJob = verify.match(/\n  check:\n([\s\S]*?)\n  platform-smoke:\n/u)?.[1];
+  const platformSmokeJob = verify.match(
+    /\n  platform-smoke:\n([\s\S]*?)\n  browser:\n/u,
+  )?.[1];
+  assert.ok(checkJob, "verify workflow must define the deterministic check job");
+  assert.ok(platformSmokeJob, "verify workflow must define the platform smoke job");
+  assert.match(checkJob, /node: \[22, 24\]/u);
+  assert.match(checkJob, /runs-on: ubuntu-latest/u);
+  assert.doesNotMatch(checkJob, /macos-latest|windows-latest/u);
+  assert.match(platformSmokeJob, /os: \[macos-latest, windows-latest\]/u);
+  assert.match(platformSmokeJob, /node-version: 22/u);
+  assert.match(platformSmokeJob, /npm run build:plugin/u);
+  assert.match(platformSmokeJob, /node --test test\/platform-smoke\.test\.mjs/u);
+  assert.match(verify, /needs: \[check, platform-smoke, browser\]/u);
   assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
+  assert.match(
+    verify,
+    /PLATFORM_SMOKE_RESULT: \$\{\{ needs\.platform-smoke\.result \}\}/u,
+  );
   assert.match(release, /npx playwright install --with-deps chromium/u);
   assert.match(release, /npm run test:browser/u);
+  assert.doesNotMatch(release, /run: npm run check\s*$/mu);
   assert.match(release, /workflow_dispatch/u);
   assert.match(release, /push:\s+branches:\s+- main/su);
-  assert.match(release, /EVENT_NAME: \$\{\{ github\.event_name \}\}/u);
+  assert.match(
+    release,
+    /ref: \$\{\{ github\.event_name == 'workflow_dispatch' && 'main' \|\| github\.sha \}\}/u,
+  );
+  assert.match(release, /test "\$\(git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
   assert.match(release, /publish=\$\{PUBLISH\}/u);
   assert.match(release, /steps\.version\.outputs\.publish == 'true'/u);
-  assert.match(release, /node tools\/next-release-version\.mjs/u);
+  assert.doesNotMatch(release, /\bincrement\b|next-release-version/u);
+  assert.doesNotMatch(release, /RELEASE_VERSION|inputs:/u);
+  assert.match(release, /echo "version=\$\{CURRENT_VERSION\}"/u);
+  assert.match(release, /echo "tag=\$\{CURRENT_TAG\}"/u);
   assert.match(release, /gh release view/u);
   assert.match(release, /git checkout --detach/u);
-  assert.match(release, /already exists unexpectedly/u);
-  assert.match(release, /git push origin HEAD:main/u);
+  assert.match(release, /git push --atomic origin HEAD:main/u);
+  assert.match(
+    release,
+    /git diff --exit-code -- plugins\/hope tools\/plugin-package-files\.txt/u,
+  );
+  assert.match(
+    release,
+    /git add [^\n]*tools\/plugin-package-files\.txt/u,
+  );
   assert.match(release, /gh release create/u);
   assert.match(release, /--fail-on-no-commits/u);
   assert.match(release, /--latest/u);
   assert.doesNotMatch(release, /--prerelease/u);
+  assert.ok(releasePrepare < release.indexOf("npm run test:browser"));
   assert.ok(
-    release.indexOf("npm run test:browser") < release.indexOf("npm run build:plugin"),
+    release.indexOf("npm run test:browser") < release.indexOf("git diff --exit-code"),
   );
 });
 
@@ -241,37 +263,26 @@ test("the release package contains exactly the approved plugin files", async (co
   }
 
   const outsideRepository = join(temporaryRoot, "outside");
-  const configHome = join(temporaryRoot, "config");
   await mkdir(outsideRepository);
-  const environment = { ...process.env, HOPE_CONFIG_HOME: configHome };
   const diffHelp = spawnSync(
     process.execPath,
     [join(destination, "runtime/features/diff/cli.mjs"), "--help"],
     {
       cwd: outsideRepository,
       encoding: "utf8",
-      env: environment,
-    },
-  );
-  const settingsShow = spawnSync(
-    process.execPath,
-    [join(destination, "runtime/settings/cli.mjs"), "show"],
-    {
-      cwd: outsideRepository,
-      encoding: "utf8",
-      env: environment,
     },
   );
   assert.equal(diffHelp.status, 0, diffHelp.stderr);
-  assert.match(diffHelp.stdout, /Use the Hope diff feature/u);
-  assert.equal(settingsShow.status, 0, settingsShow.stderr);
-  assert.match(settingsShow.stdout, /Hope settings|Hope 설정/u);
+  assert.match(diffHelp.stdout, /Use Hope Diff through its private Skill adapter/u);
 
   const stagedValidate = await import(pathToFileURL(
     join(destination, "runtime/features/diff/validate.mjs"),
   ));
   const stagedRender = await import(pathToFileURL(
     join(destination, "runtime/features/diff/render.mjs"),
+  ));
+  const stagedCodeEvidence = await import(pathToFileURL(
+    join(destination, "runtime/features/diff/code-evidence.mjs"),
   ));
   const runId = "5".repeat(32);
   const snapshot = makeSnapshot();
@@ -281,9 +292,13 @@ test("the release package contains exactly the approved plugin files", async (co
     { runId },
   );
   const artifact = await stagedRender.renderReview(review);
+  assert.match(artifact.bytes.toString("utf8"), /<!doctype html>/u);
   assert.match(
-    artifact.bytes.toString("utf8"),
-    /class="syntax-token-[a-f0-9]{16}"/u,
+    stagedCodeEvidence.renderCodeEvidence({
+      excerpt: "const staged = true;",
+      sourceKind: "file",
+    }),
+    /class="code-line"/u,
   );
 
   await assert.rejects(stagePlugin(destination), /already exists/u);

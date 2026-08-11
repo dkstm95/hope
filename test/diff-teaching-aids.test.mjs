@@ -6,7 +6,8 @@ import test, { after } from "node:test";
 import { buildMicroworldSkeleton } from "../features/diff/index.mjs";
 import {
   createMicroworldSkeleton,
-  createTeachingAidContract,
+  TEACHING_AID_DECISIONS,
+  TEACHING_AID_NAMES,
 } from "../features/diff/teaching-aids.mjs";
 import { validateAnalysis } from "../features/diff/validate.mjs";
 import {
@@ -39,94 +40,13 @@ function controls({
   }));
 }
 
-test("the shared teaching-aid contract owns selection and omission decisions", () => {
-  const contract = createTeachingAidContract();
-  assert.equal(contract.analysisVersion, 2);
-  assert.equal(contract.version, 6);
-  assert.deepEqual(contract.visual.authoring.exampleValues.fields, [
-    "caption",
-    "detail",
-    "message label",
-    "row cell",
+test("the runtime exposes deterministic teaching-aid enums", () => {
+  assert.deepEqual(TEACHING_AID_NAMES, ["visual", "microworld", "quiz"]);
+  assert.deepEqual(TEACHING_AID_DECISIONS, [
+    "included",
+    "omitted",
+    "not-applicable",
   ]);
-  assert.match(
-    contract.visual.authoring.exampleValues.inclusion,
-    /concrete example values/u,
-  );
-  assert.match(
-    contract.visual.authoring.exampleValues.omission,
-    /Do not invent/u,
-  );
-  assert.match(
-    contract.visual.authoring.exampleValues.notValues,
-    /identifiers.*component names.*step labels/u,
-  );
-  assert.match(
-    contract.visual.authoring.exampleValues.deduplication,
-    /cardinal.*ordinal.*paraphrased/u,
-  );
-  assert.match(
-    contract.visual.authoring.kindSelection["component-map"],
-    /fixed components.*handoffs/u,
-  );
-  assert.match(
-    contract.visual.authoring.kindSelection.sequence,
-    /time order.*ordered messages/u,
-  );
-  assert.match(
-    contract.visual.authoring.selection.presentationOnly,
-    /not-applicable.*presentation-only.*not.*omitted/u,
-  );
-  assert.match(
-    contract.beginnerPrimer.omission,
-    /new reader.*does not.*require a primer/u,
-  );
-  assert.match(
-    contract.beginnerPrimer.grounding.code,
-    /directly established by code evidence/u,
-  );
-  assert.deepEqual(contract.decisions.aids, ["visual", "microworld", "quiz"]);
-  assert.equal(contract.decisions.classificationOrder.length, 4);
-  assert.match(contract.omission.notApplicable, /specific aid/u);
-  assert.deepEqual(
-    contract.selectionOrder.map((item) => item.aid),
-    ["microworld", "visual", "quiz"],
-  );
-  assert.deepEqual(
-    contract.evaluationCases.map((item) => item.id),
-    ["bounded-state", "static-relationship", "single-prediction", "prose-sufficient"],
-  );
-  const includedCounts = Object.fromEntries(
-    contract.decisions.aids.map((aid) => [
-      aid,
-      contract.evaluationCases.filter(
-        (item) => item.expectedDecisions[aid] === "included",
-      ).length,
-    ]),
-  );
-  assert.deepEqual(includedCounts, { microworld: 1, quiz: 1, visual: 1 });
-  assert.deepEqual(
-    contract.evaluationCases.at(-1).expectedDecisions,
-    { microworld: "omitted", quiz: "omitted", visual: "omitted" },
-  );
-  assert.equal(contract.quiz.minimumQuestions, 1);
-  assert.equal(contract.microworld.maximumScenarios, 12);
-  assert.match(contract.microworld.skeletonCommand, /microworld-skeleton/u);
-  assert.equal(
-    contract.microworld.authoring.content,
-    "Use declarative explanation text only.",
-  );
-  assert.deepEqual(contract.microworld.authoring.forbidden, [
-    "repository code",
-    "commands",
-    "expressions",
-    "URLs",
-    "scripts",
-  ]);
-  assert.match(
-    contract.microworld.authoring.truthBoundary,
-    /Never claim.*ran repository code.*test result/u,
-  );
 });
 
 test("the runtime creates an exhaustive bounded microworld skeleton", () => {

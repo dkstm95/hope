@@ -579,6 +579,53 @@ test("provider control characters stay inert without changing line coordinates",
   assert.equal(source.lineCount, 3);
 });
 
+test("revalidation confirms an unchanged exact snapshot", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    { gh: fakeGitHub(), locale: "en-US", theme: "system" },
+  );
+
+  const result = await revalidateGitHubSnapshot(snapshot, {
+    clock: () => new Date("2026-07-23T00:01:00.000Z"),
+    gh: fakeGitHub(),
+  });
+
+  assert.deepEqual(result, {
+    current: {
+      base: "a".repeat(40),
+      head: "b".repeat(40),
+      mergeBase: "c".repeat(40),
+    },
+    matches: true,
+    revalidatedAt: "2026-07-23T00:01:00.000Z",
+  });
+});
+
+test("revalidation detects a changed merge base", async () => {
+  const snapshot = await collectGitHubPullRequest(
+    "https://github.com/example/repo/pull/1",
+    { gh: fakeGitHub(), locale: "en-US", theme: "system" },
+  );
+  const github = fakeGitHub();
+  const changedMergeBase = "d".repeat(40);
+  const gh = async (command, arguments_) => {
+    const path = arguments_.at(-1);
+    if (path.includes("/compare/")) {
+      return response({ merge_base_commit: { sha: changedMergeBase } });
+    }
+    return await github(command, arguments_);
+  };
+
+  const result = await revalidateGitHubSnapshot(snapshot, { gh });
+
+  assert.deepEqual(result.current, {
+    base: snapshot.snapshot.base,
+    head: snapshot.snapshot.head,
+    mergeBase: changedMergeBase,
+  });
+  assert.equal(result.matches, false);
+});
+
 test("revalidation skips the comparison after the base or head changes", async () => {
   const snapshot = await collectGitHubPullRequest(
     "https://github.com/example/repo/pull/1",

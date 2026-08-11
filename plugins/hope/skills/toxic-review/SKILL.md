@@ -3,202 +3,114 @@ name: toxic-review
 description: Use for a strict, skeptical, risk-focused review of a named work product without attacking people or inventing criticism.
 ---
 
-# Hope toxic review
+# Hope Toxic Review
 
 Be demanding about the work and respectful toward people.
 
-Use the active Claude or Codex session to select and coordinate reviewers.
+Use the active Codex or Claude session to review one named work product and its
+relevant evidence.
 
-Let the Hope runtime own the bounded role contract, finding adjudication,
-priority order, and resource metrics.
+## Bind the target
 
-## Locate the command
+State the target, current stage, material risks, evidence in scope, and evidence
+that is unavailable.
 
-Claude Code:
+Do not widen the review into unrelated work.
 
-```text
-node "${CLAUDE_PLUGIN_ROOT}/runtime/features/toxic-review/cli.mjs"
-```
+Changed evidence starts a new review.
 
-Codex:
+## Choose reviewer roles
 
-```text
-node <skill-dir>/../../runtime/features/toxic-review/cli.mjs
-```
+Choose the smallest useful role set.
 
-For Codex, replace `<skill-dir>` with the absolute directory that contains this
-file.
+Use one focused role when it covers the material question.
 
-Pass every argument as a separate shell argument.
+Use multiple roles only when they test distinct risks.
 
-Never pass the placeholder or build a command from the person's text.
+Give every role:
 
-## Get the brief
+- one target;
+- risks to test;
+- evidence it may use;
+- explicit exclusions; and
+- the output expected from that role.
 
-Choose the target kind, current stage, and risk from the person's request and
-available evidence.
+When the host supports subagents, use a fresh context for every role in a
+multi-role review.
 
-Run:
+Do not let one role see another role's input or output before adjudication.
 
-```text
-brief --target <kind> --stage <stage> --risk <low|medium|high>
-```
+Parallel and isolated sequential execution are both valid.
 
-The returned JSON is the complete review workflow.
+Repeated prompts in one shared context are not independent reviewers.
 
-Follow its `snapshot`, `roleSelection`, `findings`, `adjudication`,
-`roleRun`, `resultPreparation`, `causalCompleteness`, `stopping`, `finalVoice`,
-`writingStandard`, `schemaPath`, and `limits` fields.
+If fresh contexts are unavailable, reduce the run to one role.
 
-Use `writingStandard.text` for user-facing language and use
-`writingStandard.decisionExamples` only when a situation matches.
+## Review the work
 
-Follow `causalCompleteness.activation` before selecting that perspective, and
-use its `decisionExamples` only when a situation matches.
+Each finding needs:
 
-The examples guide decisions; they are not evaluation results.
+- a concrete issue;
+- practical impact;
+- evidence;
+- a proposed action;
+- priority;
+- confidence; and
+- an important limit or uncertainty.
 
-Do not replace those rules with another static review contract in this Skill.
+Use the target's priority vocabulary when it exists.
 
-## Evaluate causal-completeness behavior
+Otherwise use high, medium, or low.
 
-Use this workflow only when the person explicitly asks to evaluate a change to
-the causal-completeness method or to produce release evidence for it.
+Do not assign a release-blocking label unless the available evidence shows that
+the work should stop.
 
-Run `evaluation-plan` through the same runtime command.
+Do not manufacture criticism.
 
-For every listed run, call `evaluation-prepare` with its case, variant, and run
-number.
+No material issue is a valid role result.
 
-Give an independent reviewing host only the returned `brief` and `hostInput`.
+Do not turn uncertainty into an established defect.
 
-Do not read the oracle before that host returns its result.
+Use the causal-completeness method only when the named work product makes or
+relies on a material causal claim.
 
-Then call `evaluation-oracle` for the case and evaluate every rubric criterion.
+When it applies, read
+[references/causal-review.md](references/causal-review.md) and assign the method
+to one role.
 
-Call `evaluation-record` with the validated review and host-owned model,
-effort, and invocation identity.
+Do not activate it merely because the target is an incident.
 
-For a legacy run, complete the returned null assessment after evaluation.
+## Adjudicate
 
-For a rules-only or full run, keep the assessment copied from the structured
-causal result.
+Use the active host to combine role output.
 
-For every run, complete the rubric, evaluator, and evaluation-time fields, and
-keep the prepared input, brief, invocation, and output bindings.
+Judge each material finding by evidence, impact, current scope, feasibility, and
+duplication.
 
-Validate each record with `evaluation-validate` and the complete array with
-`evaluation-validate-set`.
+Do not count reviewer votes.
 
-Keep failed runs in the set and report run success separately from rubric
-totals.
+Accept, partly accept, reject, defer, or merge each finding.
 
-Do not describe deterministic contract tests as model behavior evidence.
+A deferred finding needs a concrete next step.
 
-## Prepare the role run
+Keep rejected and duplicate findings out of the actionable list.
 
-Use the active host session to bind the target and select the smallest useful
-role set.
+## Respond
 
-Write one private plan that follows `roleRun.planSchemaPath`.
+Use one strict, competent voice.
 
-Record why those roles are needed and the person's maximum role count.
+Lead with the highest-priority accepted issue.
 
-Use one role and `single` mode when one focused pass covers the material risk.
+Keep deferred risk visible.
 
-Use multiple roles only when they cover distinct material risks.
+If no material issue was found, say so and name the checked scope and limits.
 
-Run:
+Do not attack a person.
 
-```text
-run-prepare --input <private-plan.json>
-```
+Perform one review round for one evidence snapshot.
 
-Save the returned private run state with restricted permissions outside the
-repository.
+Start another only when changed evidence or an accepted high-impact finding
+creates a different material question.
 
-For every pending role, run:
-
-```text
-role-input --state <private-run.json> --role <role-id>
-```
-
-The returned object is the complete reviewer input.
-
-## Execute one role
-
-Give a reviewer exactly one prepared role input.
-
-In Claude Code, invoke the plugin's `hope:toxic-reviewer` agent.
-
-In Codex, spawn a fresh subagent with the prepared role input and tell it to
-follow `roleRun.reviewer`.
-
-For a one-role run on a host without subagents, the active session may execute
-the prepared input before adjudication.
-
-For a multi-role run, every reviewer must use a fresh context and must not see
-another role's input or output.
-
-Parallel and isolated-sequential scheduling are both valid when contexts stay
-independent.
-
-If the host cannot provide fresh contexts, reduce the plan to one role or stop.
-
-Do not describe repeated role prompts in one shared context as independent
-reviewers.
-
-The reviewer returns one private result that follows
-`roleRun.roleResultSchemaPath`.
-
-After a successful reviewer call, run:
-
-```text
-role-complete --state <private-run.json> --input <private-role-result.json> --invocation <host-invocation-id>
-```
-
-Replace the private run state with the returned state.
-
-If the reviewer fails or is cancelled, run `role-fail` with its role, host
-invocation identity, error code, message, retryability, and status.
-
-Never create an empty successful role result for a failed reviewer.
-
-Use `role-retry` only for a retryable failed or cancelled role, then execute the
-new pending attempt.
-
-## Adjudicate and finish
-
-Continue only when the run state is `ready-for-adjudication`.
-
-Use the active host session to adjudicate the completed role findings.
-
-Write only the adjudications and summary required by
-`roleRun.adjudicationSchemaPath`.
-
-Run:
-
-```text
-run-finalize --state <private-run.json> --input <private-adjudication.json>
-```
-
-Present only the returned validated `review` through the brief's `finalVoice`
-contract.
-
-The returned `execution` record is the trusted account of role selection,
-attempts, completion, and independence.
-
-Do not replace it with reviewer-authored claims.
-
-## Legacy and evaluation validation
-
-The direct validation command remains available for existing version 1 review
-records and causal evaluation runs:
-
-```text
-validate --input <private-review.json>
-```
-
-Follow `resultPreparation` and `stopping`, including removal of every private
-plan, run state, role result, adjudication, and review JSON after validation or
-cancellation.
+Do not create a custom model adapter, private role-run state, evaluation record,
+or persisted review JSON.

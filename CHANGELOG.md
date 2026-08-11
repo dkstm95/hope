@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.0.0 - 2026-08-10
+
+- Make Hope an installable Codex and Claude plugin only, and remove the
+  independent CLI, harness, package binary, and entry-path compatibility
+  layers.
+- Remove Hope Settings and the product-wide Model Evaluation framework,
+  including their commands, schemas, generated runtime, documentation, and
+  dedicated tests.
+- Make Align, Polish, Sweep, Toxic Review, and Write instruction-led Skills,
+  with conditional references for detailed methods instead of private state
+  machines and model-output records.
+- Make Align conversational, make Sweep read-only, and remove their artifact,
+  approval, composition, and legacy-record protocols.
+- Keep Diff's exact pull-request snapshot, bounded evidence, validation,
+  revalidation, safe publication, and self-contained offline HTML as Hope's
+  deterministic runtime boundary.
+- Move Diff invocation judgment into the Skill and split detailed analysis
+  guidance into a reference while retaining runtime-enforced evidence and
+  artifact safety.
+- Remove non-product parity and evaluation suites, keep deterministic Diff and
+  browser coverage, raise the minimum runtime from end-of-life Node 20 to Node
+  22, and replace six repeated cross-platform full runs with Linux Node 22 and
+  24 plus focused macOS and Windows package smoke tests while running release
+  preparation only once.
+- Replace the stateful bundled syntax engine with escaped, line-addressable code
+  evidence and fixed patch roles so offline HTML stays byte-deterministic.
+- Adopt all 86 conditional GUI widget guidelines, show small microworld choices
+  as radio groups, distinguish visited evidence links, and embed a local
+  favicon in Diff artifacts.
+
 ## 1.9.0 - 2026-08-08
 
 - Add grounded example values to Diff visuals when they make data or control

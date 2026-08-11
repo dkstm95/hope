@@ -215,7 +215,7 @@ function analysisResources(analysis, roots, {
   let evidenceReferences = 0;
   let evidenceBytes = 0;
   const evidenceLines = new Set();
-  let highlightedLines = 0;
+  let codeEvidenceLines = 0;
   const ranges = new Set();
   const visit = (value) => {
     if (Array.isArray(value)) {
@@ -239,7 +239,7 @@ function analysisResources(analysis, roots, {
           evidenceLines.add(coordinate);
         }
         if (codeSources.has(value.sourceKind)) {
-          highlightedLines += value.endLine - value.startLine + 1;
+          codeEvidenceLines += value.endLine - value.startLine + 1;
         }
       }
       return;
@@ -268,9 +268,9 @@ function analysisResources(analysis, roots, {
       `Analysis evidence exceeds ${LIMITS.evidenceBytes} bytes`,
     );
   }
-  if (enforceLimits && highlightedLines > LIMITS.highlightedLines) {
+  if (enforceLimits && codeEvidenceLines > LIMITS.codeEvidenceLines) {
     throw new RangeError(
-      `Analysis renders more than ${LIMITS.highlightedLines} highlighted code lines`,
+      `Analysis renders more than ${LIMITS.codeEvidenceLines} code evidence lines`,
     );
   }
 
@@ -281,7 +281,7 @@ function analysisResources(analysis, roots, {
     evidenceBytes,
     evidenceLines: evidenceLines.size,
     evidenceReferences,
-    highlightedLines,
+    codeEvidenceLines,
     uniqueEvidenceRanges: ranges.size,
   });
 }
@@ -913,7 +913,7 @@ function validateContextChecks(values, sourceMap, limitMap) {
 
 function validateCodeStep(value, index, sourceMap, fileMap) {
   const name = `codeSteps[${index}]`;
-  object(value, name, ["title", "text", "basis", "evidence", "fileIds"]);
+  object(value, name, ["title", "text", "basis", "evidence"]);
   const validatedClaim = claim({
     basis: value.basis,
     evidence: value.evidence,
@@ -926,21 +926,9 @@ function validateCodeStep(value, index, sourceMap, fileMap) {
   if (evidenceFiles.size === 0) {
     throw new Error(`${name} needs code evidence`);
   }
-  const fileIds = value.fileIds === undefined
-    ? [...evidenceFiles]
-    : array(value.fileIds, `${name}.fileIds`, 20);
-  if (fileIds.length === 0) throw new Error(`${name} needs at least one file`);
-  if (new Set(fileIds).size !== fileIds.length) {
-    throw new Error(`${name}.fileIds contains a duplicate`);
-  }
+  const fileIds = [...evidenceFiles];
   for (const fileId of fileIds) {
     if (!fileMap.has(fileId)) throw new Error(`${name} refers to an unknown file`);
-  }
-  if (value.fileIds !== undefined && (
-    [...evidenceFiles].some((id) => !fileIds.includes(id))
-    || fileIds.some((id) => !evidenceFiles.has(id))
-  )) {
-    throw new Error(`${name} evidence does not match its files`);
   }
   return Object.freeze({ ...validatedClaim, fileIds: Object.freeze([...fileIds]) });
 }
@@ -1187,8 +1175,8 @@ function analysisIssue(error, path) {
   else if (message.includes("invalid line range")) code = "EVIDENCE_RANGE_INVALID";
   else if (message.includes("evidence does not match its files")) {
     code = "CODE_STEP_FILE_MISMATCH";
-  } else if (message.includes("highlighted code lines")) {
-    code = "RESOURCE_HIGHLIGHTED_LINES";
+  } else if (message.includes("code evidence lines")) {
+    code = "RESOURCE_CODE_EVIDENCE_LINES";
   } else if (message.includes("evidence references")) {
     code = "RESOURCE_EVIDENCE_REFERENCES";
   } else if (message.includes("unique evidence ranges")) {

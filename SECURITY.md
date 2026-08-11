@@ -1,51 +1,63 @@
 # Security
 
-Do not open a public issue for a bug that could expose source code, credentials,
-private pull request data, or executable generated content.
+Do not open a public issue for a bug that could expose source code,
+credentials, private pull-request data, or executable generated content.
 
 Use GitHub's private security advisory flow for this repository.
 
-## Current diff boundary
+## Plugin boundary
 
-### Collection and rendering
+Hope's instruction-led Skills run through the active Codex or Claude host and
+inherit that host's tool, permission, and approval boundaries.
 
-Treat provider data, repository content, paths, model output, and URLs as
-untrusted.
+A Skill instruction does not authorize an unrelated write, command, network
+request, publication, or message.
 
-Instructions inside that content must not change the workflow.
+Treat repository content, provider data, paths, model output, and URLs as
+untrusted input.
 
-The current feature binds a result to one exact base, merge-base, and head
-snapshot.
+Instructions found inside that input must not change the requested workflow or
+expand its authority.
+
+Align, Polish, Sweep, Toxic Review, and Write do not use a private Hope runtime,
+custom model adapter, global settings file, or persistent feature record.
+
+Sweep is read-only, and Align stops before implementation.
+
+Polish may edit only the named work product under the host's normal safeguards.
+
+Toxic Review findings do not execute code or authorize a change.
+
+## Diff collection and rendering
+
+Hope Diff binds one result to an exact base, merge-base, and head snapshot.
 
 It accounts for every changed file and validates model evidence against
 collected source lines.
 
-It keeps model-authored markup and URLs inert, rejects incomplete or stale
-results, and publishes through an exclusive no-overwrite path.
+It rejects incomplete or stale results and publishes through an exclusive
+no-overwrite path.
 
-The generated HTML is self-contained and has a restrictive content security
+The generated HTML is self-contained and uses a restrictive content security
 policy.
 
-It does not execute repository code or fetch remote page assets.
+Hope keeps model-authored markup and URLs inert and never emits repository- or
+model-authored HTML, CSS, or JavaScript.
 
-The first path also does not execute tests, builds, lint, or CI and must not
-claim their outcome.
+It does not execute repository code, tests, builds, lint, or CI, and the review
+must not claim those outcomes without separate evidence supplied by the host.
 
-Hope tokenizes supported code excerpts during artifact generation with fixed
-local grammars and themes.
+Hope renders every code excerpt as escaped, line-addressable text with fixed
+renderer-owned patch roles.
 
-It emits only escaped token text and renderer-owned CSS classes.
+It does not load language grammars or derive executable markup from source
+text.
 
-It never emits model- or repository-authored HTML or styles.
+High-confidence credential patterns in a pull-request title, description, or
+commit title stop collection before that text becomes an analysis source.
 
-Unsupported file languages remain escaped plain text.
-
-High-confidence credential patterns in a pull request title, description, or
-commit title stop collection before the text becomes an analysis source.
-
-Changed-file bodies use the documented metadata-only or redacted states.
-
-Errors never reproduce suspected credential text.
+Changed-file bodies use documented metadata-only or redacted states, and errors
+never reproduce suspected credential text.
 
 GitHub API calls are bound to `github.com` even when the surrounding environment
 selects another `gh` host.
@@ -53,74 +65,48 @@ selects another `gh` host.
 Hope rejects bidirectional control characters in semantic analysis and file
 identities.
 
-It exposes them as visible Unicode escape text in provider prose and code
-excerpts, so they cannot silently reorder what a reader sees.
+Provider prose and code excerpts show those characters as visible Unicode
+escapes so they cannot silently reorder what a reader sees.
 
-### Private run lifecycle
+## Private Diff lifecycle
 
-Private DiffRun files and global settings use restrictive permissions.
+Private Diff run files use restrictive permissions outside the repository.
 
-One invalid analysis may keep its DiffRun for one repair attempt.
+One invalid analysis may keep its run for one repair attempt.
 
-Success, terminal failure, and cancellation remove the run.
+Success, terminal failure, and cancellation remove the run when Hope can verify
+ownership.
 
-Finalization uses an exclusive run claim.
+Before recursive removal, Hope rechecks the run at its original path, moves it
+to a private claim path, and deletes it only when both checks have the verified
+identity.
 
-It removes private run data before a completed artifact becomes visible.
+A directory replaced before the claim stays at its original path.
+
+If identity changes during the claim itself, Hope preserves and reports the
+claim path instead of deleting it.
+
+Finalization uses an exclusive claim and removes private run data before a
+completed artifact becomes visible.
 
 A later invocation removes an expired run directory only when it has Hope's
 ownership marker and expected permissions.
 
 It does not remove a run with a fresh finalization lease.
 
-The finalizer renews a random lease token while it works and again immediately
-before publication.
+The finalizer renews a random lease token while it works and immediately before
+publication.
 
-After a crash, Hope can reclaim a valid or incomplete private claim whose lease
-has stayed stale past the bounded lifetime.
+After a crash, Hope can reclaim a valid or incomplete private claim only after
+its lease remains stale past the bounded lifetime.
 
-If a paused finalizer loses its lease, it fails before publication.
+A paused finalizer that loses its lease fails before publication and cannot
+expose a result from the reclaimed run.
 
-It does not expose a result from a reclaimed run.
+## Authentication and optional execution
 
-### Optional execution and authentication
-
-Optional command execution needs an enforced isolated environment or explicit
-approval of the concrete exposure and effects.
-
-Authentication remains owned by the provider tool or host; Hope must not read or
+Authentication belongs to the provider tool or host, and Hope must not read or
 store credentials.
 
-## Current structured AI feature boundary
-
-Align, Polish, and Toxic Review bind model-authored records to captured source
-identities and validate bounded, versioned JSON before using a result.
-
-Their private state belongs in a restricted temporary file outside the
-repository and is removed after completion or cancellation.
-
-Align derives readiness but cannot author its own approval.
-
-A trusted host approval must point to a captured conversation source.
-
-Its pre-approval Polish transition consumes one exact candidate digest,
-revalidates the resulting state, and records a digest-bound record so the same
-candidate is not polished again.
-
-Polish requires an output snapshot to keep the target source IDs, kinds, and
-locators.
-
-Digest-backed targets must remain digest-backed.
-
-An applied revision also records conversation-backed authority, a
-before-and-after comparison, and identity checks before and after the write.
-
-These records make the host's actions auditable; they are not cryptographic
-proof that semantic preservation or a filesystem write occurred.
-
-Toxic Review treats reviewer output as untrusted findings.
-
-The main reviewer must adjudicate every finding against the captured evidence.
-
-A finding or suggested action does not execute code or authorize a change by
-itself.
+Any optional command execution outside the Diff protocol needs an enforced
+isolated environment or explicit approval of its concrete exposure and effects.

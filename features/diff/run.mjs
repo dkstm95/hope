@@ -100,6 +100,45 @@ function isInside(parent, candidate) {
   );
 }
 
+function sameDirectoryIdentity(value, expected) {
+  return value.isDirectory()
+    && !value.isSymbolicLink()
+    && value.dev === expected.dev
+    && value.ino === expected.ino
+    && value.mode === expected.mode;
+}
+
+function replacedRunError(preservedPath) {
+  const error = new Error(
+    `Hope preserved a replaced run directory at ${preservedPath}`,
+  );
+  error.code = "HOPE_DIFF_RUN_REPLACED";
+  error.preservedPath = preservedPath;
+  return error;
+}
+
+async function removeOwnedRunDirectory(path, expected, {
+  onRemoveReady = async () => {},
+  removeDirectory = rm,
+  renameDirectory = rename,
+} = {}) {
+  await onRemoveReady({ directory: expected, path });
+  const current = await lstat(path);
+  if (!sameDirectoryIdentity(current, expected)) {
+    throw replacedRunError(path);
+  }
+  const claimedPath = join(
+    dirname(path),
+    `.remove-${basename(path)}-${randomBytes(16).toString("hex")}`,
+  );
+  await renameDirectory(path, claimedPath);
+  const claimed = await lstat(claimedPath);
+  if (!sameDirectoryIdentity(claimed, expected)) {
+    throw replacedRunError(claimedPath);
+  }
+  await removeDirectory(claimedPath, { recursive: true });
+}
+
 async function privateRunRoot({ temporaryRoot = tmpdir() } = {}) {
   const trustedTemporaryRoot = await realpath(temporaryRoot);
   const userSuffix = typeof process.getuid === "function"
@@ -994,10 +1033,14 @@ function validContextOperations(values) {
 export async function cleanupExpiredRuns({
   clock = () => new Date(),
   onCleanupClaimed = async () => {},
+  onRemoveReady = async () => {},
+  removeDirectory = rm,
+  renameDirectory = rename,
   temporaryRoot,
 } = {}) {
   const root = await privateRunRoot({ temporaryRoot });
-  const removed = [];
+  const removedPaths = [];
+  const preservedPaths = [];
   const now = clock().getTime();
   for (const entry of await readdir(root, { withFileTypes: true })) {
     if (!entry.isDirectory() || !entry.name.startsWith("run-")) continue;
@@ -1033,16 +1076,26 @@ export async function cleanupExpiredRuns({
         // authoritative generation immediately before the destructive step so
         // a newer claimant fences the resumed cleanup process.
         await cleanupClaim.renew();
-        await rm(path, { recursive: true });
-        removed.push(path);
+        await removeOwnedRunDirectory(path, directory, {
+          onRemoveReady,
+          removeDirectory,
+          renameDirectory,
+        });
+        removedPaths.push(path);
       } finally {
         await cleanupClaim.release().catch(() => {});
       }
-    } catch {
+    } catch (error) {
+      if (error?.code === "HOPE_DIFF_RUN_REPLACED") {
+        preservedPaths.push(error.preservedPath);
+      }
       // Unknown state is left in place.
     }
   }
-  return removed;
+  return Object.freeze({
+    preservedPaths: Object.freeze(preservedPaths),
+    removedPaths: Object.freeze(removedPaths),
+  });
 }
 
 export async function createDiffRun(snapshot, {
@@ -1051,7 +1104,7 @@ export async function createDiffRun(snapshot, {
   temporaryRoot,
   writeJson = writeNewJson,
 } = {}) {
-  await cleanupExpiredRuns({ clock, temporaryRoot });
+  const expiredCleanup = await cleanupExpiredRuns({ clock, temporaryRoot });
   const root = await privateRunRoot({ temporaryRoot });
   const runId = randomBytes(16).toString("hex");
   const path = join(root, `run-${runId}`);
@@ -1059,6 +1112,14 @@ export async function createDiffRun(snapshot, {
   const ledgerState = createLedgerState(runId);
   const resources = runResources(snapshot, pages);
   await mkdir(path, { mode: 0o700 });
+  const directory = await lstat(path);
+  if (
+    !directory.isDirectory()
+    || directory.isSymbolicLink()
+    || (process.platform !== "win32" && (directory.mode & 0o077) !== 0)
+  ) {
+    throw new Error("Hope could not verify the new private run directory");
+  }
   const manifest = {
     analysisAttempts: 0,
     analysisFile: "analysis.json",
@@ -1088,7 +1149,18 @@ export async function createDiffRun(snapshot, {
     await writeJson(join(path, manifest.ledgerStateFile), ledgerState);
     await writeInspectionPageFiles(path, snapshot.digest, pages, writeJson);
   } catch (error) {
-    await rm(path, { recursive: true, force: true }).catch(() => {});
+    try {
+      await removeOwnedRunDirectory(path, directory);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== "ENOENT") {
+        error.cleanupError = cleanupError;
+        if (cleanupError?.code === "HOPE_DIFF_RUN_REPLACED") {
+          error.preservedPath = cleanupError.preservedPath;
+        } else {
+          error.cleanupPending = true;
+        }
+      }
+    }
     throw error;
   }
   return Object.freeze({
@@ -1105,6 +1177,7 @@ export async function createDiffRun(snapshot, {
     generation: manifest.generation,
     pageCount: pages.length,
     path,
+    preservedRunPaths: expiredCleanup.preservedPaths,
     resources,
     runId,
     snapshotDigest: snapshot.digest,
@@ -1189,7 +1262,7 @@ export async function loadDiffRunIdentity(value, {
   ) {
     throw new Error("Hope diff run ownership does not match");
   }
-  return Object.freeze({ manifest, manifestPath, path });
+  return Object.freeze({ directory, manifest, manifestPath, path });
 }
 
 async function loadDiffTransition(runPath, page, {
@@ -1469,6 +1542,7 @@ export async function loadDiffRun(value, {
         ? ledgerState.currentPage + 1
         : Math.min(manifest.deliveredPage + 1, manifest.pageCount),
     ),
+    directory,
     ledger,
     ledgerState,
     ledgerStatePath: join(path, manifest.ledgerStateFile),
@@ -1780,18 +1854,6 @@ export async function inspectDiffRun(runPath, page, options = {}) {
       ...run.page,
       checkpointPath: run.checkpointPath,
     });
-  });
-}
-
-export async function inspectLoadedDiffRun(run, page) {
-  return await inspectDiffRun(run.path, page, {
-    temporaryRoot: dirname(dirname(run.path)),
-  });
-}
-
-export async function checkpointLoadedDiffRun(run, page, input) {
-  return await checkpointDiffRun(run.path, page, input, {
-    temporaryRoot: dirname(dirname(run.path)),
   });
 }
 
@@ -2264,5 +2326,12 @@ export async function recordAnalysisFailure(run, options = {}) {
 
 export async function removeDiffRun(runPath, options = {}) {
   const run = await loadDiffRun(runPath, options);
-  await rm(run.path, { recursive: true });
+  await removeOwnedRunDirectory(run.path, run.directory, options);
+}
+
+export async function cancelDiffRun(runPath, options = {}) {
+  await withDiffRunMutation(runPath, options, async (claim) => {
+    await claim.renew();
+    await removeDiffRun(runPath, options);
+  });
 }

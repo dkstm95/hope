@@ -1,12 +1,8 @@
 import { lstat, open, unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { resolveSettings } from "../../settings/index.mjs";
-import {
-  createWritingStandard,
-  loadWritingStandard,
-} from "../write/index.mjs";
-import { readBoundedJson } from "../work-snapshot/index.mjs";
+import { resolveDisplayOptions } from "./locales/index.mjs";
+import { readBoundedJson } from "./structured-input.mjs";
 import {
   ANALYSIS_VERSION,
   LIMITS,
@@ -26,34 +22,8 @@ import {
 } from "./github.mjs";
 import { digestJson } from "./hash.mjs";
 import {
-  createDiffInvocationContract,
-  createDiffPendingConfirmation,
-  transitionDiffPendingConfirmation,
-  transitionDiffPendingConfirmationInput,
-} from "./invocation.mjs";
-import {
-  createDiffInvocationExampleRemovalRecord,
-  createDiffInvocationEvaluationRecord,
-  createDiffInvocationProductionVerificationRecord,
-  diffInvocationEvaluationLimits,
-  validateDiffInvocationExampleRemovalEvidence,
-  validateDiffInvocationExampleRemovalRecord,
-  validateDiffInvocationExampleRemovalRecordSet,
-  validateDiffInvocationEvaluationOutput,
-  validateDiffInvocationEvaluationRecord,
-  validateDiffInvocationEvaluationRecordSet,
-  validateDiffInvocationProductionVerificationRecord,
-  validateDiffInvocationProductionVerificationRecordSet,
-} from "./invocation-evaluation.mjs";
-import {
-  createDiffTeachingEvaluationFailureRecord,
-  createDiffTeachingEvaluationRecord,
-  diffTeachingEvaluationLimits,
-  validateDiffTeachingEvaluationRecord,
-  validateDiffTeachingEvaluationRecordSet,
-} from "./teaching-aid-evaluation.mjs";
-import {
   appendDiffRunPlan,
+  cancelDiffRun,
   checkpointDiffRun,
   checkpointDiffRunWindow,
   claimDiffRunFinalization,
@@ -70,81 +40,9 @@ import {
   discoverGitHubPullRequest,
   resolveGitHubPullRequestNumber,
 } from "./target.mjs";
-import {
-  createMicroworldSkeleton,
-  createTeachingAidContract,
-} from "./teaching-aids.mjs";
+import { createMicroworldSkeleton } from "./teaching-aids.mjs";
 import { validateAnalysis } from "./validate.mjs";
 
-export {
-  createDiffInvocationContract,
-  createDiffPendingConfirmation,
-  transitionDiffPendingConfirmation,
-  transitionDiffPendingConfirmationInput,
-} from "./invocation.mjs";
-
-export {
-  createDiffInvocationExampleRemovalPlan,
-  createDiffInvocationExampleRemovalRecord,
-  createDiffInvocationEvaluationPlan,
-  createDiffInvocationEvaluationRecord,
-  createDiffInvocationProductionVerificationPlan,
-  createDiffInvocationProductionVerificationRecord,
-  DIFF_INVOCATION_EVALUATED_CONTRACT_VERSION,
-  diffInvocationExampleRemovalProtocol,
-  diffInvocationEvaluationCases,
-  diffInvocationEvaluationLimits,
-  diffInvocationEvaluationOutputContract,
-  diffInvocationEvaluationProtocol,
-  diffInvocationProductionVerificationProtocol,
-  digestDiffInvocationEvaluationValue,
-  getDiffInvocationEvaluationOracle,
-  prepareDiffInvocationExampleRemovalRun,
-  prepareDiffInvocationEvaluationRun,
-  prepareDiffInvocationProductionVerificationRun,
-  validateDiffInvocationExampleRemovalEvidence,
-  validateDiffInvocationExampleRemovalRecord,
-  validateDiffInvocationExampleRemovalRecordSet,
-  validateDiffInvocationEvaluationOutput,
-  validateDiffInvocationEvaluationRecord,
-  validateDiffInvocationEvaluationRecordSet,
-  validateDiffInvocationProductionVerificationRecord,
-  validateDiffInvocationProductionVerificationRecordSet,
-} from "./invocation-evaluation.mjs";
-
-export {
-  createDiffTeachingEvaluationFailureRecord,
-  createDiffTeachingEvaluationPlan,
-  createDiffTeachingEvaluationRecord,
-  DIFF_TEACHING_EVALUATION_MAX_ATTEMPTS,
-  DIFF_TEACHING_EVALUATION_VERSION,
-  diffTeachingEvaluationCases,
-  diffTeachingEvaluationLimits,
-  diffTeachingEvaluationOutputContract,
-  diffTeachingEvaluationProtocol,
-  digestDiffTeachingEvaluationValue,
-  getDiffTeachingEvaluationOracle,
-  prepareDiffTeachingEvaluationRun,
-  validateDiffTeachingEvaluationOutput,
-  validateDiffTeachingEvaluationRecord,
-  validateDiffTeachingEvaluationRecordSet,
-} from "./teaching-aid-evaluation.mjs";
-
-export {
-  createDiffInvocationExampleRemovalRecord as createDiffInvocationExampleRemovalReceipt,
-  createDiffInvocationEvaluationRecord as createDiffInvocationEvaluationReceipt,
-  createDiffInvocationProductionVerificationRecord as createDiffInvocationProductionVerificationReceipt,
-  validateDiffInvocationExampleRemovalRecord as validateDiffInvocationExampleRemovalReceipt,
-  validateDiffInvocationExampleRemovalRecordSet as validateDiffInvocationExampleRemovalReceiptSet,
-  validateDiffInvocationEvaluationRecord as validateDiffInvocationEvaluationReceipt,
-  validateDiffInvocationEvaluationRecordSet as validateDiffInvocationEvaluationReceiptSet,
-  validateDiffInvocationProductionVerificationRecord as validateDiffInvocationProductionVerificationReceipt,
-  validateDiffInvocationProductionVerificationRecordSet as validateDiffInvocationProductionVerificationReceiptSet,
-} from "./invocation-evaluation.mjs";
-
-export const DIFF_MODEL_ADAPTER_CODE = "HOPE_DIFF_MODEL_ADAPTER_REQUIRED";
-export const DIFF_MODEL_ADAPTER_MESSAGE =
-  "Automatic Hope diff analysis currently runs through the Claude or Codex skill.";
 export const DIFF_REVALIDATION_RETRYABLE_CODE =
   "HOPE_DIFF_REVALIDATION_RETRYABLE";
 export const DIFF_REVALIDATION_RETRYABLE_MESSAGE =
@@ -168,220 +66,6 @@ export async function resolveDiffTarget({
   return await (dependencies.discoverTarget ?? discoverGitHubPullRequest)(
     dependencies.targetOptions,
   );
-}
-
-// Deprecated version 1 compatibility aliases.
-export {
-  createDiffInvocationEvaluationRecordFromFile as createDiffInvocationEvaluationReceiptFromFile,
-  createDiffInvocationExampleRemovalRecordFromFile as createDiffInvocationExampleRemovalReceiptFromFile,
-  createDiffInvocationProductionVerificationRecordFromFile as createDiffInvocationProductionVerificationReceiptFromFile,
-  validateDiffInvocationExampleRemovalRecordFile as validateDiffInvocationExampleRemovalReceiptFile,
-  validateDiffInvocationExampleRemovalRecordSetFile as validateDiffInvocationExampleRemovalReceiptSetFile,
-  validateDiffInvocationProductionVerificationRecordFile as validateDiffInvocationProductionVerificationReceiptFile,
-  validateDiffInvocationProductionVerificationRecordSetFile as validateDiffInvocationProductionVerificationReceiptSetFile,
-  validateDiffInvocationEvaluationRecordFile as validateDiffInvocationEvaluationReceiptFile,
-  validateDiffInvocationEvaluationRecordSetFile as validateDiffInvocationEvaluationReceiptSetFile,
-};
-
-async function readDiffInvocationInput(inputPath, dependencies = {}) {
-  return await (dependencies.readInvocationInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation input",
-    maximumBytes: LIMITS.modelBytes,
-  });
-}
-
-export async function createDiffConfirmationFromFile(
-  inputPath,
-  dependencies = {},
-) {
-  const { value } = await readDiffInvocationInput(inputPath, dependencies);
-  return createDiffPendingConfirmation(value);
-}
-
-export async function transitionDiffConfirmationFromFile(
-  inputPath,
-  dependencies = {},
-) {
-  const { value } = await readDiffInvocationInput(inputPath, dependencies);
-  return transitionDiffPendingConfirmationInput(value);
-}
-
-export async function createDiffInvocationEvaluationRecordFromFile(
-  options,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(
-    options.inputPath,
-    {
-      label: "Hope diff invocation evaluation output",
-      maximumBytes: diffInvocationEvaluationLimits.outputBytes,
-    },
-  );
-  const output = (dependencies.validateOutput
-    ?? validateDiffInvocationEvaluationOutput)(input.value);
-  return createDiffInvocationEvaluationRecord({ ...options, output });
-}
-
-export async function createDiffInvocationExampleRemovalRecordFromFile(
-  options,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(
-    options.inputPath,
-    {
-      label: "Hope diff invocation example-removal output",
-      maximumBytes: diffInvocationEvaluationLimits.outputBytes,
-    },
-  );
-  const output = (dependencies.validateOutput
-    ?? validateDiffInvocationEvaluationOutput)(input.value);
-  return createDiffInvocationExampleRemovalRecord({ ...options, output });
-}
-
-export async function createDiffInvocationProductionVerificationRecordFromFile(
-  options,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(
-    options.inputPath,
-    {
-      label: "Hope diff invocation production-verification output",
-      maximumBytes: diffInvocationEvaluationLimits.outputBytes,
-    },
-  );
-  const output = (dependencies.validateOutput
-    ?? validateDiffInvocationEvaluationOutput)(input.value);
-  return createDiffInvocationProductionVerificationRecord({
-    ...options,
-    output,
-  });
-}
-
-export async function validateDiffInvocationExampleRemovalRecordFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation example-removal record",
-    maximumBytes: diffInvocationEvaluationLimits.recordBytes,
-  });
-  return validateDiffInvocationExampleRemovalRecord(input.value);
-}
-
-export async function validateDiffInvocationExampleRemovalRecordSetFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation example-removal record set",
-    maximumBytes: diffInvocationEvaluationLimits.recordSetBytes,
-  });
-  return validateDiffInvocationExampleRemovalRecordSet(input.value);
-}
-
-export async function validateDiffInvocationExampleRemovalEvidenceFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation example-removal evidence",
-    maximumBytes: diffInvocationEvaluationLimits.recordSetBytes * 2,
-  });
-  return validateDiffInvocationExampleRemovalEvidence(input.value);
-}
-
-export async function validateDiffInvocationProductionVerificationRecordFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation production-verification record",
-    maximumBytes: diffInvocationEvaluationLimits.recordBytes,
-  });
-  return validateDiffInvocationProductionVerificationRecord(input.value);
-}
-
-export async function validateDiffInvocationProductionVerificationRecordSetFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation production-verification record set",
-    maximumBytes: diffInvocationEvaluationLimits.recordSetBytes,
-  });
-  return validateDiffInvocationProductionVerificationRecordSet(input.value);
-}
-
-export async function validateDiffInvocationEvaluationRecordFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation evaluation record",
-    maximumBytes: diffInvocationEvaluationLimits.recordBytes,
-  });
-  return validateDiffInvocationEvaluationRecord(input.value);
-}
-
-export async function validateDiffInvocationEvaluationRecordSetFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff invocation evaluation record set",
-    maximumBytes: diffInvocationEvaluationLimits.recordSetBytes,
-  });
-  return validateDiffInvocationEvaluationRecordSet(input.value);
-}
-
-export async function createDiffTeachingEvaluationRecordFromFile(
-  options,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(
-    options.inputPath,
-    {
-      label: "Hope diff teaching evaluation output",
-      maximumBytes: diffTeachingEvaluationLimits.outputBytes,
-    },
-  );
-  return await (dependencies.createTeachingEvaluationRecord
-    ?? createDiffTeachingEvaluationRecord)(
-    { ...options, output: input.value },
-    dependencies,
-  );
-}
-
-export async function createDiffTeachingEvaluationFailureRecordFromOptions(
-  options,
-  dependencies = {},
-) {
-  return await (dependencies.createTeachingEvaluationFailureRecord
-    ?? createDiffTeachingEvaluationFailureRecord)(options, dependencies);
-}
-
-export async function validateDiffTeachingEvaluationRecordFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff teaching evaluation record",
-    maximumBytes: diffTeachingEvaluationLimits.recordBytes,
-  });
-  return await (dependencies.validateTeachingEvaluationRecord
-    ?? validateDiffTeachingEvaluationRecord)(input.value, dependencies);
-}
-
-export async function validateDiffTeachingEvaluationRecordSetFile(
-  inputPath,
-  dependencies = {},
-) {
-  const input = await (dependencies.readInput ?? readBoundedJson)(inputPath, {
-    label: "Hope diff teaching evaluation record set",
-    maximumBytes: diffTeachingEvaluationLimits.recordSetBytes,
-  });
-  return await (dependencies.validateTeachingEvaluationRecordSet
-    ?? validateDiffTeachingEvaluationRecordSet)(input.value, dependencies);
 }
 
 async function readPrivateJson(path, {
@@ -529,6 +213,26 @@ async function renderValidatedAnalysis(validated, dependencies = {}) {
 
 function withCleanupFailure(error, cleanupError) {
   const original = error instanceof Error ? error : new Error(String(error));
+  if (cleanupError?.code === "HOPE_DIFF_RUN_REPLACED") {
+    const combined = new Error(
+      `${original.message} Hope did not remove a replaced private run directory. `
+        + `It remains at ${cleanupError.preservedPath}. Inspect it before removing it.`,
+      { cause: original },
+    );
+    combined.name = original.name;
+    if (original.code !== undefined) combined.code = original.code;
+    if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
+    if (original.command !== undefined) combined.command = original.command;
+    if (original.runPath !== undefined) combined.runPath = original.runPath;
+    combined.preservedPath = cleanupError.preservedPath;
+    Object.defineProperty(combined, "cleanupError", {
+      configurable: false,
+      enumerable: false,
+      value: cleanupError,
+      writable: false,
+    });
+    return combined;
+  }
   const combined = new Error(
     `${original.message} Hope could not remove its private review data after this failure. `
       + "It remains in restricted temporary storage and a later Hope run will retry expiry cleanup.",
@@ -603,25 +307,21 @@ export async function prepareDiff({
   const preparedOutputPath = await (
     dependencies.preflightOutput ?? preflightReviewOutput
   )(outputPath);
-  const [settings, writingStandard] = await Promise.all([
-    (dependencies.resolveSettings ?? resolveSettings)({
-      hostLocale,
-      locale,
-      theme,
-      ...(dependencies.settingsOptions ?? {}),
-    }),
-    (dependencies.createWritingStandard ?? createWritingStandard)({
-      loadStandard: dependencies.loadWritingStandard ?? loadWritingStandard,
-    }),
-  ]);
+  const display = await (
+    dependencies.resolveDisplayOptions ?? resolveDisplayOptions
+  )({
+    hostLocale,
+    locale,
+    theme,
+  });
   const target = await resolveDiffTarget({ pullRequestNumber, url }, dependencies);
   const snapshot = await (dependencies.collect ?? collectGitHubPullRequest)(target, {
     clock: dependencies.clock,
     gh: dependencies.gh,
-    locale: settings.locale,
-    localeSource: settings.localeSource,
-    theme: settings.theme,
-    themeSource: settings.themeSource,
+    locale: display.locale,
+    localeSource: display.localeSource,
+    theme: display.theme,
+    themeSource: display.themeSource,
   });
   const run = await (dependencies.createRun ?? createDiffRun)(snapshot, {
     clock: dependencies.clock,
@@ -634,12 +334,10 @@ export async function prepareDiff({
       new URL("./analysis-v2.schema.json", import.meta.url),
     ),
     analysisSchemaVersion: ANALYSIS_VERSION,
-    locale: settings.locale,
+    locale: display.locale,
     pullRequest: snapshot.pullRequest,
     selection: target.selection ?? "explicit",
-    theme: settings.theme,
-    teachingAids: createTeachingAidContract(),
-    writingStandard,
+    theme: display.theme,
   });
 }
 
@@ -1044,13 +742,8 @@ export async function finishDiff(runPath, dependencies = {}) {
 }
 
 export async function cancelDiff(runPath, dependencies = {}) {
-  await (dependencies.removeRun ?? removeDiffRun)(runPath, {
+  await (dependencies.cancelRun ?? cancelDiffRun)(runPath, {
+    onRemoveReady: dependencies.onRemoveReady,
     temporaryRoot: dependencies.temporaryRoot,
   });
-}
-
-export function runDiff() {
-  const error = new Error(DIFF_MODEL_ADAPTER_MESSAGE);
-  error.code = DIFF_MODEL_ADAPTER_CODE;
-  throw error;
 }

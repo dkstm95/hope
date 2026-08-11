@@ -19,9 +19,9 @@ Source:
   - Medium: `c6b9a2c10bfdb55975948ce191f9cf638955b5cfdc99149969add5b579262fc1`
   - Bold: `ff7c354dd1a324e4cecc1223c4f71e74fa81be7027e0c7f6324c475909cacefc`
 - output SHA-256:
-  - Light: `14dd7df3bf3259d9dde7f83012fabaf056589108217c55d500bbfcdd103b2b63`
-  - Medium: `e359e7ab0b4a15a5b738e7e3c4e8dc53737b670aaacf20845aa6a8b7f6f36798`
-  - Bold: `58707eccf7e493e0651ec25e1b3f104722e892256f87158c197204dd6876b552`
+  - Light: `8f46f4eb180510bd51df24201712da9919b88b706c7dfeebe3d311ed3c965766`
+  - Medium: `5362eae258ca7c2ed5388cdc36462838bf6ea4cc0e1b84385e431edd607f35ed`
+  - Bold: `a83f8f0286045306fedc149c0a8112d113a2f8cfc557dcb1ebee4a902d99df8a`
 
 ## Hope Code
 
@@ -38,7 +38,7 @@ Source:
 - source SHA-256:
   `8b1b23e5de4dff652fb0b938528150d2f531edfda281d3944618b655711aba84`
 - output SHA-256:
-  `4d3fa8ed66fedcb1787f200bd75637b816b09057fc06da0aa783e3b305a726d8`
+  `04a13754c4b99ba06a5d98648075751ef273f532881b2c67af46b22230913307`
 
 ## Build
 
@@ -65,9 +65,25 @@ fonttools ttLib.woff2 compress D2Coding-Ver1.3.2-20180524.ttf
   -o HopeCode.woff2
 ```
 
+After all four WOFF2 files exist, replace their primary family, full, unique,
+PostScript, and typographic names:
+
+```text
+python3 design/fonts/rename-fonts.py
+```
+
+The script requires fontTools `4.62.1`.
+
+It leaves the original copyright, authorship, trademark, source, and license
+records intact.
+
 The WOFF2 files are modified versions.
 
-Hope presents them as `Hope Sans` and `Hope Code`, not under the reserved
-Gmarket Sans or D2Coding names.
+Their internal primary names and the CSS family names are `Hope Sans` and
+`Hope Code`, not the reserved Gmarket Sans or D2Coding names.
+
+This follows the OFL's
+[webfont and reserved-name guidance](https://openfontlicense.org/ofl-faq/),
+especially sections 2.2 and 3.1.
 
 See `OFL-Gmarket.txt` and `OFL-D2Coding.txt`.

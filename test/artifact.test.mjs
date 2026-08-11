@@ -9,7 +9,7 @@ import {
 import { dirname, join } from "node:path";
 import test, { after } from "node:test";
 
-import { publishArtifact } from "../features/artifact/index.mjs";
+import { publishArtifact } from "../features/diff/artifact.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
 } from "../test-support/temporary-directory.mjs";

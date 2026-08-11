@@ -245,14 +245,6 @@ function validateBasis(basis, evidence, snapshot, name, page) {
   }
 }
 
-export function createDiffLedger(runId) {
-  return Object.freeze({
-    checkpoints: Object.freeze([]),
-    runId,
-    schemaVersion: CHECKPOINT_VERSION,
-  });
-}
-
 export function validateDiffLedger(value, snapshot, runId) {
   object(value, "ledger", ["schemaVersion", "runId", "checkpoints"]);
   if (value.schemaVersion !== CHECKPOINT_VERSION) {
@@ -554,13 +546,6 @@ export function createDiffCheckpoint(input, {
     );
   }
   return checkpoint;
-}
-
-export function appendDiffCheckpoint(ledger, checkpoint) {
-  return Object.freeze({
-    ...ledger,
-    checkpoints: Object.freeze([...ledger.checkpoints, checkpoint]),
-  });
 }
 
 export function checkpointCount(ledger, generation) {

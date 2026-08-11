@@ -281,7 +281,6 @@ export function makeAnalysis(snapshot, runId) {
       {
         basis: "code",
         evidence: [reference("source-3", 2, 4)],
-        fileIds: ["file-1"],
         text: "The retry path stores the final error and throws it.",
         title: "Preserve the final error",
       },

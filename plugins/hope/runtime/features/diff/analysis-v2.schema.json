@@ -36,7 +36,7 @@
           "type": "array",
           "minItems": 1,
           "maxItems": 12,
-          "description": "The main behavior-first explanation. Cover the purpose, previous and new behavior, affected people or systems, and important result before implementation details.",
+          "description": "Evidence-grounded details of the core change.",
           "items": { "$ref": "#/$defs/claim" }
         }
       }
@@ -86,7 +86,7 @@
       "type": "array",
       "minItems": 1,
       "maxItems": 8,
-      "description": "Optional evidence-grounded primer for readers who need deeper background. Omit it when the ordinary Background is sufficient or the evidence is not enough.",
+      "description": "Optional evidence-grounded background claims.",
       "items": { "$ref": "#/$defs/primerClaim" }
     },
     "behavior": {
@@ -96,13 +96,13 @@
       "properties": {
         "summary": {
           "$ref": "#/$defs/claim",
-          "description": "Explain the behavior, condition, or state transition that the reader should be able to predict."
+          "description": "A summary of the represented behavior."
         },
         "steps": {
           "type": "array",
           "minItems": 2,
           "maxItems": 12,
-          "description": "Behavior or state steps, not a list of files, functions, types, or inheritance relationships.",
+          "description": "Ordered behavior or state claims.",
           "items": { "$ref": "#/$defs/claim" }
         },
         "visual": { "$ref": "#/$defs/visual" },
@@ -124,14 +124,6 @@
             "type": "array",
             "maxItems": 12,
             "items": { "$ref": "#/$defs/evidence" }
-          },
-          "fileIds": {
-            "description": "Optional compatibility field. Hope derives the exact file IDs from code evidence when omitted.",
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 20,
-            "uniqueItems": true,
-            "items": { "type": "string", "pattern": "^file-[0-9]+$" }
           }
         }
       }
@@ -163,7 +155,7 @@
           "nextStep": { "$ref": "#/$defs/text" },
           "doneWhen": {
             "$ref": "#/$defs/text",
-            "description": "The exact observation or decision that closes this item's uncertainty. Do not claim a narrower test proves a broader runtime result."
+            "description": "The observation or decision that closes this item."
           },
           "evidence": {
             "type": "array",
@@ -207,7 +199,7 @@
           "material": { "type": "boolean" },
           "impact": {
             "$ref": "#/$defs/text",
-            "description": "Name the concrete explanation or judgment limited by this omission. Do not use repository-wide or ecosystem-wide uncertainty."
+            "description": "The concrete effect of this limit on the review."
           }
         }
       }
@@ -246,7 +238,7 @@
   "$defs": {
     "text": {
       "type": "string",
-      "description": "User-facing prose rendered as plain text. Follow writingStandard.text returned by prepare. Markdown and HTML are not parsed. Analysis validation rejects backticks; keep exact syntax that needs them in evidence excerpts.",
+      "description": "User-facing plain text rendered without Markdown or HTML interpretation.",
       "minLength": 1,
       "maxLength": 32768
     },

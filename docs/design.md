@@ -1,15 +1,14 @@
 # Hope design
 
-This is the shared visual definition for files made by Hope.
+This is the visual definition for the Hope Diff HTML artifact.
 
 A feature document owns its information and reading order.
 
 This file owns the visual language used to present that information.
 
-The first implementation is the Hope diff review.
+Diff is the only Hope feature that currently creates a visual artifact.
 
-Do not build a general component framework before a second Hope feature needs
-the same component.
+Do not build a general component framework for a possible future artifact.
 
 ## Direction
 
@@ -33,10 +32,229 @@ They are comparison material, not pixel-perfect specifications.
 
 They do not ship in the runtime plugin.
 
-`design/tokens.mjs` is the code source of truth for shared colors, type sizes,
+`design/tokens.mjs` is the code source of truth for colors, type sizes,
 spacing, and layout limits.
 
 A renderer must read those tokens instead of copying their values.
+
+## GUI widgets
+
+Use the relevant group below whenever Hope introduces or changes that widget or
+interaction.
+
+A guideline does not create a reason to add a widget that Hope does not need.
+
+When a matching widget exists, follow its guidelines unless a documented
+product need, accessibility requirement, or platform convention calls for a
+different choice.
+
+The list preserves all 86 guidelines from Jakob Nielsen's [10 GUI Design
+Elements Build Every User Interface](https://www.uxtigers.com/post/gui-widgets)
+in Hope's language.
+
+### Buttons
+
+1. **GUI-01 — Pressable appearance.** Give a button a contained shape,
+   sufficient contrast, and a visible pressed state.
+2. **GUI-02 — Outcome label.** Start the label with a verb that names the
+   result. Avoid generic labels such as **OK**; if 2–4 words cannot explain the
+   result, reconsider the interaction.
+3. **GUI-03 — One primary action.** Give each screen exactly one visually
+   dominant primary action.
+4. **GUI-04 — Reachable target.** Keep frequent actions large and nearby, and
+   make a touch target at least 1 by 1 centimeter.
+5. **GUI-05 — Prompt acknowledgment.** Show that a press was received within
+   0.1 seconds.
+6. **GUI-06 — Disabled guidance.** Keep a temporarily unavailable button
+   visible but muted, and explain why it is unavailable and how to enable it.
+7. **GUI-07 — Action semantics.** Use buttons for actions and links for
+   navigation.
+8. **GUI-08 — Task-end placement.** Put the button after the fields or content
+   it completes, at the natural end of the task.
+
+### Input fields and forms
+
+1. **GUI-09 — Necessary fields.** Remove every field that is not required for
+   the task.
+2. **GUI-10 — Persistent labels.** Keep a visible label outside every field.
+   Treat placeholder text as a hint, never as the label.
+3. **GUI-11 — Flexible formats.** Accept reasonable input variations and
+   normalize them in software.
+4. **GUI-12 — Local recovery.** Put an error beside the field that caused it
+   and preserve everything the person entered.
+5. **GUI-13 — Task-specific controls.** Match the control to the data and task,
+   such as a date picker for a date or a trash control for removal.
+6. **GUI-14 — Single-column order.** Lay out a form in one column and group
+   related fields so the reading order stays clear.
+7. **GUI-15 — Submit outcome.** Name the submit button by the result instead of
+   using a generic **Submit** label.
+8. **GUI-16 — Validation timing.** Do not reject a value while the person is
+   still typing; validate after they leave the field.
+
+### Menus
+
+1. **GUI-17 — User vocabulary.** Name categories in the person's language and
+   verify the structure with card sorting and tree testing.
+2. **GUI-18 — Click to open.** Prefer click over hover. If hover is necessary,
+   add a short delay and tolerate diagonal movement toward a submenu.
+3. **GUI-19 — Shallow hierarchy.** Limit cascading menus to two levels and
+   restructure categories instead of adding more depth.
+4. **GUI-20 — Visible desktop navigation.** Show top-level navigation on a
+   desktop and reserve a compact menu for screens that lack the space.
+5. **GUI-21 — Current location.** Mark the person's current location in the
+   navigation.
+6. **GUI-22 — Meaningful order.** Order items by importance and task frequency;
+   alphabetize only when people know the exact name they seek.
+7. **GUI-23 — Promoted commands.** Keep the two or three most frequent commands
+   visible and reserve the menu for less frequent choices.
+
+### Links
+
+1. **GUI-24 — Visible link styling.** Mark an inline link with both color and
+   an underline.
+2. **GUI-25 — Exclusive link styling.** Reserve link styling for real links.
+3. **GUI-26 — Front-loaded meaning.** Put the most informative words first,
+   especially within roughly the first 11 characters.
+4. **GUI-27 — Predictable destination.** Write link text that predicts its
+   destination and remains meaningful outside the surrounding sentence.
+5. **GUI-28 — Visited state.** Distinguish visited and unvisited links when an
+   interface contains many links.
+6. **GUI-29 — Distinct roles.** Do not make a link look like a button or a
+   button look like a link.
+7. **GUI-30 — Same-tab default.** Open a link in the same tab by default and
+   state any exception in the visible link text.
+
+### Dialog boxes
+
+1. **GUI-31 — Blocking use only.** Use a modal only when a decision genuinely
+   blocks further work.
+2. **GUI-32 — Result labels.** Name each dialog button by its result instead of
+   relying on **OK** or **Cancel**.
+3. **GUI-33 — Safe defaults.** Default to the safest choice, make **Esc**
+   cancel, and never let an accidental **Enter** cause destruction.
+4. **GUI-34 — One question.** Ask one question per dialog and explain the
+   situation, consequence, and choice in 1–2 sentences.
+5. **GUI-35 — Undo reversible work.** Prefer undo over confirmation when an
+   action can be reversed.
+6. **GUI-36 — Modeless continuation.** Use a modeless dialog when work can
+   continue.
+7. **GUI-37 — No arrival overlay.** Never interrupt a newly arrived visitor
+   with an overlay.
+8. **GUI-38 — No dialog stacks.** Never open a dialog on top of another
+   dialog.
+
+### Alerts, notifications, and errors
+
+1. **GUI-39 — Plain language.** Explain the state in plain words and never show
+   a raw error code as the whole message.
+2. **GUI-40 — Exact source.** Identify what failed and point to the field,
+   file, or step where it happened.
+3. **GUI-41 — Recovery step.** State the way forward in one sentence.
+4. **GUI-42 — No blame.** Do not blame the person or use guilt-laden terms such
+   as **illegal**, **fatal**, or **invalid user**.
+5. **GUI-43 — Proportionate format.** Use a toast for information, a persistent
+   inline message for a recoverable error, and a modal alert only for a
+   catastrophic condition.
+6. **GUI-44 — Redundant status cues.** Communicate status with an icon, color,
+   and words rather than color alone.
+7. **GUI-45 — Notification restraint.** Keep notifications scarce by default
+   and let people control their frequency.
+
+### Icons
+
+1. **GUI-46 — Text pairing.** Pair an icon with text. Use a tooltip only when
+   space genuinely prevents a visible label.
+2. **GUI-47 — Standard metaphor.** Use the established symbol when one exists
+   instead of inventing a replacement.
+3. **GUI-48 — Recognition test.** Show a proposed icon by itself to five people
+   and ask what it means before trusting the metaphor.
+4. **GUI-49 — Coherent set.** Keep one visual style across the icon set while
+   giving every icon a distinct silhouette.
+5. **GUI-50 — Preserve learned symbols.** Do not redraw a familiar icon merely
+   to follow fashion.
+6. **GUI-51 — Small favicon.** Reduce the favicon to one strong shape and make
+   sure it remains clear at 16 by 16 pixels.
+7. **GUI-52 — Rare icon-only buttons.** Reserve an icon-only button for the
+   small set of near-universal symbols.
+
+### Checkboxes, radio buttons, and toggles
+
+1. **GUI-53 — Choice model.** Use checkboxes for independent choices and radio
+   buttons for mutually exclusive choices.
+2. **GUI-54 — Vertical options.** Stack options vertically so every label has
+   an unambiguous control.
+3. **GUI-55 — Clickable labels.** Make the whole label activate its control.
+4. **GUI-56 — Radio defaults.** Choose a sensible default and add a **None**
+   option when abstaining is valid.
+5. **GUI-57 — Positive wording.** Phrase choices positively and avoid nested
+   negatives.
+6. **GUI-58 — Immediate toggles.** Use a toggle only when its setting takes
+   effect immediately; use a checkbox when a later submit action commits it.
+7. **GUI-59 — One yes-or-no control.** Represent a yes-or-no choice with one
+   checkbox instead of two radio buttons.
+8. **GUI-60 — Visible small sets.** Show 2–4 choices as radio buttons rather
+   than hiding them in a select.
+
+### Tabs
+
+1. **GUI-61 — One row.** Keep tabs in one row and reduce their number or label
+   length when they do not fit.
+2. **GUI-62 — Short labels.** Name each tab with 1–2 plain words.
+3. **GUI-63 — Distinct states.** Connect the selected tab visually to its panel
+   and distinguish selected, hovered, and unselected states.
+4. **GUI-64 — Parallel peers.** Use tabs only for content of the same type at
+   the same level; use a visible step sequence for ordered work.
+5. **GUI-65 — Useful default.** Open the tab that most people need first.
+6. **GUI-66 — Comparison in one view.** Never split content people must compare
+   across tabs; use a comparison table.
+7. **GUI-67 — Addressable tabs.** Give each tab its own URL when the platform
+   allows it.
+
+### Search
+
+1. **GUI-68 — Visible search box.** Put an open search box near the top of every
+   page in a content-rich site instead of hiding it behind an icon.
+2. **GUI-69 — Query width.** Make the field at least 27 characters wide so a
+   person can see and edit the whole query.
+3. **GUI-70 — Familiar submission.** Use a magnifying glass for submission and
+   make **Enter** work.
+4. **GUI-71 — Forgiving matching.** Tolerate typos, plurals, and synonyms.
+5. **GUI-72 — Retained query.** Keep the query in the field on the results page
+   so it can be revised.
+6. **GUI-73 — Complete results UI.** Use scannable titles, explanatory
+   snippets, and filters when the collection needs them.
+7. **GUI-74 — Complete index.** Index everything people consider part of the
+   site.
+8. **GUI-75 — Search-log review.** Review search logs every month and treat
+   common queries with poor results as usability defects.
+
+### Windows and scrolling
+
+1. **GUI-76 — Same-window default.** Open content in the current window or tab
+   unless the person chooses otherwise.
+2. **GUI-77 — Native scrolling.** Never override the speed or direction of the
+   platform's scroll gesture.
+3. **GUI-78 — Visible scrollbars.** Keep a scrollbar visible for every
+   scrollable pane.
+4. **GUI-79 — Bounded infinite scroll.** Use infinite scroll only when nothing
+   important appears below the list; otherwise provide **Load more**.
+5. **GUI-80 — Important content first.** Order content by importance because
+   attention declines with each screenful.
+6. **GUI-81 — Working Back.** Protect the Back action and avoid gratuitous new
+   windows or state changes that break it.
+
+### Pointers and cursors
+
+1. **GUI-82 — Platform cursors.** Use the platform's standard cursors without
+   restyling them.
+2. **GUI-83 — Truthful cursor.** Show a pointing hand only for a clickable
+   element and an I-beam only for editable text.
+3. **GUI-84 — Long-wait feedback.** Show a busy indicator for a wait longer
+   than 1 second.
+4. **GUI-85 — No hover-only path.** Never make hover the only way to reach
+   important information or an action.
+5. **GUI-86 — Visible keyboard focus.** Give keyboard navigation a visible
+   focus indicator.
 
 ## Layout
 
@@ -78,56 +296,6 @@ update itself.
 A complex drawer is allowed only after its focus, keyboard, scroll, and deep
 link behavior is tested.
 
-### Align artifacts
-
-Align uses one decision-centered reading path.
-
-Show status once beside the artifact title.
-
-Put the goal and next action in the same first-screen flow without nesting
-complete bordered cards.
-
-Use quiet section dividers for scope, expected behavior, preview, agreement,
-uncertainty, and verifiable work.
-
-Reserve a stronger boundary for the next action, an unanswered question, and
-each preview viewport.
-
-Wide and narrow preview frames must use the same canonical content and state.
-
-The viewport changes layout only.
-
-Keep the same semantic order and label every intentional difference.
-
-Use the same theme icons, current-section contents marker, disclosure arrow,
-deep-link reveal behavior, and print expansion as Diff.
-
-Keep decorative disclosure arrows out of accessible names.
-
-Offset fragment destinations below the sticky header and verify the final
-focused position.
-
-Keep Align disclosures to one level.
-
-A disclosure summary carries the decision, group count, or user-visible work
-change needed to decide whether to open it.
-
-Do not use a generic **Details** label when the summary can name its content.
-
-On narrow screens, show the narrow preview first and collapse the duplicate
-wide preview.
-
-Do not make a preview look simple by removing content that the final artifact
-must show.
-
-The representative preview fixture includes decisions, evidence, material
-uncertainty, and verifiable work.
-
-Responsive visual copies do not create duplicate document headings.
-
-One canonical text representation carries the preview meaning for assistive
-technology.
-
 ## Type
 
 Use three clear roles.
@@ -156,7 +324,7 @@ Start with this compact scale and adjust it only through named tokens:
 | --- | --- | --- |
 | Main body | 14px / 1.55 | 16px / 1.55 |
 | Supporting text | 12px / 1.5 | 14px / 1.5 |
-| Code | 13px / 1.55 | 14px / 1.55 |
+| Code | 13px / 1.35 | 14px / 1.35 |
 | Page title | 24px / 1.25 | 28px / 1.25 |
 | Section title | 18px / 1.35 | 20px / 1.35 |
 
@@ -262,24 +430,18 @@ It should feel softer than pure white without looking beige or gray.
 
 Exact Hope surface values live only in `design/tokens.mjs`.
 
-Code is a separate visual surface.
-
-Use GitHub Light Default inside code regions in light mode and GitHub Dark
-Default inside code regions in dark mode.
+Code is a separate visual surface with fixed Hope light and dark colors.
 
 A theme change switches both at once.
 
 It does not replace the Hope palette outside code.
 
-Highlight syntax during artifact generation with trusted, fixed grammars and
-themes.
+Insert repository text only as escaped content.
 
-Insert repository text only as escaped token content.
+Keep source lines explicit in the document and distinguish patch additions,
+deletions, context, and hunk headers without a stateful language parser.
 
-If Hope does not support a file language, show its escaped source without
-guessed highlighting.
-
-The initial theme comes from the resolved Hope setting:
+The initial theme comes from the resolved Diff display option:
 
 - `system`;
 - `light`; or
@@ -287,7 +449,7 @@ The initial theme comes from the resolved Hope setting:
 
 The theme control changes only the open document.
 
-It does not write Hope settings or browser storage.
+It does not write plugin configuration or browser storage.
 
 Reloading returns to the generated initial theme.
 
@@ -321,10 +483,13 @@ Supported interactions can include:
 - draft an optional quiz response without submitting or saving it; and
 - reveal the quiz answer and evidence through a separate disclosure.
 
-When a quiz response box has a clear placeholder, do not repeat a visible field
-label such as **My answer** or **Selection**.
+Use the visible quiz question as the response field's persistent label.
 
-Keep an accessible name for assistive technology.
+When that question and a clear placeholder make the purpose evident, do not
+repeat a generic visible label such as **My answer** or **Selection**.
+
+Keep the question programmatically associated with the field and retain an
+accessible name for assistive technology.
 
 A response is never required before the answer can be opened.
 
@@ -400,12 +565,12 @@ Test the final file through `file://`, not only through a web server.
 
 Repository, provider, and model content is untrusted.
 
-A feature renderer inserts it as text and never accepts authored HTML, CSS,
+The Diff renderer inserts it as text and never accepts authored HTML, CSS,
 JavaScript, SVG, or URLs.
 
-Shared design code may contain tokens, fixed assets, and small helpers.
+Design code may contain tokens, fixed assets, and small helpers.
 
-The feature owns its concrete HTML.
+Diff owns its concrete HTML.
 
-Promote a feature component into shared code only after another Hope feature
-needs the same behavior.
+Add a shared artifact component only after another real artifact needs the same
+behavior.

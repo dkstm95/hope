@@ -41,13 +41,13 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(validated.sourceIndex.length, snapshot.sources.length);
   assert.equal("text" in validated.sourceIndex[0], false);
   assert.deepEqual(validated.resources, {
-    analysisCanonicalBytes: 2766,
-    analysisFileBytes: 2766,
+    analysisCanonicalBytes: 2745,
+    analysisFileBytes: 2745,
     authoredProseBytes: 1016,
     evidenceBytes: 178,
     evidenceLines: 5,
     evidenceReferences: 9,
-    highlightedLines: 8,
+    codeEvidenceLines: 8,
     teachingAidDecisions: 3,
     teachingAidMicroworldIncluded: 0,
     teachingAidQuizIncluded: 0,
@@ -206,14 +206,12 @@ test("every code step is backed by code evidence for its listed files", () => {
   );
 });
 
-test("code step file IDs are derived from evidence when omitted", () => {
+test("code step file IDs are derived from evidence", () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
-  const expected = [...analysis.codeSteps[0].fileIds];
-  delete analysis.codeSteps[0].fileIds;
 
   const validated = validateAnalysis(analysis, snapshot, { runId });
-  assert.deepEqual(validated.codeSteps[0].fileIds, expected);
+  assert.deepEqual(validated.codeSteps[0].fileIds, ["file-1"]);
 });
 
 test("analysis validation reports independent repair issues together", () => {
@@ -221,7 +219,11 @@ test("analysis validation reports independent repair issues together", () => {
   const analysis = makeAnalysis(snapshot, runId);
   analysis.coreChange.before.basis = "unknown";
   analysis.coreChange.before.evidence = [];
-  analysis.codeSteps[0].fileIds = ["file-99"];
+  analysis.codeSteps[0].evidence = [{
+    endLine: 1,
+    sourceId: "source-99",
+    startLine: 1,
+  }];
 
   assert.throws(
     () => validateAnalysis(analysis, snapshot, { runId }),
@@ -243,7 +245,11 @@ test("analysis validation keeps an uncollected first error", () => {
     reason: "A visual is required.",
     teachingJob: "Show the changed behavior.",
   };
-  analysis.codeSteps[0].fileIds = ["file-99"];
+  analysis.codeSteps[0].evidence = [{
+    endLine: 1,
+    sourceId: "source-99",
+    startLine: 1,
+  }];
 
   assert.throws(
     () => validateAnalysis(analysis, snapshot, { runId }),
@@ -263,16 +269,20 @@ test("analysis validation reports the actual code-step index", () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
   analysis.codeSteps.push(structuredClone(analysis.codeSteps[0]));
-  analysis.codeSteps[1].fileIds = ["file-99"];
+  analysis.codeSteps[1].evidence = [{
+    endLine: 1,
+    sourceId: "source-99",
+    startLine: 1,
+  }];
 
   assert.throws(
     () => validateAnalysis(analysis, snapshot, { runId }),
     (error) => {
-      assert.deepEqual(error.issues, [{
-        code: "ANALYSIS_CONTRACT",
-        message: "codeSteps[1] refers to an unknown file",
-        path: "codeSteps[1]",
-      }]);
+      assert.ok(error.issues.length > 0);
+      assert.ok(error.issues.every((issue) => (
+        issue.code === "EVIDENCE_SOURCE_UNKNOWN"
+        && issue.path.startsWith("codeSteps[1]")
+      )));
       return true;
     },
   );
@@ -660,7 +670,6 @@ test("analysis rejects excessive unique evidence bytes before rendering", () => 
       sourceId: "source-3",
       startLine: index * 24 + 1,
     }],
-    fileIds: ["file-1"],
     text: `Changed code group ${index + 1}.`,
     title: `Code group ${index + 1}`,
   }));
@@ -698,14 +707,13 @@ test("overlapping evidence ranges count every rendered code line", () => {
         startLine,
       };
     }),
-    fileIds: ["file-1"],
     text: `Changed overlapping code group ${group + 1}.`,
     title: `Overlapping code group ${group + 1}`,
   }));
 
   assert.throws(
     () => validateAnalysis(analysis, budgetSnapshot, { runId }),
-    /more than 600 highlighted code lines/u,
+    /more than 600 code evidence lines/u,
   );
 });
 

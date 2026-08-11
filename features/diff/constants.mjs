@@ -1,10 +1,9 @@
 export const CONTRACT_VERSION = 1;
 export const ANALYSIS_VERSION = 2;
-export const RENDERER_VERSION = 5;
+export const RENDERER_VERSION = 7;
 export const RUN_VERSION = 5;
 export const CHECKPOINT_VERSION = 1;
-export const TEACHING_AID_CONTRACT_VERSION = 6;
-export const DIFF_INVOCATION_CONTRACT_VERSION = 4;
+export const MICROWORLD_SKELETON_VERSION = 6;
 
 export const LIMITS = Object.freeze({
   analysisProseBytes: 48 * 1024,
@@ -33,7 +32,7 @@ export const LIMITS = Object.freeze({
   evidenceLines: 24,
   evidenceReferences: 192,
   evidenceTotalLines: 1_200,
-  highlightedLines: 600,
+  codeEvidenceLines: 600,
   inspectionPageBytes: 16 * 1024,
   inspectionTotalBytes: 1024 * 1024,
   inspectionWindowBytes: 32 * 1024,

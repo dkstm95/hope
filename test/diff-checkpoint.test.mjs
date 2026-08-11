@@ -16,7 +16,6 @@ import {
   createDiffRun,
   inspectDiffRun,
   inspectDiffRunWindow,
-  inspectLoadedDiffRun,
   loadDiffRun,
   removeDiffRun,
 } from "../features/diff/run.mjs";
@@ -73,9 +72,9 @@ test("inspection checkpoints persist grounded memory before the next page", asyn
         highLevelLoads += 1;
         return await loadDiffRun(...arguments_);
       },
-      inspectLoadedRun: async (...arguments_) => {
+      inspectLoadedRun: async () => {
         loadedInspections += 1;
-        return await inspectLoadedDiffRun(...arguments_);
+        throw new Error("unexpected loaded-run inspection");
       },
       temporaryRoot,
     },

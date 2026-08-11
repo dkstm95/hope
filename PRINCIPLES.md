@@ -8,40 +8,43 @@ These principles guide the whole project.
 A feature, interface, or outside reference may support them, but does not define
 Hope by itself.
 
-## Grow into a harness
+## Be a focused plugin
 
-Hope is growing into an AI work harness.
+Hope is a plugin made of focused Skills.
 
-This is the long-term direction of the project.
+Codex and Claude may expose the package differently, but they use the same Skill
+instructions and the same packaged deterministic code.
 
-The harness will bring tools, context, workflows, state, and results into one
-consistent environment.
+Hope does not maintain an independent CLI or harness.
 
-It will grow from useful work instead of empty framework parts.
+Add another entry path only after a real user need justifies its product and
+maintenance cost.
 
-## Support two ways to use Hope
+## Start with instructions
 
-People should be able to use Hope in either of these ways:
+Put model judgment, conversation flow, and writing guidance in a short
+`SKILL.md`.
 
-- use the Hope harness as a complete working environment;
-- use selected Hope plugins and skills in a supported host such as Claude or
-  Codex.
+Move detailed guidance to a reference that the Skill reads only when needed.
 
-Plugins and skills are not temporary.
+Use code only when Hope must control external state or produce a deterministic
+result.
 
-They stay useful for people who want one capability without the full harness.
+Examples include exact Git revisions, bounded input, source citations, safe file
+publication, and self-contained HTML.
 
-The two paths use the same feature code and rules.
+Do not wrap prose in JavaScript merely to return it to the model.
 
-A host adapter stays thin.
+## Keep each feature close together
 
-Hope does not keep a separate implementation for each host or entry point.
+A Skill directory is the default feature boundary.
 
-Not every feature must appear in both paths.
+Keep its instructions, references, scripts, and private assets together.
 
-A harness-only feature is valid when it needs the wider environment.
+Shared code needs two real consumers with the same invariant.
 
-A feature that is useful on its own can also be offered as a plugin or skill.
+Generated package files must name their editable source and must never be edited
+by hand.
 
 ## Keep the person in control
 
@@ -54,15 +57,41 @@ Show the reason and evidence when they matter.
 
 Do not present a generated claim as a verified fact.
 
+## Own what Hope creates
+
+Hope records the files or private state it creates.
+
+It never guesses ownership from a name or prefix.
+
+Destructive work needs a clear target, the person's authority, and a final
+identity check.
+
+When Hope is uncertain, it leaves the item in place.
+
+Diff never replaces an existing HTML artifact.
+
 ## Build from real work
 
 Start with a clear user goal and the smallest useful feature.
 
-Use the feature, learn from it, and then improve the harness.
+Use the feature, learn from it, and then improve it.
 
-Do not add an abstract layer for a possible future need.
+Do not add a state machine, compatibility layer, evaluation framework, or
+abstraction for a possible future need.
 
-Share a rule only when two real features need the same rule.
+Compatibility is a product choice, not a default cost.
+
+## Test the remaining risks
+
+Test Skill discovery with representative prompts.
+
+Test deterministic code at the boundaries it promises to enforce.
+
+Use browser tests for behavior that only a browser can verify.
+
+Do not preserve implementation complexity only because tests already exist.
+
+Remove obsolete behavior and its tests together.
 
 ## Use plain language and clear boundaries
 
@@ -70,32 +99,19 @@ Use short sentences and familiar words in code, commands, and documents.
 
 Name a thing after the job it does or the data it holds.
 
-Each feature owns its behavior and state.
-
-Entry points such as plugins, skills, and future harness interfaces call that
-feature instead of copying it.
-
-## Own what Hope creates
-
-Hope records the files, state, worktrees, or branches it creates.
-
-It never guesses ownership from a name or prefix.
-
-Destructive work needs a preview, clear confirmation, and a final identity
-check.
-
-When Hope is uncertain, it leaves the item in place.
+Keep facts, user decisions, AI proposals, assumptions, and uncertainty distinct.
 
 ## Test a new decision
 
-Before adding a feature or shared layer, ask:
+Before adding a feature or layer, ask:
 
 - What clear user goal does it serve?
-- Does it belong in the harness, work on its own, or both?
-- Can every entry point use the same feature code?
-- Can the person see and control important state and choices?
+- Can instructions handle it honestly?
+- What external state or deterministic result requires code?
+- Can the person see and control important choices?
 - Does Hope know exactly what it created and may clean up?
-- Has the added complexity earned its place through real use?
+- What smallest test would catch a real failure?
+- Has the complexity earned its place through use?
 
 ## Learn without copying
 

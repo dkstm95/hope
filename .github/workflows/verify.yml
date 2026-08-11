@@ -9,12 +9,12 @@ permissions:
 
 jobs:
   check:
+    name: Deterministic (Ubuntu / Node ${{ matrix.node }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [20, 22]
-    runs-on: ${{ matrix.os }}
+        node: [22, 24]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
@@ -24,6 +24,33 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm ci
       - run: npm run check
+
+  platform-smoke:
+    name: Platform smoke (${{ matrix.os }} / Node 22)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build:plugin
+      - name: Check generated plugin files
+        run: >-
+          git diff --exit-code --
+          plugins/hope/LICENSE
+          plugins/hope/THIRD_PARTY_NOTICES.md
+          plugins/hope/runtime
+          plugins/hope/docs
+          tools/plugin-package-files.txt
+      - name: Check staged plugin paths
+        run: node --test test/platform-smoke.test.mjs
 
   browser:
     runs-on: ubuntu-latest
@@ -41,13 +68,15 @@ jobs:
   required:
     name: Verify
     if: ${{ always() }}
-    needs: [check, browser]
+    needs: [check, platform-smoke, browser]
     runs-on: ubuntu-latest
     steps:
       - name: Check every supported system and browser
         env:
           BROWSER_RESULT: ${{ needs.browser.result }}
           CHECK_RESULT: ${{ needs.check.result }}
+          PLATFORM_SMOKE_RESULT: ${{ needs.platform-smoke.result }}
         run: |
           test "${CHECK_RESULT}" = "success"
+          test "${PLATFORM_SMOKE_RESULT}" = "success"
           test "${BROWSER_RESULT}" = "success"

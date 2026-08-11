@@ -6,10 +6,9 @@ import { access, readFile } from "node:fs/promises";
 import {
   expectedPluginFile,
   normalizeLineEndings,
-  pluginBundleEntries,
+  pluginBuildEntries,
 } from "./build-plugin.mjs";
 import { pluginPackageFiles } from "./plugin-files.mjs";
-import { main as runHarness } from "../harness/hope.mjs";
 
 const root = new URL("../", import.meta.url);
 const fromRoot = (path) => new URL(path, root);
@@ -25,16 +24,6 @@ const requiredFiles = [
   "AGENTS.md",
   "CHANGELOG.md",
   "CLAUDE.md",
-  "assets/readme/hope-align-en.png",
-  "assets/readme/hope-align-ko.png",
-  "assets/readme/hope-align-preview-en.png",
-  "assets/readme/hope-align-preview-ko.png",
-  "assets/readme/hope-align-scope-en.png",
-  "assets/readme/hope-align-scope-ko.png",
-  "assets/readme/hope-align-understanding-en.png",
-  "assets/readme/hope-align-understanding-ko.png",
-  "assets/readme/hope-align-work-en.png",
-  "assets/readme/hope-align-work-ko.png",
   "assets/readme/hope-diff-behavior-en.png",
   "assets/readme/hope-diff-behavior-ko.png",
   "assets/readme/hope-diff-code-en.png",
@@ -53,7 +42,9 @@ const requiredFiles = [
   "docs/architecture.md",
   "docs/design.md",
   "docs/diff.md",
+  "docs/polish.md",
   "docs/release.md",
+  "docs/sweep.md",
   "docs/toxic-review.md",
   "docs/write.md",
   "design/fonts/HopeCode.woff2",
@@ -63,30 +54,21 @@ const requiredFiles = [
   "design/fonts/OFL-D2Coding.txt",
   "design/fonts/OFL-Gmarket.txt",
   "design/fonts/SOURCE.md",
+  "design/fonts/rename-fonts.py",
   "design/tokens.mjs",
-  "features/align/cli.mjs",
-  "features/align/index.mjs",
-  "features/align/session-v1.schema.json",
-  "features/artifact/index.mjs",
   "features/diff/analysis-v2.schema.json",
+  "features/diff/artifact.mjs",
   "features/diff/cli.mjs",
+  "features/diff/code-evidence.mjs",
+  "features/diff/command-options.mjs",
   "features/diff/index.mjs",
-  "features/toxic-review/cli.mjs",
-  "features/toxic-review/index.mjs",
-  "features/toxic-review/review-v1.schema.json",
-  "features/work-snapshot/index.mjs",
-  "features/write/cli.mjs",
-  "features/write/index.mjs",
-  "features/write/standard.md",
-  "harness/hope.mjs",
-  "locales/index.mjs",
-  "settings/cli.mjs",
-  "settings/index.mjs",
+  "features/diff/locales/index.mjs",
+  "features/diff/structured-input.mjs",
+  "entrypoint/index.mjs",
   "tools/plugin-files.mjs",
   "tools/plugin-package-files.txt",
   "tools/check-plugin-version.mjs",
   "tools/install-plugin-dev.mjs",
-  "tools/next-release-version.mjs",
   "tools/prepare-release.mjs",
   "tools/render-readme-assets.mjs",
   "tools/stage-plugin.mjs",
@@ -100,17 +82,69 @@ const requiredFiles = [
 
 const retiredPaths = [
   "DESIGN.md",
+  "assets/readme/hope-align-en.png",
+  "assets/readme/hope-align-ko.png",
+  "assets/readme/hope-align-preview-en.png",
+  "assets/readme/hope-align-preview-ko.png",
+  "assets/readme/hope-align-scope-en.png",
+  "assets/readme/hope-align-scope-ko.png",
+  "assets/readme/hope-align-understanding-en.png",
+  "assets/readme/hope-align-understanding-ko.png",
+  "assets/readme/hope-align-work-en.png",
+  "assets/readme/hope-align-work-ko.png",
   "docs/design-research.md",
+  "docs/model-evaluation.md",
+  "e2e/align-artifact.spec.mjs",
+  "features/align",
+  "features/artifact",
+  "features/command-options",
   "features/diff/analysis-v1.schema.json",
-  "plugins/hope/runtime/cleanup/cleanup-plan.mjs",
-  "plugins/hope/runtime/diff/diff-run.mjs",
-  "plugins/hope/runtime/diff/latest-pull-request.mjs",
+  "features/diff/highlight.mjs",
+  "features/diff/invocation-evaluation.mjs",
+  "features/diff/invocation.mjs",
+  "features/diff/teaching-aid-evaluation.mjs",
+  "features/diff/work-snapshot.mjs",
+  "features/model-evaluation",
+  "features/polish",
+  "features/record-compat",
+  "features/result-validation",
+  "features/sweep",
+  "features/toxic-review",
+  "features/work-snapshot",
+  "features/write",
+  "harness",
+  "locales",
+  "plugins/hope/agents/toxic-reviewer.md",
+  "plugins/hope/runtime/cleanup",
+  "plugins/hope/runtime/diff",
+  "plugins/hope/runtime/features/align",
+  "plugins/hope/runtime/features/artifact",
+  "plugins/hope/runtime/features/command-options",
   "plugins/hope/runtime/features/diff/analysis-v1.schema.json",
-  "plugins/hope/skills/cleanup/SKILL.md",
+  "plugins/hope/runtime/features/diff/highlight.mjs",
+  "plugins/hope/runtime/features/diff/invocation-evaluation.mjs",
+  "plugins/hope/runtime/features/diff/invocation.mjs",
+  "plugins/hope/runtime/features/diff/teaching-aid-evaluation.mjs",
+  "plugins/hope/runtime/features/diff/work-snapshot.mjs",
+  "plugins/hope/runtime/features/model-evaluation",
+  "plugins/hope/runtime/features/polish",
+  "plugins/hope/runtime/features/record-compat",
+  "plugins/hope/runtime/features/result-validation",
+  "plugins/hope/runtime/features/sweep",
+  "plugins/hope/runtime/features/toxic-review",
+  "plugins/hope/runtime/features/work-snapshot",
+  "plugins/hope/runtime/features/write",
+  "plugins/hope/runtime/locales",
+  "plugins/hope/runtime/settings",
+  "plugins/hope/skills/cleanup",
   "plugins/hope/skills/diff/references/change-request-v1.schema.json",
   "plugins/hope/skills/diff/references/review-model-v1.schema.json",
-  "plugins/hope/skills/diff/scripts/hope-diff.mjs",
+  "plugins/hope/skills/diff/scripts",
+  "plugins/hope/skills/settings",
   "plugins/hope/skills/write/references/plain-writing.md",
+  "settings",
+  "tools/next-release-version.mjs",
+  "tools/run-sweep-model-evaluation.mjs",
 ];
 
 await Promise.all([
@@ -121,7 +155,7 @@ await Promise.all(retiredPaths.map(async (path) => {
   await assert.rejects(access(fromRoot(path)), undefined, `${path} must not ship`);
 }));
 
-for (const entry of pluginBundleEntries) {
+for (const entry of pluginBuildEntries) {
   const expected = await expectedPluginFile(entry);
   const actual = await readBytes(entry.destination);
   if (Buffer.isBuffer(expected)) {
@@ -146,7 +180,6 @@ const [
   claudeMarketplace,
   alignSkill,
   skill,
-  settingsSkill,
   toxicReviewSkill,
   writeSkill,
   writingStandard,
@@ -172,10 +205,9 @@ const [
     readJson(".claude-plugin/marketplace.json"),
     read("plugins/hope/skills/align/SKILL.md"),
     read("plugins/hope/skills/diff/SKILL.md"),
-    read("plugins/hope/skills/settings/SKILL.md"),
     read("plugins/hope/skills/toxic-review/SKILL.md"),
     read("plugins/hope/skills/write/SKILL.md"),
-    read("features/write/standard.md"),
+    read("plugins/hope/skills/write/references/writing-standard.md"),
     read("docs/architecture.md"),
     read("docs/align.md"),
     read("docs/diff.md"),
@@ -195,20 +227,12 @@ const [
 assert.equal(packageJson.version, currentVersion);
 assert.equal(packageLock.version, currentVersion);
 assert.equal(packageLock.packages[""].version, currentVersion);
-assert.equal(packageJson.bin.hope, "./harness/hope.mjs");
+assert.equal(packageJson.bin, undefined);
+assert.equal(packageJson.scripts.hope, undefined);
 assert.equal(codexPlugin.name, "hope");
 assert.equal(codexPlugin.version, currentVersion);
 assert.equal(claudePlugin.name, "hope");
 assert.equal(claudePlugin.version, currentVersion);
-let harnessVersion = "";
-await runHarness(["--version"], {
-  stdout: {
-    write(value) {
-      harnessVersion += value;
-    },
-  },
-});
-assert.equal(harnessVersion, `${currentVersion}\n`);
 if (process.env.GITHUB_REF_TYPE === "tag") {
   assert.equal(process.env.GITHUB_REF_NAME, `v${currentVersion}`);
 }
@@ -232,55 +256,49 @@ assert.equal(claudeMarketplaceEntry.source, "./plugins/hope");
 assert.equal(claudeMarketplaceEntry.version, undefined);
 assert.doesNotMatch(claudeMarketplaceEntry.description, /rebuild status/u);
 assert.match(alignSkill, /^---\r?\nname: align\r?\ndescription: /u);
-assert.match(alignSkill, /runtime\/features\/align\/cli\.mjs/u);
-assert.match(alignSkill, /`snapshot`.*`approval`.*`lifecycle`/su);
-assert.doesNotMatch(alignSkill, /Do not repeat a closed question/u);
+assert.match(alignSkill, /Wait for an explicit user response/u);
+assert.doesNotMatch(alignSkill, /runtime\/features\//u);
 assert.match(skill, /^---\r?\nname: diff\r?\ndescription: /u);
 assert.match(skill, /runtime\/features\/diff\/cli\.mjs/u);
 assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/runtime\/features\/diff\/cli\.mjs/u);
-assert.match(skill, /writingStandard\.text/u);
-assert.match(skill, /`teachingAids`/u);
-assert.match(skill, /authoring-safety/u);
+assert.match(skill, /references\/analysis\.md/u);
+assert.match(skill, /\.\.\/write\/references\/writing-standard\.md/u);
+assert.match(skill, /teaching-aid rules/u);
+assert.doesNotMatch(skill, /teaching-aid contract/u);
 assert.match(skill, /microworld-skeleton/u);
 assert.doesNotMatch(skill, /Add at most one `behavior\.microworld`/u);
 assert.doesNotMatch(skill, /Prefer a short, familiar word/u);
-assert.match(settingsSkill, /^---\r?\nname: settings\r?\ndescription: /u);
-assert.match(settingsSkill, /runtime\/settings\/cli\.mjs/u);
 assert.match(
   toxicReviewSkill,
   /^---\r?\nname: toxic-review\r?\ndescription: /u,
 );
-assert.match(
-  toxicReviewSkill,
-  /runtime\/features\/toxic-review\/cli\.mjs/u,
-);
-assert.match(
-  toxicReviewSkill,
-  /`roleSelection`.*`resultPreparation`.*`finalVoice`/su,
-);
-assert.doesNotMatch(toxicReviewSkill, /partially-accepted/u);
+assert.match(toxicReviewSkill, /references\/causal-review\.md/u);
+assert.match(toxicReviewSkill, /Do not count reviewer votes/u);
+assert.doesNotMatch(toxicReviewSkill, /runtime\/features\//u);
 assert.match(writeSkill, /^---\r?\nname: write\r?\ndescription: /u);
-assert.match(writeSkill, /runtime\/features\/write\/cli\.mjs/u);
+assert.match(writeSkill, /references\/writing-standard\.md/u);
+assert.doesNotMatch(writeSkill, /runtime\/features\//u);
 assert.doesNotMatch(writeSkill, /Prefer a short, familiar word/u);
 assert.match(writingStandard, /^# Plain writing standard\r?\n/u);
 assert.match(writingStandard, /Politics and the English Language/u);
-assert.match(architecture, /harness -> features <- host adapters/u);
 assert.match(architecture, /\.codex-plugin\/plugin\.json/u);
 assert.match(architecture, /\.claude-plugin\/plugin\.json/u);
-assert.match(align, /^# Hope align\r?\n/u);
-assert.match(align, /hope align/u);
-assert.match(diff, /^# Hope diff\r?\n/u);
-assert.match(diff, /ko-KR/u);
-assert.match(diff, /en-US/u);
-assert.match(toxicReview, /^# Hope toxic review\r?\n/u);
-assert.match(toxicReview, /hope toxic-review/u);
-assert.match(write, /^# Hope write\r?\n/u);
-assert.match(write, /features\/write\/standard\.md/u);
-assert.match(write, /hope write/u);
-assert.match(write, /input prompts and task restatements/u);
-assert.match(write, /implementation code when Write can improve/u);
+assert.match(align, /^# Hope Align\r?\n/u);
+assert.match(align, /explicit approval/u);
+assert.match(diff, /^# Hope Diff\r?\n/u);
+assert.match(diff, /Use the conversation language/u);
+assert.match(toxicReview, /^# Hope Toxic Review\r?\n/u);
+assert.match(toxicReview, /Do not count reviewer votes/u);
+assert.match(write, /^# Hope Write\r?\n/u);
+assert.match(write, /skills\/write\/references\/writing-standard\.md/u);
+assert.match(write, /They do not need a runtime brief/u);
 assert.match(releaseDefinition, /^# Hope releases\r?$/mu);
 assert.match(releaseDefinition, /public version files reach `main`/u);
+assert.match(releaseDefinition, /never chooses or increases a version/u);
+assert.match(
+  releaseDefinition,
+  /already has a GitHub Release, the run exits without/u,
+);
 assert.match(
   changelog,
   new RegExp(
@@ -291,20 +309,36 @@ assert.match(
 assert.match(agentInstructions, /Use the Hope Write Skill whenever/u);
 assert.match(agentInstructions, /again before sending any response/u);
 assert.match(claudeInstructions, /@AGENTS\.md/u);
-assert.match(release, /npm run build:plugin/u);
+assert.match(release, /npm run release:prepare/u);
+assert.doesNotMatch(release, /run: npm run check\s*$/mu);
 assert.match(release, /workflow_dispatch/u);
 assert.match(release, /push:\s+branches:\s+- main/su);
 assert.match(release, /publish=\$\{PUBLISH\}/u);
-assert.match(release, /node tools\/next-release-version\.mjs/u);
+assert.match(
+  release,
+  /github\.event_name == 'workflow_dispatch' && 'main' \|\| github\.sha/u,
+);
+assert.doesNotMatch(release, /\bincrement\b|next-release-version/u);
+assert.doesNotMatch(release, /RELEASE_VERSION|inputs:/u);
+assert.match(release, /echo "version=\$\{CURRENT_VERSION\}"/u);
+assert.match(release, /echo "tag=\$\{CURRENT_TAG\}"/u);
 assert.match(release, /gh release view/u);
 assert.match(release, /git checkout --detach/u);
-assert.match(release, /already exists unexpectedly/u);
-assert.match(release, /git push origin HEAD:main/u);
+assert.match(release, /git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
+assert.match(release, /git push --atomic origin HEAD:main/u);
 assert.doesNotMatch(release, /--prerelease/u);
 assert.match(release, /npx playwright install --with-deps chromium/u);
 assert.match(release, /npm run test:browser/u);
 assert.match(release, /fetch-depth: 0/u);
 assert.match(release, /test "\$\{GITHUB_REF\}" = "refs\/heads\/main"/u);
+assert.match(
+  release,
+  /git diff --exit-code -- plugins\/hope tools\/plugin-package-files\.txt/u,
+);
+assert.match(
+  release,
+  /git add [^\n]*tools\/plugin-package-files\.txt/u,
+);
 assert.match(release, /node tools\/stage-plugin\.mjs/u);
 assert.match(release, /diff -u tools\/plugin-package-files\.txt/u);
 assert.match(release, /unzip -p [^\n]* \.claude-plugin\/plugin\.json/u);
@@ -312,15 +346,19 @@ assert.match(release, /unzip -p [^\n]* \.codex-plugin\/plugin\.json/u);
 assert.match(release, /unzip -p [^\n]* skills\/write\/SKILL\.md/u);
 assert.match(
   release,
-  /unzip -p [^\n]* runtime\/features\/write\/standard\.md/u,
+  /unzip -p [^\n]* skills\/write\/references\/writing-standard\.md/u,
 );
 assert.match(release, /--generate-notes/u);
 assert.match(release, /--fail-on-no-commits/u);
 assert.match(release, /--latest/u);
 assert.match(verify, /name: Verify/u);
-assert.equal((verify.match(/fetch-depth: 0/gu) ?? []).length, 2);
-assert.match(verify, /needs: \[check, browser\]/u);
+assert.equal((verify.match(/fetch-depth: 0/gu) ?? []).length, 3);
+assert.match(verify, /needs: \[check, platform-smoke, browser\]/u);
 assert.match(verify, /CHECK_RESULT: \$\{\{ needs\.check\.result \}\}/u);
+assert.match(
+  verify,
+  /PLATFORM_SMOKE_RESULT: \$\{\{ needs\.platform-smoke\.result \}\}/u,
+);
 assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
 assert.match(verify, /npm run test:browser/u);
 assert.match(readme, /src="plugins\/hope\/assets\/hope-protected-light\.png"/u);
@@ -341,11 +379,6 @@ for (const [file, text] of [
   assert.match(text, /\/reload-plugins/u);
   assert.doesNotMatch(text, /\$hope:|```mermaid/iu);
   for (const asset of [
-    "align",
-    "align-scope",
-    "align-preview",
-    "align-understanding",
-    "align-work",
     "diff",
     "diff-core",
     "diff-behavior",
@@ -362,7 +395,7 @@ for (const [file, text] of [
   }
   assert.doesNotMatch(
     text,
-    /assets\/readme\/hope-(?:toxic-review|polish|write|settings)-/u,
+    /assets\/readme\/hope-(?:align|toxic-review|polish|write|settings)-/u,
   );
 }
 assert.equal(packageJson.scripts["check:plugin-version"], "node tools/check-plugin-version.mjs");

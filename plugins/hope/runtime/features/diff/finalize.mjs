@@ -2,7 +2,7 @@
 import {
   preflightArtifactOutput,
   publishArtifact,
-} from "../artifact/index.mjs";
+} from "./artifact.mjs";
 import { CONTRACT_VERSION } from "./constants.mjs";
 
 export async function preflightReviewOutput(outputPath) {

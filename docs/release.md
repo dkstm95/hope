@@ -30,8 +30,10 @@ npm run release:prepare -- <version>
 
 The `Release` workflow starts when new public version files reach `main`.
 
-It publishes the version already recorded in the repository instead of
-choosing another version.
+The automatic run uses the exact commit that changed those files.
+
+It publishes the version already recorded in that commit instead of choosing
+another version.
 
 If that version already has a GitHub Release, the automatic run exits without
 publishing or increasing it.
@@ -42,13 +44,19 @@ package files, records a checksum, and publishes the GitHub Release as latest.
 
 ## Manual release
 
-A manual run publishes the recorded version when it has no release tag.
+A manual run uses the latest `main` commit and publishes the version already
+recorded there when it has no release tag.
 
-If the recorded version is already released, the selected patch, minor, or
-major increase becomes the next version.
+If its tag exists without a GitHub Release, the run resumes that exact tagged
+commit.
 
-The workflow commits that manual increase to `main` before it tags and
-publishes the release.
+If the recorded version already has a GitHub Release, the run exits without
+changing or publishing anything.
+
+The workflow never chooses or increases a version.
+
+Prepare and commit the next version with
+`npm run release:prepare -- <version>` before starting a manual run.
 
 ## Recovery
 

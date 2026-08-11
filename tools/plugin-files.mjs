@@ -1,7 +1,6 @@
 const generatedText = (source, destination, banner = "") => Object.freeze({
   banner,
   binary: false,
-  bundle: false,
   destination,
   source,
 });
@@ -9,15 +8,6 @@ const generatedText = (source, destination, banner = "") => Object.freeze({
 const generatedBinary = (source, destination) => Object.freeze({
   banner: "",
   binary: true,
-  bundle: false,
-  destination,
-  source,
-});
-
-const generatedBundle = (source, destination, banner = "") => Object.freeze({
-  banner,
-  binary: false,
-  bundle: true,
   destination,
   source,
 });
@@ -42,11 +32,6 @@ export const generatedPluginFiles = Object.freeze([
     "docs/diff.md",
     "plugins/hope/docs/diff.md",
     "<!-- Generated from docs/diff.md. Do not edit. -->\n\n",
-  ),
-  generatedText(
-    "docs/model-evaluation.md",
-    "plugins/hope/docs/model-evaluation.md",
-    "<!-- Generated from docs/model-evaluation.md. Do not edit. -->\n\n",
   ),
   generatedText(
     "docs/polish.md",
@@ -81,6 +66,14 @@ export const generatedPluginFiles = Object.freeze([
     "plugins/hope/runtime/design/fonts/SOURCE.md",
   ),
   generatedBinary(
+    "design/HopeFavicon.png",
+    "plugins/hope/assets/hope-protected-light-128.png",
+  ),
+  generatedBinary(
+    "design/HopeFavicon.png",
+    "plugins/hope/runtime/design/HopeFavicon.png",
+  ),
+  generatedBinary(
     "design/fonts/HopeCode.woff2",
     "plugins/hope/runtime/design/fonts/HopeCode.woff2",
   ),
@@ -106,101 +99,15 @@ export const generatedPluginFiles = Object.freeze([
     "plugins/hope/runtime/entrypoint/index.mjs",
     "// Generated from entrypoint/index.mjs. Do not edit.\n",
   ),
-  generatedText(
-    "features/command-options/index.mjs",
-    "plugins/hope/runtime/features/command-options/index.mjs",
-    "// Generated from features/command-options/index.mjs. Do not edit.\n",
-  ),
-  generatedText(
-    "features/artifact/index.mjs",
-    "plugins/hope/runtime/features/artifact/index.mjs",
-    "// Generated from features/artifact/index.mjs. Do not edit.\n",
-  ),
-  generatedText(
-    "features/record-compat/index.mjs",
-    "plugins/hope/runtime/features/record-compat/index.mjs",
-    "// Generated from features/record-compat/index.mjs. Do not edit.\n",
-  ),
-  ...[
-    "cli.mjs",
-    "evidence.mjs",
-    "feature-selection.mjs",
-    "host-attestation.mjs",
-    "index.mjs",
-    "polish-preservation.mjs",
-    "write-examples.mjs",
-  ].map((name) =>
-    generatedText(
-      `features/model-evaluation/${name}`,
-      `plugins/hope/runtime/features/model-evaluation/${name}`,
-      `// Generated from features/model-evaluation/${name}. Do not edit.\n`,
-    )
-  ),
-  ...[
-    "cli.mjs",
-    "constants.mjs",
-    "index.mjs",
-    "record-v1.schema.json",
-    "receipt-v1.schema.json",
-    "run-v1.schema.json",
-    "run-v2.schema.json",
-    "validate.mjs",
-  ].map((name) => generatedText(
-    `features/polish/${name}`,
-    `plugins/hope/runtime/features/polish/${name}`,
-    name.endsWith(".mjs")
-      ? `// Generated from features/polish/${name}. Do not edit.\n`
-      : "",
-  )),
-  ...[
-    "approval-v1.schema.json",
-    "batch-result-v1.schema.json",
-    "cli.mjs",
-    "completion-v1.schema.json",
-    "constants.mjs",
-    "discovery.mjs",
-    "evaluation-output-v1.schema.json",
-    "index.mjs",
-    "inventory-v1.schema.json",
-    "inventory.mjs",
-    "model-evaluation.mjs",
-    "plan-v1.schema.json",
-    "session-result-v1.schema.json",
-    "validate.mjs",
-  ].map((name) => generatedText(
-    `features/sweep/${name}`,
-    `plugins/hope/runtime/features/sweep/${name}`,
-    name.endsWith(".mjs")
-      ? `// Generated from features/sweep/${name}. Do not edit.\n`
-      : "",
-  )),
-  ...[
-    "cli.mjs",
-    "constants.mjs",
-    "index.mjs",
-    "render.mjs",
-    "session-v1.schema.json",
-    "session-v2.schema.json",
-    "session-v3.schema.json",
-    "validate.mjs",
-  ].map((name) => generatedText(
-    `features/align/${name}`,
-    `plugins/hope/runtime/features/align/${name}`,
-    name.endsWith(".mjs")
-      ? `// Generated from features/align/${name}. Do not edit.\n`
-      : "",
-  )),
-  generatedBundle(
-    "features/diff/highlight.mjs",
-    "plugins/hope/runtime/features/diff/highlight.mjs",
-    "// Generated from features/diff/highlight.mjs and bundled dependencies. Do not edit.\n",
-  ),
   ...[
     "analysis-v2.schema.json",
+    "artifact.mjs",
     "checkpoint-v1.schema.json",
     "checkpoint-window-v1.schema.json",
     "checkpoint.mjs",
     "cli.mjs",
+    "code-evidence.mjs",
+    "command-options.mjs",
     "constants.mjs",
     "context.mjs",
     "derive.mjs",
@@ -208,16 +115,14 @@ export const generatedPluginFiles = Object.freeze([
     "github.mjs",
     "hash.mjs",
     "index.mjs",
-    "invocation.mjs",
-    "invocation-evaluation.mjs",
     "redact.mjs",
     "render.mjs",
     "run.mjs",
     "target.mjs",
-    "teaching-aid-evaluation.mjs",
     "teaching-aids.mjs",
     "text.mjs",
     "validate.mjs",
+    "structured-input.mjs",
   ].map((name) => generatedText(
     `features/diff/${name}`,
     `plugins/hope/runtime/features/diff/${name}`,
@@ -225,88 +130,40 @@ export const generatedPluginFiles = Object.freeze([
       ? `// Generated from features/diff/${name}. Do not edit.\n`
       : "",
   )),
-  ...["cli.mjs", "index.mjs", "standard.md"].map((name) => generatedText(
-    `features/write/${name}`,
-    `plugins/hope/runtime/features/write/${name}`,
-    name.endsWith(".mjs")
-      ? `// Generated from features/write/${name}. Do not edit.\n`
-      : "",
-  )),
-  ...[
-    "adjudication-v1.schema.json",
-    "causal-evaluation.mjs",
-    "cli.mjs",
-    "constants.mjs",
-    "index.mjs",
-    "model-adapter.mjs",
-    "review-v1.schema.json",
-    "role-result-v1.schema.json",
-    "role-run.mjs",
-    "run-plan-v1.schema.json",
-    "validate.mjs",
-  ].map((name) => generatedText(
-    `features/toxic-review/${name}`,
-    `plugins/hope/runtime/features/toxic-review/${name}`,
-    name.endsWith(".mjs")
-      ? `// Generated from features/toxic-review/${name}. Do not edit.\n`
-      : "",
-  )),
   generatedText(
-    "features/result-validation/index.mjs",
-    "plugins/hope/runtime/features/result-validation/index.mjs",
-    "// Generated from features/result-validation/index.mjs. Do not edit.\n",
+    "features/diff/locales/index.mjs",
+    "plugins/hope/runtime/features/diff/locales/index.mjs",
+    "// Generated from features/diff/locales/index.mjs. Do not edit.\n",
   ),
-  generatedText(
-    "features/work-snapshot/index.mjs",
-    "plugins/hope/runtime/features/work-snapshot/index.mjs",
-    "// Generated from features/work-snapshot/index.mjs. Do not edit.\n",
-  ),
-  generatedText(
-    "locales/index.mjs",
-    "plugins/hope/runtime/locales/index.mjs",
-    "// Generated from locales/index.mjs. Do not edit.\n",
-  ),
-  ...["en-US", "ko-KR"].flatMap((locale) => ["align", "common", "diff"].map(
+  ...["en-US", "ko-KR"].flatMap((locale) => ["common", "diff"].map(
     (name) => generatedText(
-      `locales/${locale}/${name}.json`,
-      `plugins/hope/runtime/locales/${locale}/${name}.json`,
+      `features/diff/locales/${locale}/${name}.json`,
+      `plugins/hope/runtime/features/diff/locales/${locale}/${name}.json`,
     ),
   )),
-  generatedText(
-    "settings/cli.mjs",
-    "plugins/hope/runtime/settings/cli.mjs",
-    "// Generated from settings/cli.mjs. Do not edit.\n",
-  ),
-  generatedText(
-    "settings/index.mjs",
-    "plugins/hope/runtime/settings/index.mjs",
-    "// Generated from settings/index.mjs. Do not edit.\n",
-  ),
 ]);
 
 export const staticPluginFiles = Object.freeze([
   "plugins/hope/.claude-plugin/plugin.json",
   "plugins/hope/.codex-plugin/plugin.json",
-  "plugins/hope/assets/hope-protected-light-128.png",
   "plugins/hope/assets/hope-protected-light.png",
-  "plugins/hope/agents/toxic-reviewer.md",
   "plugins/hope/skills/align/SKILL.md",
   "plugins/hope/skills/align/agents/openai.yaml",
   "plugins/hope/skills/diff/SKILL.md",
   "plugins/hope/skills/diff/agents/openai.yaml",
   "plugins/hope/skills/diff/assets/hope-protected-light.png",
-  "plugins/hope/skills/settings/SKILL.md",
-  "plugins/hope/skills/settings/agents/openai.yaml",
-  "plugins/hope/skills/settings/assets/hope-protected-light.png",
+  "plugins/hope/skills/diff/references/analysis.md",
   "plugins/hope/skills/polish/SKILL.md",
   "plugins/hope/skills/polish/agents/openai.yaml",
   "plugins/hope/skills/sweep/SKILL.md",
   "plugins/hope/skills/sweep/agents/openai.yaml",
   "plugins/hope/skills/toxic-review/SKILL.md",
   "plugins/hope/skills/toxic-review/agents/openai.yaml",
+  "plugins/hope/skills/toxic-review/references/causal-review.md",
   "plugins/hope/skills/write/SKILL.md",
   "plugins/hope/skills/write/agents/openai.yaml",
   "plugins/hope/skills/write/assets/hope-protected-light.png",
+  "plugins/hope/skills/write/references/writing-standard.md",
 ]);
 
 export const pluginPackageFiles = Object.freeze([

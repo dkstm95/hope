@@ -6,15 +6,68 @@ import {
   label,
   loadLocale,
   normalizeLocale,
-} from "../locales/index.mjs";
+  resolveDisplayOptions,
+} from "../features/diff/locales/index.mjs";
+import {
+  generatedPluginFiles,
+  pluginPackageFiles,
+} from "../tools/plugin-files.mjs";
+
+test("Diff owns its locale sources and packaged locale paths", () => {
+  const entries = generatedPluginFiles
+    .filter(({ source }) => source.includes("/locales/"))
+    .sort((left, right) => left.source.localeCompare(right.source));
+  const sources = [
+    "features/diff/locales/en-US/common.json",
+    "features/diff/locales/en-US/diff.json",
+    "features/diff/locales/index.mjs",
+    "features/diff/locales/ko-KR/common.json",
+    "features/diff/locales/ko-KR/diff.json",
+  ];
+
+  assert.deepEqual(entries.map(({ source }) => source), sources);
+  assert.deepEqual(
+    entries.map(({ destination }) => destination),
+    sources.map((source) => `plugins/hope/runtime/${source}`),
+  );
+  assert.deepEqual(
+    pluginPackageFiles.filter((path) => path.includes("/locales/")),
+    sources.map((source) => `runtime/${source}`),
+  );
+});
 
 test("the supported locale dictionaries have identical keys", async () => {
   const keys = await checkLocaleParity();
   assert.ok(keys.includes("section.core"));
   assert.ok(keys.includes("section.teachingAids"));
-  assert.ok(keys.includes("settings.locale"));
-  const alignKeys = await checkLocaleParity(["common", "align"]);
-  assert.ok(alignKeys.includes("align.sharedState"));
+  assert.ok(keys.includes("theme.system"));
+});
+
+test("display options use explicit values before the host locale", () => {
+  assert.deepEqual(resolveDisplayOptions({
+    hostLocale: "en-US",
+    locale: "ko-KR",
+    theme: "dark",
+  }), {
+    locale: "ko-KR",
+    localeSource: "override",
+    theme: "dark",
+    themeSource: "override",
+  });
+  assert.deepEqual(resolveDisplayOptions({ hostLocale: "ko" }), {
+    locale: "ko-KR",
+    localeSource: "host",
+    theme: "system",
+    themeSource: "default",
+  });
+  assert.throws(
+    () => resolveDisplayOptions({ locale: "ja-JP" }),
+    /Unsupported Hope locale/u,
+  );
+  assert.throws(
+    () => resolveDisplayOptions({ theme: "sepia" }),
+    /Unsupported Hope theme/u,
+  );
 });
 
 test("locale normalization is narrow and labels fail closed", async () => {

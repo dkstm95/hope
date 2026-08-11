@@ -27,11 +27,13 @@ const maintainedProsePaths = [
   "docs/write.md",
   "plugins/hope/skills/align/SKILL.md",
   "plugins/hope/skills/diff/SKILL.md",
+  "plugins/hope/skills/diff/references/analysis.md",
   "plugins/hope/skills/polish/SKILL.md",
   "plugins/hope/skills/sweep/SKILL.md",
-  "plugins/hope/skills/settings/SKILL.md",
   "plugins/hope/skills/toxic-review/SKILL.md",
+  "plugins/hope/skills/toxic-review/references/causal-review.md",
   "plugins/hope/skills/write/SKILL.md",
+  "plugins/hope/skills/write/references/writing-standard.md",
 ];
 
 // This repository uses a stricter convention for top-level prose paragraphs
@@ -119,4 +121,17 @@ test("maintained top-level prose follows the project paragraph convention", asyn
   }
 
   assert.deepEqual(violations, []);
+});
+
+test("the GUI guide keeps all 86 conditional guidelines addressable", async () => {
+  const markdown = await readFile(resolve(root, "docs/design.md"), "utf8");
+  const identifiers = [...markdown.matchAll(/\*\*GUI-(\d{2}) —/gu)].map(
+    (match) => match[1],
+  );
+  const expected = Array.from(
+    { length: 86 },
+    (_, index) => String(index + 1).padStart(2, "0"),
+  );
+
+  assert.deepEqual(identifiers, expected);
 });
