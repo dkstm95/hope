@@ -56,6 +56,7 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/diff/scripts/locales/ko-KR/diff.json",
   "plugins/hope/skills/polish/SKILL.md",
   "plugins/hope/skills/polish/agents/openai.yaml",
+  "plugins/hope/skills/polish/references/code.md",
   "plugins/hope/skills/sweep/SKILL.md",
   "plugins/hope/skills/sweep/agents/openai.yaml",
   "plugins/hope/skills/toxic-review/SKILL.md",

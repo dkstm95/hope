@@ -165,23 +165,28 @@ It is hard on the work, respectful toward people, and does not invent criticism.
 </details>
 
 <details>
-<summary><strong>Polish</strong> — Refine completed work without changing settled decisions</summary>
+<summary><strong>Polish</strong> — Improve completed work without changing settled behavior</summary>
 
-Polish defines what must stay unchanged and refines the work once within a clear
-scope.
+Polish reviews a named completed result or the current repository change set,
+then applies one bounded improvement pass.
 
-It preserves settled behavior and meaning, reports what changed and what was
-checked, and stops when the work needs a material decision.
+Independent cleanup scouts look only for useful improvements. For code, they
+check reuse of existing helpers, simplicity, efficiency, and abstraction fit.
+A fresh finisher weighs their evidence, rejects speculative or risky changes,
+applies the coherent remainder, and verifies the result.
 
-It starts only after a result is complete and you ask to polish it.
+Polish keeps cleanup separate from bug hunting, feature work, migrations, and
+broad maintenance. It reports those concerns instead of hiding them in a
+refactor.
 
-One fresh worker receives the exact target and preservation contract without
-inheriting the conversation that produced the work.
+> [!NOTE]
+> Polish edits the local target by default. Ask for a review-only pass when you
+> want adjudicated candidates without changes.
+>
+> Each scout and the finisher runs in a fresh context and makes a separate model
+> call. Polish uses only the smallest useful scout set.
 
-Initial implementation, feature changes, architecture migrations, and broad
-restructuring stay outside Polish.
-
-> Example: “Refine the current work product.”
+> Example: “Simplify the current changes without changing behavior.”
 
 </details>
 

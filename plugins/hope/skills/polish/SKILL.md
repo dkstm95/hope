@@ -1,107 +1,147 @@
 ---
 name: polish
-description: Use only after someone asks to polish or refine one named, completed work product in a bounded pass that must preserve its settled behavior and meaning. Do not use for initial implementation, feature changes, architecture migrations, or broad restructuring.
+description: Use after a work product or code change is complete when someone asks to polish, simplify, clean up, deduplicate, consolidate, refactor, or improve efficiency without changing settled behavior, meaning, or public contracts. Review a named target or the current repository change set with independent cleanup scouts, let a fresh finisher apply one bounded local improvement pass by default, and verify it. Do not use for initial implementation, requested feature changes, bug hunting, architecture migrations, or broad maintenance sweeps.
 ---
 
 # Hope Polish
 
-Use the active host session only to bind the task, start one fresh worker, and
-report the result.
+Use the active host session only to bind the target, assign independent cleanup
+scouts, hand their evidence to one fresh finisher, and report the result.
 
-The fresh worker must not inherit the conversation that produced the work.
+Do not let the active session inspect, judge, revise, or verify the target as a
+scout or finisher.
 
-Do not let the active session inspect, revise, or verify the target as the
-Polish worker.
+Perform one candidate-discovery round and at most one coherent modification
+pass. A limited correction or reversion of a regression introduced by that pass
+is part of verification, not another cleanup round.
 
-Do not use Polish to implement the work product, add or change a feature,
-perform an architecture migration, or carry out broad restructuring.
+## Bind the target
 
-A requirement to preserve existing behavior does not turn ordinary
-implementation or restructuring into Polish.
+Prefer an exact target named by the person.
 
-The fresh worker inspects, revises, and verifies the named completed result.
+When no target is named and the current project is a Git repository, bind the
+smallest reliable change set that matches the request:
 
-Perform at most one bounded modification round.
+- use a reliable last-turn change set when the request clearly refers to it;
+- otherwise include the current branch changes ahead of its upstream plus
+  staged, unstaged, and relevant untracked files; or
+- use only the working-tree changes when no upstream comparison is available.
 
-## Create an isolated handoff
+For a non-repository result, use the named or clearly referenced completed work
+product. Ask for a target only when the available context cannot identify one
+without widening the task.
 
-Before editing, confirm that the host can start a subagent with no inherited
-conversation context.
+Before review, state:
 
-If it cannot, stop and explain that Polish requires a fresh worker.
+- the target, its purpose, and the evidence snapshot;
+- what is in and out of scope;
+- the behavior, meaning, facts, uncertainty, citations, voice, and public
+  contracts that must stay unchanged;
+- whether the run may edit or is review-only; and
+- how the result can be verified.
 
-Give the worker only:
+A request to polish, simplify, clean up, deduplicate, consolidate, or refactor
+grants authority for reversible local edits inside the stated boundary unless
+the person asks for review-only output. It does not authorize a feature change,
+public-contract change, dependency migration, architecture move, or unrelated
+cleanup.
+
+Recheck the target evidence before writing. Stop and bind a new snapshot when
+the target changed after inspection or its identity is uncertain.
+
+## Assign cleanup scouts
+
+Use one to four fresh scouts. Choose the smallest role set that can test the
+material cleanup opportunities without making one scout repeat another.
+
+For code, tests, configuration, build logic, or other code-bearing changes,
+read [references/code.md](references/code.md) and select from its review lenses.
+
+For other work products, derive distinct lenses from the target's purpose.
+Common useful questions are whether the result duplicates existing material,
+contains avoidable structure or wording, spends effort without improving the
+result, or is organized at the wrong level. Use Hope Write for language-bearing
+judgment.
+
+Every scout must:
+
+- use a fresh subagent context with no inherited conversation, previous
+  reasoning, drafts, implementation narrative, conclusions, or other scout
+  output;
+- inspect the bound target and only enough surrounding evidence to establish a
+  candidate;
+- remain read-only;
+- report each candidate's location, evidence, proposed action, expected benefit,
+  preservation risk, and verification method; and
+- separate suspected correctness problems or required product decisions from
+  cleanup candidates.
+
+Give each scout the person's exact request, the bound target, its preservation
+contract, its assigned lens, direct evidence locations, exclusions, the
+location of this Skill, and the expected output. Tell it to read this Skill and
+any applicable reference before acting.
+
+Do not require a finding. No useful cleanup is a valid result.
+
+If fresh subagent contexts are unavailable, stop without performing Polish.
+
+## Let a fresh finisher decide
+
+Start one fresh finisher after the scouts complete. The finisher may see the
+scout reports but must not inherit the conversation that produced the target or
+the scouts' hidden reasoning.
+
+Give the finisher only:
 
 - the person's exact request;
-- the exact target and its purpose;
-- settled behavior and meaning, facts, uncertainty, citations, intended voice,
-  and public contracts;
-- in-scope and out-of-scope work plus the granted write authority;
-- the location of this Skill;
-- direct evidence locations; and
-- the verification methods.
+- the bound target, purpose, preservation contract, scope, and write authority;
+- authoritative project rules and direct evidence locations;
+- every scout report, including no-finding and out-of-scope results;
+- the applicable verification methods;
+- the location of this Skill; and
+- an instruction to read this Skill before acting.
 
-Do not pass previous reasoning, drafts, failed approaches, implementation
-narrative, or another agent's conclusions.
+The finisher inspects the target, then accepts, merges, rejects, or defers each
+candidate from evidence and net benefit. Do not count scout votes.
 
-Tell the worker to read this Skill before acting.
+Accept only changes that:
 
-## Establish the boundary
+- have a concrete reason and a visible improvement;
+- preserve the bound behavior, meaning, and contracts;
+- fit one small, coherent pass; and
+- can be verified in the changed scope.
 
-The fresh worker inspects the exact target before planning.
+Reject personal taste, speculative optimization, parallel abstractions, broad
+rewrites, and cleanup whose benefit does not justify its risk. Remove or merge
+content only when evidence shows that it is unnecessary or duplicative.
 
-State:
+Do not fix a suspected correctness bug, implement a product decision, or hide a
+feature change inside Polish. Report it separately. Return `needs alignment`
+when such an issue prevents a safe cleanup decision.
 
-- the target and its purpose;
-- what is in and out of scope;
-- the behavior, meaning, facts, uncertainty, citations, and public contracts
-  that must stay unchanged;
-- the small set of planned changes; and
-- how the checked scope will be verified.
+If the run is review-only, report the adjudicated candidates without editing.
+Otherwise, create a short plan from the accepted candidates, recheck the target,
+and apply the pass. Use Hope Write for language-bearing changes within the
+finisher; it does not add another worker or modification round. A no-change
+result is valid.
 
-Use the person's request as write authority only for work clearly inside that
-boundary.
+## Verify the pass
 
-Ask before a removal or consolidation that is not clearly authorized.
+Run the smallest checks that can detect a regression in the changed scope and
+inspect the final difference against the preservation contract.
 
-Return `needs alignment` instead of silently choosing a material product
-behavior or public-contract change.
+If verification exposes a regression introduced by Polish, correct only that
+regression inside the same boundary or revert the affected Polish change. Do
+not use verification as a new candidate-discovery round. Do not fix a
+pre-existing failure unless the person starts a separate task.
 
-## Revise once
+The finisher reports:
 
-The fresh worker creates a short plan from the inspected target.
-
-Every change needs a concrete reason.
-
-Removing or merging content is allowed only when available evidence shows that
-it is unnecessary or duplicative.
-
-Similar tests, repeated documentation, and apparently unused code may protect
-different boundaries.
-
-Keep them when their purpose cannot be established.
-
-A no-change result is valid.
-
-Recheck the target before writing.
-
-Stop when it changed after inspection or its identity is uncertain.
-
-Use Hope Write for language-bearing changes within the fresh worker.
-
-Write does not add another worker or modification round.
-
-## Verify and report
-
-Run the smallest checks that can detect a regression in the changed scope.
-
-The fresh worker reports:
-
-- what changed;
-- what was checked;
-- what passed or failed;
+- what changed, or why no change was needed;
+- which candidates were rejected or deferred and why;
+- what was checked and what passed or failed;
 - what remains uncertain; and
-- whether no change was needed.
+- any correctness concern or material decision left outside Polish.
 
 Passing checks prove only their stated scope.
 
