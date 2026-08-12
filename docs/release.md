@@ -7,9 +7,16 @@ It does not define feature behavior.
 Hope publishes one verified package and matching source tag for each public
 version.
 
-## Release intent
+## Automatic release
 
-A manual `Release` run records the normal release intent.
+Every push to `main` starts `Verify`.
+
+When Verify succeeds, it starts the `Release` workflow for the tested commit.
+
+Failed or cancelled verification does not start a release.
+
+If commits follow the current release, the workflow prepares and publishes the
+next version without waiting for a separate release decision.
 
 Use a concise, outcome-focused Conventional Commit subject for each change that
 reaches `main`.
@@ -36,50 +43,39 @@ The public version files are:
 - `plugins/hope/.codex-plugin/plugin.json`; and
 - `plugins/hope/.claude-plugin/plugin.json`.
 
-The workflow passes its selected version to the preparation command, which
-updates all four files and rebuilds the generated plugin:
+The workflow asks the preparation command to classify those commits, update all
+four files, and rebuild the generated plugin:
 
 ```bash
-npm run release:prepare -- <version>
+npm run release:prepare -- --automatic <current-tag>
 ```
 
-## Automatic release
+The automatic run starts from the exact `main` commit that passed Verify.
 
-The `Release` workflow also starts when an explicitly prepared, untagged public
-version reaches `main`.
+If that commit is already part of the current GitHub Release, the run exits
+without changing or publishing anything.
 
-The automatic run uses the exact commit that changed those files.
-
-It publishes the version already recorded in that commit.
-
-If that version already has a GitHub Release, the automatic run exits without
-publishing or increasing it.
-
-The workflow installs locked dependencies, runs repository and browser checks,
-verifies generated plugin files, creates an annotated tag, stages the approved
-package files, records a checksum, and publishes the GitHub Release as latest.
+The release workflow installs locked dependencies, prepares and rechecks the
+versioned package, creates an annotated tag, stages the approved package files,
+records a checksum, and publishes the GitHub Release as latest.
 
 GitHub Release notes are the public version history.
 
 GitHub generates them from the commits and merged pull requests since the
 previous tag.
 
-## Manual release
+## Manual retry
 
-A manual run uses the latest `main` commit.
+A manual run retries the same automatic process against the latest `main`
+commit.
 
-When the recorded version already has a GitHub Release, the workflow classifies
-the commits after its tag, chooses the next version, and commits the prepared
-release files.
+Use it when the automatic run did not start or needs recovery.
 
 When no commit follows the current release, the run exits without changing or
 publishing anything.
 
-When the recorded version has no release tag, the workflow publishes that
-version without increasing it.
-
-If its tag exists without a GitHub Release, the run resumes that exact tagged
-commit.
+If the current version's tag exists without a GitHub Release, the workflow
+resumes that exact tagged commit.
 
 The person starting the run does not choose a version or increase type.
 
@@ -94,6 +90,9 @@ The rerun restores the tagged commit, verifies it again, and publishes the
 missing package without increasing the version.
 
 Once a version tag exists, its plugin package is immutable.
+
+If the version recorded in the source has no matching tag, the workflow stops.
+Normal contributions must not prepare public version files by hand.
 
 If `main` advances while the workflow is preparing a release, the atomic push
 fails without publishing the new tag.
