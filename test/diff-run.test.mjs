@@ -18,6 +18,8 @@ import {
 } from "../plugins/hope/skills/diff/scripts/constants.mjs";
 import { revalidateGitHubSnapshot } from "../plugins/hope/skills/diff/scripts/github.mjs";
 import {
+  DIFF_CLEANUP_FAILED_CODE,
+  DIFF_PUBLICATION_RETRYABLE_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
   cancelDiff,
   finishDiff,
@@ -417,17 +419,58 @@ test("inspection-plan pointers reject traversal and symlinked files", async () =
   );
 });
 
-test("a run is removed before its review becomes visible", async () => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-run-before-publish-");
+test("a publication failure preserves its validated run for retry", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-publish-retry-");
   const { created } = await createAnalyzedRun(temporaryRoot);
-  let published = false;
+  let removed = false;
 
   await assert.rejects(
     finishDiff(created.path, {
       finalize: async () => {
-        published = true;
-        return {};
+        throw new Error("publication failed");
       },
+      removeRun: async () => {
+        removed = true;
+      },
+      render: async () => ({ bytes: Buffer.from("review"), digest: "d".repeat(64) }),
+      revalidate: async () => ({
+        matches: true,
+        revalidatedAt: "2026-07-23T00:01:00.000Z",
+      }),
+      temporaryRoot,
+    }),
+    (error) => {
+      assert.equal(error.code, DIFF_PUBLICATION_RETRYABLE_CODE);
+      assert.equal(error.canRetry, true);
+      assert.equal(error.command, "finish");
+      assert.equal(error.runPath, created.path);
+      return true;
+    },
+  );
+  assert.equal(removed, false);
+  await access(created.path);
+
+  const result = await finishDiff(created.path, {
+    finalize: async () => ({ outputPath: join(temporaryRoot, "review.html") }),
+    render: async () => ({ bytes: Buffer.from("review"), digest: "d".repeat(64) }),
+    revalidate: async () => ({
+      matches: true,
+      revalidatedAt: "2026-07-23T00:01:00.000Z",
+    }),
+    temporaryRoot,
+  });
+  assert.equal(result.outputPath, join(temporaryRoot, "review.html"));
+  await assert.rejects(access(created.path), /ENOENT/u);
+});
+
+test("a cleanup failure reports the review that was already published", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-cleanup-report-");
+  const { created } = await createAnalyzedRun(temporaryRoot);
+  const outputPath = join(temporaryRoot, "review.html");
+
+  await assert.rejects(
+    finishDiff(created.path, {
+      finalize: async () => ({ outputPath }),
       removeRun: async () => {
         throw new Error("cleanup failed");
       },
@@ -438,9 +481,50 @@ test("a run is removed before its review becomes visible", async () => {
       }),
       temporaryRoot,
     }),
-    /cleanup failed/u,
+    (error) => {
+      assert.equal(error.code, DIFF_CLEANUP_FAILED_CODE);
+      assert.equal(error.outputPath, outputPath);
+      assert.equal(error.runPath, created.path);
+      assert.equal(error.cleanupPending, true);
+      return true;
+    },
   );
-  assert.equal(published, false);
+  await access(created.path);
+  await removeDiffRun(created.path, { temporaryRoot });
+});
+
+test("a lock-release failure keeps the published review location", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-release-report-");
+  const { created } = await createAnalyzedRun(temporaryRoot);
+  const outputPath = join(temporaryRoot, "review.html");
+
+  await assert.rejects(
+    finishDiff(created.path, {
+      claimMutation: async () => ({
+        assertOwned: async () => {},
+        release: async () => {
+          throw new Error("lock release failed");
+        },
+      }),
+      finalize: async () => ({ outputPath }),
+      removeRun: async () => {
+        throw new Error("cleanup failed");
+      },
+      render: async () => ({ bytes: Buffer.from("review"), digest: "d".repeat(64) }),
+      revalidate: async () => ({
+        matches: true,
+        revalidatedAt: "2026-07-23T00:01:00.000Z",
+      }),
+      temporaryRoot,
+    }),
+    (error) => {
+      assert.equal(error.code, DIFF_CLEANUP_FAILED_CODE);
+      assert.equal(error.outputPath, outputPath);
+      assert.equal(error.runPath, created.path);
+      assert.equal(error.cleanupPending, true);
+      return true;
+    },
+  );
   await removeDiffRun(created.path, { temporaryRoot });
 });
 

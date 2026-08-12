@@ -43,3 +43,10 @@ Publication creates a new file and never replaces an existing artifact.
 
 A failed collection, validation, render, revalidation, or publication does not
 publish a partial review.
+
+A publication failure preserves the validated private run so `finish` can be
+retried after the publication problem is fixed.
+
+After successful publication, Diff removes the private run. If that cleanup
+fails, Diff reports the published artifact and the remaining cleanup work
+instead of telling the caller to publish again.

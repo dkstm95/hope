@@ -9,6 +9,8 @@ import {
   buildMicroworldSkeleton,
   cancelDiff,
   checkpointDiffWindow,
+  DIFF_CLEANUP_FAILED_CODE,
+  DIFF_PUBLICATION_RETRYABLE_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
   finishDiff,
   prepareDiff,
@@ -238,7 +240,9 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
 
 export function diffErrorDetails(error) {
   const structured = error?.code === "HOPE_ANALYSIS_INVALID"
-    || error?.code === DIFF_REVALIDATION_RETRYABLE_CODE;
+    || error?.code === DIFF_REVALIDATION_RETRYABLE_CODE
+    || error?.code === DIFF_PUBLICATION_RETRYABLE_CODE
+    || error?.code === DIFF_CLEANUP_FAILED_CODE;
   if (!structured && error?.preservedPath === undefined) return "";
   const details = {};
   if (structured) {
@@ -246,6 +250,7 @@ export function diffErrorDetails(error) {
     details.code = error.code;
     if (Array.isArray(error.issues)) details.issues = error.issues;
     if (error.command !== undefined) details.command = error.command;
+    if (error.outputPath !== undefined) details.outputPath = error.outputPath;
     if (error.runPath !== undefined) details.runPath = error.runPath;
   }
   if (error.preservedPath !== undefined) {
@@ -258,6 +263,7 @@ export function diffExitCode(error) {
   if (error?.code === "HOPE_ANALYSIS_INVALID") return 3;
   if (error?.code === "HOPE_DIFF_STALE") return 4;
   if (error?.code === DIFF_REVALIDATION_RETRYABLE_CODE) return 5;
+  if (error?.code === DIFF_PUBLICATION_RETRYABLE_CODE) return 6;
   return 1;
 }
 
