@@ -74,68 +74,48 @@ jobs:
       - name: Restore interrupted release source
         if: steps.plan.outputs.mode == 'resume'
         run: git checkout --detach "${{ steps.plan.outputs.current-tag }}"
-      - if: steps.plan.outputs.publish == 'true'
-        run: npm ci
-      - name: Prepare recorded version
-        id: release
+      - name: Check recorded package
         if: steps.plan.outputs.publish == 'true'
         run: |
-          npm run release:prepare -- "${{ steps.plan.outputs.current-version }}"
-          RELEASE_VERSION="$(node -p "require('./package.json').version")"
-          RELEASE_TAG="v${RELEASE_VERSION}"
-          if git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}^{commit}" > /dev/null; then
+          test "$(node -p "require('./package.json').version")" = "${{ steps.plan.outputs.current-version }}"
+          if git rev-parse --verify --quiet "refs/tags/${{ steps.plan.outputs.current-tag }}^{commit}" > /dev/null; then
             if [ "${{ steps.plan.outputs.mode }}" != "resume" ]; then
-              echo "Release tag ${RELEASE_TAG} already exists unexpectedly" >&2
+              echo "Release tag ${{ steps.plan.outputs.current-tag }} already exists unexpectedly" >&2
               exit 1
             fi
-            test "$(git rev-parse HEAD)" = "$(git rev-parse "${RELEASE_TAG}^{commit}")"
+            test "$(git rev-parse HEAD)" = "$(git rev-parse "${{ steps.plan.outputs.current-tag }}^{commit}")"
           elif [ "${{ steps.plan.outputs.mode }}" = "resume" ]; then
-            echo "Release tag ${RELEASE_TAG} disappeared before recovery" >&2
+            echo "Release tag ${{ steps.plan.outputs.current-tag }} disappeared before recovery" >&2
             exit 1
           fi
-          {
-            echo "version=${RELEASE_VERSION}"
-            echo "tag=${RELEASE_TAG}"
-          } >> "${GITHUB_OUTPUT}"
-      - if: steps.plan.outputs.publish == 'true'
-        run: npx playwright install --with-deps chromium
-      - if: steps.plan.outputs.publish == 'true'
-        run: npm run test:browser
-      - name: Check generated plugin
-        if: steps.plan.outputs.publish == 'true'
-        run: |
-          git diff --exit-code -- package.json package-lock.json plugins/hope tools/plugin-package-files.txt
+          node tools/check-release.mjs
       - name: Stage plugin package
         if: steps.plan.outputs.publish == 'true'
         run: node tools/stage-plugin.mjs "${RUNNER_TEMP}/hope-package"
       - name: Package plugin
         if: steps.plan.outputs.publish == 'true'
         working-directory: ${{ runner.temp }}/hope-package
-        run: zip -r "${GITHUB_WORKSPACE}/hope-${{ steps.release.outputs.tag }}.zip" .
+        run: zip -r "${GITHUB_WORKSPACE}/hope-${{ steps.plan.outputs.current-tag }}.zip" .
       - name: Check package root
         if: steps.plan.outputs.publish == 'true'
         run: |
-          unzip -Z1 "hope-${{ steps.release.outputs.tag }}.zip" | sed '/\/$/d' | sort > "${RUNNER_TEMP}/plugin-package-files.txt"
+          unzip -t "hope-${{ steps.plan.outputs.current-tag }}.zip" > /dev/null
+          unzip -Z1 "hope-${{ steps.plan.outputs.current-tag }}.zip" | sed '/\/$/d' | sort > "${RUNNER_TEMP}/plugin-package-files.txt"
           diff -u tools/plugin-package-files.txt "${RUNNER_TEMP}/plugin-package-files.txt"
-          unzip -p "hope-${{ steps.release.outputs.tag }}.zip" .claude-plugin/plugin.json > /dev/null
-          unzip -p "hope-${{ steps.release.outputs.tag }}.zip" .codex-plugin/plugin.json > /dev/null
-          unzip -p "hope-${{ steps.release.outputs.tag }}.zip" skills/diff/SKILL.md > /dev/null
-          unzip -p "hope-${{ steps.release.outputs.tag }}.zip" skills/write/SKILL.md > /dev/null
-          unzip -p "hope-${{ steps.release.outputs.tag }}.zip" skills/write/references/writing-standard.md > /dev/null
-          sha256sum "hope-${{ steps.release.outputs.tag }}.zip" > "hope-${{ steps.release.outputs.tag }}.zip.sha256"
+          sha256sum "hope-${{ steps.plan.outputs.current-tag }}.zip" > "hope-${{ steps.plan.outputs.current-tag }}.zip.sha256"
       - name: Publish recorded release
         if: steps.plan.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ steps.plan.outputs.mode }}" != "resume" ]; then
-            git tag -a "${{ steps.release.outputs.tag }}" -m "Hope ${{ steps.release.outputs.tag }}"
-            git push origin "${{ steps.release.outputs.tag }}"
+            git tag -a "${{ steps.plan.outputs.current-tag }}" -m "Hope ${{ steps.plan.outputs.current-tag }}"
+            git push origin "${{ steps.plan.outputs.current-tag }}"
           fi
-          gh release create "${{ steps.release.outputs.tag }}" \
-            "hope-${{ steps.release.outputs.tag }}.zip" \
-            "hope-${{ steps.release.outputs.tag }}.zip.sha256" \
-            --title "Hope ${{ steps.release.outputs.tag }}" \
+          gh release create "${{ steps.plan.outputs.current-tag }}" \
+            "hope-${{ steps.plan.outputs.current-tag }}.zip" \
+            "hope-${{ steps.plan.outputs.current-tag }}.zip.sha256" \
+            --title "Hope ${{ steps.plan.outputs.current-tag }}" \
             --generate-notes \
             --fail-on-no-commits \
             --latest \

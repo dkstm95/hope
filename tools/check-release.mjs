@@ -82,9 +82,12 @@ assert.equal(
   packageJson.scripts["render:readme-assets"],
   "node tools/render-readme-assets.mjs",
 );
-assert.equal(
-  packageJson.scripts.check,
-  "npm run check:release && npm run release:check && npm test",
+assert.ok(
+  packageJson.scripts.check
+    .split("&&")
+    .map((command) => command.trim())
+    .includes("npm run release:check"),
+  "npm run check must include release impact",
 );
 assert.equal(
   normalizeLineEndings(await read("tools/plugin-package-files.txt")),

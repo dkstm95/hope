@@ -53,20 +53,5 @@ Start a new Codex task after installation.
 - Keep product documentation aligned with implemented behavior.
 - State which checks ran and any remaining verification gap in the pull
   request.
-- Decide whether the completed work needs no release, a patch, a minor, or a
-  major release. Record the decision in the pull request.
-
-When the decision changes the version, update from the latest `main` and run:
-
-```bash
-npm run release:prepare -- <patch|minor|major>
-```
-
-The command calculates the exact version from the selected base ref.
-
-Commit its version and generated package changes with the work.
-
-Run `npm run check` again after preparing the version.
-
-See [docs/release.md](docs/release.md) for the decision criteria and recovery
-process.
+- Follow [docs/release.md](docs/release.md) to record the release decision,
+  prepare any version change, and pass the completion gate before committing.

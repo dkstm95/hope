@@ -97,9 +97,8 @@ The workflow checks out that event's exact commit.
 If the push did not change the recorded version, the workflow exits without
 publishing.
 
-For a new version, it installs locked dependencies, prepares the recorded
-version again, runs the browser suite, stages and checks the archive, and then
-creates the tag and GitHub Release.
+For a new version, it checks the recorded package, stages and verifies the
+archive, and then creates the tag and GitHub Release.
 
 The workflow never chooses a version, changes `main`, or lets a later unchanged
 commit claim an earlier version.
@@ -115,9 +114,9 @@ A manual run uses the selected `main` commit, not a moving branch reference.
 
 If its tag and GitHub Release both exist, the run exits without publishing.
 
-If neither exists, the run verifies and publishes that recorded version.
+If neither exists, the run checks and publishes that recorded version.
 
 If the tag exists without a GitHub Release, the run restores the tagged commit,
-verifies it again, and publishes the missing package.
+checks its package again, and publishes the missing release.
 
 Once a version tag exists, its source and plugin package are immutable.

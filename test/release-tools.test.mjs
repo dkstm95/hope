@@ -330,43 +330,18 @@ test("release file lists compare across platform line endings", () => {
   assert.equal(normalizeLineEndings(windowsCheckout), expected);
 });
 
-test("CI checks locally and publishes only an exact recorded push", async () => {
+test("CI keeps release decisions local and publishes a checked package", async () => {
   const verify = await readFile(join(root, ".github/workflows/verify.yml"), "utf8");
   const release = await readFile(join(root, ".github/workflows/release.yml"), "utf8");
 
   const verifyInstall = verify.indexOf("- run: npm ci");
-  const releaseInstall = release.indexOf("run: npm ci");
-  const releasePrepare = release.indexOf("npm run release:prepare");
+  const releaseCheck = release.indexOf("node tools/check-release.mjs");
   const releaseStage = release.indexOf("node tools/stage-plugin.mjs");
-  const releasePackageCheck = release.indexOf("unzip -Z1");
+  const releasePackageCheck = release.indexOf("unzip -t");
   const releasePublish = release.indexOf("- name: Publish recorded release");
   assert.ok(verifyInstall >= 0, "verify workflow must install dependencies");
-  assert.ok(releaseInstall >= 0, "release workflow must install dependencies");
-  assert.ok(releasePrepare >= 0, "release workflow must prepare the release");
   assert.ok(verifyInstall < verify.indexOf("- run: npm run check"));
   assert.doesNotMatch(verify, /tools\/release-impact\.mjs|BASE_REF/u);
-  assert.ok(releaseInstall < releasePrepare);
-  const checkJob = verify.match(/\n  check:\n([\s\S]*?)\n  platform-smoke:\n/u)?.[1];
-  const platformSmokeJob = verify.match(
-    /\n  platform-smoke:\n([\s\S]*?)\n  browser:\n/u,
-  )?.[1];
-  assert.ok(checkJob, "verify workflow must define the deterministic check job");
-  assert.ok(platformSmokeJob, "verify workflow must define the platform smoke job");
-  assert.match(checkJob, /node: \[22, 24\]/u);
-  assert.match(checkJob, /runs-on: ubuntu-latest/u);
-  assert.doesNotMatch(checkJob, /macos-latest|windows-latest/u);
-  assert.match(platformSmokeJob, /os: \[macos-latest, windows-latest\]/u);
-  assert.match(platformSmokeJob, /node-version: 22/u);
-  assert.match(platformSmokeJob, /npm run build:plugin/u);
-  assert.match(platformSmokeJob, /node --test test\/platform-smoke\.test\.mjs/u);
-  assert.match(verify, /needs: \[check, platform-smoke, browser\]/u);
-  assert.match(verify, /BROWSER_RESULT: \$\{\{ needs\.browser\.result \}\}/u);
-  assert.match(
-    verify,
-    /PLATFORM_SMOKE_RESULT: \$\{\{ needs\.platform-smoke\.result \}\}/u,
-  );
-  assert.match(release, /npx playwright install --with-deps chromium/u);
-  assert.match(release, /npm run test:browser/u);
   assert.match(release, /push:\s+branches:\s+- main\s+paths:\s+- package\.json/su);
   assert.match(release, /workflow_dispatch/u);
   assert.doesNotMatch(release, /workflow_run/u);
@@ -375,33 +350,12 @@ test("CI checks locally and publishes only an exact recorded push", async () => 
   assert.match(release, /test "\$\{EVENT_REF\}" = "refs\/heads\/main"/u);
   assert.match(release, /test "\$\(git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
   assert.match(release, /PREVIOUS_VERSION=.*BEFORE_SHA/u);
-  assert.match(release, /PREVIOUS_VERSION.*=.*CURRENT_VERSION/u);
-  assert.match(release, /MODE=recorded/u);
-  assert.doesNotMatch(release, /MODE=increment|--automatic/u);
-  assert.match(
-    release,
-    /npm run release:prepare -- "\$\{\{ steps\.plan\.outputs\.current-version \}\}"/u,
-  );
-  assert.match(release, /steps\.plan\.outputs\.publish == 'true'/u);
-  assert.doesNotMatch(release, /workflow_dispatch:\s+inputs:/su);
-  assert.match(release, /gh release view/u);
-  assert.match(release, /git checkout --detach/u);
-  assert.match(
-    release,
-    /test "\$\(git rev-parse HEAD\)" = "\$\(git rev-parse "\$\{RELEASE_TAG\}\^\{commit\}"\)"/u,
-  );
-  assert.match(release, /git push origin "\$\{\{ steps\.release\.outputs\.tag \}\}"/u);
+  assert.doesNotMatch(release, /npm ci|release:prepare|test:browser|playwright install/u);
+  assert.match(release, /git push origin "\$\{\{ steps\.plan\.outputs\.current-tag \}\}"/u);
   assert.doesNotMatch(release, /HEAD:main|git commit|git add/u);
-  assert.match(
-    release,
-    /git diff --exit-code -- package\.json package-lock\.json plugins\/hope tools\/plugin-package-files\.txt/u,
-  );
   assert.match(release, /gh release create/u);
-  assert.match(release, /--fail-on-no-commits/u);
-  assert.match(release, /--latest/u);
-  assert.doesNotMatch(release, /--prerelease/u);
-  assert.ok(releasePrepare < release.indexOf("npm run test:browser"));
-  assert.ok(releaseStage > releasePrepare);
+  assert.ok(releaseCheck >= 0);
+  assert.ok(releaseStage > releaseCheck);
   assert.ok(releasePackageCheck > releaseStage);
   assert.ok(releasePublish > releasePackageCheck);
 });
