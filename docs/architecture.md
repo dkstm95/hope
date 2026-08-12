@@ -45,6 +45,9 @@ The arrows point from delivery toward feature behavior.
 Manifests and marketplace metadata may describe discovery but must not define a
 different feature.
 
+Each Skill's `agents/openai.yaml` is also delivery metadata. It must describe
+the owning Skill and cannot add or change feature behavior.
+
 Feature references and scripts must not read a plugin manifest, marketplace
 configuration, installed-cache path, or host-specific root variable.
 

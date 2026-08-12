@@ -12,14 +12,15 @@ Before changing Hope:
 
 ## Writing
 
-Apply the shared
+Use the Hope Write Skill whenever clearer language would improve the work.
+
+Write applies the shared
 [writing standard](plugins/hope/skills/write/references/writing-standard.md)
-to language-bearing work.
+inside the active task.
 
-Use the Hope Write Skill for a standalone language-only draft, edit, or review.
-
-During implementation or another Hope workflow, apply the standard directly
-instead of invoking Write as a second workflow.
+When implementation or another Skill owns the task, Write remains
+cross-cutting. It does not create another workflow, worker, result, scope, or
+completion condition.
 
 ## Completion
 

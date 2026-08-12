@@ -27,7 +27,6 @@ import {
   releaseTypeForCommits,
   replaceVersion,
   withPackageLockVersion,
-  withVersion,
 } from "../tools/prepare-release.mjs";
 import {
   parsePackageFileList,
@@ -60,11 +59,6 @@ test("release versions use one supported form", () => {
   assert.equal(isSemanticVersion("01.0.0"), false);
   assert.equal(isSemanticVersion("1.0.0-01"), false);
   assert.equal(isSemanticVersion("1.0.0-alpha..1"), false);
-  assert.deepEqual(withVersion({ name: "hope", version: "old" }, "1.0.0"), {
-    name: "hope",
-    version: "1.0.0",
-  });
-  assert.throws(() => withVersion({}, "next"), /semantic version/u);
   assert.equal(
     replaceVersion('{\n  "version": "0.1.0",\n  "items": ["one", "two"]\n}\n', "1.0.0"),
     '{\n  "version": "1.0.0",\n  "items": ["one", "two"]\n}\n',

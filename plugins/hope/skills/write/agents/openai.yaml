@@ -4,4 +4,4 @@ interface:
   icon_small: "./assets/hope-protected-light.png"
   icon_large: "./assets/hope-protected-light.png"
   brand_color: "#087EA4"
-  default_prompt: "Use $hope:write wherever clearer language would improve this task."
+  default_prompt: "Use $hope:write within this task wherever clearer language would help."

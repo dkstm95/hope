@@ -194,11 +194,11 @@ project.
 It inventories the owned worktree, reports exclusions and evidence gaps, and
 returns an ordered plan.
 
-It checks broken references and configuration drift; dead or stale code, tests,
-documentation, and configuration; repeated, missing, or premature abstractions;
-test and documentation gaps; dependency, security, license, and compatibility
-risks; performance, package, build, and CI waste; and architecture, support,
-release, and recovery readiness.
+It considers the maintenance risks that matter to the project, such as broken
+references, stale code, unsupported abstractions, verification gaps,
+dependency or license risk, delivery waste, and unclear ownership.
+
+The list guides the review; Sweep does not force a finding in every area.
 
 Incomplete evidence stays visible instead of being reported as complete.
 
@@ -219,8 +219,9 @@ Select a candidate from its plan to start a separate implementation task.
 Write drafts, edits, or reviews language without losing meaning, facts,
 uncertainty, citations, or the person's voice.
 
-Hope also applies Write in other tasks, including prompts, documentation,
-responses, interface text, errors, comments, and names.
+Hope also uses Write within other tasks, including implementation and other
+Skills. It applies the shared standard without creating a second workflow or
+changing the task's scope.
 
 Write's shared standard adapts George Orwell's six rules in
 [Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).

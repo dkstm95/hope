@@ -81,13 +81,6 @@ export function incrementVersion(version, releaseType) {
   return `${major}.${minor}.${patch}`;
 }
 
-export function withVersion(document, version) {
-  if (!isSemanticVersion(version)) {
-    throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
-  }
-  return { ...document, version };
-}
-
 export function replaceVersion(content, version) {
   if (!isSemanticVersion(version)) {
     throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
