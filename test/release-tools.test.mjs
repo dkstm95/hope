@@ -21,6 +21,13 @@ import {
 } from "../tools/install-plugin-dev.mjs";
 import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 import {
+  compareVersions,
+  incrementVersion,
+  packageDigest,
+  releaseTypeBetween,
+  validateReleaseImpact,
+} from "../tools/release-impact.mjs";
+import {
   isSemanticVersion,
   replaceVersion,
   withPackageLockVersion,
@@ -82,6 +89,127 @@ test("release versions use one supported form", () => {
   assert.throws(
     () => withPackageLockVersion({ packages: {} }, "1.0.0"),
     /root package/u,
+  );
+});
+
+test("release impact requires one exact version step for package changes and debt", () => {
+  assert.equal(compareVersions("2.0.0", "2.0.0"), 0);
+  assert.equal(compareVersions("2.0.0", "2.0.1"), -1);
+  assert.equal(compareVersions("3.0.0", "2.9.9"), 1);
+  assert.equal(incrementVersion("2.4.6", "patch"), "2.4.7");
+  assert.equal(incrementVersion("2.4.6", "minor"), "2.5.0");
+  assert.equal(incrementVersion("2.4.6", "major"), "3.0.0");
+  assert.equal(releaseTypeBetween("2.4.6", "2.4.7"), "patch");
+  assert.equal(releaseTypeBetween("2.4.6", "2.5.0"), "minor");
+  assert.equal(releaseTypeBetween("2.4.6", "3.0.0"), "major");
+  assert.equal(releaseTypeBetween("2.4.6", "2.4.6"), "none");
+  assert.equal(releaseTypeBetween("2.4.6", "2.4.8"), undefined);
+
+  assert.deepEqual(
+    validateReleaseImpact({
+      baseDigest: "released",
+      baseVersion: "2.0.0",
+      headDigest: "released",
+      headVersion: "2.0.0",
+      releasedDigest: "released",
+      releasedVersion: "2.0.0",
+    }),
+    {
+      inheritedPackageDebt: false,
+      localPackageChange: false,
+      releaseRequired: false,
+      selectedType: "none",
+    },
+  );
+
+  assert.deepEqual(
+    validateReleaseImpact({
+      baseDigest: "changed-before-this-pr",
+      baseVersion: "2.0.0",
+      headDigest: "changed-before-this-pr",
+      headVersion: "2.0.1",
+      releasedDigest: "released",
+      releasedVersion: "2.0.0",
+    }),
+    {
+      inheritedPackageDebt: true,
+      localPackageChange: false,
+      releaseRequired: true,
+      selectedType: "patch",
+    },
+  );
+
+  assert.deepEqual(
+    validateReleaseImpact({
+      baseDigest: "base",
+      baseVersion: "2.0.0",
+      headDigest: "head",
+      headVersion: "2.1.0",
+      releasedDigest: "base",
+      releasedVersion: "2.0.0",
+    }),
+    {
+      inheritedPackageDebt: false,
+      localPackageChange: true,
+      releaseRequired: true,
+      selectedType: "minor",
+    },
+  );
+
+  assert.throws(
+    () => validateReleaseImpact({
+      baseDigest: "base",
+      baseVersion: "2.0.0",
+      headDigest: "head",
+      headVersion: "2.0.0",
+      releasedDigest: "base",
+      releasedVersion: "2.0.0",
+    }),
+    /release is required/u,
+  );
+  assert.throws(
+    () => validateReleaseImpact({
+      baseDigest: "same",
+      baseVersion: "2.0.0",
+      headDigest: "same",
+      headVersion: "2.0.1",
+      releasedDigest: "same",
+      releasedVersion: "2.0.0",
+    }),
+    /version changes without/u,
+  );
+  assert.throws(
+    () => validateReleaseImpact({
+      baseDigest: "base",
+      baseVersion: "2.0.0",
+      headDigest: "head",
+      headVersion: "2.0.2",
+      releasedDigest: "base",
+      releasedVersion: "2.0.0",
+    }),
+    /not one patch, minor, or major step/u,
+  );
+});
+
+test("package impact ignores only manifest versions", () => {
+  const manifest = (version) => Buffer.from(
+    `{\n  "name": "hope",\n  "version": "${version}",\n  "skills": "./skills/"\n}\n`,
+  );
+  const entries = (version, { mode = "100644", skill = "one\n" } = {}) => [
+    { bytes: manifest(version), mode: "100644", path: ".codex-plugin/plugin.json" },
+    { bytes: Buffer.from(skill), mode, path: "skills/write/SKILL.md" },
+  ];
+  const baseline = packageDigest(entries("2.0.0"));
+
+  assert.equal(packageDigest(entries("9.8.7")), baseline);
+  assert.notEqual(packageDigest(entries("2.0.0", { skill: "two\n" })), baseline);
+  assert.notEqual(packageDigest(entries("2.0.0", { mode: "100755" })), baseline);
+  assert.notEqual(
+    packageDigest([
+      ...entries("2.0.0"),
+      { bytes: Buffer.from("new\n"), mode: "100644", path: "skills/new/SKILL.md" },
+    ]),
+    baseline,
   );
 });
 
@@ -160,6 +288,15 @@ test("CI installs locked dependencies before running checks or builds", async ()
   assert.ok(releasePrepare >= 0, "release workflow must prepare the release");
   assert.ok(releasePlan, "release workflow must choose a release mode");
   assert.ok(verifyInstall < verify.indexOf("- run: npm run check"));
+  assert.match(verify, /node tools\/release-impact\.mjs "\$\{BASE_REF\}"/u);
+  assert.match(
+    verify,
+    /BASE_REF: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.base\.sha \|\| github\.event\.before \}\}/u,
+  );
+  assert.match(
+    verify,
+    /if: matrix\.node == 22 && \(github\.event_name == 'pull_request' \|\| github\.ref == 'refs\/heads\/main'\)/u,
+  );
   assert.ok(releaseInstall < releasePrepare);
   const checkJob = verify.match(/\n  check:\n([\s\S]*?)\n  platform-smoke:\n/u)?.[1];
   const platformSmokeJob = verify.match(

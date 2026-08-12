@@ -84,12 +84,12 @@ jobs:
           RELEASE_VERSION="$(node -p "require('./package.json').version")"
           RELEASE_TAG="v${RELEASE_VERSION}"
           if git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}^{commit}" > /dev/null; then
-            if [ "${MODE}" != "resume" ]; then
+            if [ "${{ steps.plan.outputs.mode }}" != "resume" ]; then
               echo "Release tag ${RELEASE_TAG} already exists unexpectedly" >&2
               exit 1
             fi
             test "$(git rev-parse HEAD)" = "$(git rev-parse "${RELEASE_TAG}^{commit}")"
-          elif [ "${MODE}" = "resume" ]; then
+          elif [ "${{ steps.plan.outputs.mode }}" = "resume" ]; then
             echo "Release tag ${RELEASE_TAG} disappeared before recovery" >&2
             exit 1
           fi

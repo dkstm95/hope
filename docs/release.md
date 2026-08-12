@@ -18,10 +18,45 @@ Every completed change records one release decision in its pull request:
 
 Judge the delivered behavior, not the commit type.
 
+AI or the reviewer chooses `patch`, `minor`, or `major` when a release is
+required.
+
+The repository determines whether a release is required and calculates the
+exact version.
+
 Documentation and internal maintenance can still require a release when they
 change a Skill, package content, or another public contract.
 
 A `none` decision changes no version file solely to record the decision.
+
+## Deterministic release impact
+
+Verify compares the approved plugin package at three Git revisions:
+
+- the latest stable release tag;
+- the pull request base; and
+- the proposed result.
+
+It compares the exact package allowlist, Git file modes, and file contents after
+replacing only the two manifest version values with one neutral value.
+
+This detects a new, changed, or removed package file without maintaining a
+second list of version-sensitive paths.
+
+A pull request must increase the version by exactly one patch, minor, or major
+step when it changes the package.
+
+It must also increase the version when its base contains package changes that
+the current public version never released.
+
+This inherited-debt check recovers changes merged while version automation was
+missing or broken.
+
+When the base already records an unreleased version, an unrelated pull request
+keeps that version instead of increasing it again.
+
+A pull request with no current or inherited package change must keep the base
+version.
 
 ## Prepare a version
 
@@ -35,20 +70,37 @@ The public version files are:
 - `plugins/hope/.codex-plugin/plugin.json`; and
 - `plugins/hope/.claude-plugin/plugin.json`.
 
-For a `patch`, `minor`, or `major` decision, choose the exact next version and
-run:
+For a `patch`, `minor`, or `major` decision, run:
 
 ```bash
-npm run release:prepare -- <version>
+npm run release:prepare -- <patch|minor|major>
 ```
 
-The command updates all four files, rebuilds the generated plugin, and checks
-the versioned package.
+The command reads the merge base with `origin/main`, calculates the exact next
+version, updates all four files, rebuilds the generated plugin, and checks the
+versioned package.
+
+Pass another base ref as a second argument only when `origin/main` is not the
+pull request base.
+
+Verify runs the same deterministic check before a pull request can merge.
+
+Run it locally with:
+
+```bash
+npm run release:check -- origin/main
+```
 
 Commit those changes with the work they release.
 
 The pull request therefore contains both the product change and its release
 decision before review and merge.
+
+The protected `main` branch must require the `Verify` check and require pull
+requests to be up to date before merging.
+
+That setting makes a parallel pull request recalculate its version after
+another release-bearing pull request merges.
 
 ## Publish the recorded version
 

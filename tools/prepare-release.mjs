@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { isEntrypoint } from "./entrypoint.mjs";
 import { buildPlugin } from "./build-plugin.mjs";
+import { incrementVersion } from "./release-impact.mjs";
 
 const root = new URL("../", import.meta.url);
 const fromRoot = (path) => new URL(path, root);
@@ -96,6 +97,32 @@ function run(commandArguments) {
   }
 }
 
+function git(arguments_) {
+  const result = spawnSync("git", arguments_, {
+    cwd: fileURLToPath(root),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    const detail = result.stderr?.trim();
+    throw new Error(detail || `git ${arguments_.join(" ")} failed`);
+  }
+  return result.stdout.trim();
+}
+
+export function versionFromBase(baseReference = "origin/main") {
+  const resolvedBase = git([
+    "rev-parse",
+    "--verify",
+    "--end-of-options",
+    `${baseReference}^{commit}`,
+  ]);
+  const baseCommit = git(["merge-base", "HEAD", resolvedBase]);
+  const packageJson = JSON.parse(git(["show", `${baseCommit}:package.json`]));
+  return packageJson.version;
+}
+
 export async function prepareRelease(version) {
   if (!isSemanticVersion(version)) {
     throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
@@ -108,13 +135,26 @@ export async function prepareRelease(version) {
   process.stdout.write(`Hope ${version} is ready to review and commit.\n`);
 }
 
+export async function prepareReleaseType(releaseType, baseReference = "origin/main") {
+  const version = incrementVersion(versionFromBase(baseReference), releaseType);
+  await prepareRelease(version);
+  process.stdout.write(`Selected Hope ${version} (${releaseType}).\n`);
+  return version;
+}
+
 if (isEntrypoint(import.meta.url)) {
   const arguments_ = process.argv.slice(2);
-  if (arguments_.length !== 1) {
-    process.stderr.write("Usage: npm run release:prepare -- <version>\n");
+  if (arguments_.length < 1 || arguments_.length > 2) {
+    process.stderr.write(
+      "Usage: npm run release:prepare -- <version|patch|minor|major> [base-ref]\n",
+    );
     process.exitCode = 1;
   } else {
-    prepareRelease(arguments_[0]).catch((error) => {
+    const [selection, baseReference] = arguments_;
+    const preparation = ["patch", "minor", "major"].includes(selection)
+      ? prepareReleaseType(selection, baseReference)
+      : prepareRelease(selection);
+    preparation.catch((error) => {
       process.stderr.write(`prepare-release: ${error.message}\n`);
       process.exitCode = 1;
     });
