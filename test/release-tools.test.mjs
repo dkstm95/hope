@@ -21,10 +21,7 @@ import {
 } from "../tools/install-plugin-dev.mjs";
 import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 import {
-  incrementVersion,
   isSemanticVersion,
-  releaseTypeForCommit,
-  releaseTypeForCommits,
   replaceVersion,
   withPackageLockVersion,
 } from "../tools/prepare-release.mjs";
@@ -86,40 +83,6 @@ test("release versions use one supported form", () => {
     () => withPackageLockVersion({ packages: {} }, "1.0.0"),
     /root package/u,
   );
-});
-
-test("automatic releases derive the largest semantic change from commits", () => {
-  assert.equal(releaseTypeForCommit("fix: keep the cache bounded"), "patch");
-  assert.equal(releaseTypeForCommit("README wording"), "patch");
-  assert.equal(releaseTypeForCommit("feat(diff): add a focused view"), "minor");
-  assert.equal(releaseTypeForCommit("feat!: replace the public input\n"), "major");
-  assert.equal(
-    releaseTypeForCommit("refactor: simplify the boundary\n\nBREAKING CHANGE: remove v1"),
-    "major",
-  );
-  assert.equal(
-    releaseTypeForCommits([
-      "fix: correct an error",
-      "feat: add a capability",
-      "docs: explain it",
-    ]),
-    "minor",
-  );
-  assert.equal(
-    releaseTypeForCommits([
-      "feat: add a capability",
-      "refactor!: remove the old boundary",
-    ]),
-    "major",
-  );
-  assert.throws(() => releaseTypeForCommit(""), /non-empty commit/u);
-  assert.throws(() => releaseTypeForCommits([]), /at least one commit/u);
-
-  assert.equal(incrementVersion("2.4.6", "patch"), "2.4.7");
-  assert.equal(incrementVersion("2.4.6", "minor"), "2.5.0");
-  assert.equal(incrementVersion("2.4.6", "major"), "3.0.0");
-  assert.throws(() => incrementVersion("2.4.6-rc.1", "patch"), /stable/u);
-  assert.throws(() => incrementVersion("2.4.6", "unknown"), /Unknown release type/u);
 });
 
 test("development installation verifies the selected plugin and cache", async (context) => {
@@ -235,12 +198,13 @@ test("CI installs locked dependencies before running checks or builds", async ()
   assert.match(release, /test "\$\{VERIFY_EVENT\}" = "push"/u);
   assert.match(release, /test "\$\{EVENT_CONCLUSION\}" = "success"/u);
   assert.match(release, /test "\$\(git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
-  assert.match(release, /MODE=increment/u);
-  assert.match(release, /BASE_TAG="\$\{CURRENT_TAG\}"/u);
+  assert.match(release, /MODE=recorded/u);
   assert.doesNotMatch(releasePlan, /EVENT_NAME|workflow_dispatch/u);
-  assert.doesNotMatch(releasePlan, /MODE=recorded/u);
-  assert.match(releasePlan, /Current version \$\{CURRENT_VERSION\} has no release tag/u);
-  assert.match(release, /npm run release:prepare -- --automatic "\$\{BASE_TAG\}"/u);
+  assert.doesNotMatch(release, /MODE=increment|BASE_TAG|--automatic/u);
+  assert.match(
+    release,
+    /npm run release:prepare -- "\$\{\{ steps\.plan\.outputs\.current-version \}\}"/u,
+  );
   assert.match(release, /steps\.plan\.outputs\.publish == 'true'/u);
   assert.doesNotMatch(release, /workflow_dispatch:\s+inputs:/su);
   assert.match(release, /echo "current-version=\$\{CURRENT_VERSION\}"/u);
@@ -253,14 +217,11 @@ test("CI installs locked dependencies before running checks or builds", async ()
     /test "\$\(git rev-parse HEAD\)" = "\$\(git rev-parse "\$\{RELEASE_TAG\}\^\{commit\}"\)"/u,
   );
   assert.match(release, /steps\.plan\.outputs\.mode \}\}.*!= "resume"/u);
-  assert.match(release, /git push --atomic origin HEAD:main/u);
+  assert.match(release, /git push origin "\$\{\{ steps\.release\.outputs\.tag \}\}"/u);
+  assert.doesNotMatch(release, /HEAD:main|git commit|git add/u);
   assert.match(
     release,
-    /git diff --exit-code -- plugins\/hope tools\/plugin-package-files\.txt/u,
-  );
-  assert.match(
-    release,
-    /git add package\.json [^\n]*tools\/plugin-package-files\.txt/u,
+    /git diff --exit-code -- package\.json package-lock\.json plugins\/hope tools\/plugin-package-files\.txt/u,
   );
   assert.match(release, /gh release create/u);
   assert.match(release, /--fail-on-no-commits/u);

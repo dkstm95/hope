@@ -40,3 +40,10 @@ works.
 
 Run the relevant checks from [CONTRIBUTING.md](CONTRIBUTING.md) and report any
 remaining verification gap.
+
+Before opening or updating a pull request, decide and record its release impact
+as `none`, `patch`, `minor`, or `major` according to
+[docs/release.md](docs/release.md).
+
+If the version changes, update from the latest `main`, run the documented
+release preparation command, and include its output in the same change.

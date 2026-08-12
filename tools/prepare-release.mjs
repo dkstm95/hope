@@ -18,10 +18,6 @@ export const versionFiles = Object.freeze([
 ]);
 
 const semanticVersion = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/u;
-const stableVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
-const conventionalSubject = /^(?<type>build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(?:\([^()\r\n]+\))?(?<breaking>!)?: \S.*$/u;
-const breakingFooter = /^BREAKING(?: CHANGE|-CHANGE):[ \t]+\S.*$/mu;
-const releaseTypePriority = Object.freeze({ patch: 0, minor: 1, major: 2 });
 
 export function isSemanticVersion(version) {
   const match = semanticVersion.exec(version);
@@ -32,53 +28,6 @@ export function isSemanticVersion(version) {
   return !prereleaseParts.some(
     (part) => part === "" || (/^\d+$/u.test(part) && part.length > 1 && part.startsWith("0")),
   ) && !buildParts.some((part) => part === "");
-}
-
-export function releaseTypeForCommit(message) {
-  if (typeof message !== "string" || !message.trim()) {
-    throw new Error("Expected a non-empty commit message");
-  }
-  const [subject = ""] = message.split(/\r?\n/u, 1);
-  const conventional = conventionalSubject.exec(subject);
-  if (breakingFooter.test(message) || conventional?.groups?.breaking === "!") return "major";
-  if (conventional?.groups?.type === "feat") return "minor";
-  return "patch";
-}
-
-export function releaseTypeForCommits(messages) {
-  if (!Array.isArray(messages) || messages.length === 0) {
-    throw new Error("Automatic release requires at least one commit");
-  }
-  return messages.reduce((selected, message) => {
-    const candidate = releaseTypeForCommit(message);
-    return releaseTypePriority[candidate] > releaseTypePriority[selected]
-      ? candidate
-      : selected;
-  }, "patch");
-}
-
-export function incrementVersion(version, releaseType) {
-  const match = stableVersion.exec(version);
-  if (!match) {
-    throw new Error(`Automatic release requires a stable semantic version, received: ${version}`);
-  }
-  if (!(releaseType in releaseTypePriority)) {
-    throw new Error(`Unknown release type: ${releaseType}`);
-  }
-  let major = BigInt(match[1]);
-  let minor = BigInt(match[2]);
-  let patch = BigInt(match[3]);
-  if (releaseType === "major") {
-    major += 1n;
-    minor = 0n;
-    patch = 0n;
-  } else if (releaseType === "minor") {
-    minor += 1n;
-    patch = 0n;
-  } else {
-    patch += 1n;
-  }
-  return `${major}.${minor}.${patch}`;
 }
 
 export function replaceVersion(content, version) {
@@ -147,27 +96,6 @@ function run(commandArguments) {
   }
 }
 
-function readCommitMessages(baseRef) {
-  const result = spawnSync("git", [
-    "log",
-    "--format=%B%x00",
-    `${baseRef}..HEAD`,
-  ], {
-    cwd: fileURLToPath(root),
-    encoding: "utf8",
-    stdio: "pipe",
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    const detail = result.stderr?.trim();
-    throw new Error(detail ? `Could not read commits after ${baseRef}: ${detail}` : `Could not read commits after ${baseRef}`);
-  }
-  return result.stdout
-    .split("\0")
-    .map((message) => message.trim())
-    .filter(Boolean);
-}
-
 export async function prepareRelease(version) {
   if (!isSemanticVersion(version)) {
     throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
@@ -180,37 +108,13 @@ export async function prepareRelease(version) {
   process.stdout.write(`Hope ${version} is ready to review and commit.\n`);
 }
 
-export async function prepareAutomaticRelease(baseRef) {
-  if (typeof baseRef !== "string" || !baseRef.trim()) {
-    throw new Error("Automatic release requires a base Git reference");
-  }
-  const packageJson = JSON.parse(await readFile(fromRoot("package.json"), "utf8"));
-  const commitMessages = readCommitMessages(baseRef);
-  const releaseType = releaseTypeForCommits(commitMessages);
-  const version = incrementVersion(packageJson.version, releaseType);
-  await prepareRelease(version);
-  process.stdout.write(
-    `Selected Hope ${version} (${releaseType}) from ${commitMessages.length} commit${commitMessages.length === 1 ? "" : "s"}.\n`,
-  );
-  return { commitCount: commitMessages.length, releaseType, version };
-}
-
 if (isEntrypoint(import.meta.url)) {
   const arguments_ = process.argv.slice(2);
-  const automatic = arguments_[0] === "--automatic";
-  if (
-    (automatic && arguments_.length !== 2)
-    || (!automatic && arguments_.length !== 1)
-  ) {
-    process.stderr.write(
-      "Usage: npm run release:prepare -- <version> | --automatic <base-ref>\n",
-    );
+  if (arguments_.length !== 1) {
+    process.stderr.write("Usage: npm run release:prepare -- <version>\n");
     process.exitCode = 1;
   } else {
-    const preparation = automatic
-      ? prepareAutomaticRelease(arguments_[1])
-      : prepareRelease(arguments_[0]);
-    preparation.catch((error) => {
+    prepareRelease(arguments_[0]).catch((error) => {
       process.stderr.write(`prepare-release: ${error.message}\n`);
       process.exitCode = 1;
     });
