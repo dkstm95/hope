@@ -1,14 +1,13 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - Verify
+    types:
+      - completed
     branches:
       - main
-    paths:
-      - package.json
-      - package-lock.json
-      - plugins/hope/.codex-plugin/plugin.json
-      - plugins/hope/.claude-plugin/plugin.json
   workflow_dispatch:
 
 run-name: Release Hope (automatic version)
@@ -22,49 +21,56 @@ concurrency:
 
 jobs:
   release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.event.workflow_run.head_sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Require the intended release source
         env:
+          EVENT_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           EVENT_NAME: ${{ github.event_name }}
-          EVENT_SHA: ${{ github.sha }}
+          EVENT_SHA: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+          VERIFY_EVENT: ${{ github.event.workflow_run.event }}
         run: |
           if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
             test "$(git branch --show-current)" = "main"
           else
-            test "${GITHUB_REF}" = "refs/heads/main"
+            test "${VERIFY_EVENT}" = "push"
+            test "${EVENT_CONCLUSION}" = "success"
             test "$(git rev-parse HEAD)" = "${EVENT_SHA}"
           fi
       - name: Choose release mode
         id: plan
         env:
-          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
           CURRENT_VERSION="$(node -p "require('./package.json').version")"
           CURRENT_TAG="v${CURRENT_VERSION}"
-          MODE=recorded
+          MODE=none
           BASE_TAG=
-          PUBLISH=true
-          if git rev-parse --verify --quiet "refs/tags/${CURRENT_TAG}^{commit}" > /dev/null; then
-            if ! gh release view "${CURRENT_TAG}" > /dev/null 2>&1; then
-              MODE=resume
-            elif [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
-              git merge-base --is-ancestor "${CURRENT_TAG}^{commit}" HEAD
-              if [ "$(git rev-list --count "${CURRENT_TAG}..HEAD")" -eq 0 ]; then
-                MODE=none
-                PUBLISH=false
-              else
-                MODE=increment
-                BASE_TAG="${CURRENT_TAG}"
-              fi
+          PUBLISH=false
+          if ! git rev-parse --verify --quiet "refs/tags/${CURRENT_TAG}^{commit}" > /dev/null; then
+            echo "Current version ${CURRENT_VERSION} has no release tag" >&2
+            exit 1
+          fi
+          if ! gh release view "${CURRENT_TAG}" > /dev/null 2>&1; then
+            MODE=resume
+            PUBLISH=true
+          else
+            git merge-base --is-ancestor "${CURRENT_TAG}^{commit}" HEAD
+            if [ "$(git rev-list --count "${CURRENT_TAG}..HEAD")" -gt 0 ]; then
+              MODE=increment
+              BASE_TAG="${CURRENT_TAG}"
+              PUBLISH=true
             else
               MODE=none
               PUBLISH=false
@@ -93,6 +99,7 @@ jobs:
           if [ "${MODE}" = "increment" ]; then
             npm run release:prepare -- --automatic "${BASE_TAG}"
           else
+            test "${MODE}" = "resume"
             npm run release:prepare -- "${CURRENT_VERSION}"
           fi
           RELEASE_VERSION="$(node -p "require('./package.json').version")"
