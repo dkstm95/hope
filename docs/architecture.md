@@ -100,7 +100,8 @@ plugins/hope/
     │   ├── scripts/
     │   └── assets/
     ├── polish/
-    │   └── SKILL.md
+    │   ├── SKILL.md
+    │   └── references/
     ├── sweep/
     │   └── SKILL.md
     ├── toxic-review/
