@@ -1,6 +1,6 @@
 {
   "name": "hope",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Align before implementation, sweep maintenance, improve completed work with independent cleanup review, challenge it with evidence, understand pull requests, and improve writing. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
