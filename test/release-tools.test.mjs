@@ -359,6 +359,8 @@ test("CI keeps release decisions local and publishes a checked package", async (
   assert.match(release, /test "\$\(git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
   assert.match(release, /PREVIOUS_VERSION=.*BEFORE_SHA/u);
   assert.doesNotMatch(release, /npm ci|release:prepare|test:browser|playwright install/u);
+  assert.match(release, /git tag "\$\{\{ steps\.plan\.outputs\.current-tag \}\}"/u);
+  assert.doesNotMatch(release, /git tag -a/u);
   assert.match(release, /git push origin "\$\{\{ steps\.plan\.outputs\.current-tag \}\}"/u);
   assert.doesNotMatch(release, /HEAD:main|git commit|git add/u);
   assert.match(release, /gh release create/u);

@@ -109,7 +109,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ steps.plan.outputs.mode }}" != "resume" ]; then
-            git tag -a "${{ steps.plan.outputs.current-tag }}" -m "Hope ${{ steps.plan.outputs.current-tag }}"
+            git tag "${{ steps.plan.outputs.current-tag }}"
             git push origin "${{ steps.plan.outputs.current-tag }}"
           fi
           gh release create "${{ steps.plan.outputs.current-tag }}" \
