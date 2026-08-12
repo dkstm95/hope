@@ -26,8 +26,6 @@ Use Hope to align before implementation, challenge a work product, understand a
 code change, sweep codebase maintenance, refine completed work, or clarify
 language without losing meaning.
 
-These features and their behavior define Hope.
-
 The current supported delivery is a plugin for Codex and Claude Code.
 
 ## Install
@@ -85,14 +83,10 @@ Choose the work you need.
 <details>
 <summary><strong>Align</strong> — Reach shared understanding before implementation</summary>
 
-Misunderstandings about a task's goal, scope, behavior, or important choices can
-survive until implementation.
+Align brings the person and AI to a shared understanding.
 
-Align reads available evidence, teaches back the current understanding, and
-asks only about choices that can change the result.
-
-It keeps facts, decisions, proposals, assumptions, open questions, and
-implementation-time checks distinct in the conversation.
+It explains its current understanding based on verifiable evidence, such as the
+codebase, then asks about choices that can change the result.
 
 > [!NOTE]
 > Align waits for explicit approval and never implements the task.
@@ -110,14 +104,10 @@ judge it, and that gap is cognitive debt.
 
 Diff explains behavior before code and links important claims to evidence.
 
-Its analysis runs in a fresh context that receives the exact review request and
-pull request, not the conversation that produced the change.
+Diff uses visuals, a microworld, or a quiz to help the reader explore the change.
 
-When active exploration would help, the review can use visuals, a microworld, or
-an evidence-backed quiz.
-
-The resulting local HTML file helps the reader understand the change, judge it,
-and carry that understanding into follow-up decisions and work.
+The resulting HTML artifact helps the reader understand the change, judge it,
+and use that understanding in follow-up decisions and work.
 
 > [!NOTE]
 > Diff does not recommend approval or rejection or change the pull request.
@@ -146,17 +136,15 @@ and carry that understanding into follow-up decisions and work.
 <details>
 <summary><strong>Toxic Review</strong> — Find important risks you may have missed</summary>
 
-Toxic Review turns evidence-linked findings into one prioritized review.
-
-It is hard on the work, respectful toward people, and does not invent criticism.
+Toxic Review examines the work rigorously and critically, then organizes
+evidence-backed findings into one prioritized review.
 
 > [!NOTE]
 > Every reviewer runs in a fresh context, including a one-reviewer pass.
 > Toxic Review uses multiple independent reviewers only for distinct material
 > risks.
 >
-> Every reviewer makes a separate model call. Parallel multi-reviewer execution
-> can reduce elapsed time but not token usage.
+> Every reviewer makes a separate model call.
 >
 > Ask Hope to limit the reviewer count when you want a smaller run.
 
@@ -165,26 +153,25 @@ It is hard on the work, respectful toward people, and does not invent criticism.
 </details>
 
 <details>
-<summary><strong>Polish</strong> — Improve completed work without changing settled behavior</summary>
+<summary><strong>Polish</strong> — Refine completed work</summary>
 
-Polish reviews a named completed result or the current repository change set,
-then applies one bounded improvement pass.
+Polish reviews a completed result or the current repository change set, then
+applies bounded improvements.
 
-Independent cleanup scouts look only for useful improvements. For code, they
+Independent review agents look only for useful improvements. For code, they
 check reuse of existing helpers, simplicity, efficiency, and abstraction fit.
-A fresh finisher weighs their evidence, rejects speculative or risky changes,
-applies the coherent remainder, and verifies the result.
+A finisher weighs their evidence, rejects speculative or risky changes, applies
+the improvements that work together, and verifies the result.
 
-Polish keeps cleanup separate from bug hunting, feature work, migrations, and
-broad maintenance. It reports those concerns instead of hiding them in a
-refactor.
+Polish does not hunt for bugs, develop features, perform migrations, or handle
+broad maintenance.
 
 > [!NOTE]
 > Polish edits the local target by default. Ask for a review-only pass when you
 > want adjudicated candidates without changes.
 >
-> Each scout and the finisher runs in a fresh context and makes a separate model
-> call. Polish uses only the smallest useful scout set.
+> Each reviewer and the finisher runs in a fresh context and makes a separate
+> model call.
 
 > Example: “Simplify the current changes without changing behavior.”
 
@@ -193,26 +180,13 @@ refactor.
 <details>
 <summary><strong>Sweep</strong> — Clean up and maintain a codebase safely</summary>
 
-Sweep runs one read-only codebase maintenance review that adapts to the
-project.
+Sweep performs a read-only review of a codebase.
 
-It inventories the owned worktree, reports exclusions and evidence gaps, and
-returns an ordered plan.
+It looks for broken references, stale code, unsupported abstractions,
+verification gaps, dependency or license risk, delivery waste, unclear
+ownership, and similar maintenance risks.
 
-It considers the maintenance risks that matter to the project, such as broken
-references, stale code, unsupported abstractions, verification gaps,
-dependency or license risk, delivery waste, and unclear ownership.
-
-The list guides the review; Sweep does not force a finding in every area.
-
-Incomplete evidence stays visible instead of being reported as complete.
-
-When Sweep divides the project into batches, each inspector receives a fresh,
-disjoint assignment without inherited conclusions.
-
-Sweep never edits files.
-
-Select a candidate from its plan to start a separate implementation task.
+Select a candidate from the review results to start work.
 
 > Example: “Sweep this codebase.”
 
