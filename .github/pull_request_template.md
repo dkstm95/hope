@@ -20,3 +20,9 @@
 - Commands that ran:
 - Checks not run:
 - [ ] `npm run check`
+
+## Release
+
+- Decision: none | patch | minor | major
+- Version: unchanged | x.y.z
+- Reason:

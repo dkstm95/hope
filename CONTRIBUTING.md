@@ -27,6 +27,9 @@ npm install
 npm run check
 ```
 
+`npm run check` validates the current working tree's package, release impact,
+and deterministic tests.
+
 Run `npm run test:browser` when Diff layout or interaction changes.
 
 Run `npm run render:readme-assets` and inspect the updated captures when a Diff
@@ -50,7 +53,5 @@ Start a new Codex task after installation.
 - Keep product documentation aligned with implemented behavior.
 - State which checks ran and any remaining verification gap in the pull
   request.
-
-Do not change public version files for a normal contribution.
-
-The release workflow selects the version increase and prepares those files.
+- Follow [docs/release.md](docs/release.md) to record the release decision,
+  prepare any version change, and pass the completion gate before committing.

@@ -40,3 +40,9 @@ works.
 
 Run the relevant checks from [CONTRIBUTING.md](CONTRIBUTING.md) and report any
 remaining verification gap.
+
+Before completing any file-changing task, follow the release decision and
+preparation steps in [docs/release.md](docs/release.md), then run
+`npm run check`.
+
+Do not finish, commit, or push while that check fails.

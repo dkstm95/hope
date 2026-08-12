@@ -7,34 +7,62 @@ It does not define feature behavior.
 Hope publishes one verified package and matching source tag for each public
 version.
 
-## Automatic release
+## Release decision
 
-Every push to `main` starts `Verify`.
+Every completed change records one release decision in its pull request:
 
-When Verify succeeds, it starts the `Release` workflow for the tested commit.
+- `none` when the change does not alter the public package;
+- `patch` for a backward-compatible correction;
+- `minor` for a backward-compatible capability; or
+- `major` for an incompatible public change.
 
-Failed or cancelled verification does not start a release.
+Judge the delivered behavior, not the commit type.
 
-If commits follow the current release, the workflow prepares and publishes the
-next version without waiting for a separate release decision.
+AI or the reviewer chooses `patch`, `minor`, or `major` when a release is
+required.
 
-Use a concise, outcome-focused Conventional Commit subject for each change that
-reaches `main`.
+The repository determines whether the working tree changes the public package
+and calculates the exact version.
 
-Add a commit body only when the reason or trade-off is not clear from the
-change.
+Documentation and internal maintenance can still require a release when they
+change a Skill or another packaged contract.
 
-The workflow chooses the version increase from every commit after the current
-release:
+A `none` decision changes no version file solely to record the decision.
 
-- a `!` after the commit type or a `BREAKING CHANGE` footer selects major;
-- `feat` selects minor; and
-- every other commit selects patch.
+## Local completion gate
 
-The largest increase wins.
+Every file-changing task ends with:
 
-Use a patch increase for compatible fixes, a minor increase for compatible
-capability changes, and a major increase for incompatible public changes.
+```bash
+npm run check
+```
+
+The command checks the package structure, the current working tree's release
+impact, and the deterministic tests.
+
+The release-impact check compares the approved package at the latest stable
+release, the latest `origin/main`, and the current working tree.
+
+It compares the exact package allowlist, file modes, and file contents after
+replacing only the two manifest version values with one neutral value.
+
+When the working tree changes the package, it must increase the base version by
+exactly one patch, minor, or major step.
+
+When the base already records an unreleased version, unrelated work keeps that
+version.
+
+When the base has unversioned package changes, the next completed task records
+their release unless it restores the package to the released state.
+
+A branch must include the latest `origin/main` before the check can pass.
+
+The same command runs in normal CI as a safety net, but local completion owns
+the version decision.
+
+## Prepare a version
+
+Before preparing a version, update the branch from the latest `main`.
 
 The public version files are:
 
@@ -43,58 +71,52 @@ The public version files are:
 - `plugins/hope/.codex-plugin/plugin.json`; and
 - `plugins/hope/.claude-plugin/plugin.json`.
 
-The workflow asks the preparation command to classify those commits, update all
-four files, and rebuild the generated plugin:
+For a `patch`, `minor`, or `major` decision, run:
 
 ```bash
-npm run release:prepare -- --automatic <current-tag>
+npm run release:prepare -- <patch|minor|major>
 ```
 
-The automatic run starts from the exact `main` commit that passed Verify.
+The command reads the version from `origin/main`, calculates the exact next
+version, updates all four files, rebuilds the package, and runs its checks.
 
-If that commit is already part of the current GitHub Release, the run exits
-without changing or publishing anything.
+Pass another base ref as a second argument only when `origin/main` is not the
+task base.
 
-The release workflow installs locked dependencies, prepares and rechecks the
-versioned package, creates an annotated tag, stages the approved package files,
-records a checksum, and publishes the GitHub Release as latest.
+Run `npm run check` again and commit the version with the work it releases.
 
-GitHub Release notes are the public version history.
+The pull request therefore contains both the product change and its release
+decision before review and merge.
 
-GitHub generates them from the commits and merged pull requests since the
-previous tag.
+## Publish the recorded version
 
-## Manual retry
+A push to `main` that changes `package.json` starts the `Release` workflow.
 
-A manual run retries the same automatic process against the latest `main`
-commit.
+The workflow checks out that event's exact commit.
 
-Use it when the automatic run did not start or needs recovery.
+If the push did not change the recorded version, the workflow exits without
+publishing.
 
-When no commit follows the current release, the run exits without changing or
-publishing anything.
+For a new version, it checks the recorded package, stages and verifies the
+archive, and then creates the tag and GitHub Release.
 
-If the current version's tag exists without a GitHub Release, the workflow
-resumes that exact tagged commit.
+The workflow never chooses a version, changes `main`, or lets a later unchanged
+commit claim an earlier version.
 
-The person starting the run does not choose a version or increase type.
+Release jobs share one queue so two releases never publish at the same time.
 
-## Recovery
+GitHub generates the public release notes from the commits and merged pull
+requests since the previous tag.
 
-Only one release job runs at a time.
+## Manual retry and recovery
 
-If a job creates the tag but stops before it creates the GitHub Release, rerun
-the workflow.
+A manual run uses the selected `main` commit, not a moving branch reference.
 
-The rerun restores the tagged commit, verifies it again, and publishes the
-missing package without increasing the version.
+If its tag and GitHub Release both exist, the run exits without publishing.
 
-Once a version tag exists, its plugin package is immutable.
+If neither exists, the run checks and publishes that recorded version.
 
-If the version recorded in the source has no matching tag, the workflow stops.
-Normal contributions must not prepare public version files by hand.
+If the tag exists without a GitHub Release, the run restores the tagged commit,
+checks its package again, and publishes the missing release.
 
-If `main` advances while the workflow is preparing a release, the atomic push
-fails without publishing the new tag.
-
-Rerun against the new `main` state.
+Once a version tag exists, its source and plugin package are immutable.
