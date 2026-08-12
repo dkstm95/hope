@@ -185,6 +185,9 @@ test("release file lists compare across platform line endings", () => {
 test("CI installs locked dependencies before running checks or builds", async () => {
   const verify = await readFile(join(root, ".github/workflows/verify.yml"), "utf8");
   const release = await readFile(join(root, ".github/workflows/release.yml"), "utf8");
+  const releasePlan = release.match(
+    /- name: Choose release mode\n([\s\S]*?)\n      - name: Restore interrupted release commit/u,
+  )?.[1];
 
   const verifyInstall = verify.indexOf("- run: npm ci");
   const releaseInstall = release.indexOf("run: npm ci");
@@ -192,6 +195,7 @@ test("CI installs locked dependencies before running checks or builds", async ()
   assert.ok(verifyInstall >= 0, "verify workflow must install dependencies");
   assert.ok(releaseInstall >= 0, "release workflow must install dependencies");
   assert.ok(releasePrepare >= 0, "release workflow must prepare the release");
+  assert.ok(releasePlan, "release workflow must choose a release mode");
   assert.ok(verifyInstall < verify.indexOf("- run: npm run check"));
   assert.ok(releaseInstall < releasePrepare);
   const checkJob = verify.match(/\n  check:\n([\s\S]*?)\n  platform-smoke:\n/u)?.[1];
@@ -217,14 +221,25 @@ test("CI installs locked dependencies before running checks or builds", async ()
   assert.match(release, /npm run test:browser/u);
   assert.doesNotMatch(release, /run: npm run check\s*$/mu);
   assert.match(release, /workflow_dispatch/u);
-  assert.match(release, /push:\s+branches:\s+- main/su);
   assert.match(
     release,
-    /ref: \$\{\{ github\.event_name == 'workflow_dispatch' && 'main' \|\| github\.sha \}\}/u,
+    /workflow_run:\s+workflows:\s+- Verify\s+types:\s+- completed\s+branches:\s+- main/su,
   );
+  assert.doesNotMatch(release, /^\s+paths:/mu);
+  assert.match(
+    release,
+    /ref: \$\{\{ github\.event_name == 'workflow_dispatch' && 'main' \|\| github\.event\.workflow_run\.head_sha \}\}/u,
+  );
+  assert.match(release, /github\.event\.workflow_run\.event == 'push'/u);
+  assert.match(release, /github\.event\.workflow_run\.conclusion == 'success'/u);
+  assert.match(release, /test "\$\{VERIFY_EVENT\}" = "push"/u);
+  assert.match(release, /test "\$\{EVENT_CONCLUSION\}" = "success"/u);
   assert.match(release, /test "\$\(git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
   assert.match(release, /MODE=increment/u);
   assert.match(release, /BASE_TAG="\$\{CURRENT_TAG\}"/u);
+  assert.doesNotMatch(releasePlan, /EVENT_NAME|workflow_dispatch/u);
+  assert.doesNotMatch(releasePlan, /MODE=recorded/u);
+  assert.match(releasePlan, /Current version \$\{CURRENT_VERSION\} has no release tag/u);
   assert.match(release, /npm run release:prepare -- --automatic "\$\{BASE_TAG\}"/u);
   assert.match(release, /steps\.plan\.outputs\.publish == 'true'/u);
   assert.doesNotMatch(release, /workflow_dispatch:\s+inputs:/su);
