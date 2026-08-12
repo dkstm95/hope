@@ -29,7 +29,6 @@ import {
   validateReleaseImpact,
 } from "../tools/release-impact.mjs";
 import {
-  isSemanticVersion,
   replaceVersion,
   withPackageLockVersion,
 } from "../tools/prepare-release.mjs";
@@ -56,17 +55,14 @@ async function listFiles(directory, base = directory) {
   return paths.sort();
 }
 
-test("release versions use one supported form", () => {
-  assert.equal(isSemanticVersion("0.4.1-alpha"), true);
-  assert.equal(isSemanticVersion("1.0.0-rc.1+build.2"), true);
-  assert.equal(isSemanticVersion("v1.0.0"), false);
-  assert.equal(isSemanticVersion("1.0"), false);
-  assert.equal(isSemanticVersion("01.0.0"), false);
-  assert.equal(isSemanticVersion("1.0.0-01"), false);
-  assert.equal(isSemanticVersion("1.0.0-alpha..1"), false);
+test("release preparation accepts only stable versions", () => {
   assert.equal(
     replaceVersion('{\n  "version": "0.1.0",\n  "items": ["one", "two"]\n}\n', "1.0.0"),
     '{\n  "version": "1.0.0",\n  "items": ["one", "two"]\n}\n',
+  );
+  assert.throws(
+    () => replaceVersion('{"version":"1.0.0"}', "1.0.1-rc.1"),
+    /stable semantic version/u,
   );
   assert.throws(() => replaceVersion('{"name":"hope"}', "1.0.0"), /does not declare/u);
   assert.deepEqual(
@@ -92,6 +88,18 @@ test("release versions use one supported form", () => {
     () => withPackageLockVersion({ packages: {} }, "1.0.0"),
     /root package/u,
   );
+  assert.throws(
+    () => withPackageLockVersion({ packages: { "": {} } }, "1.0.1+build.1"),
+    /stable semantic version/u,
+  );
+
+  const prerelease = spawnSync(
+    process.execPath,
+    [join(root, "tools/prepare-release.mjs"), "2.2.0-rc.1"],
+    { encoding: "utf8" },
+  );
+  assert.equal(prerelease.status, 1);
+  assert.match(prerelease.stderr, /<patch\|minor\|major>/u);
 });
 
 test("release impact requires one exact version step for package changes and debt", () => {

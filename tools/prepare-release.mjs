@@ -6,44 +6,30 @@ import { fileURLToPath } from "node:url";
 
 import { isEntrypoint } from "./entrypoint.mjs";
 import { buildPlugin } from "./build-plugin.mjs";
-import { incrementVersion } from "./release-impact.mjs";
+import {
+  incrementVersion,
+  parseStableVersion,
+} from "./release-impact.mjs";
 
 const root = new URL("../", import.meta.url);
 const fromRoot = (path) => new URL(path, root);
 
-export const versionFiles = Object.freeze([
+const versionFiles = Object.freeze([
   "package.json",
   "package-lock.json",
   "plugins/hope/.codex-plugin/plugin.json",
   "plugins/hope/.claude-plugin/plugin.json",
 ]);
 
-const semanticVersion = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/u;
-
-export function isSemanticVersion(version) {
-  const match = semanticVersion.exec(version);
-  if (!match) return false;
-  const [, prerelease, build] = match;
-  const prereleaseParts = prerelease?.split(".") ?? [];
-  const buildParts = build?.split(".") ?? [];
-  return !prereleaseParts.some(
-    (part) => part === "" || (/^\d+$/u.test(part) && part.length > 1 && part.startsWith("0")),
-  ) && !buildParts.some((part) => part === "");
-}
-
 export function replaceVersion(content, version) {
-  if (!isSemanticVersion(version)) {
-    throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
-  }
+  parseStableVersion(version);
   const versionLine = /^(\s*"version"\s*:\s*)"[^"]+"/mu;
   if (!versionLine.test(content)) throw new Error("JSON file does not declare a version");
   return content.replace(versionLine, `$1"${version}"`);
 }
 
 export function withPackageLockVersion(document, version) {
-  if (!isSemanticVersion(version)) {
-    throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
-  }
+  parseStableVersion(version);
   if (
     !document
     || typeof document !== "object"
@@ -126,10 +112,8 @@ export function versionFromBase(baseReference = "origin/main") {
   return packageJson.version;
 }
 
-export async function prepareRelease(version) {
-  if (!isSemanticVersion(version)) {
-    throw new Error(`Expected a semantic version without a v prefix, received: ${version}`);
-  }
+async function prepareRelease(version) {
+  parseStableVersion(version);
 
   await Promise.all(versionFiles.map(async (path) => await writeVersion(path, version)));
   await buildPlugin();
@@ -147,17 +131,18 @@ export async function prepareReleaseType(releaseType, baseReference = "origin/ma
 
 if (isEntrypoint(import.meta.url)) {
   const arguments_ = process.argv.slice(2);
-  if (arguments_.length < 1 || arguments_.length > 2) {
+  const [releaseType, baseReference] = arguments_;
+  if (
+    arguments_.length < 1
+    || arguments_.length > 2
+    || !["patch", "minor", "major"].includes(releaseType)
+  ) {
     process.stderr.write(
-      "Usage: npm run release:prepare -- <version|patch|minor|major> [base-ref]\n",
+      "Usage: npm run release:prepare -- <patch|minor|major> [base-ref]\n",
     );
     process.exitCode = 1;
   } else {
-    const [selection, baseReference] = arguments_;
-    const preparation = ["patch", "minor", "major"].includes(selection)
-      ? prepareReleaseType(selection, baseReference)
-      : prepareRelease(selection);
-    preparation.catch((error) => {
+    prepareReleaseType(releaseType, baseReference).catch((error) => {
       process.stderr.write(`prepare-release: ${error.message}\n`);
       process.exitCode = 1;
     });

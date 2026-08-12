@@ -44,6 +44,9 @@ export const DIFF_REVALIDATION_RETRYABLE_MESSAGE =
   "Hope could not revalidate the pull request, so no review was created. "
   + "The private review run was kept. Restore GitHub access, then retry finish "
   + "with the same run.";
+export const DIFF_PUBLICATION_RETRYABLE_CODE =
+  "HOPE_DIFF_PUBLICATION_RETRYABLE";
+export const DIFF_CLEANUP_FAILED_CODE = "HOPE_DIFF_CLEANUP_FAILED";
 
 export async function resolveDiffTarget({
   pullRequestNumber,
@@ -184,6 +187,10 @@ function withCleanupFailure(error, cleanupError) {
   if (original.code !== undefined) combined.code = original.code;
   if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
   if (original.command !== undefined) combined.command = original.command;
+  if (original.outputPath !== undefined) combined.outputPath = original.outputPath;
+  if (original.preservedPath !== undefined) {
+    combined.preservedPath = original.preservedPath;
+  }
   if (original.runPath !== undefined) combined.runPath = original.runPath;
   combined.cleanupPending = true;
   Object.defineProperty(combined, "cleanupError", {
@@ -206,6 +213,10 @@ function withMutationReleaseFailure(error, releaseError) {
   if (original.code !== undefined) combined.code = original.code;
   if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
   if (original.command !== undefined) combined.command = original.command;
+  if (original.outputPath !== undefined) combined.outputPath = original.outputPath;
+  if (original.preservedPath !== undefined) {
+    combined.preservedPath = original.preservedPath;
+  }
   if (original.runPath !== undefined) combined.runPath = original.runPath;
   combined.cleanupPending = true;
   if (original.cleanupError !== undefined) {
@@ -236,6 +247,36 @@ function revalidationRetryable(error, runPath) {
   retryable.command = "finish";
   retryable.runPath = runPath;
   return retryable;
+}
+
+function publicationRetryable(error, runPath) {
+  const original = error instanceof Error ? error : new Error(String(error));
+  const retryable = new Error(
+    `${original.message} The private review run was kept. Fix the publication `
+      + "problem, then retry finish with the same run.",
+    { cause: original },
+  );
+  retryable.code = DIFF_PUBLICATION_RETRYABLE_CODE;
+  retryable.canRetry = true;
+  retryable.command = "finish";
+  retryable.runPath = runPath;
+  return retryable;
+}
+
+function postPublicationCleanupFailure(ticket, cleanupError, runPath) {
+  const failure = new Error(
+    `Hope created the review at ${ticket.outputPath}, but could not remove its `
+      + "private review data. Do not retry finish.",
+    { cause: cleanupError },
+  );
+  failure.code = DIFF_CLEANUP_FAILED_CODE;
+  failure.outputPath = ticket.outputPath;
+  failure.runPath = runPath;
+  failure.cleanupPending = true;
+  if (cleanupError?.preservedPath !== undefined) {
+    failure.preservedPath = cleanupError.preservedPath;
+  }
+  return failure;
 }
 
 export async function prepareDiff({
@@ -533,7 +574,6 @@ export async function finishDiff(runPath, dependencies = {}) {
       throw error;
     }
 
-    let runRemoved = false;
     let preserveRun = false;
     try {
       const rendered = await renderValidatedAnalysis(validated, dependencies);
@@ -558,18 +598,29 @@ export async function finishDiff(runPath, dependencies = {}) {
         throw error;
       }
       await mutationClaim.assertOwned();
-      await (dependencies.removeRun ?? removeDiffRun)(run.path, {
-        temporaryRoot: dependencies.temporaryRoot,
-      });
-      runRemoved = true;
-      const ticket = await (dependencies.finalize ?? finalizeReview)(rendered.bytes, {
-        artifactDigest: rendered.digest,
-        outputPath: run.manifest.outputPath,
-        revalidatedAt: revalidation.revalidatedAt,
-        runId: run.manifest.runId,
-        snapshotDigest: run.snapshot.digest,
-        temporaryRoot: dependencies.temporaryRoot,
-      });
+      let ticket;
+      try {
+        ticket = await (dependencies.finalize ?? finalizeReview)(rendered.bytes, {
+          artifactDigest: rendered.digest,
+          outputPath: run.manifest.outputPath,
+          revalidatedAt: revalidation.revalidatedAt,
+          runId: run.manifest.runId,
+          snapshotDigest: run.snapshot.digest,
+          temporaryRoot: dependencies.temporaryRoot,
+        });
+      } catch (error) {
+        preserveRun = true;
+        throw publicationRetryable(error, run.path);
+      }
+      try {
+        await mutationClaim.assertOwned();
+        await (dependencies.removeRun ?? removeDiffRun)(run.path, {
+          temporaryRoot: dependencies.temporaryRoot,
+        });
+      } catch (error) {
+        preserveRun = true;
+        throw postPublicationCleanupFailure(ticket, error, run.path);
+      }
       return Object.freeze({
         ...ticket,
         pullRequest: run.snapshot.pullRequest,
@@ -581,7 +632,7 @@ export async function finishDiff(runPath, dependencies = {}) {
         result: validated.result,
       });
     } catch (error) {
-      if (!runRemoved && !preserveRun) {
+      if (!preserveRun) {
         try {
           await mutationClaim.assertOwned();
           await (dependencies.removeRun ?? removeDiffRun)(run.path, {

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  DIFF_CLEANUP_FAILED_CODE,
+  DIFF_PUBLICATION_RETRYABLE_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
 } from "../plugins/hope/skills/diff/scripts/index.mjs";
 import {
@@ -208,7 +210,7 @@ test("Diff dispatches every internal Skill command", async () => {
   }
 });
 
-test("Diff emits structured repair and revalidation errors", () => {
+test("Diff emits structured repair, retry, and cleanup errors", () => {
   const analysisError = new Error("Analysis needs repair");
   analysisError.code = "HOPE_ANALYSIS_INVALID";
   analysisError.canRetry = true;
@@ -242,6 +244,29 @@ test("Diff emits structured repair and revalidation errors", () => {
       })}\n`,
     },
   );
+
+  const publication = new Error("Publication failed");
+  publication.code = DIFF_PUBLICATION_RETRYABLE_CODE;
+  publication.canRetry = true;
+  publication.command = "finish";
+  publication.runPath = "run-path";
+  assert.equal(diffExitCode(publication), 6);
+  assert.deepEqual(JSON.parse(diffErrorDetails(publication).trim()), {
+    canRetry: true,
+    code: DIFF_PUBLICATION_RETRYABLE_CODE,
+    command: "finish",
+    runPath: "run-path",
+  });
+
+  const cleanup = new Error("Cleanup failed");
+  cleanup.code = DIFF_CLEANUP_FAILED_CODE;
+  cleanup.outputPath = "/tmp/review.html";
+  cleanup.runPath = "run-path";
+  assert.deepEqual(JSON.parse(diffErrorDetails(cleanup).trim()), {
+    code: DIFF_CLEANUP_FAILED_CODE,
+    outputPath: "/tmp/review.html",
+    runPath: "run-path",
+  });
 
   assert.equal(diffExitCode({ code: "HOPE_DIFF_STALE" }), 4);
   assert.equal(diffExitCode(new Error("ordinary failure")), 1);

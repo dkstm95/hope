@@ -279,6 +279,13 @@ fix the reported contract errors before running `finish` again.
 If `HOPE_DIFF_REVALIDATION_RETRYABLE` returns `canRetry: true`, restore GitHub
 access and retry only the returned `command` with the returned `runPath`.
 
+If `HOPE_DIFF_PUBLICATION_RETRYABLE` returns `canRetry: true`, fix the reported
+publication problem and retry only the returned `command` with the returned
+`runPath`.
+
+If `HOPE_DIFF_CLEANUP_FAILED` returns an `outputPath`, the review was created.
+Report the artifact and the cleanup failure. Do not retry `finish`.
+
 Do not prepare again, reread evidence, or rewrite a validated analysis.
 
 Cancel if the same access failure repeats without progress.
