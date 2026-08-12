@@ -118,8 +118,11 @@ export function versionFromBase(baseReference = "origin/main") {
     "--end-of-options",
     `${baseReference}^{commit}`,
   ]);
-  const baseCommit = git(["merge-base", "HEAD", resolvedBase]);
-  const packageJson = JSON.parse(git(["show", `${baseCommit}:package.json`]));
+  const mergeBase = git(["merge-base", "HEAD", resolvedBase]);
+  if (mergeBase !== resolvedBase) {
+    throw new Error(`Update the branch so ${baseReference} is an ancestor of HEAD`);
+  }
+  const packageJson = JSON.parse(git(["show", `${resolvedBase}:package.json`]));
   return packageJson.version;
 }
 

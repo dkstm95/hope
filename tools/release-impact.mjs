@@ -2,6 +2,8 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { lstatSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isEntrypoint } from "./entrypoint.mjs";
@@ -93,11 +95,14 @@ export function validateReleaseImpact({
     );
   }
 
-  const localPackageChange = baseDigest !== headDigest;
-  const baseHasPackageDebt = releasedDigest !== baseDigest;
   const baseHasRecordedVersion = compareVersions(baseVersion, releasedVersion) > 0;
-  const inheritedPackageDebt = baseHasPackageDebt && !baseHasRecordedVersion;
-  const releaseRequired = localPackageChange || inheritedPackageDebt;
+  const localPackageChange = baseDigest !== headDigest;
+  const inheritedPackageDebt = !baseHasRecordedVersion
+    && baseDigest !== releasedDigest
+    && headDigest !== releasedDigest;
+  const releaseRequired = baseHasRecordedVersion
+    ? localPackageChange
+    : headDigest !== releasedDigest;
 
   if (releaseRequired && selectedType === "none") {
     const reason = localPackageChange
@@ -175,21 +180,50 @@ export function packageDigestAt(reference) {
       if (!match) throw new Error(`Could not parse package tree entry: ${line}`);
       return [match.groups.path, match.groups];
     }));
-  return packageIdentityDigest(packageFiles.map((path) => {
+  return packageDigest(packageFiles.map((path) => {
     const entry = tree.get(path);
     if (!entry || entry.type !== "blob") {
       throw new Error(`Package entry is not a Git blob at ${commit}: ${path}`);
     }
-    const contentDigest = versionedPackageFiles.has(path)
-      ? sha256(normalizePackageFile(path, readGitFile(commit, `plugins/hope/${path}`)))
-      : entry.digest;
-    return { contentDigest, mode: entry.mode, path };
+    return {
+      bytes: readGitFile(commit, `plugins/hope/${path}`),
+      mode: entry.mode,
+      path,
+    };
   }));
+}
+
+export function packageDigestFromDirectory(directory, packageFiles) {
+  return packageDigest(packageFiles.map((path) => {
+    const absolutePath = resolve(directory, path);
+    const info = lstatSync(absolutePath);
+    if (!info.isFile() || info.isSymbolicLink()) {
+      throw new Error(`Plugin package entry is not a regular file: ${path}`);
+    }
+    return {
+      bytes: readFileSync(absolutePath),
+      mode: info.mode & 0o111 ? "100755" : "100644",
+      path,
+    };
+  }));
+}
+
+export function packageDigestFromWorktree() {
+  const packageFiles = parsePackageFileList(
+    readFileSync(resolve(root, "tools/plugin-package-files.txt"), "utf8"),
+  );
+  return packageDigestFromDirectory(resolve(root, "plugins/hope"), packageFiles);
 }
 
 export function versionAt(reference) {
   const commit = resolveCommit(reference);
   const packageJson = JSON.parse(readGitFile(commit, "package.json").toString("utf8"));
+  parseStableVersion(packageJson.version);
+  return packageJson.version;
+}
+
+export function worktreeVersion() {
+  const packageJson = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
   parseStableVersion(packageJson.version);
   return packageJson.version;
 }
@@ -207,7 +241,14 @@ export function latestReleaseTag() {
   return tags[0];
 }
 
-export function checkReleaseImpact(baseReference, headReference = "HEAD") {
+export function checkReleaseImpact(baseReference = "origin/main") {
+  const baseCommit = resolveCommit(baseReference);
+  const headCommit = resolveCommit("HEAD");
+  const mergeBase = git(["merge-base", baseCommit, headCommit]).trim();
+  if (mergeBase !== baseCommit) {
+    throw new Error(`Update the branch so ${baseReference} is an ancestor of HEAD`);
+  }
+
   const releasedReference = latestReleaseTag();
   const releasedVersion = versionAt(releasedReference);
   if (releasedReference !== `v${releasedVersion}`) {
@@ -216,12 +257,12 @@ export function checkReleaseImpact(baseReference, headReference = "HEAD") {
     );
   }
   const baseVersion = versionAt(baseReference);
-  const headVersion = versionAt(headReference);
+  const headVersion = worktreeVersion();
   return {
     ...validateReleaseImpact({
       baseDigest: packageDigestAt(baseReference),
       baseVersion,
-      headDigest: packageDigestAt(headReference),
+      headDigest: packageDigestFromWorktree(),
       headVersion,
       releasedDigest: packageDigestAt(releasedReference),
       releasedVersion,
@@ -234,15 +275,15 @@ export function checkReleaseImpact(baseReference, headReference = "HEAD") {
 }
 
 if (isEntrypoint(import.meta.url)) {
-  const [baseReference, headReference = "HEAD", ...extraArguments] = process.argv.slice(2);
-  if (!baseReference || extraArguments.length > 0) {
+  const [baseReference = "origin/main", ...extraArguments] = process.argv.slice(2);
+  if (extraArguments.length > 0) {
     process.stderr.write(
-      "Usage: node tools/release-impact.mjs <base-ref> [head-ref]\n",
+      "Usage: node tools/release-impact.mjs [base-ref]\n",
     );
     process.exitCode = 1;
   } else {
     try {
-      const result = checkReleaseImpact(baseReference, headReference);
+      const result = checkReleaseImpact(baseReference);
       const debt = result.inheritedPackageDebt ? ", including inherited package debt" : "";
       process.stdout.write(
         `Hope release impact is valid: ${result.selectedType} `

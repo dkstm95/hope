@@ -41,10 +41,17 @@ works.
 Run the relevant checks from [CONTRIBUTING.md](CONTRIBUTING.md) and report any
 remaining verification gap.
 
-Before opening or updating a pull request, decide and record its release impact
-as `none`, `patch`, `minor`, or `major` according to
-[docs/release.md](docs/release.md).
+Run `npm run check` before completing any file-changing task.
+
+The command checks the current working tree's release impact as well as the
+package and tests.
+
+Do not finish, commit, or push while that check reports a missing or unnecessary
+version change.
+
+Before opening or updating a pull request, record its release impact as `none`,
+`patch`, `minor`, or `major` according to [docs/release.md](docs/release.md).
 
 If the version changes, update from the latest `main`, run the documented
-release preparation command with the chosen increase type, and include its
-output in the same change.
+release preparation command with the chosen increase type, include its output
+in the same change, and run `npm run check` again.

@@ -17,7 +17,7 @@
     "test": "node --test",
     "test:browser": "playwright test",
     "check:release": "node tools/check-release.mjs",
-    "check": "npm run check:release && npm test"
+    "check": "npm run check:release && npm run release:check && npm test"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1"

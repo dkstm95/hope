@@ -21,47 +21,48 @@ Judge the delivered behavior, not the commit type.
 AI or the reviewer chooses `patch`, `minor`, or `major` when a release is
 required.
 
-The repository determines whether a release is required and calculates the
-exact version.
+The repository determines whether the working tree changes the public package
+and calculates the exact version.
 
 Documentation and internal maintenance can still require a release when they
-change a Skill, package content, or another public contract.
+change a Skill or another packaged contract.
 
 A `none` decision changes no version file solely to record the decision.
 
-## Deterministic release impact
+## Local completion gate
 
-Verify compares the approved plugin package at three Git revisions:
+Every file-changing task ends with:
 
-- the latest stable release tag;
-- the pull request base; and
-- the proposed result.
+```bash
+npm run check
+```
 
-It compares the exact package allowlist, Git file modes, and file contents after
+The command checks the package structure, the current working tree's release
+impact, and the deterministic tests.
+
+The release-impact check compares the approved package at the latest stable
+release, the latest `origin/main`, and the current working tree.
+
+It compares the exact package allowlist, file modes, and file contents after
 replacing only the two manifest version values with one neutral value.
 
-This detects a new, changed, or removed package file without maintaining a
-second list of version-sensitive paths.
+When the working tree changes the package, it must increase the base version by
+exactly one patch, minor, or major step.
 
-A pull request must increase the version by exactly one patch, minor, or major
-step when it changes the package.
-
-It must also increase the version when its base contains package changes that
-the current public version never released.
-
-This inherited-debt check recovers changes merged while version automation was
-missing or broken.
-
-When the base already records an unreleased version, an unrelated pull request
-keeps that version instead of increasing it again.
-
-A pull request with no current or inherited package change must keep the base
+When the base already records an unreleased version, unrelated work keeps that
 version.
+
+When the base has unversioned package changes, the next completed task records
+their release unless it restores the package to the released state.
+
+A branch must include the latest `origin/main` before the check can pass.
+
+The same command runs in normal CI as a safety net, but local completion owns
+the version decision.
 
 ## Prepare a version
 
-Before preparing a version, update the branch from the latest `main` so another
-merged release cannot make the chosen version stale.
+Before preparing a version, update the branch from the latest `main`.
 
 The public version files are:
 
@@ -76,68 +77,47 @@ For a `patch`, `minor`, or `major` decision, run:
 npm run release:prepare -- <patch|minor|major>
 ```
 
-The command reads the merge base with `origin/main`, calculates the exact next
-version, updates all four files, rebuilds the generated plugin, and checks the
-versioned package.
+The command reads the version from `origin/main`, calculates the exact next
+version, updates all four files, rebuilds the package, and runs its checks.
 
 Pass another base ref as a second argument only when `origin/main` is not the
-pull request base.
+task base.
 
-Verify runs the same deterministic check before a pull request can merge.
-
-Run it locally with:
-
-```bash
-npm run release:check -- origin/main
-```
-
-Commit those changes with the work they release.
+Run `npm run check` again and commit the version with the work it releases.
 
 The pull request therefore contains both the product change and its release
 decision before review and merge.
 
-The protected `main` branch must require the `Verify` check and require pull
-requests to be up to date before merging.
-
-That setting makes a parallel pull request recalculate its version after
-another release-bearing pull request merges.
-
 ## Publish the recorded version
 
-Merging a pull request that changes the public version starts `Verify` for the
-new `main` commit.
+A push to `main` that changes `package.json` starts the `Release` workflow.
 
-When Verify succeeds, the `Release` workflow reads that exact commit and
-publishes its recorded version.
+The workflow checks out that event's exact commit.
 
-Failed or cancelled verification does not publish a release.
+If the push did not change the recorded version, the workflow exits without
+publishing.
 
-The workflow does not choose or change a version.
+For a new version, it installs locked dependencies, prepares the recorded
+version again, runs the browser suite, stages and checks the archive, and then
+creates the tag and GitHub Release.
 
-It installs locked dependencies, prepares the already recorded version again,
-checks that preparation creates no tracked difference, runs the browser suite,
-creates an annotated tag for the merge commit, stages the approved package
-files, records a checksum, and publishes the GitHub Release as latest.
+The workflow never chooses a version, changes `main`, or lets a later unchanged
+commit claim an earlier version.
 
-The workflow never commits or pushes a change to `main`.
+Release jobs share one queue so two releases never publish at the same time.
 
-GitHub Release notes are the public version history.
-
-GitHub generates them from the commits and merged pull requests since the
-previous tag.
+GitHub generates the public release notes from the commits and merged pull
+requests since the previous tag.
 
 ## Manual retry and recovery
 
-A manual run reads the version already recorded on the latest `main`.
+A manual run uses the selected `main` commit, not a moving branch reference.
 
-If its tag and GitHub Release both exist, the run exits without publishing
-anything.
+If its tag and GitHub Release both exist, the run exits without publishing.
 
 If neither exists, the run verifies and publishes that recorded version.
 
-If the tag exists without a GitHub Release, the run restores that exact tagged
-commit, verifies it again, and publishes the missing package.
-
-Only one release job runs at a time.
+If the tag exists without a GitHub Release, the run restores the tagged commit,
+verifies it again, and publishes the missing package.
 
 Once a version tag exists, its source and plugin package are immutable.

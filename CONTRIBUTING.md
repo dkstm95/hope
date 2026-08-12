@@ -27,6 +27,9 @@ npm install
 npm run check
 ```
 
+`npm run check` validates the current working tree's package, release impact,
+and deterministic tests.
+
 Run `npm run test:browser` when Diff layout or interaction changes.
 
 Run `npm run render:readme-assets` and inspect the updated captures when a Diff
@@ -59,15 +62,11 @@ When the decision changes the version, update from the latest `main` and run:
 npm run release:prepare -- <patch|minor|major>
 ```
 
-The command calculates the exact version from the merge base.
+The command calculates the exact version from the selected base ref.
 
 Commit its version and generated package changes with the work.
 
-Confirm the recorded result against the package history with:
-
-```bash
-npm run release:check -- origin/main
-```
+Run `npm run check` again after preparing the version.
 
 See [docs/release.md](docs/release.md) for the decision criteria and recovery
 process.

@@ -24,6 +24,7 @@ import {
   compareVersions,
   incrementVersion,
   packageDigest,
+  packageDigestFromDirectory,
   releaseTypeBetween,
   validateReleaseImpact,
 } from "../tools/release-impact.mjs";
@@ -86,6 +87,7 @@ test("release versions use one supported form", () => {
       },
     },
   );
+
   assert.throws(
     () => withPackageLockVersion({ packages: {} }, "1.0.0"),
     /root package/u,
@@ -120,6 +122,35 @@ test("release impact requires one exact version step for package changes and deb
       releaseRequired: false,
       selectedType: "none",
     },
+  );
+
+  assert.deepEqual(
+    validateReleaseImpact({
+      baseDigest: "debt",
+      baseVersion: "2.0.0",
+      headDigest: "released",
+      headVersion: "2.0.0",
+      releasedDigest: "released",
+      releasedVersion: "2.0.0",
+    }),
+    {
+      inheritedPackageDebt: false,
+      localPackageChange: true,
+      releaseRequired: false,
+      selectedType: "none",
+    },
+  );
+
+  assert.throws(
+    () => validateReleaseImpact({
+      baseDigest: "debt",
+      baseVersion: "2.0.0",
+      headDigest: "released",
+      headVersion: "2.0.1",
+      releasedDigest: "released",
+      releasedVersion: "2.0.0",
+    }),
+    /version changes without/u,
   );
 
   assert.deepEqual(
@@ -213,6 +244,32 @@ test("package impact ignores only manifest versions", () => {
   );
 });
 
+test("package impact reads the current working directory", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "hope-package-impact-"));
+  context.after(async () => await rm(directory, { recursive: true, force: true }));
+  await mkdir(join(directory, ".codex-plugin"), { recursive: true });
+  await mkdir(join(directory, "skills/write"), { recursive: true });
+  await writeFile(
+    join(directory, ".codex-plugin/plugin.json"),
+    '{\n  "name": "hope",\n  "version": "2.0.0"\n}\n',
+  );
+  await writeFile(join(directory, "skills/write/SKILL.md"), "write\n");
+
+  const paths = [".codex-plugin/plugin.json", "skills/write/SKILL.md"];
+  const expected = packageDigest([
+    {
+      bytes: Buffer.from('{\n  "name": "hope",\n  "version": "9.0.0"\n}\n'),
+      mode: "100644",
+      path: paths[0],
+    },
+    { bytes: Buffer.from("write\n"), mode: "100644", path: paths[1] },
+  ]);
+  assert.equal(packageDigestFromDirectory(directory, paths), expected);
+
+  await writeFile(join(directory, "skills/write/SKILL.md"), "changed\n");
+  assert.notEqual(packageDigestFromDirectory(directory, paths), expected);
+});
+
 test("development installation verifies the selected plugin and cache", async (context) => {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "hope-dev-cache-test-"));
   context.after(async () => await rm(temporaryRoot, { recursive: true, force: true }));
@@ -273,30 +330,21 @@ test("release file lists compare across platform line endings", () => {
   assert.equal(normalizeLineEndings(windowsCheckout), expected);
 });
 
-test("CI installs locked dependencies before running checks or builds", async () => {
+test("CI checks locally and publishes only an exact recorded push", async () => {
   const verify = await readFile(join(root, ".github/workflows/verify.yml"), "utf8");
   const release = await readFile(join(root, ".github/workflows/release.yml"), "utf8");
-  const releasePlan = release.match(
-    /- name: Choose release mode\n([\s\S]*?)\n      - name: Restore interrupted release commit/u,
-  )?.[1];
 
   const verifyInstall = verify.indexOf("- run: npm ci");
   const releaseInstall = release.indexOf("run: npm ci");
   const releasePrepare = release.indexOf("npm run release:prepare");
+  const releaseStage = release.indexOf("node tools/stage-plugin.mjs");
+  const releasePackageCheck = release.indexOf("unzip -Z1");
+  const releasePublish = release.indexOf("- name: Publish recorded release");
   assert.ok(verifyInstall >= 0, "verify workflow must install dependencies");
   assert.ok(releaseInstall >= 0, "release workflow must install dependencies");
   assert.ok(releasePrepare >= 0, "release workflow must prepare the release");
-  assert.ok(releasePlan, "release workflow must choose a release mode");
   assert.ok(verifyInstall < verify.indexOf("- run: npm run check"));
-  assert.match(verify, /node tools\/release-impact\.mjs "\$\{BASE_REF\}"/u);
-  assert.match(
-    verify,
-    /BASE_REF: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.base\.sha \|\| github\.event\.before \}\}/u,
-  );
-  assert.match(
-    verify,
-    /if: matrix\.node == 22 && \(github\.event_name == 'pull_request' \|\| github\.ref == 'refs\/heads\/main'\)/u,
-  );
+  assert.doesNotMatch(verify, /tools\/release-impact\.mjs|BASE_REF/u);
   assert.ok(releaseInstall < releasePrepare);
   const checkJob = verify.match(/\n  check:\n([\s\S]*?)\n  platform-smoke:\n/u)?.[1];
   const platformSmokeJob = verify.match(
@@ -319,41 +367,29 @@ test("CI installs locked dependencies before running checks or builds", async ()
   );
   assert.match(release, /npx playwright install --with-deps chromium/u);
   assert.match(release, /npm run test:browser/u);
-  assert.doesNotMatch(release, /run: npm run check\s*$/mu);
+  assert.match(release, /push:\s+branches:\s+- main\s+paths:\s+- package\.json/su);
   assert.match(release, /workflow_dispatch/u);
-  assert.match(
-    release,
-    /workflow_run:\s+workflows:\s+- Verify\s+types:\s+- completed\s+branches:\s+- main/su,
-  );
-  assert.doesNotMatch(release, /^\s+paths:/mu);
-  assert.match(
-    release,
-    /ref: \$\{\{ github\.event_name == 'workflow_dispatch' && 'main' \|\| github\.event\.workflow_run\.head_sha \}\}/u,
-  );
-  assert.match(release, /github\.event\.workflow_run\.event == 'push'/u);
-  assert.match(release, /github\.event\.workflow_run\.conclusion == 'success'/u);
-  assert.match(release, /test "\$\{VERIFY_EVENT\}" = "push"/u);
-  assert.match(release, /test "\$\{EVENT_CONCLUSION\}" = "success"/u);
+  assert.doesNotMatch(release, /workflow_run/u);
+  assert.match(release, /queue: max/u);
+  assert.match(release, /ref: \$\{\{ github\.sha \}\}/u);
+  assert.match(release, /test "\$\{EVENT_REF\}" = "refs\/heads\/main"/u);
   assert.match(release, /test "\$\(git rev-parse HEAD\)" = "\$\{EVENT_SHA\}"/u);
+  assert.match(release, /PREVIOUS_VERSION=.*BEFORE_SHA/u);
+  assert.match(release, /PREVIOUS_VERSION.*=.*CURRENT_VERSION/u);
   assert.match(release, /MODE=recorded/u);
-  assert.doesNotMatch(releasePlan, /EVENT_NAME|workflow_dispatch/u);
-  assert.doesNotMatch(release, /MODE=increment|BASE_TAG|--automatic/u);
+  assert.doesNotMatch(release, /MODE=increment|--automatic/u);
   assert.match(
     release,
     /npm run release:prepare -- "\$\{\{ steps\.plan\.outputs\.current-version \}\}"/u,
   );
   assert.match(release, /steps\.plan\.outputs\.publish == 'true'/u);
   assert.doesNotMatch(release, /workflow_dispatch:\s+inputs:/su);
-  assert.match(release, /echo "current-version=\$\{CURRENT_VERSION\}"/u);
-  assert.match(release, /echo "version=\$\{RELEASE_VERSION\}"/u);
   assert.match(release, /gh release view/u);
   assert.match(release, /git checkout --detach/u);
-  assert.match(release, /already exists unexpectedly/u);
   assert.match(
     release,
     /test "\$\(git rev-parse HEAD\)" = "\$\(git rev-parse "\$\{RELEASE_TAG\}\^\{commit\}"\)"/u,
   );
-  assert.match(release, /steps\.plan\.outputs\.mode \}\}.*!= "resume"/u);
   assert.match(release, /git push origin "\$\{\{ steps\.release\.outputs\.tag \}\}"/u);
   assert.doesNotMatch(release, /HEAD:main|git commit|git add/u);
   assert.match(
@@ -365,9 +401,9 @@ test("CI installs locked dependencies before running checks or builds", async ()
   assert.match(release, /--latest/u);
   assert.doesNotMatch(release, /--prerelease/u);
   assert.ok(releasePrepare < release.indexOf("npm run test:browser"));
-  assert.ok(
-    release.indexOf("npm run test:browser") < release.indexOf("git diff --exit-code"),
-  );
+  assert.ok(releaseStage > releasePrepare);
+  assert.ok(releasePackageCheck > releaseStage);
+  assert.ok(releasePublish > releasePackageCheck);
 });
 
 test("the release package contains exactly the approved plugin files", async (context) => {
