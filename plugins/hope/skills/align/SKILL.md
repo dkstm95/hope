@@ -45,7 +45,8 @@ Start with a short account of:
 
 Match the detail to the task risk.
 
-Do not turn a small reversible task into a long interview.
+Interview length is not a reason to leave a question or assumption that could
+change the result unresolved.
 
 ## Ask only material questions
 
@@ -60,6 +61,12 @@ default.
 Let the person delegate a reversible low-impact choice.
 
 Ask one question at a time when that makes the decision easier.
+
+Continue the interview until the person's intent and the agent's understanding
+agree on every point that could change the work.
+
+Reduce the person's effort with concise questions and updated teach-backs, not
+by lowering the readiness standard.
 
 Do not repeat a closed question in different words.
 
