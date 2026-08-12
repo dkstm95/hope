@@ -60,7 +60,8 @@ default.
 
 Let the person delegate a reversible low-impact choice.
 
-Ask one question at a time when that makes the decision easier.
+Ask material questions together when the person can answer them independently.
+Ask one at a time only when an answer determines the next question.
 
 Continue the interview until the person's intent and the agent's understanding
 agree on every point that could change the work.
