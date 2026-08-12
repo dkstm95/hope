@@ -87,9 +87,9 @@ Recheck the target before writing.
 
 Stop when it changed after inspection or its identity is uncertain.
 
-Apply the Hope Write standard directly to language-bearing changes.
+Use Hope Write for language-bearing changes within the fresh worker.
 
-Do not invoke Write as another workflow.
+Write does not add another worker or modification round.
 
 ## Verify and report
 

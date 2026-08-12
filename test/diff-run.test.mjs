@@ -16,7 +16,6 @@ import {
   LIMITS,
   RUN_VERSION,
 } from "../plugins/hope/skills/diff/scripts/constants.mjs";
-import { digestJson } from "../plugins/hope/skills/diff/scripts/hash.mjs";
 import { revalidateGitHubSnapshot } from "../plugins/hope/skills/diff/scripts/github.mjs";
 import {
   DIFF_REVALIDATION_RETRYABLE_CODE,
@@ -35,7 +34,6 @@ import {
   inspectionPageView,
   loadDiffRun,
   removeDiffRun,
-  replaceDiffRunPlan,
 } from "../plugins/hope/skills/diff/scripts/run.mjs";
 import { makeAnalysis, makeSnapshot } from "../test-support/diff-fixture.mjs";
 import {
@@ -78,13 +76,6 @@ async function createAnalyzedRun(temporaryRoot, { outputPath } = {}) {
     { flag: "wx", mode: 0o600 },
   );
   return { created, snapshot };
-}
-
-function revisedSnapshot(snapshot, marker) {
-  const value = JSON.parse(JSON.stringify(snapshot));
-  delete value.digest;
-  value.sources[1].text = `${value.sources[1].text} ${marker}`;
-  return Object.freeze({ ...value, digest: digestJson(value) });
 }
 
 test("an invalid explicit output fails before GitHub collection", async () => {
@@ -399,60 +390,15 @@ test("expiry cleanup preserves a directory replaced during removal", async () =>
   assert.equal(await readFile(join(created.path, "foreign.txt"), "utf8"), "keep\n");
 });
 
-test("an inspected run cannot replace its checkpointed evidence", async () => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-state-");
-  const snapshot = makeSnapshot();
-  const created = await createDiffRun(snapshot, { temporaryRoot });
-  await inspectAndCheckpointAll(created.path, { temporaryRoot });
-
-  await assert.rejects(
-    replaceDiffRunPlan(created.path, revisedSnapshot(snapshot, "new context"), {
-      temporaryRoot,
-    }),
-    /only before analysis starts/u,
-  );
-  await removeDiffRun(created.path, { temporaryRoot });
-});
-
-test("a failed plan write leaves the previous manifest authoritative", async () => {
-  const temporaryRoot = await createTestTemporaryDirectory("hope-run-plan-write-");
-  const snapshot = makeSnapshot();
-  const created = await createDiffRun(snapshot, { temporaryRoot });
-  let writes = 0;
-
-  await assert.rejects(
-    replaceDiffRunPlan(created.path, revisedSnapshot(snapshot, "not committed"), {
-      temporaryRoot,
-      writeJson: async (path, value) => {
-        writes += 1;
-        if (writes === 2) throw new Error("new pages could not be written");
-        await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, {
-          flag: "wx",
-          mode: 0o600,
-        });
-      },
-    }),
-    /new pages could not be written/u,
-  );
-  const resumed = await loadDiffRun(created.path, { temporaryRoot });
-  assert.equal(resumed.snapshot.digest, snapshot.digest);
-  assert.equal(resumed.manifest.phase, "prepared");
-  await removeDiffRun(created.path, { temporaryRoot });
-});
-
-test("inspection-plan pointers reject traversal and symlinked generation files", async () => {
+test("inspection-plan pointers reject traversal and symlinked files", async () => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-run-pointer-");
   const snapshot = makeSnapshot();
   const created = await createDiffRun(snapshot, { temporaryRoot });
-  const replaced = await replaceDiffRunPlan(
-    created.path,
-    revisedSnapshot(snapshot, "pointer check"),
-    { temporaryRoot },
-  );
   const manifestPath = join(created.path, "run.json");
   const originalManifest = await readFile(manifestPath, "utf8");
   const traversing = JSON.parse(originalManifest);
   traversing.snapshotFile = "../snapshot.json";
+  traversing.pagesFile = "../pages.json";
   await writeFile(manifestPath, `${JSON.stringify(traversing, null, 2)}\n`, "utf8");
   await assert.rejects(
     loadDiffRun(created.path, { temporaryRoot }),
@@ -460,9 +406,11 @@ test("inspection-plan pointers reject traversal and symlinked generation files",
   );
 
   await writeFile(manifestPath, originalManifest, "utf8");
-  const snapshotPath = join(created.path, replaced.manifest.snapshotFile);
+  const snapshotPath = join(created.path, "snapshot.json");
+  const snapshotTarget = join(created.path, "snapshot-target.json");
+  await writeFile(snapshotTarget, await readFile(snapshotPath));
   await unlink(snapshotPath);
-  await symlink(join(created.path, "snapshot.json"), snapshotPath);
+  await symlink(snapshotTarget, snapshotPath);
   await assert.rejects(
     loadDiffRun(created.path, { temporaryRoot }),
     /snapshot is not a regular file/u,

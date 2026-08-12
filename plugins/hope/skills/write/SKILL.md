@@ -1,17 +1,27 @@
 ---
 name: write
-description: Use to improve language in any task, including drafts, edits, reviews, prompts, documentation, plans, instructions, product text, errors, comments, names, and responses; preserve meaning, facts, uncertainty, citations, exact text, and voice.
+description: Use as the cross-cutting language standard whenever clearer language would improve any task, including standalone drafts, edits, and reviews and language within implementation or another Skill; preserve meaning, facts, uncertainty, citations, exact text, and voice.
 ---
 
 # Hope Write
 
-Use the active host session to draft, edit, review, or improve language within a
-broader task.
+Use the active host session to draft, edit, review, or improve language.
+
+Write may own a standalone language task or accompany implementation and
+another Skill.
 
 Read [references/writing-standard.md](references/writing-standard.md) before
 doing the work.
 
-## Choose the mode
+When another task or Skill owns the work, keep its scope, authority, process,
+and completion conditions.
+
+Apply Write to its language-bearing parts in the same session.
+
+Do not create a separate Write pass, result, or worker merely to apply the
+standard.
+
+## Choose the language mode
 
 - Use `draft` for new prose.
 - Use `edit` to change existing prose or files.
@@ -19,6 +29,8 @@ doing the work.
   the target.
 
 Do not ask for a mode when the request already makes the action clear.
+
+The mode describes the language action, not the surrounding task.
 
 ## Preserve the work
 
