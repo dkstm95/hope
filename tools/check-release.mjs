@@ -53,7 +53,7 @@ assert.equal(packageJson.bin, undefined);
 assert.equal(packageJson.scripts.hope, undefined);
 assert.equal(codexPlugin.name, "hope");
 assert.equal(codexPlugin.version, currentVersion);
-assert.equal(codexPlugin.interface.defaultPrompt.length, 3);
+assert.equal(codexPlugin.interface.defaultPrompt.length, 4);
 assert.equal(claudePlugin.name, "hope");
 assert.equal(claudePlugin.version, currentVersion);
 if (process.env.GITHUB_REF_TYPE === "tag") {

@@ -47,6 +47,7 @@ skills/diff/scripts/text.mjs
 skills/diff/scripts/validate.mjs
 skills/polish/SKILL.md
 skills/polish/agents/openai.yaml
+skills/polish/references/code.md
 skills/sweep/SKILL.md
 skills/sweep/agents/openai.yaml
 skills/toxic-review/SKILL.md
