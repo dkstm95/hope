@@ -380,9 +380,12 @@ document title enough emphasis to establish the reading path, then keep body
 type compact and readable. Omit an optional section instead of rendering an
 empty box.
 
-Align uses the platform sans-serif stack so its project document stays small
-and remains legible across supported hosts. Its palette, spacing, type, and
-layout values come only from Align's own tokens.
+Align embeds Hope Sans so it uses the same Hope type family as Diff across
+supported hosts. Its palette, spacing, type sizes, and layout values still come
+only from Align's own tokens.
+
+Put the Hope icon immediately before **HOPE** in the Align product bar. Keep the
+visible wordmark as the accessible name; the icon is decorative.
 
 ## Diff artifact layout
 

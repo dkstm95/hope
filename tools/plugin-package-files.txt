@@ -1,6 +1,12 @@
 .claude-plugin/plugin.json
 .codex-plugin/plugin.json
 LICENSE
+assets/fonts/HopeSansBold.woff2
+assets/fonts/HopeSansLight.woff2
+assets/fonts/HopeSansMedium.woff2
+assets/fonts/OFL-Gmarket.txt
+assets/fonts/SOURCE.md
+assets/hope-icon.png
 assets/hope-protected-light.png
 skills/align/SKILL.md
 skills/align/agents/openai.yaml

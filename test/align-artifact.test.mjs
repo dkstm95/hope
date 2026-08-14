@@ -95,8 +95,11 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   const second = renderAlignArtifact(data, options);
 
   assert.equal(first, second);
-  assert.match(first, /HOPE · ALIGN/u);
-  assert.match(first, /name="hope-align-design-version" content="1"/u);
+  assert.match(first, /<img class="brand-icon" src="data:image\/png;base64,/u);
+  assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
+  assert.match(first, /font-family: "Hope Sans"/u);
+  assert.match(first, /font-src data:/u);
+  assert.match(first, /name="hope-align-design-version" content="2"/u);
   assert.match(first, /r1 · 현재 합의/u);
   assert.match(first, /aria-label="다크 모드로 전환"/u);
   assert.match(first, /class="outcome-mark" aria-hidden="true">×</u);

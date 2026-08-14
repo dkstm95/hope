@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 import {
   ALIGN_DESIGN_VERSION,
@@ -7,6 +8,13 @@ import {
   SPACE,
   TYPE,
 } from "./design/tokens.mjs";
+
+const fontUrls = Object.freeze({
+  sansBold: new URL("../../../assets/fonts/HopeSansBold.woff2", import.meta.url),
+  sansLight: new URL("../../../assets/fonts/HopeSansLight.woff2", import.meta.url),
+  sansMedium: new URL("../../../assets/fonts/HopeSansMedium.woff2", import.meta.url),
+});
+const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
 
 const dictionaries = Object.freeze({
   "en-US": Object.freeze({
@@ -279,9 +287,30 @@ function themeVariables(colors) {
   ].join(";");
 }
 
-function css() {
+function css(fontBase64) {
   const [space1, space2, space3, space4, space5, space6, space7, space8, space9] = SPACE;
-  return `:root {
+  return `@font-face {
+  font-family: "Hope Sans";
+  src: url(data:font/woff2;base64,${fontBase64.sansLight}) format("woff2");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Hope Sans";
+  src: url(data:font/woff2;base64,${fontBase64.sansMedium}) format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Hope Sans";
+  src: url(data:font/woff2;base64,${fontBase64.sansBold}) format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+:root {
   color-scheme: light;
   ${themeVariables(COLORS.light)};
 }
@@ -301,15 +330,15 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 400 ${TYPE.body.wide.fontSize}px/${TYPE.body.wide.lineHeight} ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 300 ${TYPE.body.wide.fontSize}px/${TYPE.body.wide.lineHeight} "Hope Sans", sans-serif;
   text-rendering: optimizeLegibility;
 }
 h1, h2, h3, strong { font-weight: 700; }
 p, ul, ol, dl { margin-block: 0; }
 a { color: var(--accent); text-underline-offset: .2em; }
 a:visited { color: var(--visited); }
-code { font: .92em/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
-button, summary { font: inherit; }
+code { font: 500 .92em/1.5 "Hope Sans", sans-serif; overflow-wrap: anywhere; }
+button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 [id]:target { scroll-margin-top: 76px; }
 [id]:focus { outline: 2px solid var(--accent); outline-offset: ${space1}px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -317,7 +346,8 @@ button, summary { font: inherit; }
 .skip:focus { transform: none; }
 .topbar { position: sticky; z-index: 10; top: 0; border-bottom: 1px solid var(--border); background: var(--bg); }
 .topbar-inner { max-width: ${LAYOUT.documentWidth}px; height: ${LAYOUT.topbarInnerHeight}px; margin: 0 auto; padding: 0 ${LAYOUT.topbarWideGutter}px; display: flex; align-items: center; gap: ${space5}px; }
-.brand { flex: none; font-size: ${TYPE.brand.wide.fontSize}px; line-height: ${TYPE.brand.wide.lineHeight}; font-weight: 700; letter-spacing: -.025em; }
+.brand { flex: none; display: flex; align-items: center; gap: ${space2}px; font-size: ${TYPE.brand.wide.fontSize}px; line-height: ${TYPE.brand.wide.lineHeight}; font-weight: 700; letter-spacing: -.025em; white-space: nowrap; }
+.brand-icon { flex: none; width: 24px; height: 24px; border-radius: 6px; }
 .repository { min-width: 0; display: flex; align-items: center; gap: ${space2}px; color: var(--text); }
 .repository span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repository-icon { flex: none; width: 16px; height: 16px; stroke: var(--muted); }
@@ -440,6 +470,9 @@ button, summary { font: inherit; }
 }
 @media (max-width: ${LAYOUT.compactBreakpoint}px) {
   .topbar-inner { padding-inline: ${space3}px; gap: ${space2}px; }
+  .brand { gap: ${space1}px; }
+  .brand-icon { width: 20px; height: 20px; border-radius: 5px; }
+  .brand-product { display: none; }
   .repository { display: none; }
   .status { max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .synopsis > div { grid-template-columns: 1fr; gap: ${space1}px; padding-inline: 0; }
@@ -513,10 +546,14 @@ export function renderAlignArtifact(data, { digest }) {
       ${railHistory(data, dictionary, "-mobile")}
     </div>
   </details>`;
-  const styles = css();
+  const fontBytes = Object.fromEntries(Object.entries(fontUrls).map(
+    ([name, url]) => [name, readFileSync(url).toString("base64")],
+  ));
+  const iconBase64 = readFileSync(iconUrl).toString("base64");
+  const iconDataUrl = `data:image/png;base64,${iconBase64}`;
+  const styles = css(fontBytes);
   const script = clientScript(dictionary);
   const themeAttribute = data.theme === "system" ? "" : ` data-theme="${data.theme}"`;
-  const icon = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="${COLORS.light.accent}"/><path d="M9 9v14M23 9v14M9 16h14" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>`);
   return `<!doctype html>
 <html lang="${escapeHtml(data.locale)}"${themeAttribute}>
 <head>
@@ -525,8 +562,8 @@ export function renderAlignArtifact(data, { digest }) {
   <meta name="hope-align-id" content="${escapeHtml(data.alignId)}">
   <meta name="hope-align-digest" content="${escapeHtml(digest)}">
   <meta name="hope-align-design-version" content="${ALIGN_DESIGN_VERSION}">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src data:; style-src 'sha256-${hashSource(styles)}'; script-src 'sha256-${hashSource(script)}'">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${icon}">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src data:; font-src data:; style-src 'sha256-${hashSource(styles)}'; script-src 'sha256-${hashSource(script)}'">
+  <link rel="icon" type="image/png" sizes="128x128" href="${iconDataUrl}">
   <title>${escapeHtml(content.title)} · Hope Align</title>
   <style>${styles}</style>
 </head>
@@ -534,7 +571,7 @@ export function renderAlignArtifact(data, { digest }) {
   <a class="skip" href="#overview">${escapeHtml(label(dictionary, "skip"))}</a>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand">HOPE · ALIGN</div>
+      <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· ALIGN</span></div>
       <span class="repository"><svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>${escapeHtml(data.repository)}</span></span>
       <span class="status">r${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))}</span>
       <div class="top-actions">

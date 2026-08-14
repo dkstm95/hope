@@ -79,6 +79,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   await page.goto(artifactUrl);
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("실패한 업로드 복구");
+  await expect(page.locator(".brand-icon")).toBeVisible();
   await expect(page.locator(".status")).toHaveText("r2 · 현재 합의");
   await expect(page.locator(".rail")).toBeVisible();
   await expect(page.locator(".rail .rail-history .current")).toContainText("복구 기간과 경계를 명확히 함");
@@ -111,6 +112,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   expect(geometry.railLeft).toBe(932);
   expect(geometry.titleLeft).toBe(40);
   expect(geometry.topbarHeight).toBe(58);
+  await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
   await expect(page.locator(".decision-number")).toHaveText(["01", "02"]);
   await expectNoOverflow(page);
 });
@@ -134,11 +136,15 @@ test("Align theme action is keyboard reachable and updates its label", async ({ 
 });
 
 test("Align keeps one reading order and useful navigation on mobile", async ({ page }) => {
-  await page.setViewportSize({ height: 812, width: 375 });
+  await page.setViewportSize({ height: 568, width: 320 });
   await page.goto(artifactUrl);
 
   await expect(page.locator(".rail")).toBeHidden();
   await expect(page.locator(".repository")).toBeHidden();
+  await expect(page.locator(".brand-icon")).toBeVisible();
+  await expect(page.locator(".brand-product")).toBeHidden();
+  await expect(page.locator(".status")).toBeVisible();
+  await expect(page.locator("#theme-toggle")).toBeVisible();
   const navigation = page.locator(".mobile-navigation");
   await expect(navigation).toBeVisible();
   const navigationButton = navigation.locator(":scope > summary");

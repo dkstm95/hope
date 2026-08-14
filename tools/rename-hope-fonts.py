@@ -8,14 +8,6 @@ from fontTools.ttLib import TTFont
 
 
 FONT_NAMES = {
-    "HopeCode.woff2": {
-        1: "Hope Code",
-        3: "Hope Code Regular 1.3.2",
-        4: "Hope Code Regular",
-        6: "HopeCode-Regular",
-        16: "Hope Code",
-        20: "HopeCode-KSCpc-EUC-H",
-    },
     "HopeSansLight.woff2": {
         1: "Hope Sans Light",
         3: "Hope Sans Light 1.000",
@@ -83,8 +75,6 @@ def main() -> None:
         Path(__file__).resolve().parent.parent
         / "plugins"
         / "hope"
-        / "skills"
-        / "diff"
         / "assets"
         / "fonts"
     )

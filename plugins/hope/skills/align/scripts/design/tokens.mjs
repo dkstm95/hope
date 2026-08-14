@@ -1,4 +1,4 @@
-export const ALIGN_DESIGN_VERSION = 1;
+export const ALIGN_DESIGN_VERSION = 2;
 
 // Align owns this palette. Values follow the approved Align implementation brief.
 export const COLORS = Object.freeze({
@@ -46,8 +46,8 @@ export const TYPE = Object.freeze({
     lineHeight: 1.45,
   }),
   pageTitle: Object.freeze({
-    narrow: Object.freeze({ fontSize: 32, lineHeight: 1.2 }),
-    wide: Object.freeze({ fontSize: 40, lineHeight: 1.2 }),
+    narrow: Object.freeze({ fontSize: 28, lineHeight: 1.2 }),
+    wide: Object.freeze({ fontSize: 32, lineHeight: 1.2 }),
   }),
   sectionTitle: Object.freeze({
     narrow: Object.freeze({ fontSize: 16, lineHeight: 1.4 }),
