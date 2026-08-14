@@ -66,12 +66,14 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
 
 test("review title explains the grounded change instead of copying provider text", () => {
   const snapshot = makeSnapshot();
-  const copied = makeAnalysis(snapshot, runId);
-  copied.title.text = snapshot.pullRequest.title;
-  assert.throws(
-    () => validateAnalysis(copied, snapshot, { runId }),
-    /instead of copying the pull request title/u,
-  );
+  for (const punctuation of ["", ".", "?", "!", "。", "？", "！"]) {
+    const copied = makeAnalysis(snapshot, runId);
+    copied.title.text = `${snapshot.pullRequest.title}${punctuation}`;
+    assert.throws(
+      () => validateAnalysis(copied, snapshot, { runId }),
+      /instead of copying the pull request title/u,
+    );
+  }
 
   const ungrounded = makeAnalysis(snapshot, runId);
   ungrounded.title = {
@@ -89,6 +91,51 @@ test("review title explains the grounded change instead of copying provider text
   assert.throws(
     () => validateAnalysis(long, snapshot, { runId }),
     /title\.text must not exceed 80 characters/u,
+  );
+});
+
+test("analysis rejects whitespace-only prose and microworld labels", () => {
+  const snapshot = makeSnapshot();
+  for (const change of [
+    (analysis) => { analysis.title.text = "  \n\t"; },
+    (analysis) => { analysis.purpose.text = "  \n\t"; },
+  ]) {
+    const analysis = makeAnalysis(snapshot, runId);
+    change(analysis);
+    assert.throws(
+      () => validateAnalysis(analysis, snapshot, { runId }),
+      /must be a non-empty string/u,
+    );
+  }
+
+  for (const change of [
+    (analysis) => { analysis.behavior.microworld.controls[0].label = " \n "; },
+    (analysis) => { analysis.behavior.microworld.controls[0].options[0].label = " \n "; },
+  ]) {
+    const analysis = makeAnalysis(snapshot, runId);
+    addTeachingBehavior(analysis);
+    change(analysis);
+    assert.throws(
+      () => validateAnalysis(analysis, snapshot, { runId }),
+      /must be a non-empty bounded string/u,
+    );
+  }
+});
+
+test("review title reuses evidence that the core explanation renders", () => {
+  const snapshot = makeSnapshot();
+  const titleOnly = makeAnalysis(snapshot, runId);
+  titleOnly.title.evidence = [{ endLine: 1, sourceId: "source-3", startLine: 1 }];
+  assert.throws(
+    () => validateAnalysis(titleOnly, snapshot, { runId }),
+    /title\.evidence must reuse evidence rendered by coreChange/u,
+  );
+
+  const reused = makeAnalysis(snapshot, runId);
+  const validated = validateAnalysis(reused, snapshot, { runId });
+  assert.equal(
+    validated.title.evidence[0],
+    validated.coreChange.after.evidence[0],
   );
 });
 

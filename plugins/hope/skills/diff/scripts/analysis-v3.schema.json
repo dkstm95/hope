@@ -253,7 +253,8 @@
       "type": "string",
       "description": "User-facing plain text rendered without Markdown or HTML interpretation.",
       "minLength": 1,
-      "maxLength": 32768
+      "maxLength": 32768,
+      "pattern": "^[\\s\\S]*\\S[\\s\\S]*$"
     },
     "evidence": {
       "type": "object",

@@ -75,7 +75,13 @@ const analysisFields = Object.freeze([
 ]);
 
 function comparableTitle(value) {
-  return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
+  return value
+    .normalize("NFKC")
+    .trim()
+    .replace(/\s+/gu, " ")
+    .replace(/[.!?。？！]+$/gu, "")
+    .trim()
+    .toLowerCase();
 }
 
 function validateReviewTitle(value, snapshot, sourceMap) {
@@ -118,7 +124,7 @@ function array(value, name, maximum = LIMITS.reviewItems) {
 }
 
 function text(value, name) {
-  if (typeof value !== "string" || value.length === 0) {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new TypeError(`${name} must be a non-empty string`);
   }
   if ([...value].length > LIMITS.modelString) {
@@ -136,6 +142,10 @@ function text(value, name) {
     );
   }
   return value.replace(/\r\n?/gu, "\n");
+}
+
+function evidenceRange(value) {
+  return `${value.sourceId}:${value.startLine}:${value.endLine}`;
 }
 
 function enumeration(value, name, values) {
@@ -1099,6 +1109,15 @@ function validateAnalysisValue(analysis, snapshot, {
   });
   if (coreChange.details.length === 0) {
     throw new Error("coreChange.details needs the main explanation");
+  }
+  const renderedCoreEvidence = new Set([
+    coreChange.before,
+    coreChange.after,
+    coreChange.why,
+    ...coreChange.details,
+  ].flatMap((claimValue) => claimValue.evidence.map(evidenceRange)));
+  if (title.evidence.some((item) => !renderedCoreEvidence.has(evidenceRange(item)))) {
+    throw new Error("title.evidence must reuse evidence rendered by coreChange");
   }
   if (!snapshot.files.some((file) => file.bodyState === "included")) {
     throw new Error("The core change cannot be grounded without an included file");

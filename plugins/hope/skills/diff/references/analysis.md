@@ -27,6 +27,8 @@ Use these rules with the analysis schema and the shared Hope Write standard.
   longer use a retry attempt." Name one decisive result. Leave secondary
   mechanics for the summary when combining them makes the title longer or
   harder to scan.
+- Reuse the exact changed-code evidence range from `coreChange` for `title`.
+  The title names the core result; it does not introduce separate evidence.
 - Let the visible explanation answer these reader questions in order: what
   changed, why it matters, how previous and new behavior differ, when the
   outcome changes, what the review found, and how the review knows. Do not turn

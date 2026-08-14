@@ -41,7 +41,7 @@ function identifier(value, name) {
 function label(value, name) {
   if (
     typeof value !== "string"
-    || value.length === 0
+    || value.trim().length === 0
     || [...value].length > LIMITS.modelString
   ) {
     throw new TypeError(`${name} must be a non-empty bounded string`);
