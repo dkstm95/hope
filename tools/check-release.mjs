@@ -63,7 +63,7 @@ assert.equal(codexPlugin.skills, "./skills/");
 assert.equal(claudePlugin.skills, "./skills/");
 assert.equal(
   codexPlugin.interface.composerIcon,
-  "./skills/diff/assets/HopeFavicon.png",
+  "./assets/hope-icon.png",
 );
 assert.equal(
   codexPlugin.interface.logo,

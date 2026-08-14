@@ -35,18 +35,19 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(validated.result.status, "verify");
   assert.equal(validated.result.scope, "limited");
   assert.equal(validated.files[0].disposition, "explained");
+  assert.equal(validated.title.text, "The final retry error now reaches the caller.");
   assert.equal(validated.reviewItems[0].evidence[0].excerpt.includes("throw last"), true);
   assert.equal(validated.reviewItems[0].basis, "inferred");
   assert.equal(validated.contextChecks.length, 3);
   assert.equal(validated.sourceIndex.length, snapshot.sources.length);
   assert.equal("text" in validated.sourceIndex[0], false);
   assert.deepEqual(validated.resources, {
-    analysisCanonicalBytes: 2745,
-    analysisFileBytes: 2745,
-    authoredProseBytes: 1016,
+    analysisCanonicalBytes: 2888,
+    analysisFileBytes: 2888,
+    authoredProseBytes: 1061,
     evidenceBytes: 178,
     evidenceLines: 5,
-    evidenceReferences: 9,
+    evidenceReferences: 10,
     codeEvidenceLines: 8,
     teachingAidDecisions: 3,
     teachingAidMicroworldIncluded: 0,
@@ -60,6 +61,94 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(
     validated.coreChange.after.evidence[0],
     validated.coreChange.details[0].evidence[0],
+  );
+});
+
+test("review title explains the grounded change instead of copying provider text", () => {
+  const snapshot = makeSnapshot();
+  for (const punctuation of ["", ".", "?", "!", "。", "？", "！"]) {
+    const copied = makeAnalysis(snapshot, runId);
+    copied.title.text = `${snapshot.pullRequest.title}${punctuation}`;
+    assert.throws(
+      () => validateAnalysis(copied, snapshot, { runId }),
+      /instead of copying the pull request title/u,
+    );
+  }
+
+  const ungrounded = makeAnalysis(snapshot, runId);
+  ungrounded.title = {
+    basis: "unknown",
+    evidence: [],
+    text: "The change is easier to understand.",
+  };
+  assert.throws(
+    () => validateAnalysis(ungrounded, snapshot, { runId }),
+    /title must be grounded in collected code/u,
+  );
+
+  const long = makeAnalysis(snapshot, runId);
+  long.title.text = "A".repeat(81);
+  assert.throws(
+    () => validateAnalysis(long, snapshot, { runId }),
+    /title\.text must not exceed 80 characters/u,
+  );
+});
+
+test("analysis rejects whitespace-only prose and microworld labels", () => {
+  const snapshot = makeSnapshot();
+  for (const change of [
+    (analysis) => { analysis.title.text = "  \n\t"; },
+    (analysis) => { analysis.purpose.text = "  \n\t"; },
+  ]) {
+    const analysis = makeAnalysis(snapshot, runId);
+    change(analysis);
+    assert.throws(
+      () => validateAnalysis(analysis, snapshot, { runId }),
+      /must be a non-empty string/u,
+    );
+  }
+
+  for (const change of [
+    (analysis) => { analysis.behavior.microworld.controls[0].label = " \n "; },
+    (analysis) => { analysis.behavior.microworld.controls[0].options[0].label = " \n "; },
+  ]) {
+    const analysis = makeAnalysis(snapshot, runId);
+    addTeachingBehavior(analysis);
+    change(analysis);
+    assert.throws(
+      () => validateAnalysis(analysis, snapshot, { runId }),
+      /must be a non-empty bounded string/u,
+    );
+  }
+});
+
+test("review title reuses evidence that the core explanation renders", () => {
+  const snapshot = makeSnapshot();
+  const titleOnly = makeAnalysis(snapshot, runId);
+  titleOnly.title.evidence = [{ endLine: 1, sourceId: "source-3", startLine: 1 }];
+  assert.throws(
+    () => validateAnalysis(titleOnly, snapshot, { runId }),
+    /title\.evidence must reuse evidence rendered by coreChange/u,
+  );
+
+  const reused = makeAnalysis(snapshot, runId);
+  const validated = validateAnalysis(reused, snapshot, { runId });
+  assert.equal(
+    validated.title.evidence[0],
+    validated.coreChange.after.evidence[0],
+  );
+});
+
+test("the main explanation keeps at most four focused details", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.coreChange.details = Array.from(
+    { length: 5 },
+    () => structuredClone(analysis.coreChange.details[0]),
+  );
+  assert.throws(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+    /coreChange\.details has too many items/u,
   );
 });
 

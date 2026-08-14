@@ -64,36 +64,78 @@ The Diff renderer must read those tokens instead of copying their values.
 The first screen should explain the shape and limits of the change in about 30
 seconds.
 
-Show the pull-request title, reviewed commit, goal, previous and new behavior,
-practical impact, the top one to three review items or a clear empty result,
-and material review limits.
+Show a plain-language title written from the changed behavior, reviewed commit,
+goal, previous and new behavior, practical impact, the top one to three review
+items or a clear empty result, and material review limits. Keep the provider's
+pull-request title in the collapsed review information instead of using it as
+the document title. Let the title name one decisive result; keep secondary
+mechanics in the summary when they make the title harder to scan.
 
 Keep internal source IDs, model details, token counts, and processing state out
 of the first screen.
 
 Do not repeat repository identity in multiple prominent places.
 
-After the first screen, use this order and omit a conditional section when it
-adds no value:
+Use four top-level reading areas and omit a conditional area when it adds no
+value:
 
-1. Background
-2. Core change
-3. Behavior flow
-4. Teaching aid choices
-5. Code flow
-6. Review items
-7. Check understanding
-8. Evidence and scope
+1. Summary
+2. Behavior change
+3. Review items
+4. Evidence and scope
 
-Explain behavior before code.
+Keep background in Summary. In Behavior change, show the core change first,
+then any behavior model, the understanding check, and teaching aid choices.
+Teaching aid choices and understanding checks are supporting details, not
+parallel top-level destinations.
+
+Let the reading path answer these questions in order:
+
+1. What changed?
+2. Why does it matter?
+3. How do previous and new behavior differ?
+4. Under which conditions does the outcome change?
+5. What did the review find, and what limited the judgment?
+6. What implementation and evidence support that explanation?
+
+This is a reader-question order, not a fixed six-question template. Omit a
+question that does not apply instead of creating an empty or repetitive block.
+
+Explain behavior before code. Keep functions, types, file mechanics, and code
+steps in a collapsed **Implementation details** group inside Evidence and
+scope. In the main path, translate source states and callback return values into
+the human choice, condition, and outcome they represent.
 
 Show only the code excerpts needed for understanding instead of reproducing the
 full diff.
 
 Keep important evidence beside the claim it supports.
 
+Keep inline evidence controls quiet and collapsed until requested. Use thin
+dividers, whitespace, and type hierarchy before introducing a contained box.
+
 Use Evidence and scope as the complete index of the captured snapshot, checked
 files, supporting sources, exclusions, and limits.
+
+This order is informed by research showing that context supplied before a
+passage improves comprehension and recall
+([Bransford and Johnson, 1972](https://doi.org/10.1016/S0022-5371(72)80006-9)),
+pre-training on a system's parts helps people build a mental model
+([Mayer, Mathias, and Wetzell, 2002](https://pubmed.ncbi.nlm.nih.gov/12240927/)),
+and headings and previews direct attention in complex text
+([Lorch and Lorch, 1996](https://doi.org/10.1037/0022-0663.88.1.38)). The main
+path keeps secondary implementation mechanics folded while a new reader builds
+the first mental model, informed by research on the processing cost that can
+compete with learning
+([Sweller, 1988](https://doi.org/10.1207/s15516709cog1202_4)). Use a diagram
+only when its spatial structure makes a relationship or inference easier to
+find than equivalent prose
+([Larkin and Simon, 1987](https://doi.org/10.1111/j.1551-6708.1987.tb00863.x)).
+
+Keep repository identity, a visible pull-request link, and artifact controls in
+one compact product bar. Preserve the pull-request link when repository text is
+hidden at narrow widths. Replace the desktop contents rail with an icon beside
+the theme control and open the contents in a bounded right-side panel.
 
 ## Align artifact direction
 
@@ -381,7 +423,13 @@ Align embeds Hope Sans so it uses the same Hope type family as Diff across
 supported hosts. Its palette, spacing, type sizes, and layout values still come
 only from Align's own tokens.
 
-Put the Hope icon immediately before **HOPE** in the Align product bar. Keep the
+## Hope artifact branding
+
+Align and Diff embed the fixed Hope Sans files and Hope product icon under
+`plugins/hope/assets/`. Diff also embeds Hope Code from the same asset folder.
+Each feature still owns how those assets are applied in its renderer.
+
+Put the Hope icon immediately before **HOPE** in both product bars. Keep the
 visible wordmark as the accessible name; the icon is decorative.
 
 ## Diff artifact layout
@@ -403,6 +451,9 @@ On a narrow screen:
 - put a compact native collapsible table of contents in the product bar;
 - do not give the closed table of contents its own body row or vertical gap;
 - open its links in a bounded panel directly below the product bar;
+- keep the panel vertically scrollable without passing its scroll gesture to
+  the document;
+- close the open panel with Escape and return focus to its control; and
 - use larger body text and touch targets.
 
 When the theme and contents controls appear together, give both a 44-pixel
@@ -413,8 +464,8 @@ control family.
 
 The product bar owns repository and pull request identity.
 
-The synopsis card header owns the artifact title, compact **Commit** label, and
-capture time.
+The synopsis card header owns the change-based artifact title, compact
+**Commit** label, and capture time.
 
 Do not repeat repository identity.
 
@@ -444,8 +495,8 @@ Do not synthesize a missing font weight.
 Hope presents the converted files under Hope-owned family names because both
 source licenses reserve their original family names.
 
-Keep their source hashes, build commands, and licenses beside the Diff feature's
-fonts under `assets/fonts/`.
+Keep their source hashes, build commands, and licenses beside the shared fonts
+under `plugins/hope/assets/fonts/`.
 
 Start with this compact scale and adjust it only through named tokens:
 
@@ -454,7 +505,7 @@ Start with this compact scale and adjust it only through named tokens:
 | Main body | 14px / 1.55 | 16px / 1.55 |
 | Supporting text | 12px / 1.5 | 14px / 1.5 |
 | Code | 13px / 1.35 | 14px / 1.35 |
-| Page title | 24px / 1.25 | 28px / 1.25 |
+| Page title | 32px / 1.2 | 28px / 1.2 |
 | Section title | 18px / 1.35 | 20px / 1.35 |
 
 Keep prose near 60–80 characters per line.
@@ -527,7 +578,8 @@ Use semantic `ul` and `ol` elements for content that is a list.
 
 Make the first-screen synopsis one self-contained component.
 
-Put the pull request title, reviewed commit, and capture time in its header.
+Put the change-based artifact title, reviewed commit, and capture time in its
+header. Keep the provider's pull-request title in collapsed review information.
 
 Do not place a second title block above it or show a generic **Summary** title
 inside it.
@@ -670,6 +722,13 @@ Merge changed-file source metadata into the changed-file table, keep other
 sources in a separate small table, and group exclusions with the same reason.
 
 Keep the collapsed interface compact.
+
+A closed disclosure occupies only its summary row and borders. It must not
+reserve body padding or leave unused parent spacing below the row.
+
+Keep the understanding-check subsection visible when it is present. Let each
+question and its answer open independently instead of collapsing the whole
+subsection.
 
 Expanded details must still account for every source, file, and limit.
 

@@ -346,6 +346,11 @@ export function makeAnalysis(snapshot, runId) {
       },
     ],
     locale: snapshot.settings.locale,
+    title: {
+      basis: "code",
+      evidence: [reference("source-3", 2, 4)],
+      text: "The final retry error now reaches the caller.",
+    },
     purpose: {
       basis: "stated",
       evidence: [reference("source-2", 1)],
@@ -366,7 +371,7 @@ export function makeAnalysis(snapshot, runId) {
       },
     ],
     runId,
-    schemaVersion: 2,
+    schemaVersion: 3,
     snapshotDigest: snapshot.digest,
     teachingAids: makeTeachingAidDecisions(),
   };

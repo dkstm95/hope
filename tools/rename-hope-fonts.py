@@ -81,11 +81,7 @@ def rename_font(path: Path, replacements: dict[int, str]) -> None:
 def main() -> None:
     root = Path(__file__).resolve().parent.parent
     shared = root / "plugins" / "hope" / "assets" / "fonts"
-    diff = root / "plugins" / "hope" / "skills" / "diff" / "assets" / "fonts"
-    targets = [
-        *(shared / filename for filename in FONT_NAMES if filename.startswith("HopeSans")),
-        *(diff / filename for filename in FONT_NAMES),
-    ]
+    targets = [shared / filename for filename in FONT_NAMES]
     for path in targets:
         rename_font(path, FONT_NAMES[path.name])
 

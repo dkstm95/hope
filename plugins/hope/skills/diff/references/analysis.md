@@ -20,12 +20,39 @@ Use these rules with the analysis schema and the shared Hope Write standard.
 
 ## Explanation
 
+- Write `title` as one short sentence that states the observable change in the
+  review locale. Ground it in changed code. Do not copy the pull-request title,
+  lead with a code identifier, or use a vague label such as "refactor retry
+  logic." Prefer the result a person can understand, such as "Some failures no
+  longer use a retry attempt." Name one decisive result. Leave secondary
+  mechanics for the summary when combining them makes the title longer or
+  harder to scan.
+- Reuse the exact changed-code evidence range from `coreChange` for `title`.
+  The title names the core result; it does not introduce separate evidence.
+- Let the visible explanation answer these reader questions in order: what
+  changed, why it matters, how previous and new behavior differ, when the
+  outcome changes, what the review found, and how the review knows. Do not turn
+  these questions into headings when the existing fields already answer them.
+- Use `background` only for context a new reader needs before the comparison.
+  Prefer one small concrete situation over a general definition when both
+  explain the concept.
+- Keep `purpose`, `background`, `coreChange`, `behavior`, visual, microworld,
+  and quiz prose understandable without code identifiers. Put identifiers and
+  technical mechanics in `codeSteps`. When a public identifier is necessary
+  to understand the main promise, explain its role in plain language first and
+  use the identifier once.
+- In the main reading path, describe a person's choice, a condition, and its
+  outcome instead of spelling source states such as boolean literals, callback
+  return values, operators, or option assignments. Those source mechanics
+  belong in `codeSteps` and linked evidence.
 - Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` short
   enough for the first screen.
-- Start `coreChange.details` with purpose, previous and new behavior, affected
-  people or systems, and the important result.
-- Put implementation sequences, functions, types, inheritance, and
-  file-by-file mechanics in `codeSteps`, not in place of the main explanation.
+- Use `coreChange.details` for one to four observable outcomes or preserved
+  conditions that help a new reader predict the change. Use plain language.
+  Keep functions, types, identifiers, inheritance, clocks, files, and
+  file-by-file mechanics out of these visible details.
+- Put implementation sequences and technical mechanics in `codeSteps`. They
+  appear as collapsed implementation evidence, not in the main reading path.
 - Use `behavior` only when a flow, condition, state change, comparison, or
   small experiment helps the reader predict an outcome. Do not duplicate
   `codeSteps`.
@@ -80,7 +107,7 @@ Use these rules with the analysis schema and the shared Hope Write standard.
   name instead.
 - Keep one idea in one primary field. Reuse the smallest exact evidence range
   only when another field genuinely needs it.
-- Normally use at most 12 review items, 6 core details, and 12 code steps. Do
+- Normally use at most 12 review items, 4 core details, and 12 code steps. Do
   not fill maxima for their own sake.
 
 ## Teaching-aid decisions
