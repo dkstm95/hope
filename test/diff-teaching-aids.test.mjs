@@ -95,7 +95,7 @@ test("the shared Diff boundary reads a private controls file for the skeleton", 
   assert.equal(skeleton.controls[0].id, "control-1");
 });
 
-test("analysis version 2 records every teaching-aid decision and matches payloads", () => {
+test("the current analysis version records every teaching-aid decision and matches payloads", () => {
   const snapshot = makeSnapshot();
   const missing = makeAnalysis(snapshot, runId);
   delete missing.teachingAids;

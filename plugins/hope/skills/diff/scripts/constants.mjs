@@ -1,6 +1,6 @@
 export const CONTRACT_VERSION = 1;
-export const ANALYSIS_VERSION = 2;
-export const RENDERER_VERSION = 7;
+export const ANALYSIS_VERSION = 3;
+export const RENDERER_VERSION = 8;
 export const RUN_VERSION = 6;
 export const CHECKPOINT_VERSION = 1;
 export const MICROWORLD_SKELETON_VERSION = 6;
@@ -43,6 +43,7 @@ export const LIMITS = Object.freeze({
   modelBytes: 128 * 1024,
   modelString: 32 * 1024,
   pullRequestBodyBytes: 32 * 1024,
+  reviewTitleCharacters: 80,
   reviewItems: 80,
   safeBodyBytes: 256 * 1024,
   safeBodyTotalBytes: 768 * 1024,

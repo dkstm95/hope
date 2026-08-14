@@ -381,10 +381,11 @@ function diffAnalysis(snapshot) {
         contextChanged: "변경된 두 반복문과 음수 입력 테스트를 확인했습니다.",
         contextOther: "수집하지 않은 기존 호출자는 확인하지 않았습니다.",
         contextRun: "PR에는 테스트 결과가 적혀 있지만 Hope가 직접 실행하지는 않았습니다.",
-        detail: "변경은 일반 nanoid와 customAlphabet의 비보안 구현에 같은 종료 조건을 적용합니다.",
+        detail: "두 비보안 ID 생성 방식 모두 음수 길이에서 바로 끝납니다.",
         impactOther: "핵심 변경은 자체적으로 설명되므로 수집하지 않은 호출자는 주요 설명을 제한하지 않습니다.",
         impactRun: "테스트 통과 주장은 출처에만 적혀 있어 실행으로 확인해야 합니다.",
         purpose: "음수 길이 때문에 비보안 ID 생성이 끝나지 않는 문제를 막습니다.",
+        title: "음수 길이에서도 비보안 ID 생성이 바로 끝납니다.",
         reviewDone: "v3 브랜치에서 음수 길이 테스트를 실행해 모두 끝나고 빈 문자열을 반환합니다.",
         reviewEffect: "코드와 테스트는 의도를 보여 주지만 실제 v3 테스트 결과는 확인하지 못했습니다.",
         reviewExplanation: "PR 설명은 11개 테스트가 통과했다고 말하지만 이번 Diff는 명령을 실행하지 않습니다.",
@@ -400,10 +401,11 @@ function diffAnalysis(snapshot) {
         contextChanged: "The two changed loops and negative-size tests were checked.",
         contextOther: "Other unchanged callers were not collected.",
         contextRun: "The PR states a test result, but Hope did not run it.",
-        detail: "The change applies the same stopping condition to nanoid and customAlphabet.",
+        detail: "Both non-secure ID generators now stop immediately for a negative size.",
         impactOther: "The changed branch is self-contained, so unchecked callers do not limit the main explanation.",
         impactRun: "The stated passing test result still needs execution evidence.",
         purpose: "Stop non-secure ID generation from looping forever on a negative size.",
+        title: "Non-secure ID generation now stops for negative sizes.",
         reviewDone: "The stated v3 test command finishes and every negative-size case returns an empty string.",
         reviewEffect: "The code and tests show the intended behavior, but the v3 result was not observed.",
         reviewExplanation: "The PR says 11 tests pass, while this Diff does not execute commands.",
@@ -537,6 +539,11 @@ function diffAnalysis(snapshot) {
       },
     ],
     locale: snapshot.settings.locale,
+    title: {
+      basis: "code",
+      evidence: [ref("source-4", 6, 8), ref("source-5", 6, 8)],
+      text: t.title,
+    },
     purpose: {
       basis: "stated",
       evidence: [ref("source-2", 1)],
@@ -555,7 +562,7 @@ function diffAnalysis(snapshot) {
       title: t.reviewTitle,
     }],
     runId,
-    schemaVersion: 2,
+    schemaVersion: 3,
     snapshotDigest: snapshot.digest,
     teachingAids: {
       microworld: {
@@ -595,20 +602,52 @@ async function capturePage(page, htmlPath, outputPath, options = {}) {
 }
 
 async function captureElement(page, outputPath, selector, {
+  capturePadding = 0,
   expandDetails = false,
+  hideStickyHeader = false,
 } = {}) {
+  if (hideStickyHeader) {
+    await page.locator(".topbar").evaluate((topbar) => {
+      topbar.style.position = "absolute";
+    });
+  }
   const element = page.locator(selector);
   await element.scrollIntoViewIfNeeded();
   if (expandDetails) {
+    await element.evaluate((target) => {
+      if (target.matches("details")) target.open = true;
+    });
     await element.locator("details").evaluateAll((details) => {
       for (const detail of details) detail.open = true;
     });
   }
-  await element.screenshot({
-    animations: "disabled",
-    path: outputPath,
-    type: "png",
-  });
+  if (capturePadding === 0) {
+    await element.screenshot({
+      animations: "disabled",
+      path: outputPath,
+      type: "png",
+    });
+    return;
+  }
+  const previousStyle = await element.getAttribute("style");
+  await element.evaluate((target, padding) => {
+    const style = getComputedStyle(target);
+    for (const side of ["Top", "Right", "Bottom", "Left"]) {
+      target.style[`padding${side}`] = `${Number.parseFloat(style[`padding${side}`]) + padding}px`;
+    }
+  }, capturePadding);
+  try {
+    await element.screenshot({
+      animations: "disabled",
+      path: outputPath,
+      type: "png",
+    });
+  } finally {
+    await element.evaluate((target, style) => {
+      if (style === null) target.removeAttribute("style");
+      else target.setAttribute("style", style);
+    }, previousStyle);
+  }
 }
 
 async function main() {
@@ -652,19 +691,23 @@ async function main() {
         join(outputDirectory, `hope-diff-${suffix}.png`),
         { height: 820 },
       );
-      for (const [name, selector, expandDetails] of [
-        ["core", "#core-change", false],
-        ["behavior", "#explore", false],
-        ["teaching", "#teaching-aids", false],
-        ["code", "#follow-code", true],
-        ["review", "#judge", true],
-        ["evidence", "#evidence-and-scope", false],
+      for (const [name, selector, expandDetails, capturePadding] of [
+        ["core", "#core-change", false, 16],
+        ["behavior", "#explore > .behavior-model", false, 16],
+        ["teaching", "#teaching-aids", true, 16],
+        ["code", "#implementation-details", true, 16],
+        ["review", "#judge", true, 16],
+        ["evidence", "#evidence-and-scope", false, 16],
       ]) {
         await captureElement(
           page,
           join(outputDirectory, `hope-diff-${name}-${suffix}.png`),
           selector,
-          { expandDetails },
+          {
+            capturePadding,
+            expandDetails,
+            hideStickyHeader: name === "behavior",
+          },
         );
       }
     }

@@ -51,6 +51,11 @@ test.beforeAll(async () => {
     digest: digestJson(snapshotValue),
   });
   const analysis = makeAnalysis(snapshot, runId);
+  analysis.title = {
+    basis: "code",
+    evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
+    text: "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
+  };
   analysis.beginnerPrimer = [{
     basis: "code",
     evidence: [{
@@ -325,7 +330,15 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     "padding-top",
     "2px",
   );
-  await expect(page.locator("header .top-context")).toHaveText("example/hope · PR #142");
+  await expect(page.locator("header .top-context")).toHaveText("example/hope");
+  await expect(page.locator("header .brand-icon")).toBeVisible();
+  const pullRequestLink = page.locator("header .pull-request-link");
+  await expect(pullRequestLink).toHaveText("PR #142");
+  await expect(pullRequestLink).toHaveAttribute(
+    "href",
+    "https://github.com/example/hope/pull/142",
+  );
+  await expect(pullRequestLink).toHaveAttribute("aria-label", "PR #142 열기");
   await expect(page.locator(".pr-hero")).toHaveCount(0);
   await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
     "example/hope · PR #142",
@@ -442,6 +455,18 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(
     page.locator('.toc-desktop a[href="#synopsis"]'),
   ).toHaveAttribute("aria-current", "location");
+  expect(await page.locator(".toc-desktop a").evaluateAll(
+    (links) => links.map((link) => link.getAttribute("href")),
+  )).toEqual([
+    "#synopsis",
+    "#explore",
+    "#judge",
+    "#evidence-and-scope",
+  ]);
+  await expect(page.locator(".main > [id]")).toHaveCount(4);
+  await expect(page.locator("#review-title")).toHaveText(
+    "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
+  );
   const itemActionColumns = await page.locator(
     ".review-items-full .item-actions",
   ).first().evaluate((element) => getComputedStyle(element).gridTemplateColumns);
@@ -668,13 +693,16 @@ test("the artifact explains every teaching-aid omission", async ({ page }) => {
     exact: true,
     name: "교육 보조 자료 선택",
   })).toBeVisible();
+  await expect(section).not.toHaveAttribute("open", "");
+  await section.locator(":scope > summary").click();
+  await expect(section).toHaveAttribute("open", "");
   await expect(section.locator(".teaching-aid-choice")).toHaveCount(3);
   await expect(section.locator(".teaching-aid-decision")).toHaveText([
     "생략",
     "생략",
     "생략",
   ]);
-  await expect(section.locator("h3")).toHaveText([
+  await expect(section.locator(".teaching-aid-choice h3")).toHaveText([
     "시각 자료",
     "마이크로월드",
     "퀴즈",
@@ -692,6 +720,7 @@ test("the artifact distinguishes mixed teaching-aid decisions", async ({ page })
   await page.goto(visualArtifactUrls.sequence);
 
   const section = page.locator("#teaching-aids");
+  await section.locator(":scope > summary").click();
   const cards = section.locator(".teaching-aid-choice");
   await expect(cards).toHaveCount(3);
   await expect(section.locator(".teaching-aid-decision")).toHaveText([
@@ -742,10 +771,12 @@ test("theme and contents controls share one visual control family", async ({ pag
   expect(contentsBox).not.toBeNull();
   expect(themeBox.height).toBe(44);
   expect(contentsBox.height).toBe(44);
+  expect(contentsBox.x - (themeBox.x + themeBox.width)).toBe(8);
 
   const styles = await page.evaluate(() => {
     const themeControl = document.querySelector("#theme-toggle");
     const contentsControl = document.querySelector(".toc-mobile > summary");
+    const topbar = document.querySelector(".topbar-inner");
     return {
       contents: {
         borderRadius: getComputedStyle(contentsControl).borderRadius,
@@ -757,9 +788,11 @@ test("theme and contents controls share one visual control family", async ({ pag
         borderStyle: getComputedStyle(themeControl).borderStyle,
         borderWidth: getComputedStyle(themeControl).borderWidth,
       },
+      topbarGap: getComputedStyle(topbar).columnGap,
     };
   });
   expect(styles.theme).toEqual(styles.contents);
+  expect(styles.topbarGap).toBe("24px");
 });
 
 test("the theme control works from the keyboard and describes its next action", async ({
@@ -786,6 +819,12 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   page,
 }) => {
   await openArtifact(page, viewports.mobile);
+  const pullRequestLink = page.locator("header .pull-request-link");
+  await expect(pullRequestLink).toBeVisible();
+  await expect(pullRequestLink).toHaveAttribute("aria-label", "PR #142 열기");
+  const pullRequestLinkBox = await pullRequestLink.boundingBox();
+  expect(pullRequestLinkBox).not.toBeNull();
+  expect(pullRequestLinkBox.height).toBeGreaterThanOrEqual(44);
   const summaries = page.locator("details.evidence > summary");
   const count = await summaries.count();
   expect(count).toBeGreaterThan(1);
@@ -803,7 +842,7 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   }
 
   const otherSummaries = page.locator(
-    ".quiz > details > summary, .quiz-answer > summary, "
+    ".quiz-question > summary, "
       + "#evidence-and-scope > summary, .toc-mobile > summary",
   );
   const otherCount = await otherSummaries.count();
@@ -817,11 +856,18 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   const mobileToc = page.locator(".toc-mobile");
   const mobileTocSummary = mobileToc.locator(":scope > summary");
   await expect(mobileToc.locator("xpath=ancestor::header[1]")).toHaveCount(1);
-  const main = await page.locator("main").boundingBox();
+  const { contentTop, synopsisTop } = await page.evaluate(() => {
+    const main = document.querySelector("main");
+    const synopsis = document.querySelector("#synopsis");
+    const mainBox = main.getBoundingClientRect();
+    return {
+      contentTop: mainBox.top + Number.parseFloat(getComputedStyle(main).paddingTop),
+      synopsisTop: synopsis.getBoundingClientRect().top,
+    };
+  });
+  expect(Math.abs(synopsisTop - contentTop)).toBeLessThanOrEqual(1);
   const synopsis = await page.locator("#synopsis").boundingBox();
-  expect(main).not.toBeNull();
   expect(synopsis).not.toBeNull();
-  expect(synopsis.y - main.y).toBeLessThanOrEqual(1);
   const synopsisTopBeforeOpen = synopsis.y;
   await mobileTocSummary.click();
   await expect(mobileToc).toHaveAttribute("open", "");
@@ -831,20 +877,20 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   const synopsisAfterOpen = await page.locator("#synopsis").boundingBox();
   expect(synopsisAfterOpen).not.toBeNull();
   expect(synopsisAfterOpen.y).toBe(synopsisTopBeforeOpen);
-  const coreLink = mobileToc.locator('a[href="#core-change"]');
-  await expect(coreLink).toHaveCount(1);
-  await coreLink.click();
+  const behaviorLink = mobileToc.locator('a[href="#explore"]');
+  await expect(behaviorLink).toHaveCount(1);
+  await behaviorLink.click();
   await expect(mobileToc).not.toHaveAttribute("open", "");
-  await expect(page.locator("#core-change")).toBeFocused();
+  await expect(page.locator("#explore")).toBeFocused();
   await expectNoPageOverflow(page);
 });
 
 test("the mobile contents panel remains bounded, scrollable, and visibly current", async ({
   page,
 }) => {
-  await openArtifact(page, { height: 360, width: 320 });
+  await openArtifact(page, { height: 220, width: 320 });
   await page.locator("#judge").evaluate(
-    (element) => element.scrollIntoView({ block: "start" }),
+    (element) => element.scrollIntoView({ behavior: "instant", block: "start" }),
   );
 
   const toc = page.locator(".toc-mobile");
@@ -854,14 +900,25 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
     const box = element.getBoundingClientRect();
     return {
       bottom: box.bottom,
+      clientWidth: element.clientWidth,
       clientHeight: element.clientHeight,
+      listStyleType: getComputedStyle(element.querySelector("ol")).listStyleType,
       overflowY: getComputedStyle(element).overflowY,
+      scrollWidth: element.scrollWidth,
       scrollHeight: element.scrollHeight,
     };
   });
-  expect(panelState.bottom).toBeLessThanOrEqual(360);
+  expect(panelState.bottom).toBeLessThanOrEqual(220);
+  expect(panelState.listStyleType).toBe("none");
   expect(panelState.overflowY).toBe("auto");
+  expect(panelState.scrollWidth).toBeLessThanOrEqual(panelState.clientWidth);
   expect(panelState.scrollHeight).toBeGreaterThan(panelState.clientHeight);
+
+  const pageScrollBefore = await page.evaluate(() => scrollY);
+  await panel.hover();
+  await page.mouse.wheel(0, 180);
+  await expect.poll(() => panel.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => scrollY)).toBe(pageScrollBefore);
 
   const linkHeights = await toc.locator("a").evaluateAll(
     (links) => links.map((link) => link.getBoundingClientRect().height),
@@ -874,8 +931,13 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
     borderLeftWidth: getComputedStyle(element).borderLeftWidth,
     fontWeight: getComputedStyle(element).fontWeight,
   }));
-  expect(currentStyle.borderLeftWidth).toBe("3px");
+  expect(currentStyle.borderLeftWidth).toBe("2px");
   expect(Number(currentStyle.fontWeight)).toBeGreaterThanOrEqual(700);
+
+  await page.keyboard.press("Escape");
+  await expect(toc).not.toHaveAttribute("open", "");
+  await expect(toc.locator(":scope > summary")).toBeFocused();
+  await toc.locator(":scope > summary").click();
 
   const lastLink = toc.locator('a[href="#evidence-and-scope"]');
   await lastLink.scrollIntoViewIfNeeded();
@@ -885,10 +947,37 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
   await expectNoPageOverflow(page);
 });
 
+test("mobile product-bar actions fit without hiding the pull request", async ({ page }) => {
+  await openArtifact(page, { height: 568, width: 320 });
+
+  const selectors = [
+    ".brand-icon",
+    ".pull-request-link",
+    "#theme-toggle",
+    ".toc-mobile > summary",
+  ];
+  await expect(page.locator(".brand-product")).toBeHidden();
+  const boxes = [];
+  for (const selector of selectors) {
+    const locator = page.locator(selector);
+    await expect(locator).toBeVisible();
+    boxes.push(await locator.boundingBox());
+  }
+  expect(boxes.every(Boolean)).toBe(true);
+  for (let index = 1; index < boxes.length; index += 1) {
+    expect(boxes[index].x).toBeGreaterThanOrEqual(boxes[index - 1].x + boxes[index - 1].width);
+  }
+  expect(boxes.at(-1).x + boxes.at(-1).width).toBeLessThanOrEqual(320);
+  await expectNoPageOverflow(page);
+});
+
 test("quiz separates an optional response from the answer and evidence", async ({
   page,
 }) => {
   await openArtifact(page, viewports.mobile);
+  const quizSection = page.locator("#quiz");
+  await expect(quizSection).toBeVisible();
+  await expect(quizSection.locator(":scope > summary")).toHaveCount(0);
   const questions = page.locator(".quiz > details.quiz-question");
   await expect(questions).toHaveCount(3);
 
@@ -964,11 +1053,55 @@ test("quiz separates an optional response from the answer and evidence", async (
   await expect(answer.locator(".evidence-inline")).toBeVisible();
 });
 
+test("behavior content follows the reading order and closed disclosures stay compact", async ({
+  page,
+}) => {
+  await openArtifact(page, viewports.desktop);
+
+  const order = await page.locator("#explore").evaluate((section) => {
+    const selectors = ["#core-change", ".behavior-model", "#quiz", "#teaching-aids"];
+    return selectors.map((selector) => {
+      const element = section.querySelector(selector);
+      return [...section.querySelectorAll("*")].indexOf(element);
+    });
+  });
+  expect(order.every((position) => position >= 0)).toBe(true);
+  expect(order).toEqual([...order].sort((left, right) => left - right));
+
+  for (const selector of ["#teaching-aids", ".quiz-question:first-child", ".artifact-details"]) {
+    const disclosure = page.locator(selector);
+    await expect(disclosure).not.toHaveAttribute("open", "");
+    const dimensions = await disclosure.evaluate((element) => ({
+      disclosure: element.getBoundingClientRect().height,
+      summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
+    }));
+    expect(dimensions.disclosure - dimensions.summary).toBeLessThanOrEqual(2);
+  }
+
+  const artifactDetails = page.locator(".artifact-details");
+  await expect(artifactDetails).toHaveClass(/evidence-group/u);
+  await expect(artifactDetails.locator(":scope > summary > h3")).toHaveText("리뷰 정보");
+
+  const endGap = await page.locator("#evidence-and-scope").evaluate((section) => {
+    const summary = section.querySelector(".artifact-details > summary");
+    return section.getBoundingClientRect().bottom - summary.getBoundingClientRect().bottom;
+  });
+  expect(endGap).toBeLessThanOrEqual(32);
+
+  const evidence = page.locator("#evidence-and-scope");
+  await evidence.locator(":scope > summary").click();
+  const collapsedDimensions = await evidence.evaluate((element) => ({
+    disclosure: element.getBoundingClientRect().height,
+    summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
+  }));
+  expect(collapsedDimensions.disclosure - collapsedDimensions.summary).toBeLessThanOrEqual(2);
+});
+
 test("the evidence appendix starts open while its groups and code evidence stay closed", async ({
   page,
 }) => {
   await openArtifact(page, viewports.desktop);
-  const codeEvidence = page.locator("#follow-code details.evidence");
+  const codeEvidence = page.locator("#implementation-details details.evidence");
   expect(await codeEvidence.count()).toBeGreaterThan(0);
   expect(await codeEvidence.evaluateAll((items) => (
     items.every((item) => !item.hasAttribute("open"))
@@ -1012,16 +1145,14 @@ test("the evidence appendix starts open while its groups and code evidence stay 
 
 test("code evidence preserves source line breaks in the DOM", async ({ page }) => {
   await openArtifact(page, viewports.desktop);
-  const code = page.locator(".code-evidence code").filter({ hasText: "+const last" }).first();
-  await code.evaluate((element) => {
-    let details = element.closest("details");
-    while (details) {
-      details.open = true;
-      details = details.parentElement?.closest("details");
-    }
-  });
-  await expect(code).toBeVisible();
-  const text = (await code.innerText()).replaceAll("\r\n", "\n");
+  const text = await page.locator(".code-evidence code").evaluateAll((codes) => (
+    codes.map((code) => code.textContent.replaceAll("\r\n", "\n")).find(
+      (content) => content.includes("-throw new Error()")
+        && content.includes("+const last = error")
+        && content.includes("+throw veryLongIdentifier"),
+    )
+  ));
+  expect(text).toBeTruthy();
   const lines = text.split("\n");
   expect(lines).toHaveLength(3);
   expect(lines.slice(0, 2)).toEqual([
@@ -1038,10 +1169,15 @@ test("fragment navigation opens details that contain the target", async ({ page 
   await expect(page.locator("#beginner-primer")).toBeFocused();
 
   await openArtifact(page, viewports.desktop);
-  const reference = page.locator('.evidence-reference a[href^="#evidence-"]').first();
+  const reference = page.locator(
+    '.code-step-list .evidence-reference a[href^="#evidence-"]',
+  ).first();
   await reference.evaluate((element) => {
-    const details = element.closest("details");
-    if (details) details.open = true;
+    let details = element.closest("details");
+    while (details) {
+      details.open = true;
+      details = details.parentElement?.closest("details");
+    }
   });
   await expect(reference).toBeVisible();
   const targetId = (await reference.getAttribute("href")).slice(1);
@@ -1110,7 +1246,9 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await expect(evidenceSection).toContainText("그 밖의 수집 출처");
     await expect(evidenceSection).toContainText("관련 맥락");
     await expect(evidenceSection).toContainText("변경 파일");
-    await expect(page.locator(".code-evidence code").first()).toContainText(
+    await expect(page.locator(
+      '.code-evidence code[aria-label*="throw new Error()"]',
+    ).first()).toContainText(
       "throw new Error()",
     );
     const world = page.locator("#explore .microworld");

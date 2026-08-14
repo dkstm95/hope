@@ -25,7 +25,7 @@
       "Use $hope:diff to explain the current pull request."
     ],
     "brandColor": "#087EA4",
-    "composerIcon": "./skills/diff/assets/HopeFavicon.png",
+    "composerIcon": "./assets/hope-icon.png",
     "logo": "./assets/hope-protected-light.png"
   }
 }

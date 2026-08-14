@@ -59,6 +59,7 @@ const analysisFields = Object.freeze([
   "runId",
   "snapshotDigest",
   "locale",
+  "title",
   "purpose",
   "coreChange",
   "contextChecks",
@@ -72,6 +73,32 @@ const analysisFields = Object.freeze([
   "quiz",
   "teachingAids",
 ]);
+
+function comparableTitle(value) {
+  return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
+}
+
+function validateReviewTitle(value, snapshot, sourceMap) {
+  const validated = claim(value, "title", sourceMap);
+  if ([...validated.text].length > LIMITS.reviewTitleCharacters) {
+    throw new RangeError(
+      `title.text must not exceed ${LIMITS.reviewTitleCharacters} characters`,
+    );
+  }
+  if (
+    validated.basis === "unknown"
+    || !validated.evidence.some((item) => changeSources.has(item.sourceKind))
+  ) {
+    throw new Error("title must be grounded in collected code");
+  }
+  if (
+    comparableTitle(validated.text)
+    === comparableTitle(snapshot.pullRequest.title)
+  ) {
+    throw new Error("title must explain the change instead of copying the pull request title");
+  }
+  return validated;
+}
 
 function object(value, name, keys) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -978,6 +1005,7 @@ function validateAnalysisValue(analysis, snapshot, {
   }));
   const fileMap = new Map(snapshot.files.map((file) => [file.id, file]));
   const limitMap = new Map(snapshot.limits.map((limit) => [limit.id, limit]));
+  const title = validateReviewTitle(analysis.title, snapshot, sourceMap);
   const core = object(
     analysis.coreChange,
     "coreChange",
@@ -1064,7 +1092,7 @@ function validateAnalysisValue(analysis, snapshot, {
   const coreChange = Object.freeze({
     after: claim(core.after, "coreChange.after", sourceMap),
     before: claim(core.before, "coreChange.before", sourceMap),
-    details: Object.freeze(array(core.details, "coreChange.details", 12).map(
+    details: Object.freeze(array(core.details, "coreChange.details", 4).map(
       (value, index) => claim(value, `coreChange.details[${index}]`, sourceMap),
     )),
     why: claim(core.why, "coreChange.why", sourceMap),
@@ -1111,6 +1139,7 @@ function validateAnalysisValue(analysis, snapshot, {
       purpose,
       quiz,
       reviewItems,
+      title,
     ],
     { analysisFileBytes, enforceLimits: enforceResourceLimits },
   );
@@ -1160,13 +1189,14 @@ function validateAnalysisValue(analysis, snapshot, {
       snapshot: snapshot.snapshot,
     }),
     teachingAids,
+    title,
   });
 }
 
 function analysisIssue(error, path) {
   const message = error instanceof Error ? error.message : String(error);
   const inferredPath = message.match(
-    /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|teachingAids)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
+    /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|teachingAids|title)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
   )?.[0] ?? "analysis";
   let code = "ANALYSIS_CONTRACT";
   if (message.includes("evidence limit")) code = "EVIDENCE_RANGE_LIMIT";
@@ -1225,6 +1255,7 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
   const fileMap = new Map(snapshot.files.map((file) => [file.id, file]));
   const limitMap = new Map(snapshot.limits.map((limit) => [limit.id, limit]));
 
+  capture("title", () => validateReviewTitle(analysis.title, snapshot, sourceMap));
   capture("purpose", () => claim(analysis.purpose, "purpose", sourceMap));
   if (analysis.coreChange && typeof analysis.coreChange === "object") {
     for (const name of ["before", "after", "why"]) {

@@ -121,6 +121,10 @@ Diff explains behavior before code and links important claims to evidence.
 
 Diff uses visuals, a microworld, or a quiz to help the reader explore the change.
 
+Its reading path starts with a plain-language change title, then moves through
+the summary, behavior change, review items, and complete evidence scope.
+Implementation details stay available inside collapsed evidence.
+
 The resulting HTML artifact helps the reader understand the change, judge it,
 and use that understanding in follow-up decisions and work.
 
@@ -136,8 +140,8 @@ and use that understanding in follow-up decisions and work.
 | Core change | Behavior model |
 | --- | --- |
 | [![The core change explanation in a Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![The input comparison and behavior flow in a Diff artifact](assets/readme/hope-diff-behavior-en.png)](assets/readme/hope-diff-behavior-en.png) |
-| Teaching aid choices | Evidence-linked code flow |
-| [![A Diff artifact explaining which teaching aids it includes and why](assets/readme/hope-diff-teaching-en.png)](assets/readme/hope-diff-teaching-en.png) | [![Code steps and supporting evidence links in a Diff artifact](assets/readme/hope-diff-code-en.png)](assets/readme/hope-diff-code-en.png) |
+| Teaching aid choices | Implementation details and evidence |
+| [![A Diff artifact explaining which teaching aids it includes and why](assets/readme/hope-diff-teaching-en.png)](assets/readme/hope-diff-teaching-en.png) | [![Implementation steps and supporting evidence links in a Diff artifact](assets/readme/hope-diff-code-en.png)](assets/readme/hope-diff-code-en.png) |
 | Next check for an informed judgment | Evidence and checked scope |
 | [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
 

@@ -163,6 +163,10 @@ Both host manifests point at the same `skills/` directory.
 Skill instructions, references, scripts, schemas, locales, and private assets
 ship directly from their editable paths.
 
+Hope-wide brand fonts and the product icon live under `plugins/hope/assets/`
+because Align and Diff embed the same fixed files. Each feature renderer still
+owns its HTML, CSS, layout, and use of those assets.
+
 `tools/build-plugin.mjs` copies the root `LICENSE` into the package.
 
 `tools/plugin-files.mjs` records that source mapping and derives the exact

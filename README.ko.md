@@ -120,6 +120,9 @@ Diff는 코드보다 동작을 먼저 설명하고 중요한 주장에 근거를
 
 능동적인 이해를 돕기 위해 시각 자료, 마이크로월드, 퀴즈를 활용합니다.
 
+변경 내용을 쉬운 한 문장으로 먼저 보여 준 뒤 요약, 동작 변화, 검토 항목,
+근거와 범위를 차례로 설명합니다. 구현 세부는 접힌 근거 안에서 확인할 수 있습니다.
+
 그렇게 완성된 HTML 결과물은 변경을 이해하고 판단한 뒤 그 이해를 후속 결정과 작업에 활용하도록 돕습니다.
 
 > [!NOTE]
@@ -133,8 +136,8 @@ Diff는 코드보다 동작을 먼저 설명하고 중요한 주장에 근거를
 | 핵심 변경 | 동작 모델 |
 | --- | --- |
 | [![Diff 결과의 핵심 변경 설명](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![Diff 결과의 입력별 동작 비교와 흐름](assets/readme/hope-diff-behavior-ko.png)](assets/readme/hope-diff-behavior-ko.png) |
-| 설명 도구 선택 | 근거가 연결된 코드 흐름 |
-| [![Diff 결과가 설명 도구의 포함 여부와 이유를 보여 주는 화면](assets/readme/hope-diff-teaching-ko.png)](assets/readme/hope-diff-teaching-ko.png) | [![Diff 결과의 코드 단계와 근거 링크](assets/readme/hope-diff-code-ko.png)](assets/readme/hope-diff-code-ko.png) |
+| 설명 도구 선택 | 구현 세부와 근거 |
+| [![Diff 결과가 설명 도구의 포함 여부와 이유를 보여 주는 화면](assets/readme/hope-diff-teaching-ko.png)](assets/readme/hope-diff-teaching-ko.png) | [![Diff 결과의 구현 단계와 근거 링크](assets/readme/hope-diff-code-ko.png)](assets/readme/hope-diff-code-ko.png) |
 | 판단에 필요한 다음 확인 | 근거와 확인 범위 |
 | [![Diff 결과의 다음 행동과 완료 조건](assets/readme/hope-diff-review-ko.png)](assets/readme/hope-diff-review-ko.png) | [![Diff 결과의 수집한 근거와 검토 범위](assets/readme/hope-diff-evidence-ko.png)](assets/readme/hope-diff-evidence-ko.png) |
 

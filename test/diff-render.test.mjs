@@ -48,7 +48,7 @@ function withLocaleSource(snapshot, localeSource) {
 
 function teachingAidCards(html) {
   const section = html.match(
-    /<section class="review-section" id="teaching-aids">[\s\S]*?<\/section>/u,
+    /<details class="review-subsection review-subsection-collapsible" id="teaching-aids">[\s\S]*?<\/details>/u,
   )?.[0] ?? "";
   const cards = [...section.matchAll(
     /<article class="teaching-aid-choice decision-([^"]+)">([\s\S]*?)<\/article>/gu,
@@ -88,7 +88,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 7);
+  assert.equal(first.rendererVersion, 8);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -99,6 +99,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     html,
     /<link rel="icon" type="image\/png" sizes="128x128" href="data:image\/png;base64,iVBOR/u,
   );
+  assert.match(html, /<img class="brand-icon" src="data:image\/png;base64,iVBOR/u);
+  assert.match(html, /<span>HOPE<\/span><span class="brand-product">· DIFF<\/span>/u);
   assert.match(html, /data:font\/woff2;base64/u);
   assert.match(html, /font-family: "Hope Sans"/u);
   assert.match(html, /font-family: "Hope Code"/u);
@@ -120,12 +122,22 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(header, /<details class="toc-mobile">/u);
   assert.match(header, /class="toc-mobile-panel"/u);
   assert.match(header, /class="toc-icon"/u);
-  assert.match(header, />example\/hope · PR #142</u);
+  assert.match(header, /<span>example\/hope<\/span>/u);
+  assert.match(
+    header,
+    /<a class="pull-request-link" href="https:\/\/github\.com\/example\/hope\/pull\/142" aria-label="Open PR #142" title="Open PR #142">/u,
+  );
+  assert.match(header, /<span>PR #142<\/span>/u);
   const synopsisHead = html.match(
     /<header class="synopsis-head">[\s\S]*?<\/header>/u,
   )?.[0] ?? "";
   assert.doesNotMatch(synopsisHead, /example\/hope · PR #142/u);
   assert.doesNotMatch(synopsisHead, /<a /u);
+  assert.match(
+    synopsisHead,
+    /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><\/h1>/u,
+  );
+  assert.doesNotMatch(synopsisHead, /&lt;script/u);
   assert.match(synopsisHead, /<dt>Commit<\/dt>\s*<dd><code>bbbbbbbb<\/code><\/dd>/u);
   assert.match(
     synopsisHead,
@@ -156,6 +168,19 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<h3 id="synopsis-now-title">TO-BE<\/h3>/u);
   assert.doesNotMatch(html, /shift-arrow/u);
   assert.match(html, /class="toc-synopsis"><a href="#synopsis"/u);
+  assert.doesNotMatch(html, /<a href="#follow-code">/u);
+  assert.match(
+    html,
+    /<details class="evidence-group" id="implementation-details">/u,
+  );
+  const artifactDetails = html.match(
+    /<details class="evidence-group artifact-details">[\s\S]*?<\/details>/u,
+  )?.[0] ?? "";
+  assert.match(artifactDetails, /<summary><h3>Review info<\/h3><\/summary>/u);
+  assert.match(
+    artifactDetails,
+    /<dt>Pull request title<\/dt><dd><bdi dir="auto">&lt;\/title&gt;&lt;script/u,
+  );
   assert.doesNotMatch(html, /<details class="evidence" open>/u);
   assert.match(html, /<pre class="code-evidence"><code aria-label=/u);
   assert.doesNotMatch(html, /syntax-/u);
@@ -184,7 +209,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<div class="synopsis-row synopsis-review">\s*<h3>Review result<\/h3>\s*<div class="synopsis-value synopsis-review-value">/u,
   );
   const coreChange = html.match(
-    /<section class="review-section" id="core-change">[\s\S]*?<\/section>/u,
+    /<section class="review-subsection" id="core-change">[\s\S]*?<\/section>/u,
   )?.[0] ?? "";
   assert.doesNotMatch(coreChange, /class="core-narrative"/u);
   assert.doesNotMatch(coreChange, />Goal<\/bdi>|>AS-IS<\/bdi>|>TO-BE<\/bdi>|>Impact<\/bdi>/u);
@@ -243,7 +268,9 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(changedFiles, /src\/retry\.js/u);
   assert.match(changedFiles, /change excerpt · 4 lines/u);
   assert.doesNotMatch(html, />source-[0-9]+</u);
-  const synopsis = html.match(/<section class="synopsis"[\s\S]*?<\/section>/u)?.[0] ?? "";
+  const synopsis = html.match(
+    /<section class="synopsis"[\s\S]*?<\/section>\s*<section class="review-section" id="explore"/u,
+  )?.[0] ?? "";
   assert.ok(synopsis.indexOf("synopsis.why") === -1);
   assert.ok(synopsis.indexOf("synopsis-review") > synopsis.indexOf("Impact"));
   assert.equal((synopsis.match(/>1 item</gu) ?? []).length, 0);
@@ -369,7 +396,7 @@ test("beginner primer stays closed, localized, linkable, and print-visible", asy
   const review = validateAnalysis(analysis, snapshot, { runId });
   const html = (await renderReview(review)).bytes.toString("utf8");
   const background = html.match(
-    /<section class="review-section" id="background">[\s\S]*?<\/section>/u,
+    /<section class="synopsis-background" id="background">[\s\S]*?<\/section>/u,
   )?.[0] ?? "";
 
   assert.match(background, /<details class="beginner-primer" id="beginner-primer">/u);
@@ -393,10 +420,10 @@ test("the artifact shows every teaching-aid decision when all aids are omitted",
   const review = validateAnalysis(analysis, snapshot, { runId });
   const html = (await renderReview(review)).bytes.toString("utf8");
   const section = html.match(
-    /<section class="review-section" id="teaching-aids">[\s\S]*?<\/section>/u,
+    /<details class="review-subsection review-subsection-collapsible" id="teaching-aids">[\s\S]*?<\/details>/u,
   )?.[0] ?? "";
 
-  assert.match(section, /<h2>Teaching aid choices<\/h2>/u);
+  assert.match(section, /<h3>Teaching aid choices<\/h3>/u);
   assert.match(
     section,
     /Why each teaching aid appears or does not appear in this review\./u,
@@ -414,7 +441,8 @@ test("the artifact shows every teaching-aid decision when all aids are omitted",
     /&lt;\/article&gt;&lt;script src=https:\/\/evil\.example\/reason\.js&gt;&lt;\/script&gt;/u,
   );
   assert.doesNotMatch(section, /<script src=https:\/\/evil/u);
-  assert.match(html, /<a href="#teaching-aids">Teaching aid choices<\/a>/u);
+  assert.doesNotMatch(html, /<a href="#teaching-aids">/u);
+  assert.match(html, /<a href="#explore">Behavior change<\/a>/u);
 });
 
 test("the artifact preserves mixed and all-included teaching-aid states", async () => {
@@ -490,6 +518,21 @@ test("the artifact preserves mixed and all-included teaching-aid states", async 
         assert.match(cards[index].body, new RegExp(job.replaceAll(".", "\\."), "u"));
       }
     });
+    if (expected.analysis === allIncluded) {
+      const behaviorOrder = [
+        html.indexOf('id="core-change"'),
+        html.indexOf('class="behavior-model"'),
+        html.indexOf('id="quiz"'),
+        html.indexOf('id="teaching-aids"'),
+      ];
+      assert.ok(behaviorOrder.every((position) => position >= 0));
+      assert.deepEqual(
+        behaviorOrder,
+        [...behaviorOrder].sort((left, right) => left - right),
+      );
+      assert.match(html, /<section class="review-subsection" id="quiz">/u);
+      assert.doesNotMatch(html, /<details[^>]+id="quiz"/u);
+    }
   }
 });
 
@@ -599,7 +642,9 @@ test("the synopsis shows top mixed-kind items without a dashboard summary", asyn
   };
   const rendered = await renderReview(extendedReview);
   const html = rendered.bytes.toString("utf8");
-  const synopsis = html.match(/<section class="synopsis"[\s\S]*?<\/section>/u)?.[0] ?? "";
+  const synopsis = html.match(
+    /<section class="synopsis"[\s\S]*?<\/section>\s*<section class="review-section" id="explore"/u,
+  )?.[0] ?? "";
 
   assert.match(html, />2 more review items</u);
   assert.match(html, />2 more scope notes</u);
@@ -627,7 +672,9 @@ test("a review with no items states the result once", async () => {
   }));
   const review = validateAnalysis(analysis, snapshot, { runId });
   const html = (await renderReview(review)).bytes.toString("utf8");
-  const synopsis = html.match(/<section class="synopsis"[\s\S]*?<\/section>/u)?.[0] ?? "";
+  const synopsis = html.match(
+    /<section class="synopsis"[\s\S]*?<\/section>\s*<section class="review-section" id="explore"/u,
+  )?.[0] ?? "";
 
   assert.equal(
     (synopsis.match(/No important item was found in the checked scope\./gu) ?? []).length,
