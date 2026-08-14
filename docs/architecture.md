@@ -14,8 +14,8 @@ There is no independent Hope CLI or harness.
 - [PRINCIPLES.md](../PRINCIPLES.md) defines the project direction.
 - Each `plugins/hope/skills/<feature>/SKILL.md` defines one feature's behavior.
 - A Skill's `references/` directory owns detailed or conditional guidance.
-- [design.md](design.md) defines Hope's GUI guidance and the Diff artifact's
-  visual contract.
+- [design.md](design.md) defines Hope's GUI guidance and the Align and Diff
+  artifact visual contracts.
 - [release.md](release.md) defines the public package and release process.
 - This document defines repository structure and dependency boundaries.
 
@@ -36,7 +36,9 @@ flowchart LR
   C["Codex delivery"] --> S["Hope Skills"]
   L["Claude Code delivery"] --> S
   S --> I["Instructions and references"]
+  S --> A["Align deterministic code"]
   S --> D["Diff deterministic code and assets"]
+  A --> H["Self-contained HTML"]
   D --> H["Self-contained HTML"]
 ```
 
@@ -93,7 +95,9 @@ plugins/hope/
 ├── assets/
 └── skills/
     ├── align/
-    │   └── SKILL.md
+    │   ├── SKILL.md
+    │   ├── references/
+    │   └── scripts/
     ├── diff/
     │   ├── SKILL.md
     │   ├── references/
@@ -123,7 +127,9 @@ Keep private assets beside their only feature consumer.
 
 Do not generate Skill instructions or keep a repository mirror of them.
 
-Shared code needs two real consumers with the same invariant.
+Shared code needs two real consumers with the same invariant. Align and Diff
+currently own their visual tokens, rendering, and publication behavior
+independently.
 
 Do not add a generic runner, manager, registry, state machine, compatibility
 layer, or second delivery path for a possible future need.
@@ -133,17 +139,20 @@ rewriting its behavior.
 
 ## Deterministic code boundary
 
-Diff is the only feature that currently needs deterministic code.
+Align and Diff currently need deterministic code.
 
-Its scripts live beside the Diff Skill and do not form a shared runtime.
+Their scripts live beside their owning Skills and do not form a shared runtime.
 
-The Skill and its references own workflow and model judgment.
+Each Skill and its references own workflow and model judgment.
 
-The scripts own external source identity, bounds, validation, rendering,
-temporary state, and publication.
+Align's scripts own bounded structured input, HTML identity, rendering, safe
+project publication, and same-artifact revision. Diff's scripts own external
+source identity, bounds, validation, rendering, temporary state, and
+publication.
 
-[Diff's runtime contract](../plugins/hope/skills/diff/references/runtime.md)
-defines the feature-specific guarantees enforced at that boundary.
+[Align's artifact contract](../plugins/hope/skills/align/references/artifact.md)
+and [Diff's runtime contract](../plugins/hope/skills/diff/references/runtime.md)
+define the feature-specific guarantees enforced at those boundaries.
 
 Extract shared code only after another feature needs the same invariant.
 
@@ -166,10 +175,11 @@ Do not edit generated package files by hand.
 ## Verification
 
 - Skill tests cover discovery metadata and packaged references.
-- Node tests cover Diff parsing, snapshots, citations, rendering, stale-source
-  checks, bounded input, temporary-state ownership, and safe publication.
-- Browser tests cover layout, keyboard behavior, accessibility, responsive
-  navigation, printing, and no-JavaScript reading.
+- Node tests cover Align identity, revisions, rendering, and safe publication,
+  plus Diff parsing, snapshots, citations, rendering, stale-source checks,
+  bounded input, temporary-state ownership, and safe publication.
+- Browser tests cover both artifacts' layout, keyboard behavior,
+  accessibility, responsive navigation, printing, and no-JavaScript reading.
 - Package tests cover direct Skill sources, the generated license, and the
   exact release allowlist.
 

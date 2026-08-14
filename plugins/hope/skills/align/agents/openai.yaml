@@ -1,5 +1,5 @@
 interface:
   display_name: "Hope Align"
-  short_description: "Find misunderstandings before implementation"
-  brand_color: "#087EA4"
+  short_description: "Align intent and preserve the implementation brief"
+  brand_color: "#006FBE"
   default_prompt: "Use $hope:align to build a shared understanding before implementation."

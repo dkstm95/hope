@@ -7,7 +7,6 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const skillsRoot = resolve(root, "plugins/hope/skills");
 const instructionLedSkills = Object.freeze([
-  "align",
   "polish",
   "sweep",
   "toxic-review",
@@ -30,12 +29,17 @@ test("each feature has one editable Skill boundary", async () => {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
-  assert.deepEqual(skillNames, ["align", "diff", ...instructionLedSkills.slice(1)]);
+  assert.deepEqual(skillNames, ["align", "diff", ...instructionLedSkills]);
 
+  const alignScript = resolve(skillsRoot, "align/scripts/cli.mjs");
   const diffScript = resolve(skillsRoot, "diff/scripts/cli.mjs");
+  assert.equal(await exists(alignScript), true);
   assert.equal(await exists(diffScript), true);
+  const align = await readFile(resolve(skillsRoot, "align/SKILL.md"), "utf8");
   const diff = await readFile(resolve(skillsRoot, "diff/SKILL.md"), "utf8");
+  assert.match(align, /scripts\/cli\.mjs/u);
   assert.match(diff, /scripts\/cli\.mjs/u);
+  assert.doesNotMatch(align, /runtime\/features\//u);
   assert.doesNotMatch(diff, /runtime\/features\//u);
 
   for (const skillName of instructionLedSkills) {
@@ -56,41 +60,52 @@ test("each feature has one editable Skill boundary", async () => {
   }
 });
 
-test("Diff scripts do not depend on the plugin package boundary", async () => {
-  const diffRoot = resolve(skillsRoot, "diff");
-  const scriptsRoot = resolve(diffRoot, "scripts");
-  const pending = [scriptsRoot];
-  const scripts = [];
-  while (pending.length > 0) {
-    const directory = pending.pop();
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-      const path = resolve(directory, entry.name);
-      if (entry.isDirectory()) pending.push(path);
-      if (entry.isFile() && entry.name.endsWith(".mjs")) scripts.push(path);
+test("feature scripts depend only on their owning Skill", async () => {
+  for (const skillName of ["align", "diff"]) {
+    const featureRoot = resolve(skillsRoot, skillName);
+    const pending = [resolve(featureRoot, "scripts")];
+    const scripts = [];
+    while (pending.length > 0) {
+      const directory = pending.pop();
+      for (const entry of await readdir(directory, { withFileTypes: true })) {
+        const path = resolve(directory, entry.name);
+        if (entry.isDirectory()) pending.push(path);
+        if (entry.isFile() && entry.name.endsWith(".mjs")) scripts.push(path);
+      }
+    }
+
+    for (const path of scripts) {
+      const source = await readFile(path, "utf8");
+      assert.doesNotMatch(
+        source,
+        /(?:CLAUDE_)?PLUGIN_ROOT|plugins\/hope|runtime\/features/u,
+        `${relative(root, path)} must stay independent of plugin packaging`,
+      );
+      for (const match of source.matchAll(
+        /(?:from\s+|import\()\s*["'](\.\.?\/[^"']+)["']/gu,
+      )) {
+        const dependency = resolve(dirname(path), match[1]);
+        const fromFeature = relative(featureRoot, dependency);
+        const insideFeature = !isAbsolute(fromFeature)
+          && fromFeature !== ".."
+          && !fromFeature.startsWith(`..${sep}`);
+        assert.equal(
+          insideFeature,
+          true,
+          `${relative(root, path)} imports outside its Skill: ${match[1]}`,
+        );
+      }
     }
   }
 
-  for (const path of scripts) {
-    const source = await readFile(path, "utf8");
-    assert.doesNotMatch(
-      source,
-      /(?:CLAUDE_)?PLUGIN_ROOT|plugins\/hope|runtime\/features/u,
-      `${relative(root, path)} must stay independent of plugin packaging`,
-    );
-    for (const match of source.matchAll(
-      /(?:from\s+|import\()\s*["'](\.\.?\/[^"']+)["']/gu,
-    )) {
-      const dependency = resolve(dirname(path), match[1]);
-      const fromDiff = relative(diffRoot, dependency);
-      assert.equal(
-        isAbsolute(fromDiff)
-          || fromDiff === ".."
-          || fromDiff.startsWith(`..${sep}`),
-        false,
-        `${relative(root, path)} imports outside its Skill: ${match[1]}`,
-      );
-    }
-  }
+  const [alignRender, diffRender] = await Promise.all([
+    readFile(resolve(skillsRoot, "align/scripts/render.mjs"), "utf8"),
+    readFile(resolve(skillsRoot, "diff/scripts/render.mjs"), "utf8"),
+  ]);
+  assert.match(alignRender, /\.\/design\/tokens\.mjs/u);
+  assert.match(diffRender, /\.\/design\/tokens\.mjs/u);
+  assert.doesNotMatch(alignRender, /skills\/diff|shared\/visual/u);
+  assert.doesNotMatch(diffRender, /skills\/align|shared\/visual/u);
 });
 
 test("instruction-led feature guidance stays delivery-neutral", async () => {

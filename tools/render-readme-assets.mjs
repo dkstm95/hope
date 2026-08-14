@@ -7,6 +7,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { chromium } from "@playwright/test";
 
+import { validateAlignInput } from "../plugins/hope/skills/align/scripts/artifact.mjs";
+import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render.mjs";
 import { digestJson } from "../plugins/hope/skills/diff/scripts/hash.mjs";
 import { renderReview } from "../plugins/hope/skills/diff/scripts/render.mjs";
 import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
@@ -118,6 +120,166 @@ const changedFiles = Object.freeze([
     ].join("\n"),
   }),
 ]);
+
+function alignInput(locale, theme, overrides = {}) {
+  const ko = locale === "ko-KR";
+  return {
+    schemaVersion: 1,
+    locale,
+    theme,
+    title: ko ? "실패한 업로드 복구" : "Failed upload recovery",
+    intent: ko
+      ? "중단된 업로드를 감지해 사용자가 데이터 손실 없이 이어서 완료하거나 안전하게 취소할 수 있게 한다."
+      : "Detect interrupted uploads so people can resume without losing data or cancel safely.",
+    problem: ko
+      ? "업로드가 중단되면 파일이 손실되거나 불완전한 상태로 남을 수 있다."
+      : "When an upload stops, the file can be lost or left incomplete.",
+    success: ko
+      ? [
+          "중단 지점부터 이어서 업로드를 완료할 수 있다.",
+          "관련 없는 데이터 손실 없이 안전하게 취소할 수 있다.",
+        ]
+      : [
+          "Resume from the interruption point and finish the upload.",
+          "Cancel safely without losing unrelated data.",
+        ],
+    boundary: ko
+      ? "사용자 기기와 서버가 업로드를 식별할 수 있고 임시 데이터가 남아 있는 동안만 복구한다."
+      : "Recovery is available only while the device and server can identify the upload and temporary data remains.",
+    scope: {
+      included: ko
+        ? [
+            "중단된 업로드 감지 및 복구 항목 제공",
+            "중단 지점부터 이어 업로드",
+            "보관 기간 내 임시 데이터 유지",
+          ]
+        : [
+            "Detect interrupted uploads and show recovery items",
+            "Resume from the interruption point",
+            "Keep temporary data during the retention period",
+          ],
+      excluded: ko
+        ? [
+            "다른 사용자의 업로드 인계",
+            "서버 보관 기간이 지난 항목 복구",
+            "암호화 키 분실 시 복구",
+          ]
+        : [
+            "Transfer an upload to another person",
+            "Recover items after the server retention period",
+            "Recover data after an encryption key is lost",
+          ],
+    },
+    behavior: {
+      steps: ko
+        ? [
+            { title: "중단 감지", detail: "업로드 중단을 감지한다." },
+            { title: "복구 항목 유지", detail: "항목과 상태를 복구 목록에 유지한다." },
+            { title: "사용자 선택", detail: "이어 완료하거나 안전하게 취소한다." },
+          ]
+        : [
+            { title: "Detect interruption", detail: "Detect when an upload stops." },
+            { title: "Keep recovery item", detail: "Keep the item and state in the recovery list." },
+            { title: "Choose next step", detail: "Resume the upload or cancel it safely." },
+          ],
+      outcomes: ko
+        ? [
+            { title: "이어 완료", detail: "중단 지점부터 업로드를 완료한다.", kind: "complete" },
+            { title: "안전하게 취소", detail: "임시 데이터를 제거하고 복구를 끝낸다.", kind: "cancel" },
+          ]
+        : [
+            { title: "Resume upload", detail: "Finish the upload from the interruption point.", kind: "complete" },
+            { title: "Cancel safely", detail: "Remove temporary data and end recovery.", kind: "cancel" },
+          ],
+    },
+    decisions: ko
+      ? [
+          {
+            decision: "자동 감지 기반 복구 우선",
+            reason: "사용자 개입 없이 중단 항목을 찾아 복구 기회를 제공한다.",
+          },
+          {
+            decision: "서버 측 임시 보관",
+            reason: "안정적인 복구를 위해 제한된 기간 동안 임시 데이터를 유지한다.",
+          },
+        ]
+      : [
+          {
+            decision: "Prefer automatic recovery detection",
+            reason: "Find interrupted items without user setup and offer a recovery path.",
+          },
+          {
+            decision: "Keep temporary data on the server",
+            reason: "Retain temporary data for a limited time so recovery remains reliable.",
+          },
+        ],
+    openChoices: ko
+      ? [
+          "재시도 및 백오프 정책",
+          "임시 데이터 보관 기간",
+          "알림 시점과 방식",
+        ]
+      : [
+          "Retry and backoff policy",
+          "Temporary data retention period",
+          "Notification timing and channel",
+        ],
+    evidence: ko
+      ? [
+          { label: "업로드 복구 서비스", location: "src/upload/recovery.ts" },
+          { label: "제품 요구사항", location: "docs/upload-recovery.md" },
+        ]
+      : [
+          { label: "Upload recovery service", location: "src/upload/recovery.ts" },
+          { label: "Product requirement", location: "docs/upload-recovery.md" },
+        ],
+    revisionSummary: ko
+      ? "복구 기간과 취소 경계를 명확히 함"
+      : "Clarified the recovery period and cancellation boundary",
+    ...overrides,
+  };
+}
+
+function alignRevision(input, number, agreedAt) {
+  const validated = validateAlignInput(input);
+  const {
+    locale: _locale,
+    revisionSummary,
+    schemaVersion: _schemaVersion,
+    theme: _theme,
+    ...content
+  } = validated;
+  return {
+    agreedAt,
+    content,
+    number,
+    summary: revisionSummary,
+  };
+}
+
+function alignArtifact(locale, theme) {
+  const ko = locale === "ko-KR";
+  const first = alignInput(locale, theme, {
+    boundary: ko
+      ? "사용자 기기와 서버가 업로드를 식별할 수 있는 동안만 복구한다."
+      : "Recovery is available only while the device and server can identify the upload.",
+    revisionSummary: ko ? "최초 합의" : "Initial agreement",
+  });
+  const current = alignInput(locale, theme);
+  const data = {
+    schemaVersion: 1,
+    alignId: "11111111-1111-4111-8111-111111111111",
+    repository: "acme/storage",
+    locale,
+    theme,
+    createdAt: "2026-08-14T00:00:00.000Z",
+    revisions: [
+      alignRevision(first, 1, "2026-08-14T00:00:00.000Z"),
+      alignRevision(current, 2, "2026-08-21T00:00:00.000Z"),
+    ],
+  };
+  return Buffer.from(renderAlignArtifact(data, { digest: "0".repeat(64) }));
+}
 
 function diffSnapshot(locale) {
   const sources = [
@@ -413,13 +575,18 @@ function diffAnalysis(snapshot) {
   };
 }
 
-async function capturePage(page, htmlPath, outputPath, {
+async function loadPage(page, htmlPath, {
   height = 840,
   width = 1440,
 } = {}) {
   await page.setViewportSize({ height, width });
   await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load" });
   await page.evaluate(async () => await document.fonts.ready);
+}
+
+async function capturePage(page, htmlPath, outputPath, options = {}) {
+  const { height = 840, width = 1440 } = options;
+  await loadPage(page, htmlPath, { height, width });
   await page.screenshot({
     clip: { height, width, x: 0, y: 0 },
     path: outputPath,
@@ -452,6 +619,28 @@ async function main() {
   try {
     for (const locale of ["en-US", "ko-KR"]) {
       const suffix = locale === "ko-KR" ? "ko" : "en";
+      const alignLightPath = join(temporary, `align-light-${suffix}.html`);
+      const alignDarkPath = join(temporary, `align-dark-${suffix}.html`);
+      await writeFile(alignLightPath, alignArtifact(locale, "light"));
+      await writeFile(alignDarkPath, alignArtifact(locale, "dark"));
+      await capturePage(
+        page,
+        alignLightPath,
+        join(outputDirectory, `hope-align-${suffix}.png`),
+        { height: 900 },
+      );
+      await captureElement(
+        page,
+        join(outputDirectory, `hope-align-decisions-${suffix}.png`),
+        "#agreement",
+      );
+      await loadPage(page, alignDarkPath, { height: 900 });
+      await captureElement(
+        page,
+        join(outputDirectory, `hope-align-behavior-${suffix}.png`),
+        "#behavior",
+      );
+
       const snapshot = diffSnapshot(locale);
       const review = validateAnalysis(diffAnalysis(snapshot), snapshot, { runId });
       const diff = await renderReview(review);

@@ -71,6 +71,17 @@ Show the reason and evidence when they matter.
 
 Do not present a generated claim as a verified fact.
 
+## Follow explicit agreements
+
+When a person explicitly approves the intended result, scope, or design of a
+task, use that agreement as the basis for implementation.
+
+Existing code, removed implementations, and conventions from another feature
+do not override it.
+
+If implementation must differ materially, explain why and agree on the change
+before continuing.
+
 ## Own what Hope creates
 
 Hope records the files or private state it creates.
@@ -130,7 +141,11 @@ Test Skill discovery as a contract of the current delivery.
 
 Test deterministic code at the boundaries it promises to enforce.
 
-Use browser tests for behavior that only a browser can verify.
+Use browser tests for behavior or visual relationships that only a browser can
+verify.
+
+Test the required relationship directly instead of freezing a screenshot or
+CSS value as a proxy.
 
 Add a deterministic check only when it detects a concrete failure without
 rejecting a valid design.

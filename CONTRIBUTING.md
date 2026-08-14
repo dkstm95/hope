@@ -10,6 +10,7 @@ control their work with AI.
   folder or implementation boundary.
 - Read the matching `plugins/hope/skills/<feature>/SKILL.md` before changing
   feature behavior.
+- Read [docs/design.md](docs/design.md) before changing a Hope GUI.
 - Read [docs/release.md](docs/release.md) before changing packaging, versions,
   or release automation.
 - Follow [AGENTS.md](AGENTS.md) when an AI agent performs the work.
@@ -30,10 +31,10 @@ npm run check
 `npm run check` validates the current working tree's package, release impact,
 and deterministic tests.
 
-Run `npm run test:browser` when Diff layout or interaction changes.
+Run `npm run test:browser` when a Hope GUI layout or interaction changes.
 
-Run `npm run render:readme-assets` and inspect the updated captures when a Diff
-rendering change affects the README examples.
+Run `npm run render:readme-assets` and inspect the updated captures when an
+artifact rendering change affects the README examples.
 
 Install the current delivery for an end-to-end development smoke test with:
 
