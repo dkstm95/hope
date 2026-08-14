@@ -260,6 +260,15 @@ function artifactContent(input) {
   ));
 }
 
+function artifactRevision(number, agreedAt, input) {
+  return Object.freeze({
+    number,
+    agreedAt,
+    summary: input.revisionSummary,
+    content: artifactContent(input),
+  });
+}
+
 function sealHtml(source) {
   const matches = source.match(new RegExp(DIGEST_META_PATTERN.source, "gu")) ?? [];
   if (matches.length !== 1 || !source.includes(DIGEST_PLACEHOLDER)) {
@@ -568,19 +577,15 @@ export async function createAlignArtifact({ inputPath, outputPath, root }, depen
     requestedRoot,
   );
   const now = dependencies.now?.() ?? new Date();
+  const agreedAt = now.toISOString();
   const data = Object.freeze({
     schemaVersion: 1,
     alignId: (dependencies.randomUUID ?? randomUUID)(),
     repository: await repositoryLabel(resolvedRoot),
     locale: input.locale,
     theme: input.theme,
-    createdAt: now.toISOString(),
-    revisions: Object.freeze([Object.freeze({
-      number: 1,
-      agreedAt: now.toISOString(),
-      summary: input.revisionSummary,
-      content: artifactContent(input),
-    })]),
+    createdAt: agreedAt,
+    revisions: Object.freeze([artifactRevision(1, agreedAt, input)]),
   });
   const sealed = sealHtml(renderAlignArtifact(data, { digest: DIGEST_PLACEHOLDER }));
   await publishNew(target, sealed.bytes);
@@ -641,12 +646,11 @@ export async function reviseAlignArtifact({
     theme: original.data.theme,
   });
   const now = dependencies.now?.() ?? new Date();
-  const revision = Object.freeze({
-    number: original.data.revisions.length + 1,
-    agreedAt: now.toISOString(),
-    summary: input.revisionSummary,
-    content: artifactContent(input),
-  });
+  const revision = artifactRevision(
+    original.data.revisions.length + 1,
+    now.toISOString(),
+    input,
+  );
   const data = Object.freeze({
     ...original.data,
     locale: input.locale,
