@@ -88,8 +88,23 @@ Align brings the person and AI to a shared understanding.
 It explains its current understanding based on verifiable evidence, such as the
 codebase, then asks about choices that can change the result.
 
+When the agreement is ready, Align writes one self-contained HTML brief inside
+the project. The current intent stays prominent, material changes become
+revisions in the same file, and the brief becomes the implementation contract.
+Hope recommends keeping it with the project but never stages it automatically.
+
 > [!NOTE]
-> Align waits for explicit approval and never implements the task.
+> Align waits for explicit approval and never implements the task. A later
+> session uses a brief only when you name its path; Hope does not guess a
+> repository-wide “latest” agreement.
+
+![Hope Align result showing the current agreement, scope, behavior, and intent history](assets/readme/hope-align-en.png)
+
+*An actual Align HTML brief for a failed-upload recovery agreement.*
+
+| Agreed behavior · dark | Decisions and implementation choices · light |
+| --- | --- |
+| [![A branched upload-recovery flow in an Align artifact using dark mode](assets/readme/hope-align-behavior-en.png)](assets/readme/hope-align-behavior-en.png) | [![Numbered decisions and implementation choices in an Align artifact using light mode](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
 
 > Example: “I want to add a failed-upload recovery screen. Help me clarify the
 > retry behavior and layout before implementation.”

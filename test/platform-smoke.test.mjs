@@ -38,7 +38,19 @@ test("the staged plugin runs from an external platform path", async (context) =>
 
   const outsideRepository = join(temporaryRoot, "outside repository");
   await mkdir(outsideRepository);
-  const help = spawnSync(
+  const alignHelp = spawnSync(
+    process.execPath,
+    [join(destination, "skills", "align", "scripts", "cli.mjs"), "--help"],
+    {
+      cwd: outsideRepository,
+      encoding: "utf8",
+    },
+  );
+  assert.equal(alignHelp.status, 0, alignHelp.stderr);
+  assert.match(alignHelp.stdout, /Use Hope Align through its private Skill adapter/u);
+  assert.doesNotMatch(alignHelp.stderr, /\S/u);
+
+  const diffHelp = spawnSync(
     process.execPath,
     [join(destination, "skills", "diff", "scripts", "cli.mjs"), "--help"],
     {
@@ -46,9 +58,9 @@ test("the staged plugin runs from an external platform path", async (context) =>
       encoding: "utf8",
     },
   );
-  assert.equal(help.status, 0, help.stderr);
-  assert.match(help.stdout, /Use Hope Diff through its private Skill adapter/u);
-  assert.doesNotMatch(help.stderr, /\S/u);
+  assert.equal(diffHelp.status, 0, diffHelp.stderr);
+  assert.match(diffHelp.stdout, /Use Hope Diff through its private Skill adapter/u);
+  assert.doesNotMatch(diffHelp.stderr, /\S/u);
 
   assert.notEqual(resolve(destination), resolve(root, "plugins", "hope"));
 });

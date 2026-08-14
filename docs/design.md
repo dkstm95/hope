@@ -1,19 +1,36 @@
 # Hope design
 
-This document defines Hope's project-wide GUI guidance and the visual contract
-of the current Diff HTML artifact.
+This document defines Hope's project-wide GUI guidance and the visual contracts
+of the current Align and Diff HTML artifacts.
 
-The Project GUI widgets section applies whenever a Hope feature introduces or
-changes a matching control or interaction.
+The Project GUI layout and Project GUI widgets sections apply whenever a Hope
+feature introduces or changes a matching layout, control, or interaction.
 
-The remaining sections apply to the Diff artifact unless they explicitly say
-otherwise.
+Feature-named sections apply only to that artifact. Sections named for Hope
+artifacts apply to both.
 
-The Diff Skill and its analysis reference own review judgment and prose.
+The Align and Diff Skills own their feature judgment and prose.
 
-Diff is the only Hope feature that currently creates a visual artifact.
+Align and Diff each own their visual tokens and renderer. Neither artifact is a
+visual dependency of the other in this release.
 
-Do not build a general component framework for a possible future artifact.
+Do not introduce a shared artifact framework until two real consumers need the
+same invariant.
+
+## Project GUI layout
+
+Show each piece of information once in a viewport. A responsive layout may move
+it, but must not leave a second visible copy.
+
+Define spacing and alignment through layout groups. Do not correct one element
+with an isolated margin when the relationship belongs to the group.
+
+Derive the position of a connecting line, arrow, or other annotation from the
+same layout structure as the element it identifies. Do not maintain
+independent hand-tuned coordinates.
+
+When space becomes too narrow, move needed information and actions into a
+compact form that preserves access. Do not merely hide or squeeze them.
 
 ## Diff artifact direction
 
@@ -38,9 +55,9 @@ They are comparison material, not pixel-perfect specifications.
 They are design sources and do not ship with the current runtime.
 
 The Diff feature's `scripts/design/tokens.mjs` is the code source of truth for
-colors, type sizes, spacing, and layout limits.
+Diff colors, type sizes, spacing, and layout limits.
 
-A renderer must read those tokens instead of copying their values.
+The Diff renderer must read those tokens instead of copying their values.
 
 ## Diff artifact structure
 
@@ -77,6 +94,41 @@ Keep important evidence beside the claim it supports.
 
 Use Evidence and scope as the complete index of the captured snapshot, checked
 files, supporting sources, exclusions, and limits.
+
+## Align artifact direction
+
+The Align artifact should feel like a compact project specification: direct,
+quiet, easy to scan, and complete enough to guide implementation.
+
+The Align feature's `scripts/design/tokens.mjs` owns its exact visual values.
+Diff rendering, Diff tokens, and removed Align implementations do not constrain
+it.
+
+## Align artifact structure
+
+The artifact is the current implementation agreement, not a progress tracker.
+
+Show each fact once, in this order:
+
+1. title and one-sentence intent;
+2. problem, success, and governing boundary;
+3. included and excluded scope;
+4. agreed behavior, only when sequence or branching is clearer than prose;
+5. agreed decisions with visible reasons and choices left to implementation;
+6. supporting evidence, only when it adds a source that matters.
+
+Keep earlier intent revisions in the secondary history navigation. Do not
+repeat intent history at the bottom of the agreement.
+
+Keep repository identity, current revision, and theme control in the compact
+product bar. Use **current agreement**, not language that implies an external
+approval workflow.
+
+The whole document is the implementation contract. Do not repeat it in a
+separate contract summary.
+
+Do not show implementation progress, completion controls, owners, comments,
+changed files, test status, or model and interview metrics.
 
 ## Project GUI widgets
 
@@ -297,6 +349,41 @@ in Hope's language.
 5. **GUI-86 — Visible keyboard focus.** Give keyboard navigation a visible
    focus indicator.
 
+## Align artifact layout
+
+Use one linear document. Give the current agreement most of the page and keep
+intent history secondary.
+
+On a wide screen, place a narrow rail beside the document. Show a table of
+contents only when it improves navigation. Keep the current revision and at
+most one prior revision summary visible. Open earlier revision detail from that
+history instead of repeating it in the document.
+
+On a narrow screen, use one column. Put one 44-pixel navigation control to the
+right of the theme control and open the table of contents and intent history in
+a bounded right-side panel. Stack included scope before excluded scope, and
+turn a horizontal behavior flow into the same ordered vertical sequence.
+
+In the product bar, use one gap between the brand, repository, revision, and
+action group. Use the next smaller gap only between controls inside the action
+group. Do not add one-off margins to an individual product-bar item.
+
+Number agreed decisions in reading order. In a branched behavior flow, derive
+connector endpoints from the result rows so every line terminates on the same
+geometry as its result marker.
+
+Use thin dividers instead of enclosing ordinary content in cards. Give the
+document title enough emphasis to establish the reading path, then keep body
+type compact and readable. Omit an optional section instead of rendering an
+empty box.
+
+Align embeds Hope Sans so it uses the same Hope type family as Diff across
+supported hosts. Its palette, spacing, type sizes, and layout values still come
+only from Align's own tokens.
+
+Put the Hope icon immediately before **HOPE** in the Align product bar. Keep the
+visible wordmark as the accessible name; the icon is decorative.
+
 ## Diff artifact layout
 
 Use one linear document in every viewport.
@@ -461,9 +548,26 @@ Use the same text and order in both layouts.
 Use a normal numbered list for five or more steps or when any step is longer
 than 80 characters.
 
+## Align artifact color and themes
+
+Generate one Align artifact that supports light and dark themes.
+
+The light view uses a warm near-white document surface, near-black text, thin
+neutral dividers, and blue for navigation and agreement state. The dark view
+uses a near-black surface, off-white text, quiet gray dividers, and a brighter
+blue accent.
+
+Exact Align values live only in
+`plugins/hope/skills/align/scripts/design/tokens.mjs`.
+
+The initial theme comes from the artifact input: `system`, `light`, or `dark`.
+The theme button changes only the open document. It does not write browser
+storage or host configuration, and reload restores the generated initial
+theme. Print uses the Align light surface.
+
 ## Diff artifact color and themes
 
-Generate one artifact that supports light and dark themes.
+Generate one Diff artifact that supports light and dark themes.
 
 The official light palette is `Sand Paper`: a warm near-white page with a
 slightly brighter reading surface.
@@ -578,7 +682,7 @@ success feedback.
 
 Do not add task completion, assignment, comments, or hidden persistence.
 
-## Diff artifact accessibility
+## Hope artifact accessibility
 
 Target WCAG 2.2 AA.
 
@@ -598,22 +702,21 @@ Keep mobile controls at least 44 by 44 CSS pixels.
 
 On a narrow screen, keep status and control labels at 12px or larger.
 
-Supporting labels and interactive summaries use the medium face.
-
-Body prose keeps the light face.
+When an artifact embeds typefaces, supporting labels and interactive summaries
+use its medium face and body prose uses its light face.
 
 Test the final file through `file://`, not only through a web server.
 
-## Diff artifact implementation boundary
+## Hope artifact implementation boundary
 
 Repository, provider, and model content is untrusted.
 
-The Diff renderer inserts it as text and never accepts authored HTML, CSS,
-JavaScript, SVG, or URLs.
+Each renderer inserts authored prose as text and never accepts authored HTML,
+CSS, JavaScript, or SVG. Diff separately validates the source URLs it owns;
+Align renders only `http` and `https` evidence locations as links.
 
-Design code may contain tokens, fixed assets, and small helpers.
+Design code may contain feature-local tokens, fixed assets, and small helpers.
 
-Diff owns its concrete HTML.
-
-Add a shared artifact component only after another real artifact needs the same
-behavior.
+Each feature owns its concrete HTML, tokens, and publication boundary. Keep
+Align and Diff rendering, state, and design sources separate until another
+exact invariant earns shared implementation.

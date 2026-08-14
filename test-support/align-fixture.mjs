@@ -1,0 +1,59 @@
+export function makeAlignInput(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    locale: "ko-KR",
+    theme: "system",
+    title: "실패한 업로드 복구",
+    intent: "중단된 업로드를 감지해 사용자가 데이터 손실 없이 이어서 완료하거나 안전하게 취소할 수 있게 한다.",
+    problem: "업로드 중단 시 파일이 손실되거나 불완전한 상태로 남는다.",
+    success: [
+      "중단 지점부터 이어서 완료할 수 있다.",
+      "데이터 손실 없이 안전하게 취소할 수 있다.",
+    ],
+    boundary: "사용자 기기와 서버가 협력하는 범위에서만 복구를 보장한다.",
+    scope: {
+      included: [
+        "중단된 업로드 감지 및 항목 제공",
+        "중단 지점부터 이어 업로드",
+        "보관 기간 내 임시 데이터 유지",
+      ],
+      excluded: [
+        "다른 사용자의 업로드 인계",
+        "서버 보관 기간 만료 항목 복구",
+        "암호화 키 분실 시 복구",
+      ],
+    },
+    behavior: {
+      steps: [
+        { title: "중단 감지", detail: "업로드 중단을 감지한다." },
+        { title: "복구 항목 유지", detail: "항목과 상태를 목록에 유지한다." },
+        { title: "사용자 선택", detail: "이어 완료하거나 취소한다." },
+      ],
+      outcomes: [
+        { title: "이어 완료", detail: "중단 지점부터 업로드를 완료한다.", kind: "complete" },
+        { title: "안전하게 취소", detail: "임시 데이터를 제거한다.", kind: "cancel" },
+      ],
+    },
+    decisions: [
+      {
+        decision: "자동 감지 기반 복구 우선",
+        reason: "사용자 개입 없이 중단 항목을 감지해 복구 기회를 제공한다.",
+      },
+      {
+        decision: "서버 측 임시 보관",
+        reason: "안정적인 복구를 위해 제한된 기간 동안 데이터를 보관한다.",
+      },
+    ],
+    openChoices: [
+      "재시도 정책 및 백오프 전략",
+      "임시 보관 기간과 항목 보존 조건",
+      "알림 방식",
+    ],
+    evidence: [
+      { label: "업로드 서비스", location: "src/upload/recovery.ts" },
+      { label: "제품 요구", location: "https://example.com/requirements" },
+    ],
+    revisionSummary: "최초 합의",
+    ...overrides,
+  };
+}

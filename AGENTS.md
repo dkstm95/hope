@@ -8,7 +8,7 @@ Before changing Hope:
   folder, build boundary, or delivery structure.
 - Read the matching `plugins/hope/skills/<feature>/SKILL.md` before changing
   feature behavior.
-- Read [docs/design.md](docs/design.md) before changing Diff's visual language.
+- Read [docs/design.md](docs/design.md) before changing a Hope GUI.
 
 ## Writing
 

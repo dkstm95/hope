@@ -1,12 +1,13 @@
 ---
 name: align
-description: Use before implementation when requirements, scope, design, expected behavior, or an important assumption needs shared agreement.
+description: Use before implementation when requirements, scope, design, expected behavior, or an important assumption needs shared agreement and a durable implementation brief.
 ---
 
 # Hope Align
 
-Use the active host session to inspect the task and build a shared understanding
-with the person.
+Use the active host session to inspect the task, build a shared understanding
+with the person, and preserve the agreed intent as one self-contained HTML
+artifact.
 
 Align does not implement the task.
 
@@ -79,7 +80,7 @@ honestly settle them.
 
 ## Decide readiness
 
-Propose implementation only when:
+Complete alignment only when:
 
 - the goal and success conditions are clear enough to judge the result;
 - scope boundaries are visible;
@@ -89,20 +90,88 @@ Propose implementation only when:
 
 Model confidence is not approval.
 
-Wait for an explicit user response before implementation.
+## Preserve the agreement
 
-If the person changes a material decision, teach back the changed understanding
-before continuing.
+When Align starts and reaches agreement, always create or revise its HTML
+artifact. Task size changes the amount of detail, not whether an artifact is
+created.
 
-## Respond
+Read `references/artifact.md` and the complete
+`scripts/align-input-v1.schema.json` before creating structured input.
 
-Keep the exchange conversational.
+Apply the shared Write standard to the artifact language. Put each fact in one
+section only. Omit optional behavior, decisions, implementation choices, and
+evidence when they add no information. Add a behavior flow only when sequence
+or branching is clearer than prose.
 
-Stop asking questions when another answer would not change the work.
+Inspect the project's existing documentation conventions. Use its established
+location for durable design or specification documents when one is clear.
+Otherwise use `docs/alignments/`. Never use a hidden Hope directory for this
+project knowledge.
 
-Show the current understanding and the remaining material choice.
+Choose one stable, descriptive HTML path for one intent. Another implementation
+attempt, branch, or pull request for the same intent does not create another
+artifact.
 
-When alignment is complete, state the agreed implementation boundary and wait
-for approval.
+Write the structured input to a temporary JSON file outside the repository.
+Run the adapter with every argument passed separately, then remove the temporary
+input.
 
-Do not create HTML, a private JSON state, an approval record, or a Polish run.
+Claude Code:
+
+```text
+node "${CLAUDE_PLUGIN_ROOT}/skills/align/scripts/cli.mjs"
+```
+
+Codex:
+
+```text
+node <skill-dir>/scripts/cli.mjs
+```
+
+For Codex, replace `<skill-dir>` with the absolute directory containing this
+file.
+
+Create a first artifact with:
+
+```text
+create --input <draft.json> --output <artifact.html> --root <repository>
+```
+
+If an artifact may already own the same intent, inspect it first:
+
+```text
+inspect --artifact <artifact.html>
+```
+
+A material change to the goal, success, scope, expected behavior, constraint,
+or non-goal creates a new revision in the same artifact. A reversible technical
+choice does not.
+
+Revise only after `inspect` verifies the Hope-owned artifact and only when it is
+still the same intent:
+
+```text
+revise --input <draft.json> --artifact <artifact.html> --expect <digest> --root <repository>
+```
+
+Do not replace an unknown, manually changed, or identity-mismatched artifact.
+Leave it in place and ask the person where to create a new artifact.
+
+Recommend keeping the artifact with the project. Never run `git add`, commit,
+push, publish, or open it automatically.
+
+## Continue into implementation
+
+Report the absolute artifact path and the current revision.
+
+Wait for an explicit user response before implementation. When implementation
+is approved in the same session, run `inspect` again and use its current content
+as the implementation contract before editing files.
+
+In a later session, one explicit artifact path is enough. Inspect it and use
+the current revision; do not guess a global or repository-wide “latest” Align
+artifact.
+
+The artifact does not track implementation progress and Align does not link it
+to a Diff artifact.
