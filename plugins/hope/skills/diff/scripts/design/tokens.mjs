@@ -92,4 +92,5 @@ export const LAYOUT = Object.freeze({
   proseWidth: "80ch",
   tableOfContentsWidth: 230,
   tocBreakpoint: 1100,
+  topbarHeight: 58,
 });

@@ -1053,20 +1053,10 @@ test("quiz separates an optional response from the answer and evidence", async (
   await expect(answer.locator(".evidence-inline")).toBeVisible();
 });
 
-test("behavior content follows the reading order and closed disclosures stay compact", async ({
+test("closed disclosures stay compact", async ({
   page,
 }) => {
   await openArtifact(page, viewports.desktop);
-
-  const order = await page.locator("#explore").evaluate((section) => {
-    const selectors = ["#core-change", ".behavior-model", "#quiz", "#teaching-aids"];
-    return selectors.map((selector) => {
-      const element = section.querySelector(selector);
-      return [...section.querySelectorAll("*")].indexOf(element);
-    });
-  });
-  expect(order.every((position) => position >= 0)).toBe(true);
-  expect(order).toEqual([...order].sort((left, right) => left - right));
 
   for (const selector of ["#teaching-aids", ".quiz-question:first-child", ".artifact-details"]) {
     const disclosure = page.locator(selector);

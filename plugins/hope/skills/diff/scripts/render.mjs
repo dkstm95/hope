@@ -25,9 +25,7 @@ const fontUrls = Object.freeze({
   sansLight: new URL("../../../assets/fonts/HopeSansLight.woff2", import.meta.url),
   sansMedium: new URL("../../../assets/fonts/HopeSansMedium.woff2", import.meta.url),
 });
-const faviconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
-
-const evidenceOccurrences = new WeakMap();
+const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
 const renderedCodeSources = new Set([
   "after-file",
   "before-file",
@@ -123,11 +121,7 @@ function evidenceBlock(
   if (items.length === 0) return "";
   const content = `<div class="evidence-list">
     ${items.map((item) => {
-      let seen = evidenceOccurrences.get(codeRenderer);
-      if (!seen) {
-        seen = new Set();
-        evidenceOccurrences.set(codeRenderer, seen);
-      }
+      const seen = codeRenderer.evidenceTargets;
       const target = evidenceTarget(item);
       const url = trustedCodeUrl(review, item);
       const title = sourceTitle(item, dictionary);
@@ -1258,7 +1252,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   position: relative;
   max-width: ${LAYOUT.documentWidth}px;
   margin: auto;
-  min-height: 58px;
+  min-height: ${LAYOUT.topbarHeight}px;
   padding: 0 ${space5}px;
   align-items: center;
   gap: ${space5}px;
@@ -1370,9 +1364,9 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .toc-desktop {
   position: sticky;
-  top: 58px;
+  top: ${LAYOUT.topbarHeight}px;
   align-self: start;
-  min-height: calc(100vh - 58px);
+  min-height: calc(100vh - ${LAYOUT.topbarHeight}px);
   padding: 42px 0 ${space6}px ${space5}px;
   border-left: 1px solid var(--border);
 }
@@ -2605,11 +2599,11 @@ td:first-child {
   .toc-mobile-panel {
     position: fixed;
     z-index: 20;
-    top: 58px;
+    top: ${LAYOUT.topbarHeight}px;
     right: 0;
     width: min(360px, 100vw);
-    max-height: calc(100vh - 58px);
-    max-height: calc(100dvh - 58px);
+    max-height: calc(100vh - ${LAYOUT.topbarHeight}px);
+    max-height: calc(100dvh - ${LAYOUT.topbarHeight}px);
     overflow-x: hidden;
     overflow-y: auto;
     padding: ${space4}px;
@@ -2918,9 +2912,12 @@ export async function renderReview(review, { fonts } = {}) {
   const fontBytes = fonts ?? Object.fromEntries(await Promise.all(
     Object.entries(fontUrls).map(async ([name, url]) => [name, await readFile(url)]),
   ));
-  const faviconBytes = await readFile(faviconUrl);
-  const faviconDataUrl = `data:image/png;base64,${faviconBytes.toString("base64")}`;
-  const codeRenderer = Object.freeze({ render: renderCodeEvidence });
+  const iconBytes = await readFile(iconUrl);
+  const iconDataUrl = `data:image/png;base64,${iconBytes.toString("base64")}`;
+  const codeRenderer = Object.freeze({
+    evidenceTargets: new Set(),
+    render: renderCodeEvidence,
+  });
   const script = clientScript(dictionary);
   const title = review.title.text;
   const sections = buildSections(review, dictionary, codeRenderer);
@@ -2950,7 +2947,7 @@ export async function renderReview(review, { fonts } = {}) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src data:; font-src data:; style-src 'sha256-${hashSource(styles)}'; script-src 'sha256-${hashSource(script)}'">
-  <link rel="icon" type="image/png" sizes="128x128" href="${faviconDataUrl}">
+  <link rel="icon" type="image/png" sizes="128x128" href="${iconDataUrl}">
   <title>${html(title)} · Hope diff</title>
   <style>${styles}</style>
 </head>
@@ -2958,7 +2955,7 @@ export async function renderReview(review, { fonts } = {}) {
   <a class="skip" href="#review">${html(label(dictionary, "common.skip"))}</a>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand"><img class="brand-icon" src="${faviconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· DIFF</span></div>
+      <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· DIFF</span></div>
       <div class="top-context">
         <svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
