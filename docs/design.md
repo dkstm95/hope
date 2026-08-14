@@ -100,12 +100,9 @@ files, supporting sources, exclusions, and limits.
 The Align artifact should feel like a compact project specification: direct,
 quiet, easy to scan, and complete enough to guide implementation.
 
-The approved visual specification lives under `docs/design/align-v1/`. It is
-the implementation baseline, not loose comparison material.
-
-The Align feature's `scripts/design/tokens.mjs` owns the exact code values used
-to reproduce that baseline. Diff rendering, Diff tokens, and removed Align
-implementations do not constrain it.
+The Align feature's `scripts/design/tokens.mjs` owns its exact visual values.
+Diff rendering, Diff tokens, and removed Align implementations do not constrain
+it.
 
 ## Align artifact structure
 
