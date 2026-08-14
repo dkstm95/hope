@@ -90,7 +90,7 @@
     "text": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?=[\\s\\S]*\\S)[^\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F]+$"
+      "pattern": "^(?=[\\s\\S]*\\S)[^\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]+$"
     },
     "title": {
       "allOf": [

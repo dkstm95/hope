@@ -10,6 +10,11 @@ Align accepts one bounded JSON input that follows
 `scripts/align-input-v1.schema.json`. The runtime validates the same boundary
 without making a model call.
 
+String limits count Unicode code points. Dangerous bidirectional controls and
+malformed Unicode are rejected before rendering. A finished artifact must fit
+the same 4 MiB bound used by `inspect`; an oversized revision fails without
+changing the last readable artifact.
+
 The renderer escapes authored text and produces one self-contained HTML file.
 It makes no network request and keeps the current agreement readable without
 JavaScript. JavaScript adds only theme switching, current-section indication,
@@ -24,11 +29,22 @@ Creation makes missing ordinary directories inside the repository and publishes
 through a new staging file. It never replaces an existing path and never stages,
 commits, pushes, or opens the artifact.
 
+Hope records the verified output-directory identity and checks it throughout
+publication. A detected ancestor replacement stops publication and removes an
+outside file only when Hope can prove that it owns that exact file. This is a
+fail-closed check for observable path changes, not isolation from a same-user
+process that can keep changing the filesystem between operating-system calls.
+
 ## Identity and revisions
 
 Each artifact contains a generated Align ID, its complete revision data, and a
 SHA-256 digest over the whole HTML file. `inspect` verifies that identity and
 digest before returning the current implementation basis.
+
+The repository name shown in the artifact is only a display label. Revision
+authorization uses a separate canonical identity: normalized remote host,
+port, and path when an origin exists, or the canonical repository path when it
+does not.
 
 `revise` requires the digest returned by `inspect`. It verifies the artifact
 again immediately before an atomic same-directory replacement. A symbolic

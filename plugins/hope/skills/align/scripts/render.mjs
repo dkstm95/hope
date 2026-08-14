@@ -22,6 +22,8 @@ const dictionaries = Object.freeze({
     agreedDecisions: "Agreed decisions",
     behavior: "Agreed behavior",
     boundary: "Boundary",
+    cancelOutcome: "cancel",
+    completeOutcome: "complete",
     currentAgreement: "Current agreement",
     earlierRevisions: "earlier revisions",
     evidence: "Basis",
@@ -48,6 +50,8 @@ const dictionaries = Object.freeze({
     agreedDecisions: "합의된 결정",
     behavior: "합의된 동작",
     boundary: "경계",
+    cancelOutcome: "취소",
+    completeOutcome: "완료",
     currentAgreement: "현재 합의",
     earlierRevisions: "개의 이전 리비전",
     evidence: "근거",
@@ -80,6 +84,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function authoredText(value) {
+  return `<bdi dir="auto">${escapeHtml(value)}</bdi>`;
+}
+
 function embeddedJson(value) {
   return JSON.stringify(value)
     .replaceAll("<", "\\u003c")
@@ -98,25 +106,25 @@ function label(dictionary, key) {
 function textList(items, { empty, className = "plain-list" } = {}) {
   if (items.length === 0) return `<p class="empty">${escapeHtml(empty)}</p>`;
   return `<ul class="${className}">${items.map(
-    (item) => `<li>${escapeHtml(item)}</li>`,
+    (item) => `<li>${authoredText(item)}</li>`,
   ).join("")}</ul>`;
 }
 
 function summaryValue(items) {
-  if (items.length === 1) return `<p>${escapeHtml(items[0])}</p>`;
+  if (items.length === 1) return `<p>${authoredText(items[0])}</p>`;
   return textList(items, { className: "summary-list" });
 }
 
 function overview(content, dictionary) {
   return `<section class="overview document-section" id="overview" aria-labelledby="artifact-title">
     <header class="document-head">
-      <h1 id="artifact-title">${escapeHtml(content.title)}</h1>
-      <p class="intent">${escapeHtml(content.intent)}</p>
+      <h1 id="artifact-title">${authoredText(content.title)}</h1>
+      <p class="intent">${authoredText(content.intent)}</p>
     </header>
     <dl class="synopsis">
-      <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd><p>${escapeHtml(content.problem)}</p></dd></div>
+      <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd><p>${authoredText(content.problem)}</p></dd></div>
       <div><dt>${escapeHtml(label(dictionary, "success"))}</dt><dd>${summaryValue(content.success)}</dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd><p>${escapeHtml(content.boundary)}</p></dd></div>
+      <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd><p>${authoredText(content.boundary)}</p></dd></div>
     </dl>
   </section>`;
 }
@@ -154,8 +162,8 @@ function behaviorSection(content, dictionary) {
   const outcomes = outcomeCount === 0 ? "" : `<ul class="behavior-outcomes">${
     content.behavior.outcomes.map((outcome) => `<li class="${outcome.kind === "cancel" ? "cancel" : "complete"}">
       <span class="outcome-mark" aria-hidden="true">${outcome.kind === "cancel" ? "×" : "✓"}</span>
-      <div><strong>${escapeHtml(outcome.title)}</strong>${outcome.detail
-        ? `<p>${escapeHtml(outcome.detail)}</p>`
+      <div><strong>${authoredText(outcome.title)}</strong>${outcome.detail
+        ? `<p>${authoredText(outcome.detail)}</p>`
         : ""}</div>
     </li>`).join("")
   }</ul>`;
@@ -164,8 +172,8 @@ function behaviorSection(content, dictionary) {
     <div class="behavior-layout${outcomeCount === 0 ? " behavior-layout-single" : ""}">
       <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
         <span class="step-number">${index + 1}</span>
-        <strong>${escapeHtml(step.title)}</strong>
-        ${step.detail ? `<p>${escapeHtml(step.detail)}</p>` : ""}
+        <strong>${authoredText(step.title)}</strong>
+        ${step.detail ? `<p>${authoredText(step.detail)}</p>` : ""}
       </li>`).join("")}</ol>
       ${behaviorConnector(outcomeCount)}
       ${outcomes}
@@ -179,8 +187,8 @@ function agreementSection(content, dictionary) {
     <h3 class="subheading">${escapeHtml(label(dictionary, "agreedDecisions"))}</h3>
     <ol class="decision-list">${content.decisions.map((decision, index) => `<li>
       <span class="decision-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
-      <h3>${escapeHtml(decision.decision)}</h3>
-      <p>${escapeHtml(decision.reason)}</p>
+      <h3>${authoredText(decision.decision)}</h3>
+      <p>${authoredText(decision.reason)}</p>
     </li>`).join("")}</ol>
   </div>`;
   const choiceColumn = content.openChoices.length === 0 ? "" : `<div>
@@ -196,9 +204,9 @@ function agreementSection(content, dictionary) {
 
 function evidenceLocation(item) {
   if (/^https?:\/\//u.test(item.location)) {
-    return `<a href="${escapeHtml(item.location)}">${escapeHtml(item.location)}</a>`;
+    return `<a href="${escapeHtml(item.location)}">${authoredText(item.location)}</a>`;
   }
-  return `<code>${escapeHtml(item.location)}</code>`;
+  return `<code>${authoredText(item.location)}</code>`;
 }
 
 function evidenceSection(content, dictionary) {
@@ -206,34 +214,47 @@ function evidenceSection(content, dictionary) {
   return `<section class="body-section document-section" id="evidence" aria-labelledby="evidence-title">
     <h2 id="evidence-title">${escapeHtml(label(dictionary, "evidence"))}</h2>
     <dl class="evidence-list">${content.evidence.map((item) => `<div>
-      <dt>${escapeHtml(item.label)}</dt>
+      <dt>${authoredText(item.label)}</dt>
       <dd>${evidenceLocation(item)}</dd>
     </div>`).join("")}</dl>
   </section>`;
 }
 
 function compactRevisionContent(content, dictionary) {
+  const detail = (title, value) => `${authoredText(title)}${value
+    ? ` <span aria-hidden="true">—</span> ${authoredText(value)}`
+    : ""}`;
   const behavior = content.behavior ? `<div>
     <dt>${escapeHtml(label(dictionary, "behavior"))}</dt>
-    <dd>${textList(content.behavior.steps.map((step) => (
-      step.detail ? `${step.title} — ${step.detail}` : step.title
-    )))}</dd>
+    <dd><ul class="plain-list">${content.behavior.steps.map(
+      (step) => `<li>${detail(step.title, step.detail)}</li>`,
+    ).join("")}${content.behavior.outcomes.map((outcome) => `<li>${detail(
+      `${outcome.title} (${label(
+        dictionary,
+        outcome.kind === "cancel" ? "cancelOutcome" : "completeOutcome",
+      )})`,
+      outcome.detail,
+    )}</li>`).join("")}</ul></dd>
   </div>` : "";
   const decisions = content.decisions.length === 0 ? "" : `<div>
     <dt>${escapeHtml(label(dictionary, "agreedDecisions"))}</dt>
-    <dd>${textList(content.decisions.map(
-      (decision) => `${decision.decision} — ${decision.reason}`,
-    ))}</dd>
+    <dd><ul class="plain-list">${content.decisions.map(
+      (decision) => `<li>${detail(decision.decision, decision.reason)}</li>`,
+    ).join("")}</ul></dd>
   </div>`;
   const openChoices = content.openChoices.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "openChoices"))}</dt><dd>${textList(content.openChoices)}</dd></div>`;
+  const evidence = content.evidence.length === 0 ? "" : `<div>
+    <dt>${escapeHtml(label(dictionary, "evidence"))}</dt>
+    <dd><ul class="plain-list">${content.evidence.map((item) => `<li><strong>${authoredText(item.label)}</strong><br>${evidenceLocation(item)}</li>`).join("")}</ul></dd>
+  </div>`;
   return `<dl class="revision-content">
-    <div><dt>${escapeHtml(label(dictionary, "overview"))}</dt><dd><strong>${escapeHtml(content.title)}</strong><p>${escapeHtml(content.intent)}</p></dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${escapeHtml(content.problem)}</dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "overview"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(content.intent)}</p></dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredText(content.problem)}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "success"))}</dt><dd>${textList(content.success)}</dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${escapeHtml(content.boundary)}</dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(content.boundary)}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.scope.included, { empty: label(dictionary, "noIncluded") })}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "excluded"))}</dt><dd>${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded") })}</dd></div>
-    ${behavior}${decisions}${openChoices}
+    ${behavior}${decisions}${openChoices}${evidence}
   </dl>`;
 }
 
@@ -244,8 +265,8 @@ function railRevision(revision, index, data, dictionary, idSuffix) {
     <div class="revision-popup">${compactRevisionContent(revision.content, dictionary)}</div>
   </details>`;
   return `<li class="${current ? "current" : "past"}">
-    <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>r${revision.number} · ${escapeHtml(current ? label(dictionary, "currentAgreement") : revision.summary)}</strong><time datetime="${escapeHtml(revision.agreedAt)}">${escapeHtml(revision.agreedAt.slice(0, 10))}</time></div>
-    <p>${escapeHtml(revision.summary)}</p>${details ? `
+    <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>r${revision.number} · ${current ? escapeHtml(label(dictionary, "currentAgreement")) : authoredText(revision.summary)}</strong><time datetime="${escapeHtml(revision.agreedAt)}">${escapeHtml(revision.agreedAt.slice(0, 10))}</time></div>
+    <p>${authoredText(revision.summary)}</p>${details ? `
     ${details}` : ""}
   </li>`;
 }
@@ -272,6 +293,10 @@ function railHistory(data, dictionary, idSuffix = "") {
       idSuffix,
     )).join("")}</ol></details>`}
   </section>`;
+}
+
+function repositoryMark(repository, className) {
+  return `<span class="${className}"><svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>${authoredText(repository)}</span></span>`;
 }
 
 function themeVariables(colors) {
@@ -348,8 +373,8 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .topbar-inner { max-width: ${LAYOUT.documentWidth}px; height: ${LAYOUT.topbarInnerHeight}px; margin: 0 auto; padding: 0 ${LAYOUT.topbarWideGutter}px; display: flex; align-items: center; gap: ${space5}px; }
 .brand { flex: none; display: flex; align-items: center; gap: ${space2}px; font-size: ${TYPE.brand.wide.fontSize}px; line-height: ${TYPE.brand.wide.lineHeight}; font-weight: 700; letter-spacing: -.025em; white-space: nowrap; }
 .brand-icon { flex: none; width: 24px; height: 24px; border-radius: 6px; }
-.repository { min-width: 0; display: flex; align-items: center; gap: ${space2}px; color: var(--text); }
-.repository span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repository, .mobile-repository { min-width: 0; display: flex; align-items: center; gap: ${space2}px; color: var(--text); }
+.repository > span, .mobile-repository > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repository-icon { flex: none; width: 16px; height: 16px; stroke: var(--muted); }
 .status { flex: none; padding: ${space1}px ${space2}px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)); border-radius: 4px; background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
 .top-actions { margin-left: auto; display: flex; align-items: center; gap: ${space2}px; }
@@ -359,6 +384,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .theme-icon, .navigation-icon { width: 20px; height: 20px; stroke: currentColor; }
 .theme-icon[hidden] { display: none; }
 .mobile-navigation { display: none; }
+.mobile-repository { display: none; }
 .mobile-navigation > summary { list-style: none; }
 .mobile-navigation > summary::-webkit-details-marker { display: none; }
 .layout { max-width: ${LAYOUT.documentWidth}px; min-height: calc(100vh - ${LAYOUT.topbarHeight}px); margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) ${LAYOUT.tableOfContentsWidth}px; }
@@ -437,6 +463,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .mobile-navigation { display: block; }
   .mobile-navigation-panel { position: fixed; z-index: 11; top: ${LAYOUT.topbarHeight}px; right: 0; width: min(360px, 100vw); max-height: calc(100dvh - ${LAYOUT.topbarHeight}px); overflow: auto; padding: ${space5}px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); background: var(--panel); box-shadow: -12px 16px 32px color-mix(in srgb, var(--text) 14%, transparent); }
   .mobile-navigation-panel .toc { padding-bottom: ${space5}px; }
+  .mobile-navigation-panel .mobile-repository { margin-bottom: ${space5}px; padding-bottom: ${space4}px; border-bottom: 1px solid var(--border); }
   .mobile-navigation-panel .toc ol { display: grid; gap: ${space1}px; }
   .mobile-navigation-panel .toc a { padding-block: ${space1}px; }
   .mobile-navigation-panel .rail-history { padding-top: ${space5}px; }
@@ -474,6 +501,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .brand-icon { width: 20px; height: 20px; border-radius: 5px; }
   .brand-product { display: none; }
   .repository { display: none; }
+  .mobile-navigation-panel .mobile-repository { display: flex; }
   .status { max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .synopsis > div { grid-template-columns: 1fr; gap: ${space1}px; padding-inline: 0; }
 }
@@ -542,6 +570,7 @@ export function renderAlignArtifact(data, { digest }) {
   const mobileNavigation = `<details class="mobile-navigation">
     <summary aria-label="${escapeHtml(label(dictionary, "navigation"))}" title="${escapeHtml(label(dictionary, "navigation"))}"><svg class="navigation-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h10"></path><circle cx="18" cy="18" r="2.5"></circle></svg></summary>
     <div class="mobile-navigation-panel">
+      ${repositoryMark(data.repository, "mobile-repository")}
       ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}"><h2>${escapeHtml(label(dictionary, "toc"))}</h2>${toc}</nav>` : ""}
       ${railHistory(data, dictionary, "-mobile")}
     </div>
@@ -572,7 +601,7 @@ export function renderAlignArtifact(data, { digest }) {
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· ALIGN</span></div>
-      <span class="repository"><svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>${escapeHtml(data.repository)}</span></span>
+      ${repositoryMark(data.repository, "repository")}
       <span class="status">r${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))}</span>
       <div class="top-actions">
         <button class="theme-button" id="theme-toggle" type="button" aria-label="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}" title="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}">

@@ -10,6 +10,7 @@ import {
   unlink,
 } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import { renderAlignArtifact } from "./render.mjs";
@@ -17,6 +18,7 @@ import { renderAlignArtifact } from "./render.mjs";
 const execFileAsync = promisify(execFile);
 const INPUT_MAXIMUM_BYTES = 256 * 1024;
 const ARTIFACT_MAXIMUM_BYTES = 4 * 1024 * 1024;
+const BIDI_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
 const DIGEST_PLACEHOLDER = "0".repeat(64);
 const DIGEST_META_PATTERN = /(<meta name="hope-align-digest" content=")[a-f0-9]{64}(">)/u;
@@ -55,11 +57,26 @@ function text(value, path, maximumLength = 4_000) {
   if (typeof value !== "string") throw new TypeError(`${path} must be text`);
   const normalized = value.trim();
   if (normalized.length === 0) throw new TypeError(`${path} must not be empty`);
-  if (normalized.length > maximumLength) {
+  if ([...normalized].length > maximumLength) {
     throw new TypeError(`${path} exceeds ${maximumLength} characters`);
+  }
+  for (let index = 0; index < normalized.length; index += 1) {
+    const code = normalized.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = normalized.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) {
+        throw new TypeError(`${path} contains malformed Unicode`);
+      }
+      index += 1;
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      throw new TypeError(`${path} contains malformed Unicode`);
+    }
   }
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(normalized)) {
     throw new TypeError(`${path} contains unsupported control characters`);
+  }
+  if (BIDI_CONTROLS.test(normalized)) {
+    throw new TypeError(`${path} contains a bidirectional control character`);
   }
   return normalized;
 }
@@ -281,6 +298,12 @@ function sealHtml(source) {
   });
 }
 
+function assertArtifactSize(bytes) {
+  if (bytes.length > ARTIFACT_MAXIMUM_BYTES) {
+    throw new Error(`Align artifact exceeds ${ARTIFACT_MAXIMUM_BYTES} bytes`);
+  }
+}
+
 export function verifyAlignHtml(source) {
   const match = source.match(DIGEST_META_PATTERN);
   if (!match || !DIGEST_PATTERN.test(match[0].slice(match[1].length, -match[2].length))) {
@@ -305,6 +328,13 @@ function validateArtifactData(value) {
   }
   if (typeof value.repository !== "string" || value.repository.length === 0) {
     throw new Error("Align artifact repository is invalid");
+  }
+  if (
+    typeof value.repositoryIdentity !== "string"
+    || value.repositoryIdentity.length === 0
+    || value.repositoryIdentity.length > 4_000
+  ) {
+    throw new Error("Align artifact repository identity is invalid");
   }
   if (!["en-US", "ko-KR"].includes(value.locale)) {
     throw new Error("Align artifact locale is invalid");
@@ -379,27 +409,68 @@ async function repositoryRoot(requestedRoot) {
   return await realpath(stdout.trim());
 }
 
-function repositoryFromRemote(remote, root) {
-  const normalized = remote.trim().replace(/\.git$/u, "");
-  const scp = normalized.match(/^[^@]+@[^:]+:(.+)$/u)?.[1];
-  let path = scp;
-  if (!path) {
-    try {
-      path = new URL(normalized).pathname;
-    } catch {
-      path = normalized;
-    }
-  }
-  const parts = String(path).split(/[\\/]/u).filter(Boolean);
+function repositoryPath(value) {
+  return value.replace(/^\/+|\/+$/gu, "").replace(/\.git$/iu, "");
+}
+
+function repositoryDisplay(path, root) {
+  const parts = path.split(/[\\/]/u).filter(Boolean);
   return parts.length >= 2 ? parts.slice(-2).join("/") : basename(root);
 }
 
-async function repositoryLabel(root) {
+function normalizedPort(url) {
+  if (!url.port) return "";
+  const defaults = new Map([
+    ["http:", "80"],
+    ["https:", "443"],
+    ["ssh:", "22"],
+  ]);
+  return defaults.get(url.protocol) === url.port ? "" : `:${url.port}`;
+}
+
+async function repositoryFromRemote(remote, root) {
+  const normalized = remote.trim();
+  const scp = normalized.match(/^(?:[^@/\s]+@)?([^:/\s]+):(.+)$/u);
+  if (scp && !normalized.includes("://")) {
+    const path = repositoryPath(scp[2]);
+    return Object.freeze({
+      identity: `remote://${scp[1].toLowerCase()}/${path}`,
+      label: repositoryDisplay(path, root),
+    });
+  }
+  try {
+    const url = new URL(normalized);
+    if (url.protocol !== "file:") {
+      const path = repositoryPath(url.pathname);
+      const authority = `${url.hostname.toLowerCase()}${normalizedPort(url)}`;
+      return Object.freeze({
+        identity: `remote://${authority}/${path}`,
+        label: repositoryDisplay(path, root),
+      });
+    }
+    const local = await realpath(url);
+    return Object.freeze({
+      identity: pathToFileURL(local).href,
+      label: repositoryDisplay(local, root),
+    });
+  } catch {
+    const local = await realpath(resolve(root, normalized));
+    return Object.freeze({
+      identity: pathToFileURL(local).href,
+      label: repositoryDisplay(local, root),
+    });
+  }
+}
+
+async function repositoryMetadata(root) {
   try {
     const { stdout } = await runGit(root, ["remote", "get-url", "origin"]);
-    return repositoryFromRemote(stdout, root);
+    return await repositoryFromRemote(stdout, root);
   } catch {
-    return basename(root);
+    return Object.freeze({
+      identity: pathToFileURL(root).href,
+      label: basename(root),
+    });
   }
 }
 
@@ -410,6 +481,13 @@ function insideRoot(root, target) {
     && !isAbsolute(fromRoot);
 }
 
+function sameDirectory(actual, expected) {
+  return actual.isDirectory()
+    && !actual.isSymbolicLink()
+    && actual.dev === expected.dev
+    && actual.ino === expected.ino;
+}
+
 async function ensureSafeParent(root, target, { create = false } = {}) {
   const parent = dirname(target);
   if (!insideRoot(root, parent)) {
@@ -417,6 +495,12 @@ async function ensureSafeParent(root, target, { create = false } = {}) {
   }
   const fromRoot = relative(root, parent);
   let current = root;
+  const components = [];
+  const rootInfo = await lstat(root);
+  if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) {
+    throw new Error("Hope could not verify the target repository directory");
+  }
+  components.push(Object.freeze({ identity: rootInfo, path: root }));
   for (const part of fromRoot.split(sep).filter(Boolean)) {
     current = join(current, part);
     try {
@@ -431,12 +515,39 @@ async function ensureSafeParent(root, target, { create = false } = {}) {
       if (!info.isDirectory() || info.isSymbolicLink()) {
         throw new Error("Hope could not verify the Align artifact directory");
       }
+      components.push(Object.freeze({ identity: info, path: current }));
+      continue;
     }
+    components.push(Object.freeze({ identity: await lstat(current), path: current }));
   }
-  return parent;
+  const canonicalRoot = await realpath(root);
+  const canonicalParent = await realpath(parent);
+  if (canonicalRoot !== root || !insideRoot(root, canonicalParent)) {
+    throw new Error("Align artifact output must stay inside the target repository");
+  }
+  return Object.freeze({ components: Object.freeze(components), path: parent });
 }
 
-async function resolveArtifactTarget(root, requested, options, requestedRoot = root) {
+async function verifySafeParent(root, target, expected) {
+  const current = await ensureSafeParent(root, target);
+  if (
+    current.path !== expected.path
+    || current.components.length !== expected.components.length
+    || current.components.some((component, index) => (
+      component.path !== expected.components[index].path
+      || !sameDirectory(component.identity, expected.components[index].identity)
+    ))
+  ) {
+    throw new Error("Align artifact output directory changed during publication");
+  }
+}
+
+async function publicationCheckpoint(root, target, parent, dependencies, step) {
+  await dependencies.publicationCheckpoint?.(step);
+  await verifySafeParent(root, target, parent);
+}
+
+function resolveArtifactTarget(root, requested, requestedRoot = root) {
   let target;
   if (isAbsolute(requested)) {
     const unresolvedRoot = resolve(requestedRoot);
@@ -451,7 +562,6 @@ async function resolveArtifactTarget(root, requested, options, requestedRoot = r
   if (extname(target).toLowerCase() !== ".html") {
     throw new Error("Align artifact output must use an .html extension");
   }
-  await ensureSafeParent(root, target, options);
   return target;
 }
 
@@ -495,7 +605,8 @@ async function unlinkIfOwned(path, expected) {
   }
 }
 
-async function publishNew(target, bytes) {
+async function publishNew(root, target, parent, bytes, dependencies) {
+  await publicationCheckpoint(root, target, parent, dependencies, "before-stage");
   try {
     await lstat(target);
     throw new Error(`Hope did not replace the existing file: ${target}`);
@@ -510,8 +621,10 @@ async function publishNew(target, bytes) {
   let linked = false;
   try {
     identity = await writeStaging(staging, bytes);
+    await publicationCheckpoint(root, target, parent, dependencies, "before-link");
     await link(staging, target);
     linked = true;
+    await publicationCheckpoint(root, target, parent, dependencies, "after-link");
     const published = await lstat(target);
     if (!sameFile(published, identity) || published.nlink !== 2) {
       throw new Error("The Align artifact changed during publication");
@@ -521,6 +634,7 @@ async function publishNew(target, bytes) {
     if (!sameFile(final, identity) || final.nlink !== 1) {
       throw new Error("The Align artifact changed during publication");
     }
+    await publicationCheckpoint(root, target, parent, dependencies, "after-publication");
     await syncDirectory(dirname(target));
   } catch (error) {
     if (linked) await unlinkIfOwned(target, identity).catch(() => {});
@@ -529,19 +643,23 @@ async function publishNew(target, bytes) {
   }
 }
 
-async function replaceOwned(target, original, bytes) {
+async function replaceOwned(root, target, parent, original, bytes, dependencies) {
   const staging = join(
     dirname(target),
     `.${basename(target)}.hope-${randomBytes(12).toString("hex")}.tmp`,
   );
   let stagingIdentity;
   try {
+    await publicationCheckpoint(root, target, parent, dependencies, "before-stage");
     stagingIdentity = await writeStaging(staging, bytes);
+    await publicationCheckpoint(root, target, parent, dependencies, "before-reread");
     const current = await readAlignArtifactFile(target);
     if (!sameFile(current.identity, original.identity) || current.digest !== original.digest) {
       throw new Error("Align artifact changed before Hope could revise it");
     }
+    await publicationCheckpoint(root, target, parent, dependencies, "before-replace");
     await rename(staging, target);
+    await publicationCheckpoint(root, target, parent, dependencies, "after-replace");
     const final = await lstat(target);
     if (!sameFile(final, stagingIdentity) || final.nlink !== 1) {
       throw new Error("Hope could not verify the revised Align artifact");
@@ -570,25 +688,28 @@ export async function createAlignArtifact({ inputPath, outputPath, root }, depen
   const requestedRoot = root ?? process.cwd();
   const resolvedRoot = await repositoryRoot(requestedRoot);
   const input = await readAlignInput(inputPath);
-  const target = await resolveArtifactTarget(
+  const target = resolveArtifactTarget(
     resolvedRoot,
     outputPath,
-    { create: true },
     requestedRoot,
   );
   const now = dependencies.now?.() ?? new Date();
   const agreedAt = now.toISOString();
+  const repository = await repositoryMetadata(resolvedRoot);
   const data = Object.freeze({
     schemaVersion: 1,
     alignId: (dependencies.randomUUID ?? randomUUID)(),
-    repository: await repositoryLabel(resolvedRoot),
+    repository: repository.label,
+    repositoryIdentity: repository.identity,
     locale: input.locale,
     theme: input.theme,
     createdAt: agreedAt,
     revisions: Object.freeze([artifactRevision(1, agreedAt, input)]),
   });
   const sealed = sealHtml(renderAlignArtifact(data, { digest: DIGEST_PLACEHOLDER }));
-  await publishNew(target, sealed.bytes);
+  assertArtifactSize(sealed.bytes);
+  const parent = await ensureSafeParent(resolvedRoot, target, { create: true });
+  await publishNew(resolvedRoot, target, parent, sealed.bytes, dependencies);
   return resultFor(target, data, sealed.digest);
 }
 
@@ -624,12 +745,12 @@ export async function reviseAlignArtifact({
   }
   const requestedRoot = root ?? process.cwd();
   const resolvedRoot = await repositoryRoot(requestedRoot);
-  const target = await resolveArtifactTarget(
+  const target = resolveArtifactTarget(
     resolvedRoot,
     artifactPath,
-    { create: false },
     requestedRoot,
   );
+  const parent = await ensureSafeParent(resolvedRoot, target);
   const original = await readAlignArtifactFile(target);
   if (original.identity.nlink !== 1) {
     throw new Error("Hope did not revise a hard-linked Align artifact");
@@ -637,8 +758,8 @@ export async function reviseAlignArtifact({
   if (original.digest !== expectedDigest) {
     throw new Error("Align artifact digest does not match the inspected revision");
   }
-  const currentRepository = await repositoryLabel(resolvedRoot);
-  if (original.data.repository !== currentRepository) {
+  const currentRepository = await repositoryMetadata(resolvedRoot);
+  if (original.data.repositoryIdentity !== currentRepository.identity) {
     throw new Error("Align artifact belongs to a different repository");
   }
   const input = await readAlignInput(inputPath, {
@@ -658,6 +779,14 @@ export async function reviseAlignArtifact({
     revisions: Object.freeze([...original.data.revisions, revision]),
   });
   const sealed = sealHtml(renderAlignArtifact(data, { digest: DIGEST_PLACEHOLDER }));
-  await replaceOwned(target, original, sealed.bytes);
+  assertArtifactSize(sealed.bytes);
+  await replaceOwned(
+    resolvedRoot,
+    target,
+    parent,
+    original,
+    sealed.bytes,
+    dependencies,
+  );
   return resultFor(target, data, sealed.digest);
 }

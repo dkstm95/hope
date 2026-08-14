@@ -46,7 +46,17 @@ test.beforeAll(async () => {
     "git@github.com:acme/storage.git",
   ]);
   const artifactPath = join(temporaryRoot, "docs", "alignments", "upload-recovery.html");
-  const firstInput = await writeInput("first.json", makeAlignInput());
+  const firstInput = await writeInput("first.json", makeAlignInput({
+    behavior: {
+      ...makeAlignInput().behavior,
+      outcomes: [{
+        title: "이전 결과 전용",
+        detail: "이전 리비전에서만 합의한 결과다.",
+        kind: "cancel",
+      }],
+    },
+    evidence: [{ label: "이전 근거 전용", location: "docs/previous.md" }],
+  }));
   const created = await createAlignArtifact(
     { inputPath: firstInput, outputPath: artifactPath, root: temporaryRoot },
     {
@@ -114,6 +124,10 @@ test("Align presents one compact current agreement with secondary history", asyn
   expect(geometry.topbarHeight).toBe(58);
   await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
   await expect(page.locator(".decision-number")).toHaveText(["01", "02"]);
+  await page.locator("#revision-1 > summary").click();
+  await expect(page.locator("#revision-1")).toContainText("이전 결과 전용 (취소)");
+  await expect(page.locator("#revision-1")).toContainText("이전 근거 전용");
+  await expect(page.locator("#revision-1")).toContainText("docs/previous.md");
   await expectNoOverflow(page);
 });
 
@@ -153,6 +167,8 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
   expect(navigationBox.width).toBe(44);
   await navigationButton.click();
   await expect(navigation).toHaveAttribute("open", "");
+  await expect(navigation.locator(".mobile-repository")).toBeVisible();
+  await expect(navigation.locator(".mobile-repository")).toContainText("acme/storage");
   await expect(navigation.locator(".rail-history")).toContainText("의도 이력");
   await navigation.locator('a[href="#agreement"]').click();
   await expect(navigation).not.toHaveAttribute("open", "");

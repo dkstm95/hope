@@ -69,7 +69,7 @@ After all four WOFF2 files exist, replace their primary family, full, unique,
 PostScript, and typographic names:
 
 ```text
-python3 tools/rename-diff-fonts.py
+python3 tools/rename-hope-fonts.py
 ```
 
 The script requires fontTools `4.62.1`.
