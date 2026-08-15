@@ -37,7 +37,7 @@ revisions in the same file, and serves as the implementation contract.
 > Hope recommends keeping the brief with the project but never stages it
 > automatically.
 
-![Hope Align result showing the current agreement, scope, behavior, and intent history](assets/readme/hope-align-en.png)
+![Hope Align result showing the current agreement, scope, behavior, and version history](assets/readme/hope-align-en.png)
 
 | Agreed behavior · dark | Decisions and implementation choices · light |
 | --- | --- |

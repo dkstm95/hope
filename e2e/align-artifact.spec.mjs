@@ -51,7 +51,7 @@ test.beforeAll(async () => {
       ...makeAlignInput().behavior,
       outcomes: [{
         title: "이전 결과 전용",
-        detail: "이전 리비전에서만 합의한 결과다.",
+        detail: "이전 버전에서만 합의한 결과다.",
         kind: "cancel",
       }],
     },
@@ -90,8 +90,13 @@ test("Align presents one compact current agreement with secondary history", asyn
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("실패한 업로드 복구");
   await expect(page.locator(".brand-icon")).toBeVisible();
-  await expect(page.locator(".status")).toHaveText("r2 · 현재 합의");
+  await expect(page.locator(".status")).toHaveText("v2 · 현재 합의");
   await expect(page.locator(".rail")).toBeVisible();
+  await expect(page.locator(".rail .rail-history h2")).toHaveText("버전 이력");
+  await expect(page.locator(".rail .rail-history .current .revision-head strong"))
+    .toHaveText(/^v2 · 현재 합의/u);
+  await expect(page.locator(".rail .rail-history .past .revision-head strong"))
+    .toHaveText(/^v1 ·/u);
   await expect(page.locator(".rail .rail-history .current")).toContainText("복구 기간과 경계를 명확히 함");
   await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#agreement")).toContainText("자동 감지 기반 복구 우선");
@@ -169,7 +174,7 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
   await expect(navigation).toHaveAttribute("open", "");
   await expect(navigation.locator(".mobile-repository")).toBeVisible();
   await expect(navigation.locator(".mobile-repository")).toContainText("acme/storage");
-  await expect(navigation.locator(".rail-history")).toContainText("의도 이력");
+  await expect(navigation.locator(".rail-history")).toContainText("버전 이력");
   await navigation.locator('a[href="#agreement"]').click();
   await expect(navigation).not.toHaveAttribute("open", "");
   await expect(page.locator("#agreement")).toBeFocused();

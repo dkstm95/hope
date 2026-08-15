@@ -31,7 +31,7 @@
 > [!NOTE]
 > 프로젝트와 함께 보관하도록 권하지만 자동으로 스테이징하지 않습니다.
 
-![현재 합의, 범위, 동작, 의도 이력을 보여 주는 Hope Align 결과](assets/readme/hope-align-ko.png)
+![현재 합의, 범위, 동작, 버전 이력을 보여 주는 Hope Align 결과](assets/readme/hope-align-ko.png)
 
 | 합의된 동작 · 다크 | 결정과 구현 선택 · 라이트 |
 | --- | --- |
