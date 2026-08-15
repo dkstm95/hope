@@ -159,10 +159,10 @@ Show each fact once, in this order:
 5. agreed decisions with visible reasons and choices left to implementation;
 6. supporting evidence, only when it adds a source that matters.
 
-Keep earlier intent revisions in the secondary history navigation. Do not
-repeat intent history at the bottom of the agreement.
+Keep earlier versions in the secondary version history navigation. Do not
+repeat version history at the bottom of the agreement.
 
-Keep repository identity, current revision, and theme control in the compact
+Keep repository identity, current version, and theme control in the compact
 product bar. Use **current agreement**, not language that implies an external
 approval workflow.
 
@@ -394,19 +394,19 @@ in Hope's language.
 ## Align artifact layout
 
 Use one linear document. Give the current agreement most of the page and keep
-intent history secondary.
+version history secondary.
 
 On a wide screen, place a narrow rail beside the document. Show a table of
-contents only when it improves navigation. Keep the current revision and at
-most one prior revision summary visible. Open earlier revision detail from that
+contents only when it improves navigation. Keep the current version and at
+most one prior version summary visible. Open earlier version detail from that
 history instead of repeating it in the document.
 
 On a narrow screen, use one column. Put one 44-pixel navigation control to the
-right of the theme control and open the table of contents and intent history in
+right of the theme control and open the table of contents and version history in
 a bounded right-side panel. Stack included scope before excluded scope, and
 turn a horizontal behavior flow into the same ordered vertical sequence.
 
-In the product bar, use one gap between the brand, repository, revision, and
+In the product bar, use one gap between the brand, repository, version, and
 action group. Use the next smaller gap only between controls inside the action
 group. Do not add one-off margins to an individual product-bar item.
 

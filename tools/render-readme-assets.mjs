@@ -541,7 +541,7 @@ function diffAnalysis(snapshot) {
     locale: snapshot.settings.locale,
     title: {
       basis: "code",
-      evidence: [ref("source-4", 6, 8), ref("source-5", 6, 8)],
+      evidence: [ref("source-4", 6, 8), ref("source-5", 5, 8)],
       text: t.title,
     },
     purpose: {

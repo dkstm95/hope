@@ -125,7 +125,9 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
   assert.match(first, /name="hope-align-design-version" content="2"/u);
-  assert.match(first, /r1 · 현재 합의/u);
+  assert.match(first, /v1 · 현재 합의/u);
+  assert.match(first, />버전 이력</u);
+  assert.doesNotMatch(first, /의도 이력/u);
   assert.match(first, /aria-label="다크 모드로 전환"/u);
   assert.match(first, /class="outcome-mark" aria-hidden="true">×</u);
   assert.match(first, /class="behavior-connector"/u);
@@ -236,7 +238,7 @@ test("revise appends intent in the same artifact and rejects stale or edited sta
       ...makeAlignInput().behavior,
       outcomes: [{
         title: "이전 결과 전용",
-        detail: "이전 리비전에서만 합의한 결과다.",
+        detail: "이전 버전에서만 합의한 결과다.",
         kind: "cancel",
       }],
     },
@@ -274,11 +276,12 @@ test("revise appends intent in the same artifact and rejects stale or edited sta
   );
   assert.equal(inspected.history.length, 2);
   const html = await readFile(outputPath, "utf8");
-  assert.match(html, /r2 · 현재 합의/u);
+  assert.match(html, /v2 · 현재 합의/u);
+  assert.match(html, /v1 · <bdi dir="auto">최초 합의/u);
   assert.match(html, /id="revision-1"/u);
   assert.match(html, /변경 내용 보기/u);
   assert.match(html, /이전 결과 전용 \(취소\)/u);
-  assert.match(html, /이전 리비전에서만 합의한 결과다/u);
+  assert.match(html, /이전 버전에서만 합의한 결과다/u);
   assert.match(html, /이전 근거 전용/u);
   assert.match(html, /docs\/previous\.md/u);
 

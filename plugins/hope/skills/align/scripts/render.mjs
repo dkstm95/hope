@@ -25,13 +25,13 @@ const dictionaries = Object.freeze({
     cancelOutcome: "cancel",
     completeOutcome: "complete",
     currentAgreement: "Current agreement",
-    earlierRevisions: "earlier revisions",
+    earlierRevisions: "earlier versions",
     evidence: "Basis",
     excluded: "Out of scope",
-    history: "Intent history",
+    history: "Version history",
     included: "In scope",
     menu: "Contents",
-    navigation: "Contents and intent history",
+    navigation: "Contents and version history",
     noExcluded: "No explicit exclusion was needed.",
     noIncluded: "No separate included item was needed.",
     openChoices: "Choose during implementation",
@@ -53,13 +53,13 @@ const dictionaries = Object.freeze({
     cancelOutcome: "취소",
     completeOutcome: "완료",
     currentAgreement: "현재 합의",
-    earlierRevisions: "개의 이전 리비전",
+    earlierRevisions: "개의 이전 버전",
     evidence: "근거",
     excluded: "제외 범위",
-    history: "의도 이력",
+    history: "버전 이력",
     included: "포함 범위",
     menu: "목차",
-    navigation: "목차와 의도 이력",
+    navigation: "목차와 버전 이력",
     noExcluded: "명시적으로 제외한 범위가 없습니다.",
     noIncluded: "별도로 포함한 범위가 없습니다.",
     openChoices: "구현 중 선택",
@@ -265,7 +265,7 @@ function railRevision(revision, index, data, dictionary, idSuffix) {
     <div class="revision-popup">${compactRevisionContent(revision.content, dictionary)}</div>
   </details>`;
   return `<li class="${current ? "current" : "past"}">
-    <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>r${revision.number} · ${current ? escapeHtml(label(dictionary, "currentAgreement")) : authoredText(revision.summary)}</strong><time datetime="${escapeHtml(revision.agreedAt)}">${escapeHtml(revision.agreedAt.slice(0, 10))}</time></div>
+    <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>v${revision.number} · ${current ? escapeHtml(label(dictionary, "currentAgreement")) : authoredText(revision.summary)}</strong><time datetime="${escapeHtml(revision.agreedAt)}">${escapeHtml(revision.agreedAt.slice(0, 10))}</time></div>
     <p>${authoredText(revision.summary)}</p>${details ? `
     ${details}` : ""}
   </li>`;
@@ -602,7 +602,7 @@ export function renderAlignArtifact(data, { digest }) {
     <div class="topbar-inner">
       <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· ALIGN</span></div>
       ${repositoryMark(data.repository, "repository")}
-      <span class="status">r${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))}</span>
+      <span class="status">v${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))}</span>
       <div class="top-actions">
         <button class="theme-button" id="theme-toggle" type="button" aria-label="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}" title="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}">
           <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${data.theme === "dark" ? " hidden" : ""}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path></svg>
