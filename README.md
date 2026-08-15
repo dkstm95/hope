@@ -17,28 +17,118 @@
 
 <p align="center"><a href="README.ko.md">한국어</a></p>
 
-AI can finish a task quickly without making its decisions, evidence, or
-remaining uncertainty clear to the person responsible for it.
+<br>
 
-Hope provides a focused tool for each of those moments.
+## Features
 
-Use Hope to align before implementation, challenge a work product, understand a
-code change, sweep codebase maintenance, refine completed work, or clarify
-language without losing meaning.
+### Align — Reach shared understanding before implementation and prevent `intent debt`
 
-The current supported delivery is a plugin for Codex and Claude Code.
+Align explains its understanding from verifiable evidence, such as the
+codebase, and asks about choices that can change the result so the person and AI
+can reach shared understanding.
+
+When the agreement is ready, Align writes one self-contained HTML brief inside
+the project.
+
+The brief keeps the current intent prominent, records material changes as
+revisions in the same file, and serves as the implementation contract.
+
+> [!NOTE]
+> Hope recommends keeping the brief with the project but never stages it
+> automatically.
+
+![Hope Align result showing the current agreement, scope, behavior, and intent history](assets/readme/hope-align-en.png)
+
+| Agreed behavior · dark | Decisions and implementation choices · light |
+| --- | --- |
+| [![A branched upload-recovery flow in an Align artifact using dark mode](assets/readme/hope-align-behavior-en.png)](assets/readme/hope-align-behavior-en.png) | [![Numbered decisions and implementation choices in an Align artifact using light mode](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
+
+---
+
+### Diff — Understand what changed and how to judge it to prevent `cognitive debt`
+
+A code change can be complete while its owner still cannot predict, explain, or
+judge it, and that gap is cognitive debt.
+
+Diff creates one HTML artifact that explains behavior before code and links
+important claims to evidence.
+
+It may use visuals, a microworld, or a quiz to help the reader explore the
+change.
+
+The artifact helps the reader understand and judge the change, then use that
+understanding in follow-up decisions and work.
+
+> [!NOTE]
+> With no URL, Diff first looks for the current branch's pull request.
+> If none exists, it selects your latest open pull request in the repository.
+> Run Diff again when the pull request changes.
+
+> [!NOTE]
+> This is an actual Diff HTML artifact generated from
+> [nanoid PR #601](https://github.com/ai/nanoid/pull/601).
+
+![Hope Diff result for nanoid pull request 601 showing the goal, before and after behavior, impact, and verification item](assets/readme/hope-diff-en.png)
+
+| Core change | Behavior model |
+| --- | --- |
+| [![The core change explanation in a Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![The input comparison and behavior flow in a Diff artifact](assets/readme/hope-diff-behavior-en.png)](assets/readme/hope-diff-behavior-en.png) |
+| Teaching aid choices | Implementation details and evidence |
+| [![A Diff artifact explaining which teaching aids it includes and why](assets/readme/hope-diff-teaching-en.png)](assets/readme/hope-diff-teaching-en.png) | [![Implementation steps and supporting evidence links in a Diff artifact](assets/readme/hope-diff-code-en.png)](assets/readme/hope-diff-code-en.png) |
+| Next check for an informed judgment | Evidence and checked scope |
+| [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
+
+---
+
+### Toxic Review — Review a work product rigorously and critically
+
+Toxic Review uses multiple independent subagents when a review needs to examine
+distinct material risks.
+
+The active agent judges which findings are supported.
+
+Ask Hope to limit the reviewer count when you want a smaller run.
+
+---
+
+### Polish — Refine implemented work
+
+Independent review agents look for useful improvements.
+
+For code, they check reuse of existing helpers, simplicity, efficiency, and
+abstraction fit.
+
+A fresh finisher judges the results, applies only the improvements that work
+together, and verifies the result.
+
+Polish does not hunt for bugs, develop features, perform migrations, or handle
+broad maintenance.
+
+---
+
+### Sweep — Clean up a codebase
+
+Sweep performs a read-only review of a codebase.
+
+It looks for broken references, stale code, unsupported abstractions,
+verification gaps, dependency or license risk, delivery waste, unclear
+ownership, and similar maintenance risks.
+
+Select a candidate from the review results to start work.
+
+---
+
+### Write — Make language clearer without losing meaning
+
+Hope also uses Write within other tasks, including implementation and other
+Skills.
+
+Write's shared standard adapts George Orwell's six rules in
+[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).
+
+<br>
 
 ## Install
-
-Install the current Hope distribution in Codex or Claude Code.
-
-GitHub [Releases](https://github.com/dkstm95/hope/releases) provide version
-history and downloadable packages.
-
-<p>
-  <img alt="Codex supported" src="https://img.shields.io/badge/Codex-supported-000000?style=flat-square&logo=openai&logoColor=white">
-  <img alt="Claude Code supported" src="https://img.shields.io/badge/Claude_Code-supported-D97757?style=flat-square&logo=claudecode&logoColor=white">
-</p>
 
 You need:
 
@@ -55,6 +145,8 @@ Follow the repository README and tell me if I need to restart.
 
 To install it yourself, run the commands for your host.
 
+For example:
+
 ```bash
 # Codex
 codex plugin marketplace add dkstm95/hope
@@ -66,167 +158,6 @@ codex plugin add hope@hope
 claude plugin marketplace add dkstm95/hope
 claude plugin install hope@hope
 ```
-
-Start a new Codex or Claude Code session after installation.
-
-### Keep Hope current
-
-- **Claude Code:** enable auto-update for the Hope marketplace under `/plugin`
-  → **Marketplaces**. Run `/reload-plugins` when Claude Code reports an update.
-- **Codex:** run `codex plugin marketplace upgrade hope`, then
-  `codex plugin add hope@hope`, and start a new session.
-
-## Features
-
-Choose the work you need.
-
-<details>
-<summary><strong>Align</strong> — Reach shared understanding before implementation</summary>
-
-Align brings the person and AI to a shared understanding.
-
-It explains its current understanding based on verifiable evidence, such as the
-codebase, then asks about choices that can change the result.
-
-When the agreement is ready, Align writes one self-contained HTML brief inside
-the project. The current intent stays prominent, material changes become
-revisions in the same file, and the brief becomes the implementation contract.
-Hope recommends keeping it with the project but never stages it automatically.
-
-> [!NOTE]
-> Align waits for explicit approval and never implements the task. A later
-> session uses a brief only when you name its path; Hope does not guess a
-> repository-wide “latest” agreement.
-
-![Hope Align result showing the current agreement, scope, behavior, and intent history](assets/readme/hope-align-en.png)
-
-*An actual Align HTML brief for a failed-upload recovery agreement.*
-
-| Agreed behavior · dark | Decisions and implementation choices · light |
-| --- | --- |
-| [![A branched upload-recovery flow in an Align artifact using dark mode](assets/readme/hope-align-behavior-en.png)](assets/readme/hope-align-behavior-en.png) | [![Numbered decisions and implementation choices in an Align artifact using light mode](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
-
-> Example: “I want to add a failed-upload recovery screen. Help me clarify the
-> retry behavior and layout before implementation.”
-
-</details>
-
-<details>
-<summary><strong>Diff</strong> — Understand what changed and how to judge it</summary>
-
-A code change can be complete while its owner still cannot predict, explain, or
-judge it, and that gap is cognitive debt.
-
-Diff explains behavior before code and links important claims to evidence.
-
-Diff uses visuals, a microworld, or a quiz to help the reader explore the change.
-
-Its reading path starts with a plain-language change title, then moves through
-the summary, behavior change, review items, and complete evidence scope.
-Implementation details stay available inside collapsed evidence.
-
-The resulting HTML artifact helps the reader understand the change, judge it,
-and use that understanding in follow-up decisions and work.
-
-> [!NOTE]
-> Diff does not recommend approval or rejection or change the pull request.
-> It does not inspect discussions or CI results or run tests, builds, linters,
-> or repository code.
-
-![Hope Diff result for nanoid pull request 601 showing the goal, before and after behavior, impact, and verification item](assets/readme/hope-diff-en.png)
-
-*An actual Diff HTML artifact generated from [nanoid PR #601](https://github.com/ai/nanoid/pull/601).*
-
-| Core change | Behavior model |
-| --- | --- |
-| [![The core change explanation in a Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![The input comparison and behavior flow in a Diff artifact](assets/readme/hope-diff-behavior-en.png)](assets/readme/hope-diff-behavior-en.png) |
-| Teaching aid choices | Implementation details and evidence |
-| [![A Diff artifact explaining which teaching aids it includes and why](assets/readme/hope-diff-teaching-en.png)](assets/readme/hope-diff-teaching-en.png) | [![Implementation steps and supporting evidence links in a Diff artifact](assets/readme/hope-diff-code-en.png)](assets/readme/hope-diff-code-en.png) |
-| Next check for an informed judgment | Evidence and checked scope |
-| [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
-
-> [!NOTE]
-> With no URL, Diff first looks for the current branch's pull request.
-> If none exists, it selects your latest open pull request in the repository.
-> Run Diff again when the pull request changes.
-
-</details>
-
-<details>
-<summary><strong>Toxic Review</strong> — Find important risks you may have missed</summary>
-
-Toxic Review examines the work rigorously and critically, then organizes
-evidence-backed findings into one prioritized review.
-
-> [!NOTE]
-> Every reviewer runs in a fresh context, including a one-reviewer pass.
-> Toxic Review uses multiple independent reviewers only for distinct material
-> risks.
->
-> Every reviewer makes a separate model call.
->
-> Ask Hope to limit the reviewer count when you want a smaller run.
-
-> Example: “Review this database migration plan.”
-
-</details>
-
-<details>
-<summary><strong>Polish</strong> — Refine completed work</summary>
-
-Polish reviews a completed result or the current repository change set, then
-applies bounded improvements.
-
-Independent review agents look only for useful improvements. For code, they
-check reuse of existing helpers, simplicity, efficiency, and abstraction fit.
-A finisher weighs their evidence, rejects speculative or risky changes, applies
-the improvements that work together, and verifies the result.
-
-Polish does not hunt for bugs, develop features, perform migrations, or handle
-broad maintenance.
-
-> [!NOTE]
-> Polish edits the local target by default. Ask for a review-only pass when you
-> want adjudicated candidates without changes.
->
-> Each reviewer and the finisher runs in a fresh context and makes a separate
-> model call.
-
-> Example: “Simplify the current changes without changing behavior.”
-
-</details>
-
-<details>
-<summary><strong>Sweep</strong> — Clean up and maintain a codebase safely</summary>
-
-Sweep performs a read-only review of a codebase.
-
-It looks for broken references, stale code, unsupported abstractions,
-verification gaps, dependency or license risk, delivery waste, unclear
-ownership, and similar maintenance risks.
-
-Select a candidate from the review results to start work.
-
-> Example: “Sweep this codebase.”
-
-</details>
-
-<details>
-<summary><strong>Write</strong> — Make language clearer without losing meaning</summary>
-
-Write drafts, edits, or reviews language without losing meaning, facts,
-uncertainty, citations, or the person's voice.
-
-Hope also uses Write within other tasks, including implementation and other
-Skills. It applies the shared standard without creating a second workflow or
-changing the task's scope.
-
-Write's shared standard adapts George Orwell's six rules in
-[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).
-
-> Example: “Make this incident update easier to understand.”
-
-</details>
 
 ## License
 
