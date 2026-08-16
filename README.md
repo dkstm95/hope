@@ -37,8 +37,8 @@ For material UI work without attached references, Align checks the project
 first, uses web search when needed, and presents two or three image mockups.
 
 > [!NOTE]
-> Hope recommends keeping the brief with the project but never stages it
-> automatically.
+> Align briefs are project documentation. Later version-control work includes
+> them with related project changes unless the person excludes them.
 
 ![Hope Align result showing the current agreement, scope, behavior, and version history](assets/readme/hope-align-en.png)
 

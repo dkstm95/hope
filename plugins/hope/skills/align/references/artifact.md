@@ -39,8 +39,8 @@ The caller chooses an HTML path inside the target Git repository after applying
 the project-location guidance in `SKILL.md`.
 
 Creation makes missing ordinary directories inside the repository and publishes
-through a new staging file. It never replaces an existing path and never stages,
-commits, pushes, or opens the artifact.
+through a new staging file. It never replaces an existing path. Version-control
+handling belongs to the surrounding project workflow.
 
 Hope records the verified output-directory identity and checks it throughout
 publication. A detected ancestor replacement stops publication and removes an

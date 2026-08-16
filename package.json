@@ -1,6 +1,6 @@
 {
   "name": "hope",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "private": true,
   "type": "module",
   "description": "Hope plugin source and release tooling for AI-assisted work.",
