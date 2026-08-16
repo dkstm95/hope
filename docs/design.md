@@ -11,8 +11,10 @@ artifacts apply to both.
 
 The Align and Diff Skills own their feature judgment and prose.
 
-Align and Diff each own their visual tokens and renderer. Neither artifact is a
-visual dependency of the other in this release.
+Align defines the shared artifact visual baseline. Diff matches that baseline
+for common color, type, spacing, product-bar, document, and navigation roles.
+Each feature still owns its visual tokens and renderer, and neither imports the
+other at runtime.
 
 Do not introduce a shared artifact framework until two real consumers need the
 same invariant.
@@ -46,16 +48,19 @@ Use familiar words, short sentences, and one clear reading path.
 
 Prefer useful content over decoration.
 
-The source repository keeps reference images under `docs/design/baseline-v1/`.
+Use the current Align artifact as the primary reference for common visual
+roles. The source repository also keeps earlier Diff reference images under
+`docs/design/baseline-v1/`.
 
-They show the intended density and tone.
+The images provide historical Diff-specific comparison material.
 
 They are comparison material, not pixel-perfect specifications.
 
 They are design sources and do not ship with the current runtime.
 
 The Diff feature's `scripts/design/tokens.mjs` is the code source of truth for
-Diff colors, type sizes, spacing, and layout limits.
+its values. Common roles match the corresponding Align values without importing
+Align code. Diff-only code and status roles remain local to Diff.
 
 The Diff renderer must read those tokens instead of copying their values.
 
@@ -71,8 +76,8 @@ pull-request title in the collapsed review information instead of using it as
 the document title. Let the title name one decisive result; keep secondary
 mechanics in the summary when they make the title harder to scan.
 
-Keep internal source IDs, model details, token counts, and processing state out
-of the first screen.
+Keep internal source IDs, model details, token counts, processing state, and
+capture time out of the first screen.
 
 Do not repeat repository identity in multiple prominent places.
 
@@ -132,10 +137,12 @@ only when its spatial structure makes a relationship or inference easier to
 find than equivalent prose
 ([Larkin and Simon, 1987](https://doi.org/10.1111/j.1551-6708.1987.tb00863.x)).
 
-Keep repository identity, a visible pull-request link, and artifact controls in
-one compact product bar. Preserve the pull-request link when repository text is
-hidden at narrow widths. Replace the desktop contents rail with an icon beside
-the theme control and open the contents in a bounded right-side panel.
+Keep repository identity, the reviewed commit, a visible pull-request link, and
+artifact controls in one compact product bar. Present the reviewed commit with
+the same quiet status treatment that Align uses for its current version.
+Preserve the pull-request link when repository text is hidden at narrow widths.
+Replace the desktop contents rail with an icon beside the theme control and open
+the contents in a bounded right-side panel.
 
 ## Align artifact direction
 
@@ -477,8 +484,8 @@ control family.
 
 The product bar owns repository and pull request identity.
 
-The synopsis card header owns the change-based artifact title, compact
-**Commit** label, and capture time.
+The synopsis owns the change-based artifact title and goal. The product bar owns
+the compact reviewed commit, and collapsed review information owns capture time.
 
 Do not repeat repository identity.
 
@@ -511,15 +518,16 @@ source licenses reserve their original family names.
 Keep their source hashes, build commands, and licenses beside the shared fonts
 under `plugins/hope/assets/fonts/`.
 
-Start with this compact scale and adjust it only through named tokens:
+Use the same compact prose scale as Align and adjust it only through named
+tokens. Diff keeps a separate code scale:
 
 | Use | Wide screen | Narrow screen |
 | --- | --- | --- |
-| Main body | 14px / 1.55 | 16px / 1.55 |
-| Supporting text | 12px / 1.5 | 14px / 1.5 |
+| Main body | 14px / 1.58 | 14px / 1.6 |
+| Supporting text | 12px / 1.55 | 12px / 1.55 |
 | Code | 13px / 1.35 | 14px / 1.35 |
 | Page title | 32px / 1.2 | 28px / 1.2 |
-| Section title | 18px / 1.35 | 20px / 1.35 |
+| Section title | 18px / 1.4 | 16px / 1.4 |
 
 Keep prose near 60–80 characters per line.
 
@@ -531,17 +539,19 @@ They must not create page-level horizontal scrolling.
 
 ## Diff artifact space and boundaries
 
-Use a small, consistent spacing scale.
+Use Align's small, consistent spacing scale.
 
 Do not invent a new gap for each component.
 
 ```text
-4 · 8 · 12 · 16 · 24 · 32
+4 · 8 · 12 · 16 · 24 · 32 · 40 · 48 · 64
 ```
 
 Give each top-level section a clear start.
 
-Use a heading, a cyan keyline, and measured space.
+Use a blue heading, thin neutral dividers where structure needs them, and
+measured space. Match Align's 64-pixel wide-screen and 48-pixel narrow-screen
+separation between top-level areas.
 
 Number conditional sections in their rendered order so the document and its
 table of contents agree.
@@ -589,10 +599,11 @@ Separate preview items with spacing, not rules.
 
 Use semantic `ul` and `ol` elements for content that is a list.
 
-Make the first-screen synopsis one self-contained component.
+Make the first-screen synopsis one self-contained reading area with the same
+title, goal, label-and-value rows, and thin-divider rhythm as Align.
 
-Put the change-based artifact title, reviewed commit, and capture time in its
-header. Keep the provider's pull-request title in collapsed review information.
+Put the change-based artifact title and goal in its header. Keep the provider's
+pull-request title and capture time in collapsed review information.
 
 Do not place a second title block above it or show a generic **Summary** title
 inside it.
@@ -634,8 +645,8 @@ theme. Print uses the Align light surface.
 
 Generate one Diff artifact that supports light and dark themes.
 
-The official light palette is `Sand Paper`: a warm near-white page with a
-slightly brighter reading surface.
+The official light palette is `Sand Paper`: the same warm near-white page and
+slightly brighter reading surface used by Align.
 
 It should feel softer than pure white without looking beige or gray.
 
