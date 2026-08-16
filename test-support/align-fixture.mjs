@@ -1,14 +1,27 @@
 export function makeAlignInput(overrides = {}) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     locale: "ko-KR",
     theme: "system",
     title: "실패한 업로드 복구",
-    intent: "중단된 업로드를 감지해 사용자가 데이터 손실 없이 이어서 완료하거나 안전하게 취소할 수 있게 한다.",
+    goal: "중단된 업로드를 감지해 사용자가 데이터 손실 없이 이어서 완료하거나 안전하게 취소할 수 있게 한다.",
     problem: "업로드 중단 시 파일이 손실되거나 불완전한 상태로 남는다.",
-    success: [
-      "중단 지점부터 이어서 완료할 수 있다.",
-      "데이터 손실 없이 안전하게 취소할 수 있다.",
+    checks: [
+      {
+        condition: "중단 지점부터 이어서 완료할 수 있다.",
+        verify: "통합 테스트에서 재개 요청의 시작 위치, 최종 체크섬, 종료 코드를 보고한다.",
+        by: "agent",
+      },
+      {
+        condition: "복구를 취소해도 관련 없는 데이터가 바뀌지 않는다.",
+        verify: "통합 테스트에서 취소 전후의 관련 없는 데이터 스냅샷을 비교해 결과를 보고한다.",
+        by: "agent",
+      },
+      {
+        condition: "복구 취소 결과와 안내를 이해할 수 있다.",
+        verify: "복구 화면에서 취소 결과와 안내가 이해되는지 사용자가 확인한다.",
+        by: "human",
+      },
     ],
     boundary: "사용자 기기와 서버가 협력하는 범위에서만 복구를 보장한다.",
     scope: {
@@ -54,6 +67,23 @@ export function makeAlignInput(overrides = {}) {
       { label: "제품 요구", location: "https://example.com/requirements" },
     ],
     revisionSummary: "최초 합의",
+    ...overrides,
+  };
+}
+
+export function makeLegacyAlignInput(overrides = {}) {
+  const current = makeAlignInput();
+  const {
+    goal,
+    checks,
+    schemaVersion: _schemaVersion,
+    ...shared
+  } = current;
+  return {
+    ...shared,
+    schemaVersion: 1,
+    intent: goal,
+    success: checks.map((check) => check.condition),
     ...overrides,
   };
 }

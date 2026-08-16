@@ -18,11 +18,14 @@ const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
 
 const dictionaries = Object.freeze({
   "en-US": Object.freeze({
-    agreement: "Decisions and implementation choices",
-    agreedDecisions: "Agreed decisions",
+    agreement: "Decisions",
+    agreedDecisions: "Confirmed decisions",
     behavior: "Agreed behavior",
     boundary: "Boundary",
     cancelOutcome: "cancel",
+    checkedByAgent: "Agent check",
+    checkedByHuman: "Human check",
+    checks: "Completion criteria",
     completeOutcome: "complete",
     currentAgreement: "Current agreement",
     decidedByDelegated: "AI choice delegated by the person",
@@ -32,13 +35,14 @@ const dictionaries = Object.freeze({
     evidence: "Basis",
     excluded: "Out of scope",
     history: "Version history",
+    goal: "Goal",
     influence: "Influence",
     included: "In scope",
     menu: "Contents",
     navigation: "Contents and version history",
     noExcluded: "No explicit exclusion was needed.",
     noIncluded: "No separate included item was needed.",
-    openChoices: "Choose during implementation",
+    openChoices: "Decisions during implementation",
     overview: "Summary",
     problem: "Problem",
     recommendation: "AI recommendation",
@@ -47,7 +51,6 @@ const dictionaries = Object.freeze({
     revisionDetails: "View changes",
     scope: "Scope",
     skip: "Skip to agreement",
-    success: "Success",
     selected: "Selected",
     selection: "Selection",
     strengths: "Strengths",
@@ -57,11 +60,14 @@ const dictionaries = Object.freeze({
     tradeoffs: "Trade-offs",
   }),
   "ko-KR": Object.freeze({
-    agreement: "결정과 구현 선택",
-    agreedDecisions: "합의된 결정",
+    agreement: "결정 사항",
+    agreedDecisions: "확정 사항",
     behavior: "합의된 동작",
     boundary: "경계",
     cancelOutcome: "취소",
+    checkedByAgent: "AI 에이전트 확인",
+    checkedByHuman: "사용자 확인",
+    checks: "완료 기준",
     completeOutcome: "완료",
     currentAgreement: "현재 합의",
     decidedByDelegated: "사용자가 AI에 선택을 위임함",
@@ -71,13 +77,14 @@ const dictionaries = Object.freeze({
     evidence: "근거",
     excluded: "제외 범위",
     history: "버전 이력",
+    goal: "목표",
     influence: "반영한 점",
     included: "포함 범위",
     menu: "목차",
     navigation: "목차와 버전 이력",
     noExcluded: "명시적으로 제외한 범위가 없습니다.",
     noIncluded: "별도로 포함한 범위가 없습니다.",
-    openChoices: "구현 중 선택",
+    openChoices: "구현 시 결정 사항",
     overview: "요약",
     problem: "문제",
     recommendation: "AI 추천",
@@ -86,7 +93,6 @@ const dictionaries = Object.freeze({
     revisionDetails: "변경 내용 보기",
     scope: "범위",
     skip: "합의 내용으로 건너뛰기",
-    success: "성공",
     selected: "선택",
     selection: "선택 결과",
     strengths: "장점",
@@ -132,20 +138,31 @@ function textList(items, { empty, className = "plain-list" } = {}) {
   ).join("")}</ul>`;
 }
 
-function summaryValue(items) {
-  if (items.length === 1) return `<p>${authoredText(items[0])}</p>`;
-  return textList(items, { className: "summary-list" });
+function goalValue(content) {
+  return content.goal ?? content.intent;
+}
+
+function checkList(content, dictionary) {
+  const checks = content.checks ?? content.success.map((condition) => ({ condition }));
+  return `<ul class="check-list">${checks.map((check) => {
+    const verification = check.verify === undefined ? "" : `<p class="check-verification"><span class="check-by">${escapeHtml(label(
+      dictionary,
+      check.by === "human" ? "checkedByHuman" : "checkedByAgent",
+    ))}</span>${authoredText(check.verify)}</p>`;
+    return `<li><strong>${authoredText(check.condition)}</strong>${verification}</li>`;
+  }).join("")}</ul>`;
 }
 
 function overview(content, dictionary) {
   return `<section class="overview document-section" id="overview" aria-labelledby="artifact-title">
     <header class="document-head">
       <h1 id="artifact-title">${authoredText(content.title)}</h1>
-      <p class="intent">${authoredText(content.intent)}</p>
+      <p class="goal-label">${escapeHtml(label(dictionary, "goal"))}</p>
+      <p class="goal">${authoredText(goalValue(content))}</p>
     </header>
     <dl class="synopsis">
       <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd><p>${authoredText(content.problem)}</p></dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "success"))}</dt><dd>${summaryValue(content.success)}</dd></div>
+      <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
       <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd><p>${authoredText(content.boundary)}</p></dd></div>
     </dl>
   </section>`;
@@ -321,9 +338,9 @@ function compactRevisionContent(content, dictionary, idPrefix) {
     <dd><ul class="plain-list">${content.evidence.map((item) => `<li><strong>${authoredText(item.label)}</strong><br>${evidenceLocation(item)}</li>`).join("")}</ul></dd>
   </div>`;
   return `<dl class="revision-content">
-    <div><dt>${escapeHtml(label(dictionary, "overview"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(content.intent)}</p></dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(goalValue(content))}</p></dd></div>
     <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredText(content.problem)}</dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "success"))}</dt><dd>${textList(content.success)}</dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(content.boundary)}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.scope.included, { empty: label(dictionary, "noIncluded") })}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "excluded"))}</dt><dd>${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded") })}</dd></div>
@@ -349,6 +366,14 @@ function railHistory(data, dictionary, idSuffix = "") {
   const shown = reversed.slice(0, 2);
   const older = reversed.slice(shown.length);
   const headingId = `rail-history-title${idSuffix}`;
+  const olderHistory = older.length === 0 ? "" : `
+    <details class="older-history"><summary>${older.length} ${escapeHtml(label(dictionary, "earlierRevisions"))}</summary><ol>${older.map((revision, index) => railRevision(
+      revision,
+      index + shown.length,
+      data,
+      dictionary,
+      idSuffix,
+    )).join("")}</ol></details>`;
   return `<section class="rail-history" aria-labelledby="${headingId}">
     <h2 id="${headingId}">${escapeHtml(label(dictionary, "history"))}</h2>
     <ol>${shown.map((revision, index) => railRevision(
@@ -357,14 +382,7 @@ function railHistory(data, dictionary, idSuffix = "") {
       data,
       dictionary,
       idSuffix,
-    )).join("")}</ol>
-    ${older.length === 0 ? "" : `<details class="older-history"><summary>${older.length} ${escapeHtml(label(dictionary, "earlierRevisions"))}</summary><ol>${older.map((revision, index) => railRevision(
-      revision,
-      index + shown.length,
-      data,
-      dictionary,
-      idSuffix,
-    )).join("")}</ol></details>`}
+    )).join("")}</ol>${olderHistory}
   </section>`;
 }
 
@@ -488,12 +506,18 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .document-section + .document-section { margin-top: ${space9}px; }
 .document-head { max-width: 78ch; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
-.intent { margin-top: ${space3}px; font-size: ${TYPE.intent.wide.fontSize}px; line-height: ${TYPE.intent.wide.lineHeight}; }
+.goal-label { margin-top: ${space3}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
+.goal { margin-top: ${space1}px; font-size: ${TYPE.goal.wide.fontSize}px; line-height: ${TYPE.goal.wide.lineHeight}; }
 .synopsis { margin-top: ${space5}px; border-top: 1px solid var(--border); }
 .synopsis > div { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: ${space5}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
 .synopsis dt { font-weight: 700; }
 .synopsis dd { margin: 0; }
-.summary-list { padding-left: ${space4}px; }
+.check-list { list-style: none; padding: 0; display: grid; gap: ${space3}px; }
+.check-list li { position: relative; padding-left: ${space4}px; }
+.check-list li::before { content: ""; position: absolute; top: .62em; left: ${space1}px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.check-list strong { display: block; }
+.check-verification { margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.check-by { margin-right: ${space2}px; color: var(--accent); font-weight: 700; }
 .overview + .scope { margin-top: ${space7}px; }
 .scope { display: grid; grid-template-columns: minmax(0,.45fr) minmax(0,.55fr); }
 .scope-column { padding: ${space4}px ${space2}px ${space5}px; }
@@ -577,7 +601,9 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .main { padding: ${space8}px ${space4}px ${space9}px; }
   .document-section + .document-section { margin-top: 48px; }
   .document-head h1 { font-size: ${TYPE.pageTitle.narrow.fontSize}px; line-height: ${TYPE.pageTitle.narrow.lineHeight}; }
-  .intent { font-size: ${TYPE.intent.narrow.fontSize}px; line-height: ${TYPE.intent.narrow.lineHeight}; }
+  .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
+  .goal { font-size: ${TYPE.goal.narrow.fontSize}px; line-height: ${TYPE.goal.narrow.lineHeight}; }
+  .check-verification { font-size: ${TYPE.supporting.narrow.fontSize}px; }
   .scope { grid-template-columns: 1fr; }
   .scope-column + .scope-column { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
   .design-direction-list, .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }

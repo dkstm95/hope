@@ -30,20 +30,16 @@ const DIGEST_META_PATTERN = /(<meta name="hope-align-digest" content=")[a-f0-9]{
 const ALIGN_ID_META_PATTERN = /<meta name="hope-align-id" content="([a-f0-9-]{36})">/u;
 const DATA_PATTERN = /<script id="hope-align-data" type="application\/json">([\s\S]*?)<\/script>/u;
 
-const contentKeys = Object.freeze([
-  "title",
-  "intent",
-  "problem",
-  "success",
-  "boundary",
-  "scope",
-  "designDirections",
-  "behavior",
-  "decisions",
-  "openChoices",
-  "evidence",
-]);
-
+const contentKeysBySchema = Object.freeze({
+  1: Object.freeze([
+    "title", "intent", "problem", "success", "boundary", "scope",
+    "designDirections", "behavior", "decisions", "openChoices", "evidence",
+  ]),
+  2: Object.freeze([
+    "title", "goal", "problem", "checks", "boundary", "scope",
+    "designDirections", "behavior", "decisions", "openChoices", "evidence",
+  ]),
+});
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -95,6 +91,26 @@ function textList(value, path, maximumItems = 30) {
   return value.map((item, index) => text(item, `${path}[${index}]`));
 }
 
+function checkItems(value, path, maximumItems = 12) {
+  if (!Array.isArray(value)) throw new TypeError(`${path} must be an array`);
+  if (value.length === 0 || value.length > maximumItems) {
+    throw new TypeError(`${path} must contain between 1 and ${maximumItems} items`);
+  }
+  return value.map((item, index) => {
+    const itemPath = `${path}[${index}]`;
+    if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
+    assertKeys(item, ["condition", "verify", "by"], itemPath);
+    if (!["agent", "human"].includes(item.by)) {
+      throw new TypeError(`${itemPath}.by must be agent or human`);
+    }
+    return Object.freeze({
+      condition: text(item.condition, `${itemPath}.condition`),
+      verify: text(item.verify, `${itemPath}.verify`),
+      by: item.by,
+    });
+  });
+}
+
 function titledItems(value, path, { maximumItems, minimumItems = 0 } = {}) {
   if (!Array.isArray(value)) throw new TypeError(`${path} must be an array`);
   if (value.length < minimumItems || value.length > maximumItems) {
@@ -134,6 +150,61 @@ function outcomeItems(value, path, { maximumItems } = {}) {
       ...(item.kind === undefined ? {} : { kind: item.kind }),
     });
   });
+}
+
+function scopeValue(value, path) {
+  if (!isRecord(value)) throw new TypeError(`${path} must be an object`);
+  assertKeys(value, ["included", "excluded"], path);
+  return Object.freeze({
+    included: Object.freeze(textList(value.included, `${path}.included`)),
+    excluded: Object.freeze(textList(value.excluded, `${path}.excluded`)),
+  });
+}
+
+function behaviorValue(value, path) {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) throw new TypeError(`${path} must be an object`);
+  assertKeys(value, ["steps", "outcomes"], path);
+  return Object.freeze({
+    steps: titledItems(value.steps, `${path}.steps`, {
+      maximumItems: 8,
+      minimumItems: 2,
+    }),
+    outcomes: outcomeItems(value.outcomes, `${path}.outcomes`, {
+      maximumItems: 6,
+    }),
+  });
+}
+
+function decisionItems(value, path) {
+  if (!Array.isArray(value) || value.length > 20) {
+    throw new TypeError(`${path} must be an array with at most 20 items`);
+  }
+  return Object.freeze(value.map((item, index) => {
+    const itemPath = `${path}[${index}]`;
+    if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
+    assertKeys(item, ["decision", "reason"], itemPath);
+    return Object.freeze({
+      decision: text(item.decision, `${itemPath}.decision`, 160),
+      reason: text(item.reason, `${itemPath}.reason`),
+    });
+  }));
+}
+
+function evidenceItems(value, path) {
+  if (value === undefined) return Object.freeze([]);
+  if (!Array.isArray(value) || value.length > 30) {
+    throw new TypeError(`${path} must be an array with at most 30 items`);
+  }
+  return Object.freeze(value.map((item, index) => {
+    const itemPath = `${path}[${index}]`;
+    if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
+    assertKeys(item, ["label", "location"], itemPath);
+    return Object.freeze({
+      label: text(item.label, `${itemPath}.label`, 160),
+      location: text(item.location, `${itemPath}.location`),
+    });
+  }));
 }
 
 function optionId(value, path) {
@@ -235,17 +306,17 @@ function designDirections(value, path, { imageField, validateImage }) {
 
 export function validateAlignInput(value, defaults = {}) {
   if (!isRecord(value)) throw new TypeError("Align input must be an object");
+  if (![1, 2].includes(value.schemaVersion)) {
+    throw new TypeError("$.schemaVersion must be 1 or 2");
+  }
   const allowed = [
     "schemaVersion",
     "locale",
     "theme",
-    ...contentKeys,
+    ...contentKeysBySchema[value.schemaVersion],
     "revisionSummary",
   ];
   assertKeys(value, allowed, "$");
-  if (value.schemaVersion !== 1) {
-    throw new TypeError("$.schemaVersion must be 1");
-  }
 
   const locale = value.locale ?? defaults.locale ?? "en-US";
   const theme = value.theme ?? defaults.theme ?? "system";
@@ -255,25 +326,8 @@ export function validateAlignInput(value, defaults = {}) {
   if (!["system", "light", "dark"].includes(theme)) {
     throw new TypeError("$.theme must be system, light, or dark");
   }
-  if (!isRecord(value.scope)) throw new TypeError("$.scope must be an object");
-  assertKeys(value.scope, ["included", "excluded"], "$.scope");
-
-  let behavior;
-  if (value.behavior !== undefined) {
-    if (!isRecord(value.behavior)) {
-      throw new TypeError("$.behavior must be an object");
-    }
-    assertKeys(value.behavior, ["steps", "outcomes"], "$.behavior");
-    behavior = Object.freeze({
-      steps: titledItems(value.behavior.steps, "$.behavior.steps", {
-        maximumItems: 8,
-        minimumItems: 2,
-      }),
-      outcomes: outcomeItems(value.behavior.outcomes, "$.behavior.outcomes", {
-        maximumItems: 6,
-      }),
-    });
-  }
+  const scope = scopeValue(value.scope, "$.scope");
+  const behavior = behaviorValue(value.behavior, "$.behavior");
 
   const validatedDesignDirections = value.designDirections === undefined
     ? undefined
@@ -286,57 +340,37 @@ export function validateAlignInput(value, defaults = {}) {
       },
     });
 
-  if (!Array.isArray(value.decisions) || value.decisions.length > 20) {
-    throw new TypeError("$.decisions must be an array with at most 20 items");
-  }
-  const decisions = value.decisions.map((item, index) => {
-    const itemPath = `$.decisions[${index}]`;
-    if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
-    assertKeys(item, ["decision", "reason"], itemPath);
-    return Object.freeze({
-      decision: text(item.decision, `${itemPath}.decision`, 160),
-      reason: text(item.reason, `${itemPath}.reason`),
-    });
-  });
+  const decisions = decisionItems(value.decisions, "$.decisions");
+  const evidence = evidenceItems(value.evidence, "$.evidence");
 
-  let evidence = [];
-  if (value.evidence !== undefined) {
-    if (!Array.isArray(value.evidence) || value.evidence.length > 30) {
-      throw new TypeError("$.evidence must be an array with at most 30 items");
-    }
-    evidence = value.evidence.map((item, index) => {
-      const itemPath = `$.evidence[${index}]`;
-      if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
-      assertKeys(item, ["label", "location"], itemPath);
-      return Object.freeze({
-        label: text(item.label, `${itemPath}.label`, 160),
-        location: text(item.location, `${itemPath}.location`),
-      });
-    });
-  }
-
-  const success = textList(value.success, "$.success", 12);
-  if (success.length === 0) throw new TypeError("$.success must not be empty");
+  const legacySuccess = value.schemaVersion === 1
+    ? textList(value.success, "$.success", 12)
+    : undefined;
+  if (legacySuccess?.length === 0) throw new TypeError("$.success must not be empty");
+  const checks = value.schemaVersion === 2
+    ? checkItems(value.checks, "$.checks")
+    : undefined;
   return Object.freeze({
-    schemaVersion: 1,
+    schemaVersion: value.schemaVersion,
     locale,
     theme,
     title: text(value.title, "$.title", 160),
-    intent: text(value.intent, "$.intent"),
+    ...(value.schemaVersion === 1
+      ? { intent: text(value.intent, "$.intent") }
+      : { goal: text(value.goal, "$.goal") }),
     problem: text(value.problem, "$.problem"),
-    success,
+    ...(value.schemaVersion === 1
+      ? { success: Object.freeze(legacySuccess) }
+      : { checks: Object.freeze(checks) }),
     boundary: text(value.boundary, "$.boundary"),
-    scope: Object.freeze({
-      included: textList(value.scope.included, "$.scope.included"),
-      excluded: textList(value.scope.excluded, "$.scope.excluded"),
-    }),
+    scope,
     ...(validatedDesignDirections === undefined
       ? {}
       : { designDirections: validatedDesignDirections }),
     ...(behavior === undefined ? {} : { behavior }),
-    decisions: Object.freeze(decisions),
+    decisions,
     openChoices: Object.freeze(textList(value.openChoices, "$.openChoices")),
-    evidence: Object.freeze(evidence),
+    evidence,
     revisionSummary: text(value.revisionSummary, "$.revisionSummary"),
   });
 }
@@ -572,8 +606,9 @@ function sameFile(actual, expected) {
 }
 
 function artifactContent(input) {
+  const keys = contentKeysBySchema[input.schemaVersion];
   return Object.freeze(Object.fromEntries(
-    contentKeys.filter((key) => input[key] !== undefined).map((key) => [key, input[key]]),
+    keys.filter((key) => input[key] !== undefined).map((key) => [key, input[key]]),
   ));
 }
 
@@ -655,6 +690,32 @@ function validateArtifactData(value) {
     ) {
       throw new Error("Align artifact revision history is invalid");
     }
+    const contentPath = `$.revisions[${index}].content`;
+    const hasLegacyGoal = revision.content.intent !== undefined
+      || revision.content.success !== undefined;
+    const hasCurrentGoal = revision.content.goal !== undefined
+      || revision.content.checks !== undefined;
+    if (hasLegacyGoal === hasCurrentGoal) {
+      throw new Error("Align artifact goal contract is invalid");
+    }
+    const contentSchema = hasCurrentGoal ? 2 : 1;
+    assertKeys(revision.content, contentKeysBySchema[contentSchema], contentPath);
+    text(revision.content.title, `${contentPath}.title`, 160);
+    text(revision.content.problem, `${contentPath}.problem`);
+    if (hasCurrentGoal) {
+      text(revision.content.goal, `${contentPath}.goal`);
+      checkItems(revision.content.checks, `${contentPath}.checks`);
+    } else {
+      text(revision.content.intent, `${contentPath}.intent`);
+      const success = textList(revision.content.success, `${contentPath}.success`, 12);
+      if (success.length === 0) throw new Error("Align artifact success list is empty");
+    }
+    text(revision.content.boundary, `${contentPath}.boundary`);
+    scopeValue(revision.content.scope, `${contentPath}.scope`);
+    behaviorValue(revision.content.behavior, `${contentPath}.behavior`);
+    decisionItems(revision.content.decisions, `${contentPath}.decisions`);
+    textList(revision.content.openChoices, `${contentPath}.openChoices`);
+    evidenceItems(revision.content.evidence, `${contentPath}.evidence`);
     if (revision.content.designDirections !== undefined) {
       const directions = designDirections(
         revision.content.designDirections,

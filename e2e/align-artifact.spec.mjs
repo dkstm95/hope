@@ -14,7 +14,11 @@ import {
   createAlignArtifact,
   reviseAlignArtifact,
 } from "../plugins/hope/skills/align/scripts/artifact.mjs";
-import { makeAlignInput, makeDesignDirections } from "../test-support/align-fixture.mjs";
+import {
+  makeAlignInput,
+  makeDesignDirections,
+  makeLegacyAlignInput,
+} from "../test-support/align-fixture.mjs";
 
 const execFileAsync = promisify(execFile);
 let artifactUrl;
@@ -50,7 +54,7 @@ test.beforeAll(async () => {
     "git@github.com:acme/storage.git",
   ]);
   const artifactPath = join(temporaryRoot, "docs", "alignments", "upload-recovery.html");
-  const firstInput = await writeInput("first.json", makeAlignInput({
+  const firstInput = await writeInput("first.json", makeLegacyAlignInput({
     designDirections: makeDesignDirections(directionImages),
     behavior: {
       ...makeAlignInput().behavior,
@@ -102,6 +106,17 @@ test("Align presents one compact current agreement with secondary history", asyn
   await page.goto(artifactUrl);
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("실패한 업로드 복구");
+  await expect(page.locator(".goal-label")).toHaveText("목표");
+  await expect(page.locator(".goal")).toContainText("중단된 업로드를 감지해");
+  await expect(page.locator(".synopsis dt").filter({ hasText: "완료 기준" })).toHaveCount(1);
+  await expect(page.locator(".overview .check-list > li")).toHaveCount(3);
+  await expect(page.locator(".overview .check-by")).toHaveText([
+    "AI 에이전트 확인",
+    "AI 에이전트 확인",
+    "사용자 확인",
+  ]);
+  await expect(page.locator(".overview .check-list")).toContainText("재개 요청의 시작 위치");
+  await expect(page.locator(".overview .check-list")).toContainText("취소 전후의 관련 없는 데이터 스냅샷");
   await expect(page.locator(".brand-icon")).toBeVisible();
   await expect(page.locator(".status")).toHaveText("v2 · 현재 합의");
   await expect(page.locator(".rail")).toBeVisible();
@@ -114,7 +129,11 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#agreement")).toContainText("자동 감지 기반 복구 우선");
   await expect(page.locator("#agreement")).toContainText("사용자 개입 없이");
-  await expect(page.locator("#agreement-title")).toHaveText("결정과 구현 선택");
+  await expect(page.locator("#agreement-title")).toHaveText("결정 사항");
+  await expect(page.locator("#agreement .subheading")).toHaveText([
+    "확정 사항",
+    "구현 시 결정 사항",
+  ]);
   await expect(page.locator("#design-directions-title")).toHaveText("디자인 시안");
   const currentDirections = page.locator("#design-directions");
   await expect(currentDirections.locator(".design-direction")).toHaveCount(2);
@@ -128,6 +147,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   );
   expect(decodedDirections.every((image) => image.height > 0 && image.width > 0)).toBe(true);
   await expect(page.locator("#intent-history")).toHaveCount(0);
+  await expect(page.locator("#goal-history")).toHaveCount(0);
   await expect(page.getByText("현재 구현 기준", { exact: true })).toHaveCount(0);
   await expect(page.getByText("구현 계약", { exact: true })).toHaveCount(0);
 
@@ -159,6 +179,8 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
   await expect(page.locator(".decision-number")).toHaveText(["01", "02"]);
   await page.locator("#revision-1 > summary").click();
+  await expect(page.locator("#revision-1 .check-list > li")).toHaveCount(3);
+  await expect(page.locator("#revision-1 .check-by")).toHaveCount(0);
   await expect(page.locator("#revision-1")).toContainText("이전 결과 전용 (취소)");
   await expect(page.locator("#revision-1")).toContainText("이전 근거 전용");
   await expect(page.locator("#revision-1")).toContainText("docs/previous.md");

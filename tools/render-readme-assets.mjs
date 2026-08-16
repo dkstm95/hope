@@ -124,24 +124,50 @@ const changedFiles = Object.freeze([
 function alignInput(locale, theme, overrides = {}) {
   const ko = locale === "ko-KR";
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     locale,
     theme,
     title: ko ? "실패한 업로드 복구" : "Failed upload recovery",
-    intent: ko
+    goal: ko
       ? "중단된 업로드를 감지해 사용자가 데이터 손실 없이 이어서 완료하거나 안전하게 취소할 수 있게 한다."
       : "Detect interrupted uploads so people can resume without losing data or cancel safely.",
     problem: ko
       ? "업로드가 중단되면 파일이 손실되거나 불완전한 상태로 남을 수 있다."
       : "When an upload stops, the file can be lost or left incomplete.",
-    success: ko
+    checks: ko
       ? [
-          "중단 지점부터 이어서 업로드를 완료할 수 있다.",
-          "관련 없는 데이터 손실 없이 안전하게 취소할 수 있다.",
+          {
+            condition: "중단 지점부터 이어서 업로드를 완료할 수 있다.",
+            verify: "통합 테스트의 재개 요청 시작 위치, 종료 코드, 최종 체크섬을 보고한다.",
+            by: "agent",
+          },
+          {
+            condition: "복구를 취소해도 관련 없는 데이터가 바뀌지 않는다.",
+            verify: "통합 테스트에서 취소 전후의 관련 없는 데이터 스냅샷을 비교한다.",
+            by: "agent",
+          },
+          {
+            condition: "복구 취소 결과와 안내를 이해할 수 있다.",
+            verify: "복구 화면의 취소 결과와 안내를 사용자가 확인한다.",
+            by: "human",
+          },
         ]
       : [
-          "Resume from the interruption point and finish the upload.",
-          "Cancel safely without losing unrelated data.",
+          {
+            condition: "Resume from the interruption point and finish the upload.",
+            verify: "Report the resume request offset, exit code, and final checksum from the integration test.",
+            by: "agent",
+          },
+          {
+            condition: "Cancelling recovery leaves unrelated data unchanged.",
+            verify: "Compare snapshots of unrelated data before and after cancellation in the integration test.",
+            by: "agent",
+          },
+          {
+            condition: "The cancellation result and guidance are understandable.",
+            verify: "Have the person confirm the cancellation result and guidance.",
+            by: "human",
+          },
         ],
     boundary: ko
       ? "사용자 기기와 서버가 업로드를 식별할 수 있고 임시 데이터가 남아 있는 동안만 복구한다."

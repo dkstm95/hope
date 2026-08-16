@@ -26,7 +26,9 @@
 
 합의가 끝나면 프로젝트 안에 하나의 HTML 문서를 만듭니다.
 
-의도를 잘 보이게 유지하고, 중요한 변경은 동일 파일의 새 버전으로 남기며, 이 문서를 구현 시 참고 자료로 사용합니다.
+문서에는 하나의 합의된 목표와 완료 기준들이 존재합니다.
+각 기준에는 확인 방법과 AI와 사용자 중 누가 판단할지가 포함됩니다.
+중요한 변경은 동일 파일의 새 버전으로 남기며, 이 문서를 구현 계약으로 사용합니다.
 
 첨부 자료가 없는 중요한 UI 작업에서는 프로젝트를 먼저 살피고, 필요하면 웹 서치로 조사해 2~3개의 이미지 시안을 제시합니다.
 
@@ -36,9 +38,9 @@
 
 ![현재 합의, 범위, 동작, 버전 이력을 보여 주는 Hope Align 결과](assets/readme/hope-align-ko.png)
 
-| 합의된 동작 · 다크 | 결정과 구현 선택 · 라이트 |
+| 합의된 동작 · 다크 | 결정 사항 · 라이트 |
 | --- | --- |
-| [![다크 모드로 표시한 Align 결과의 업로드 복구 분기 흐름](assets/readme/hope-align-behavior-ko.png)](assets/readme/hope-align-behavior-ko.png) | [![라이트 모드로 표시한 Align 결과의 번호가 있는 결정과 구현 선택](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
+| [![다크 모드로 표시한 Align 결과의 업로드 복구 분기 흐름](assets/readme/hope-align-behavior-ko.png)](assets/readme/hope-align-behavior-ko.png) | [![라이트 모드로 표시한 Align 결과의 번호가 있는 결정 사항](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
 
 ---
 
