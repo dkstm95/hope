@@ -33,9 +33,8 @@ the project.
 The brief keeps the current intent prominent, records material changes as
 revisions in the same file, and serves as the implementation contract.
 
-For material UI work without a settled visual reference, Align can research
-only the missing context, present two or three image mockups together, and keep
-the compared options and selected direction in the brief.
+For material UI work without attached reference material, Align uses web search
+and presents two or three image mockups.
 
 > [!NOTE]
 > Hope recommends keeping the brief with the project but never stages it
