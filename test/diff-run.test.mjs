@@ -52,14 +52,12 @@ async function inspectAndCheckpointAll(runPath, { temporaryRoot }) {
     });
     const run = await loadDiffRun(runPath, { temporaryRoot });
     await checkpointDiffRunWindow(runPath, startPage, {
-      checkpoints: window.pages.map((page) => ({
-        observations: [],
-        page: page.page,
-      })),
       endPage: window.endPage,
       generation: run.manifest.generation,
+      notes: [],
+      processedPages: window.pages.map((page) => page.page),
       runId: run.manifest.runId,
-      schemaVersion: 1,
+      schemaVersion: 2,
       snapshotDigest: run.snapshot.digest,
       startPage,
     }, { temporaryRoot });

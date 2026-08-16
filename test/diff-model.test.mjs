@@ -29,6 +29,41 @@ function markQuizIncluded(analysis) {
   };
 }
 
+function withVerificationLimit(snapshot) {
+  const { digest: _digest, ...value } = snapshot;
+  const extended = {
+    ...value,
+    limits: [
+      ...snapshot.limits,
+      {
+        id: "limit-2",
+        kind: "verification",
+        reason: "CI, tests, builds, and lint were not collected or run",
+        subject: "Execution and CI results",
+      },
+    ],
+  };
+  return Object.freeze({ ...extended, digest: digestJson(extended) });
+}
+
+function analysisWithVerificationLimit(snapshot) {
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.limitImpacts.push({
+    impact: "Static evidence establishes the reviewed change without execution results.",
+    limitId: "limit-2",
+    material: false,
+  });
+  analysis.contextChecks.push({
+    basis: "unknown",
+    evidence: [],
+    explanation: "This review did not collect or run execution results.",
+    limitIds: ["limit-2"],
+    status: "limited",
+    subject: "Execution and CI results",
+  });
+  return analysis;
+}
+
 test("analysis validation derives trusted status, scope, evidence, and file use", () => {
   const snapshot = makeSnapshot();
   const validated = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
@@ -225,6 +260,58 @@ test("only material collection limits make the review scope limited", () => {
   assert.equal(validated.result.scope, "sufficient");
   assert.equal(validated.limits.length, 1);
   assert.equal(validated.limits[0].material, false);
+});
+
+test("the standard execution boundary is non-material unless it creates a verify item", () => {
+  const snapshot = withVerificationLimit(makeSnapshot());
+  const nonMaterial = analysisWithVerificationLimit(snapshot);
+  assert.doesNotThrow(() => validateAnalysis(nonMaterial, snapshot, { runId }));
+
+  const unexplained = analysisWithVerificationLimit(snapshot);
+  unexplained.limitImpacts[1].material = true;
+  unexplained.limitImpacts[1].impact = "Runtime behavior remains unconfirmed.";
+  assert.throws(
+    () => validateAnalysis(unexplained, snapshot, { runId }),
+    /material execution or CI limit needs a linked verify review item/u,
+  );
+
+  const actionable = analysisWithVerificationLimit(snapshot);
+  actionable.limitImpacts[1].material = true;
+  actionable.limitImpacts[1].impact = "Runtime behavior remains unconfirmed.";
+  actionable.reviewItems.push({
+    ...structuredClone(actionable.reviewItems[0]),
+    doneWhen: "The relevant execution result confirms the expected behavior.",
+    effect: "The behavior could differ when the changed path runs.",
+    explanation: "Static evidence cannot establish the required runtime result.",
+    limitIds: ["limit-2"],
+    nextStep: "Run the focused verification and inspect its result.",
+    title: "Confirm the runtime result",
+  });
+  const validated = validateAnalysis(actionable, snapshot, { runId });
+  assert.equal(validated.reviewItems.length, 2);
+  assert.equal(validated.result.scope, "limited");
+});
+
+test("analysis validation reports a material verification link with other issues", () => {
+  const snapshot = withVerificationLimit(makeSnapshot());
+  const analysis = analysisWithVerificationLimit(snapshot);
+  analysis.coreChange.before.basis = "unknown";
+  analysis.coreChange.before.evidence = [];
+  analysis.limitImpacts[1].material = true;
+  analysis.limitImpacts[1].impact = "Runtime behavior remains unconfirmed.";
+
+  assert.throws(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+    (error) => {
+      assert.ok(error.issues.some((issue) => issue.code === "CHANGE_GROUNDING"));
+      assert.ok(error.issues.some(
+        (issue) => issue.message.includes(
+          "material execution or CI limit needs a linked verify review item",
+        ),
+      ));
+      return true;
+    },
+  );
 });
 
 test("analysis cannot omit, duplicate, or classify unavailable files", () => {
@@ -424,7 +511,7 @@ test("quiz evidence follows the published schema limit", () => {
   );
 });
 
-test("analysis rejects oversized evidence excerpts", () => {
+test("analysis splits one authored evidence interval into bounded excerpts", () => {
   const snapshot = makeSnapshot();
   const longSource = {
     ...snapshot.sources[2],
@@ -442,9 +529,49 @@ test("analysis rejects oversized evidence excerpts", () => {
     startLine: 1,
   }];
 
+  const validated = validateAnalysis(analysis, longSnapshot, { runId });
+  assert.deepEqual(
+    validated.codeSteps[0].evidence.map(({ startLine, endLine }) => ({
+      endLine,
+      startLine,
+    })),
+    [
+      { endLine: 24, startLine: 1 },
+      { endLine: 25, startLine: 25 },
+    ],
+  );
+});
+
+test("analysis rejects an unfocused authored evidence interval", () => {
+  const snapshot = makeSnapshot();
+  const longSource = {
+    ...snapshot.sources[2],
+    lineCount: 100,
+    text: Array.from({ length: 100 }, (_, index) => `line ${index + 1}`).join("\n"),
+  };
+  const longSnapshot = {
+    ...snapshot,
+    sources: [snapshot.sources[0], snapshot.sources[1], longSource],
+  };
+  const analysis = makeAnalysis(longSnapshot, runId);
+  analysis.codeSteps[0].evidence = [{
+    endLine: 97,
+    sourceId: "source-3",
+    startLine: 1,
+  }];
+
   assert.throws(
     () => validateAnalysis(analysis, longSnapshot, { runId }),
-    /24-line evidence limit/u,
+    (error) => {
+      assert.match(error.message, /maximum authored range is 96/u);
+      assert.equal(
+        error.issues.filter(
+          (issue) => issue.message.includes("maximum authored range is 96"),
+        ).length,
+        1,
+      );
+      return true;
+    },
   );
 });
 

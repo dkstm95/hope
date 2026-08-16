@@ -27,7 +27,7 @@ async function inspectAll(run, temporaryRoot, request) {
   let window = await inspectDiffRunWindow(run.path, 1, { temporaryRoot });
   while (window) {
     const current = await loadDiffRun(run.path, { temporaryRoot });
-    const checkpoints = window.pages.map((inspected) => {
+    const notes = window.pages.flatMap((inspected) => {
       const source = inspected.kind === "sources"
         ? inspected.value.sources.find((value) => (
           request ? value.text.includes(request.path) : true
@@ -57,14 +57,18 @@ async function inspectAll(run, temporaryRoot, request) {
           }]
         : [];
       if (observations.length > 0) requested = true;
-      return { observations, page: inspected.page };
+      return observations.map((observation) => ({
+        page: inspected.page,
+        ...observation,
+      }));
     });
     const result = await checkpointDiffRunWindow(run.path, window.startPage, {
-      checkpoints,
       endPage: window.endPage,
       generation: current.manifest.generation,
+      notes,
+      processedPages: window.pages.map((page) => page.page),
       runId: current.manifest.runId,
-      schemaVersion: 1,
+      schemaVersion: 2,
       snapshotDigest: current.snapshot.digest,
       startPage: window.startPage,
     }, { temporaryRoot });

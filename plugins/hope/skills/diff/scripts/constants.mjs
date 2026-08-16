@@ -1,17 +1,20 @@
 export const CONTRACT_VERSION = 1;
 export const ANALYSIS_VERSION = 3;
 export const RENDERER_VERSION = 9;
-export const RUN_VERSION = 6;
+export const RUN_VERSION = 7;
 export const CHECKPOINT_VERSION = 1;
+export const CHECKPOINT_WINDOW_VERSION = 2;
 export const MICROWORLD_SKELETON_VERSION = 6;
 
 export const LIMITS = Object.freeze({
   analysisProseBytes: 48 * 1024,
+  authoredEvidenceLines: 96,
   artifactBytes: 6 * 1024 * 1024,
   changedFiles: 500,
   changedLines: 20_000,
   checkpointBytes: 32 * 1024,
   checkpointEvidence: 8,
+  checkpointEvidenceReferences: 32,
   checkpointEvidenceExcerptBytes: 8 * 1024,
   checkpointEvidenceLines: 24,
   checkpointEvidenceTotalBytes: 96 * 1024,
@@ -36,7 +39,7 @@ export const LIMITS = Object.freeze({
   inspectionPageBytes: 16 * 1024,
   inspectionTotalBytes: 1024 * 1024,
   inspectionWindowBytes: 32 * 1024,
-  ledgerBytes: 256 * 1024,
+  ledgerBytes: 1024 * 1024,
   ledgerPageBytes: 24 * 1024,
   ledgerStateBytes: 64 * 1024,
   manifestBytes: 128 * 1024,

@@ -14,6 +14,16 @@ base, changed files, patches, and bounded context.
 It gives captured sources stable identifiers and validates every analysis
 citation against those sources.
 
+The model selects one focused source interval. The runtime validates that
+interval and splits it into bounded evidence references without dropping any
+selected line. This keeps reference-size arithmetic out of the host workflow
+while preserving exact source binding and resource accounting.
+
+Inspection keeps deterministic processed-page coverage separate from sparse,
+model-authored notes. The final ledger combines that coverage, the grounded
+notes and excerpts, and bounded file and limit accounting in one analysis
+handoff.
+
 It rechecks the pull-request revisions after rendering and before publication.
 
 A changed revision stops publication instead of presenting the review as
@@ -43,6 +53,11 @@ Publication creates a new file and never replaces an existing artifact.
 
 A failed collection, validation, render, revalidation, or publication does not
 publish a partial review.
+
+The standard absence of CI, test, build, and lint execution does not limit a
+review by itself. When the analysis treats that absence as material, the
+runtime requires a linked verification item so the uncertainty and its closing
+evidence remain actionable.
 
 A publication failure preserves the validated private run so `finish` can be
 retried after the publication problem is fixed.

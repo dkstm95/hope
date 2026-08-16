@@ -27,7 +27,7 @@ skills/diff/references/analysis.md
 skills/diff/references/runtime.md
 skills/diff/scripts/analysis-v3.schema.json
 skills/diff/scripts/artifact.mjs
-skills/diff/scripts/checkpoint-window-v1.schema.json
+skills/diff/scripts/checkpoint-window-v2.schema.json
 skills/diff/scripts/checkpoint.mjs
 skills/diff/scripts/cli.mjs
 skills/diff/scripts/code-evidence.mjs
@@ -36,6 +36,7 @@ skills/diff/scripts/constants.mjs
 skills/diff/scripts/context.mjs
 skills/diff/scripts/derive.mjs
 skills/diff/scripts/design/tokens.mjs
+skills/diff/scripts/evidence-range.mjs
 skills/diff/scripts/finalize.mjs
 skills/diff/scripts/github.mjs
 skills/diff/scripts/hash.mjs

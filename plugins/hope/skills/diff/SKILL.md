@@ -162,20 +162,39 @@ If output is truncated, replay the same window before advancing.
 
 Before the first checkpoint, read the complete checkpoint-window schema.
 
-Write one checkpoint entry for every delivered page to the exact
-`checkpointPath` returned by Hope.
+Hope prepares a restricted input file at the exact `checkpointPath` with the
+window identity and ordered `processedPages` already filled in.
 
-Use a file-writing tool, not shell interpolation or an inline heredoc.
+Use a file-writing tool to add only sparse `notes`. Do not replace the identity
+or processed-page fields, and do not use shell interpolation or an inline
+heredoc.
 
-Record only facts, risks, and questions supported by that page.
+Record only a distinct fact, risk, or material question that could support the
+final purpose, core change, code step, review item, context check, or material
+limit.
+
+Do not inventory files, tests, or documents that merely repeat an earlier
+note. Keep the new note only when it establishes a distinct behavior, layer,
+constraint, contradiction, or risk.
+
+Normally keep one source page to four notes. Exceed that only for independent
+behaviors or risks that the final review may need.
 
 Every observation must cite a source ID and line range delivered on the same
 page.
 
-Use an empty observations array when the page adds nothing.
+Select the smallest source interval that proves the note. Hope preserves an
+authored interval of up to 96 lines and deterministically splits it into
+evidence references of at most 24 lines; do not spend time partitioning one
+continuous interval by hand.
 
-Only a question may request an exact repository-relative context path, and
-that path must appear in the cited excerpt.
+Leave `notes` empty when the window adds nothing. Hope records processed pages
+without requiring empty model-authored entries.
+
+Only a question may request an exact repository-relative context path. The
+literal path must appear inside the cited source lines; the source chunk's
+metadata path does not count. Omit `contextRequests` when there is no grounded
+request.
 
 Submit the window:
 
@@ -222,8 +241,15 @@ Continue through `totalPages`.
 
 Confirm that coverage accounts for every delivered page.
 
-Treat checkpoint notes as model-authored memory aids and check them against
-Hope's extracted evidence excerpts.
+Treat `notes` as model-authored memory aids and check them against Hope's
+extracted evidence excerpts.
+
+Treat the paginated `reviewContext` as the complete analysis handoff. It
+contains the target, classifiable files, automatically handled files, and
+collection limits. Give every `classifiable-file` one file disposition and do
+not author a disposition for an `automatic-file`. When an `automatic-file`
+contains `limitId`, read its path and unavailability reason from that matching
+`limit` entry.
 
 Read the complete analysis schema.
 
@@ -234,6 +260,14 @@ Write one JSON object to the exact `analysisPath` returned by Hope.
 Use a file-writing tool, not shell interpolation or an inline heredoc.
 
 Use the latest snapshot digest after any context collection.
+
+Select the smallest continuous evidence interval that proves each claim. Hope
+preserves an authored interval of up to 96 lines and splits it into rendered
+references of at most 24 lines; do not partition that interval by hand.
+
+Use `stated`, `inferred`, or `unknown` for `purpose`; source code is not a
+purpose statement. Ground both `coreChange.before` and `coreChange.after` in
+collected changed-file code even when pull-request prose explains the intent.
 
 When the teaching-aid rules select a microworld, write its controls to a
 restricted private JSON file and run:

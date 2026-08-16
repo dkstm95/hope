@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/diff-checkpoint-window-v2.json",
+  "title": "Hope diff checkpoint window v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "snapshotDigest",
+    "generation",
+    "startPage",
+    "endPage",
+    "processedPages",
+    "notes"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "runId": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "snapshotDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "generation": { "type": "integer", "minimum": 1 },
+    "startPage": { "type": "integer", "minimum": 1 },
+    "endPage": { "type": "integer", "minimum": 1 },
+    "processedPages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "description": "The ordered pages processed in this window. Hope prepares this list; do not edit it.",
+      "items": { "type": "integer", "minimum": 1 }
+    },
+    "notes": {
+      "type": "array",
+      "maxItems": 32,
+      "description": "Sparse, page-grounded memory for the final review. Leave this empty when the window adds no distinct fact, risk, or material question.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "kind", "text", "basis", "evidence"],
+        "properties": {
+          "page": { "type": "integer", "minimum": 1 },
+          "kind": { "enum": ["fact", "risk", "question"] },
+          "text": { "type": "string", "minLength": 1, "maxLength": 4096 },
+          "basis": { "enum": ["stated", "code", "inferred"] },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "description": "Source-bound intervals from this page. Keep each interval focused and at most 96 lines; Hope splits longer excerpts into 24-line evidence references.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sourceId", "startLine", "endLine"],
+              "properties": {
+                "sourceId": { "type": "string", "pattern": "^source-[1-9][0-9]*$" },
+                "startLine": { "type": "integer", "minimum": 1 },
+                "endLine": { "type": "integer", "minimum": 1 }
+              }
+            }
+          },
+          "contextRequests": {
+            "type": "array",
+            "maxItems": 4,
+            "description": "Optional. Use only for a question when the exact path appears inside the cited source lines; source metadata does not count.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "revision"],
+              "properties": {
+                "path": { "type": "string", "minLength": 1 },
+                "revision": { "enum": ["head", "merge-base"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

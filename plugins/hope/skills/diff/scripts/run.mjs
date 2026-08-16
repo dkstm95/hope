@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   ANALYSIS_VERSION,
+  CHECKPOINT_WINDOW_VERSION,
   LIMITS,
   RUN_VERSION,
 } from "./constants.mjs";
@@ -24,6 +25,7 @@ import {
   createDiffCheckpoint,
   validateDiffLedger,
 } from "./checkpoint.mjs";
+import { splitEvidenceRange } from "./evidence-range.mjs";
 import { digestJson } from "./hash.mjs";
 
 const RUN_OWNER = "hope-diff-run";
@@ -596,6 +598,33 @@ export function diffCheckpointWindowInputPath(
   );
 }
 
+function checkpointWindowInputTemplate(window) {
+  return {
+    endPage: window.endPage,
+    generation: window.generation,
+    notes: [],
+    processedPages: window.pages.map((page) => page.page),
+    runId: window.runId,
+    schemaVersion: CHECKPOINT_WINDOW_VERSION,
+    snapshotDigest: window.snapshotDigest,
+    startPage: window.startPage,
+  };
+}
+
+async function prepareCheckpointWindowInput(window, {
+  writeCheckpointWindowInput = writeNewJson,
+} = {}) {
+  try {
+    await writeCheckpointWindowInput(
+      window.checkpointPath,
+      checkpointWindowInputTemplate(window),
+    );
+  } catch (error) {
+    if (error?.code !== "EEXIST") throw error;
+  }
+  return window;
+}
+
 function createLedgerState(runId) {
   return {
     checkpointCount: 0,
@@ -926,9 +955,9 @@ export async function createDiffRun(snapshot, {
   return Object.freeze({
     analysisPath: join(path, manifest.analysisFile),
     checkpointWindowSchemaPath: fileURLToPath(
-      new URL("./checkpoint-window-v1.schema.json", import.meta.url),
+      new URL("./checkpoint-window-v2.schema.json", import.meta.url),
     ),
-    checkpointWindowSchemaVersion: 1,
+    checkpointWindowSchemaVersion: CHECKPOINT_WINDOW_VERSION,
     generation: manifest.generation,
     pageCount: pages.length,
     path,
@@ -1403,38 +1432,90 @@ function validateCheckpointWindowInput(value, run, window) {
     : "";
   if (
     keys !== [
-      "checkpoints",
       "endPage",
       "generation",
+      "notes",
+      "processedPages",
       "runId",
       "schemaVersion",
       "snapshotDigest",
       "startPage",
     ].sort().join(",")
-    || value.schemaVersion !== 1
+    || value.schemaVersion !== CHECKPOINT_WINDOW_VERSION
     || value.runId !== run.manifest.runId
     || value.snapshotDigest !== run.manifest.snapshotDigest
     || value.generation !== run.manifest.generation
     || value.startPage !== window.startPage
     || value.endPage !== window.endPage
-    || !Array.isArray(value.checkpoints)
-    || value.checkpoints.length !== window.pages.length
+    || !Array.isArray(value.processedPages)
+    || value.processedPages.length !== window.pages.length
+    || value.processedPages.some(
+      (page, index) => page !== window.pages[index].page,
+    )
+    || !Array.isArray(value.notes)
+    || value.notes.length
+      > LIMITS.checkpointObservations * LIMITS.checkpointWindowPages
   ) {
     throw new Error("Hope diff checkpoint window identity does not match the delivered pages");
   }
-  for (const [index, checkpoint] of value.checkpoints.entries()) {
+  const notesByPage = new Map(window.pages.map((page) => [page.page, []]));
+  let previousPage = window.startPage;
+  for (const [index, note] of value.notes.entries()) {
+    const keys = note && typeof note === "object" && !Array.isArray(note)
+      ? Object.keys(note).sort().join(",")
+      : "";
     if (
-      !checkpoint
-      || typeof checkpoint !== "object"
-      || Array.isArray(checkpoint)
-      || Object.keys(checkpoint).sort().join(",") !== "observations,page"
-      || checkpoint.page !== window.pages[index].page
-      || !Array.isArray(checkpoint.observations)
+      !["basis,evidence,kind,page,text", "basis,contextRequests,evidence,kind,page,text"]
+        .includes(keys)
+      || !notesByPage.has(note.page)
+      || note.page < previousPage
+      || (note.contextRequests !== undefined && !Array.isArray(note.contextRequests))
+      || !Array.isArray(note.evidence)
+      || note.evidence.length < 1
+      || note.evidence.length > LIMITS.checkpointEvidence
     ) {
-      throw new Error("Hope diff checkpoint window pages are incomplete or out of order");
+      throw new Error(`Hope diff checkpoint note ${index + 1} is invalid or out of order`);
     }
+    const pageNotes = notesByPage.get(note.page);
+    if (pageNotes.length >= LIMITS.checkpointObservations) {
+      throw new Error(`Hope diff checkpoint page ${note.page} has too many notes`);
+    }
+    const evidence = note.evidence.flatMap((value, evidenceIndex) => {
+      const lineCount = Number.isSafeInteger(value?.startLine)
+        && Number.isSafeInteger(value?.endLine)
+        ? value.endLine - value.startLine + 1
+        : undefined;
+      if (
+        !value
+        || typeof value !== "object"
+        || Array.isArray(value)
+        || Object.keys(value).sort().join(",") !== "endLine,sourceId,startLine"
+        || typeof value.sourceId !== "string"
+        || !Number.isSafeInteger(value.startLine)
+        || !Number.isSafeInteger(value.endLine)
+        || value.startLine < 1
+        || value.endLine < value.startLine
+        || lineCount > LIMITS.authoredEvidenceLines
+      ) {
+        throw new Error(
+          `Hope diff checkpoint page ${note.page} note ${index + 1} evidence ${evidenceIndex + 1} has an invalid authored range`,
+        );
+      }
+      return splitEvidenceRange(value, LIMITS.checkpointEvidenceLines);
+    });
+    pageNotes.push({
+      basis: note.basis,
+      contextRequests: note.contextRequests ?? [],
+      evidence,
+      kind: note.kind,
+      text: note.text,
+    });
+    previousPage = note.page;
   }
-  return value;
+  return window.pages.map((page) => ({
+    observations: notesByPage.get(page.page),
+    page: page.page,
+  }));
 }
 
 function ledgerStateInput(state) {
@@ -1475,6 +1556,33 @@ function diffWindowForRun(run, startPage) {
   });
 }
 
+async function advanceCheckpointProgress(run, state, claim, options) {
+  let manifest = run.manifest;
+  let nextWindow;
+  if (state.currentPage === run.manifest.pageCount) {
+    if (run.manifest.phase !== "inspected") {
+      manifest = { ...run.manifest, phase: "inspected" };
+    }
+  } else {
+    nextWindow = diffWindowForRun(run, state.currentPage + 1);
+    if (run.manifest.deliveredPage <= state.currentPage) {
+      manifest = {
+        ...run.manifest,
+        deliveredPage: nextWindow.endPage,
+        phase: "inspecting",
+      };
+    }
+  }
+  if (
+    manifest.phase !== run.manifest.phase
+    || manifest.deliveredPage !== run.manifest.deliveredPage
+  ) {
+    await claim.assertOwned();
+    await (options.replaceManifest ?? replaceJson)(run.manifestPath, manifest);
+  }
+  return { manifest, nextWindow };
+}
+
 export async function inspectDiffRunWindow(runPath, startPage, options = {}) {
   return await withDiffRunMutation(runPath, options, async (claim) => {
     const run = await loadDiffRun(runPath, options);
@@ -1484,7 +1592,7 @@ export async function inspectDiffRunWindow(runPath, startPage, options = {}) {
       if (replay.endPage > run.ledgerState.currentPage) {
         throw new Error(`Read inspection window ${expected} next`);
       }
-      return replay;
+      return await prepareCheckpointWindowInput(replay, options);
     }
     if (startPage !== expected) {
       throw new Error(`Read inspection window ${expected} next`);
@@ -1494,7 +1602,7 @@ export async function inspectDiffRunWindow(runPath, startPage, options = {}) {
       if (window.endPage !== run.manifest.deliveredPage) {
         throw new Error(`Checkpoint inspection window ${expected} before reading another window`);
       }
-      return window;
+      return await prepareCheckpointWindowInput(window, options);
     }
     await claim.assertOwned();
     await replaceJson(run.manifestPath, {
@@ -1502,7 +1610,7 @@ export async function inspectDiffRunWindow(runPath, startPage, options = {}) {
       deliveredPage: window.endPage,
       phase: "inspecting",
     });
-    return window;
+    return await prepareCheckpointWindowInput(window, options);
   });
 }
 
@@ -1516,6 +1624,12 @@ export async function checkpointDiffRunWindow(
     const run = await loadDiffRun(runPath, options);
     const window = diffWindowForRun(run, startPage);
     if (window.endPage <= run.ledgerState.currentPage) {
+      const transition = await advanceCheckpointProgress(
+        run,
+        run.ledgerState,
+        claim,
+        options,
+      );
       const checkpoints = await Promise.all(window.pages.map(
         (page) => readCheckpointRecord(
           run.path,
@@ -1523,16 +1637,16 @@ export async function checkpointDiffRunWindow(
           page.page,
         ),
       ));
-      const nextStart = run.ledgerState.currentPage + 1;
+      const nextWindow = transition.nextWindow
+        ? await prepareCheckpointWindowInput(transition.nextWindow, options)
+        : undefined;
       return Object.freeze({
         checkpointPath: window.checkpointPath,
         checkpoints: Object.freeze(checkpoints),
         consumedInput: false,
         ledgerState: run.ledgerState,
-        manifest: run.manifest,
-        nextWindow: nextStart <= run.manifest.deliveredPage
-          ? diffWindowForRun(run, nextStart)
-          : undefined,
+        manifest: transition.manifest,
+        nextWindow,
         replayed: true,
       });
     }
@@ -1548,12 +1662,16 @@ export async function checkpointDiffRunWindow(
     const inputValue = typeof input === "function"
       ? await input(window.checkpointPath)
       : input;
-    validateCheckpointWindowInput(inputValue, run, window);
+    const submittedCheckpoints = validateCheckpointWindowInput(
+      inputValue,
+      run,
+      window,
+    );
 
     let simulatedState = run.ledgerState;
     const accepted = [];
     const pendingCommits = [];
-    for (const submitted of inputValue.checkpoints) {
+    for (const submitted of submittedCheckpoints) {
       if (submitted.page <= run.ledgerState.currentPage) {
         const existing = await readCheckpointRecord(
           run.path,
@@ -1617,33 +1735,21 @@ export async function checkpointDiffRunWindow(
     }
 
     const state = pendingCommits.at(-1)?.state ?? run.ledgerState;
-    let manifest = run.manifest;
-    let nextWindow;
-    if (window.endPage === run.manifest.pageCount) {
-      manifest = { ...run.manifest, phase: "inspected" };
-    } else if (run.manifest.deliveredPage > window.endPage) {
-      nextWindow = diffWindowForRun(run, state.currentPage + 1);
-    } else {
-      nextWindow = diffWindowForRun(run, window.endPage + 1);
-      manifest = {
-        ...run.manifest,
-        deliveredPage: nextWindow.endPage,
-        phase: "inspecting",
-      };
-    }
-    if (
-      manifest.phase !== run.manifest.phase
-      || manifest.deliveredPage !== run.manifest.deliveredPage
-    ) {
-      await claim.assertOwned();
-      await replaceJson(run.manifestPath, manifest);
-    }
+    const transition = await advanceCheckpointProgress(
+      run,
+      state,
+      claim,
+      options,
+    );
+    const nextWindow = transition.nextWindow
+      ? await prepareCheckpointWindowInput(transition.nextWindow, options)
+      : undefined;
     return Object.freeze({
       checkpointPath: window.checkpointPath,
       checkpoints: Object.freeze(accepted),
       consumedInput: typeof input === "function",
       ledgerState: state,
-      manifest,
+      manifest: transition.manifest,
       nextWindow,
       replayed: pendingCommits.length === 0,
     });

@@ -35,14 +35,30 @@
       ],
       "description": "One concise, change-based plain-language sentence used as the review title."
     },
-    "purpose": { "$ref": "#/$defs/claim" },
+    "purpose": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "properties": {
+            "basis": { "enum": ["stated", "inferred", "unknown"] }
+          }
+        }
+      ],
+      "description": "The stated or inferred goal. Code can support the explanation, but is not itself the purpose source."
+    },
     "coreChange": {
       "type": "object",
       "additionalProperties": false,
       "required": ["before", "after", "why", "details"],
       "properties": {
-        "before": { "$ref": "#/$defs/claim" },
-        "after": { "$ref": "#/$defs/claim" },
+        "before": {
+          "$ref": "#/$defs/claim",
+          "description": "The previous behavior, grounded in collected changed-file code."
+        },
+        "after": {
+          "$ref": "#/$defs/claim",
+          "description": "The new behavior, grounded in collected changed-file code."
+        },
         "why": { "$ref": "#/$defs/claim" },
         "details": {
           "type": "array",
@@ -209,7 +225,10 @@
         "required": ["limitId", "material", "impact"],
         "properties": {
           "limitId": { "type": "string", "pattern": "^limit-[0-9]+$" },
-          "material": { "type": "boolean" },
+          "material": {
+            "type": "boolean",
+            "description": "Whether this limit changes a main explanation or judgment. A material execution-or-CI limit also needs a linked verify review item."
+          },
           "impact": {
             "$ref": "#/$defs/text",
             "description": "The concrete effect of this limit on the review."
@@ -260,6 +279,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["sourceId", "startLine", "endLine"],
+      "description": "One source-bound interval of at most 96 lines. Hope preserves the interval and splits it into evidence excerpts of at most 24 lines.",
       "properties": {
         "sourceId": { "type": "string", "pattern": "^source-[0-9]+$" },
         "startLine": { "type": "integer", "minimum": 1 },
