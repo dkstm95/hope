@@ -152,8 +152,8 @@ The artifact is the current implementation agreement, not a progress tracker.
 
 Show each fact once, in this order:
 
-1. title and one-sentence intent;
-2. problem, success, and governing boundary;
+1. title and one-sentence goal;
+2. problem, checks, and governing boundary;
 3. included and excluded scope;
 4. compared design directions and the selected option, only when material UI
    design needed visual agreement;
@@ -171,7 +171,12 @@ approval workflow.
 The whole document is the implementation contract. Do not repeat it in a
 separate contract summary.
 
-Do not show implementation progress, completion controls, owners, comments,
+Show each check as one passing condition followed by how it is verified and who
+decides whether it passes: an agent or person. Keep checks in the summary near
+the goal. Do not turn them into progress controls or store their execution
+results in the artifact.
+
+Do not show implementation progress, completion controls, work owners, comments,
 changed files, test status, or model and interview metrics.
 
 ## Project GUI widgets

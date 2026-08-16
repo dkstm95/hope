@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import {
   copyFile,
@@ -23,7 +24,11 @@ import {
   verifyAlignHtml,
 } from "../plugins/hope/skills/align/scripts/artifact.mjs";
 import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render.mjs";
-import { makeAlignInput, makeDesignDirections } from "../test-support/align-fixture.mjs";
+import {
+  makeAlignInput,
+  makeDesignDirections,
+  makeLegacyAlignInput,
+} from "../test-support/align-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
 } from "../test-support/temporary-directory.mjs";
@@ -32,6 +37,22 @@ const execFileAsync = promisify(execFile);
 const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 const now = new Date("2026-08-14T00:00:00.000Z");
 const sampleImage = fileURLToPath(new URL("../plugins/hope/assets/hope-icon.png", import.meta.url));
+const alignDataPattern = /<script id="hope-align-data" type="application\/json">([\s\S]*?)<\/script>/u;
+const alignDigestPattern = /(<meta name="hope-align-digest" content=")[a-f0-9]{64}(">)/u;
+
+function resealAlignArtifact(source, mutate) {
+  const dataSource = source.match(alignDataPattern)?.[1];
+  assert.notEqual(dataSource, undefined);
+  const data = JSON.parse(dataSource);
+  mutate(data);
+  const changed = source.replace(
+    alignDataPattern,
+    `<script id="hope-align-data" type="application/json">${JSON.stringify(data)}</script>`,
+  );
+  const normalized = changed.replace(alignDigestPattern, `$1${"0".repeat(64)}$2`);
+  const digest = createHash("sha256").update(normalized).digest("hex");
+  return normalized.replace(alignDigestPattern, `$1${digest}$2`);
+}
 
 function crc32(bytes) {
   let checksum = 0xffffffff;
@@ -104,7 +125,27 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
     /unsupported field: progress/u,
   );
   assert.throws(
-    () => validateAlignInput({ ...makeAlignInput(), success: [] }),
+    () => validateAlignInput({ ...makeAlignInput(), checks: [] }),
+    /must contain between 1 and 12 items/u,
+  );
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      checks: [{ condition: "완료", by: "agent" }],
+    })),
+    /verify must be text/u,
+  );
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      checks: [{ condition: "완료", verify: "테스트한다.", by: "model" }],
+    })),
+    /by must be agent or human/u,
+  );
+  const legacy = validateAlignInput(makeLegacyAlignInput());
+  assert.equal(legacy.schemaVersion, 1);
+  assert.equal(legacy.intent, makeAlignInput().goal);
+  assert.deepEqual(legacy.success, makeAlignInput().checks.map((check) => check.condition));
+  assert.throws(
+    () => validateAlignInput(makeLegacyAlignInput({ success: [] })),
     /must not be empty/u,
   );
   assert.throws(
@@ -337,7 +378,7 @@ test("two image-rich revisions remain complete within the artifact boundary", as
 test("renderer is deterministic, self-contained, and keeps authored text inert", () => {
   const input = validateAlignInput(makeAlignInput({
     title: '</title><script src="https://evil.example/x.js"></script>',
-    intent: "Keep <img src=x onerror=alert(1)> as text.",
+    goal: "Keep <img src=x onerror=alert(1)> as text.",
   }));
   const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
   const data = {
@@ -363,7 +404,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="3"/u);
+  assert.match(first, /name="hope-align-design-version" content="4"/u);
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
@@ -373,9 +414,15 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<ol class="decision-list">/u);
   assert.match(first, />결정과 구현 선택</u);
   assert.doesNotMatch(first, /id="intent-history"/u);
+  assert.doesNotMatch(first, /id="goal-history"/u);
+  assert.match(first, />목표</u);
+  assert.match(first, />확인 조건</u);
+  assert.match(first, />AI 에이전트 확인</u);
+  assert.match(first, />사용자 확인</u);
   assert.match(first, /prefers-color-scheme: dark/u);
   assert.match(first, /@media print/u);
   assert.match(first, /Content-Security-Policy/u);
+  assert.doesNotMatch(first, /[ \t]+$/mu);
   assert.match(first, /default-src &#39;none&#39;|default-src 'none'/u);
   assert.match(first, /&lt;script src=/u);
   assert.match(first, /&lt;img src=x onerror=alert\(1\)&gt;/u);
@@ -470,9 +517,9 @@ test("create publishes one owned project artifact without replacing a path", asy
   assert.equal(await readFile(outputPath, "utf8"), html);
 });
 
-test("revise appends intent in the same artifact and rejects stale or edited state", async () => {
+test("revise appends a current goal contract to a legacy artifact", async () => {
   const root = await repository();
-  const firstInput = await inputFile(root, "first.json", makeAlignInput({
+  const firstInput = await inputFile(root, "first.json", makeLegacyAlignInput({
     behavior: {
       ...makeAlignInput().behavior,
       outcomes: [{
@@ -509,6 +556,8 @@ test("revise appends intent in the same artifact and rejects stale or edited sta
   assert.notEqual(revised.digest, created.digest);
   const inspected = await inspectAlignArtifact(outputPath);
   assert.equal(inspected.revision, 2);
+  assert.equal(inspected.content.goal, makeAlignInput().goal);
+  assert.deepEqual(inspected.content.checks, makeAlignInput().checks);
   assert.equal(
     inspected.content.boundary,
     "복구 기간은 24시간이며 만료된 항목은 복구하지 않는다.",
@@ -523,6 +572,8 @@ test("revise appends intent in the same artifact and rejects stale or edited sta
   assert.match(html, /이전 버전에서만 합의한 결과다/u);
   assert.match(html, /이전 근거 전용/u);
   assert.match(html, /docs\/previous\.md/u);
+  assert.match(html, /중단 지점부터 이어서 완료할 수 있다/u);
+  assert.match(html, /재개 요청의 시작 위치/u);
 
   await assert.rejects(
     reviseAlignArtifact({
@@ -552,6 +603,25 @@ test("revise appends intent in the same artifact and rejects stale or edited sta
   assert.equal(await readFile(outputPath, "utf8"), edited);
 });
 
+test("inspect rejects resealed artifacts with invalid revision content", async () => {
+  const root = await repository();
+  const inputPath = await inputFile(root, "input.json", makeAlignInput());
+  const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
+  await createAlignArtifact({ inputPath, outputPath, root });
+  const original = await readFile(outputPath, "utf8");
+  const invalidChanges = [
+    (data) => { data.revisions[0].content.scope.included = "not a list"; },
+    (data) => { data.revisions[0].content.progress = 50; },
+    (data) => { delete data.revisions[0].content.checks; },
+    (data) => { data.revisions[0].content.intent = data.revisions[0].content.goal; },
+  ];
+
+  for (const change of invalidChanges) {
+    await writeFile(outputPath, resealAlignArtifact(original, change), "utf8");
+    await assert.rejects(inspectAlignArtifact(outputPath), /content|goal contract/u);
+  }
+});
+
 test("revision rejects an artifact that would exceed the readable size", async () => {
   const root = await repository();
   const prose = "x".repeat(4_000);
@@ -559,9 +629,13 @@ test("revision rejects an artifact that would exceed the readable size", async (
     behavior: undefined,
     decisions: [],
     evidence: undefined,
-    intent: prose,
+    goal: prose,
     problem: prose,
-    success: Array.from({ length: 4 }, () => prose),
+    checks: Array.from({ length: 4 }, () => ({
+      condition: prose,
+      verify: prose,
+      by: "agent",
+    })),
     boundary: prose,
     scope: {
       included: Array.from({ length: 25 }, () => prose),

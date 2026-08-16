@@ -6,7 +6,7 @@ description: Use before implementation when requirements, scope, design, expecte
 # Hope Align
 
 Use the active host session to inspect the task, build a shared understanding
-with the person, and preserve the agreed intent as one self-contained HTML
+with the person, and preserve the agreed goal as one self-contained HTML
 artifact.
 
 Align does not implement the task.
@@ -30,7 +30,7 @@ Keep these kinds of information distinct:
 Do not fill a missing requirement with a recommended design during the
 teach-back.
 
-Label any proposed success condition, scope exclusion, or expected behavior as
+Label any proposed check, scope exclusion, or expected behavior as
 an AI proposal and keep it open until the person confirms it.
 
 ## Teach back
@@ -38,7 +38,8 @@ an AI proposal and keep it open until the person confirms it.
 Start with a short account of:
 
 - the goal;
-- success conditions;
+- the conditions that must pass, how to verify them, and who decides whether
+  they pass: an agent or person;
 - in-scope and out-of-scope work;
 - expected behavior;
 - important assumptions; and
@@ -51,7 +52,7 @@ change the result unresolved.
 
 ## Ask only material questions
 
-Ask about intent, preference, work rules, expected behavior, or a choice that
+Ask about the goal, preference, work rules, expected behavior, or a choice that
 would change the result.
 
 Explain why the answer matters.
@@ -64,7 +65,7 @@ Let the person delegate a reversible low-impact choice.
 Ask material questions together when the person can answer them independently.
 Ask one at a time only when an answer determines the next question.
 
-Continue the interview until the person's intent and the agent's understanding
+Continue the interview until the person's goal and the agent's understanding
 agree on every point that could change the work.
 
 Reduce the person's effort with concise questions and updated teach-backs, not
@@ -91,13 +92,22 @@ result. Do not turn a small UI correction into a design exercise.
 
 Complete alignment only when:
 
-- the goal and success conditions are clear enough to judge the result;
+- the goal and checks are clear enough to judge the result;
 - scope boundaries are visible;
 - important expected behavior is understood;
 - no material question or open assumption remains; and
 - the work can be divided into verifiable pieces.
 
 Model confidence is not approval.
+
+Write each check as one condition, one verification method, and one decision
+source. Use `agent` only when an implementation agent can perform the check and
+report the result needed for judgment. Use `human` when completion depends on a
+person's preference, observation, or approval. Do not let an agent infer that a
+human check passed.
+
+Align owns this agreed goal contract. It does not start or manage a host's goal
+feature, implementation loop, retry state, progress, or completion evidence.
 
 ## Preserve the agreement
 
@@ -106,7 +116,7 @@ artifact. Task size changes the amount of detail, not whether an artifact is
 created.
 
 Read `references/artifact.md` and the complete
-`scripts/align-input-v1.schema.json` before creating structured input.
+`scripts/align-input-v2.schema.json` before creating structured input.
 
 Apply the shared Write standard to the artifact language. Put each fact in one
 section only. Omit optional behavior, decisions, implementation choices, and
@@ -118,8 +128,8 @@ location for durable design or specification documents when one is clear.
 Otherwise use `docs/alignments/`. Never use a hidden Hope directory for this
 project knowledge.
 
-Choose one stable, descriptive HTML path for one intent. Another implementation
-attempt, branch, or pull request for the same intent does not create another
+Choose one stable, descriptive HTML path for one goal. Another implementation
+attempt, branch, or pull request for the same goal does not create another
 artifact.
 
 Write the structured input to a temporary JSON file outside the repository.
@@ -147,18 +157,18 @@ Create a first artifact with:
 create --input <draft.json> --output <artifact.html> --root <repository>
 ```
 
-If an artifact may already own the same intent, inspect it first:
+If an artifact may already own the same goal, inspect it first:
 
 ```text
 inspect --artifact <artifact.html>
 ```
 
-A material change to the goal, success, scope, expected behavior, constraint,
+A material change to the goal, checks, scope, expected behavior, constraint,
 or non-goal creates a new revision in the same artifact. A reversible technical
 choice does not.
 
 Revise only after `inspect` verifies the Hope-owned artifact and only when it is
-still the same intent:
+still the same goal:
 
 ```text
 revise --input <draft.json> --artifact <artifact.html> --expect <digest> --root <repository>

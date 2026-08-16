@@ -6,10 +6,16 @@ and revision judgment.
 
 ## Input and rendering
 
-Align accepts one bounded JSON input that follows
-`scripts/align-input-v1.schema.json`. The runtime revalidates that structure
-without making a model call and applies filesystem, URL, and image checks that
-JSON Schema cannot express safely.
+New agreements use one bounded JSON input that follows
+`scripts/align-input-v2.schema.json`. Its `goal` names the agreed result. Every
+item in `checks` binds one passing condition to its verification method and to
+the `agent` or `human` that decides whether it passes.
+
+The runtime continues to accept `scripts/align-input-v1.schema.json` so
+existing callers and artifact history remain readable. A current revision
+should use v2. The runtime revalidates both structures without making a model
+call and applies filesystem, URL, and image checks that JSON Schema cannot
+express safely.
 
 String limits count Unicode code points. Dangerous bidirectional controls and
 malformed Unicode are rejected before rendering. A finished artifact must fit
@@ -64,8 +70,8 @@ again immediately before an atomic same-directory replacement. A symbolic
 link, different repository identity, stale digest, unknown file, or file changed
 outside Hope stops revision and leaves the existing path in place.
 
-One artifact keeps one intent. Revisions append complete agreed snapshots so
-the latest agreement is prominent and earlier intent remains recoverable.
+One artifact keeps one goal. Revisions append complete agreed snapshots so the
+latest agreement is prominent and earlier goal contracts remain recoverable.
 
 ## Commands
 
