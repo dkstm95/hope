@@ -8,8 +8,10 @@ Use these rules with the analysis schema and the shared Hope Write standard.
 - Cite only source IDs and line ranges delivered by inspection.
 - Keep each claim no broader than its evidence. Split claims whose parts rest
   on code, stated intent, or inference differently.
-- Use the smallest supporting excerpt and no more than 24 lines in one
-  evidence reference.
+- Select the smallest continuous source interval that proves the claim. An
+  authored interval may contain up to 96 lines. Hope preserves that interval
+  and deterministically splits it into rendered evidence references of at most
+  24 lines, so do not partition one interval by hand.
 - Test code establishes an expected condition, not that the test ran or that a
   wider integration behavior succeeded.
 - Do not invent execution or CI results.
@@ -35,6 +37,11 @@ Use these rules with the analysis schema and the shared Hope Write standard.
   these questions into headings when the existing fields already answer them.
 - State `purpose` as the goal itself. Do not wrap it in phrases such as "this
   change aims to," "this is intended to," or their translated equivalents.
+- Give `purpose` a `stated`, `inferred`, or `unknown` basis. Source code may
+  establish the implementation, but is not itself a statement of purpose.
+- Ground both `coreChange.before` and `coreChange.after` in collected
+  changed-file code. Pull-request prose may explain why the change exists, but
+  cannot establish either code state by itself.
 - Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` to one
   main idea each. Start with the actor or affected thing, then state the
   condition or result. Avoid a sentence whose subject changes halfway through.
@@ -85,6 +92,11 @@ Use these rules with the analysis schema and the shared Hope Write standard.
   left unknown and state whether that omission materially limits a main
   explanation or judgment.
 - Not reading the whole repository is not itself a material limit.
+- Diff does not run or collect CI, tests, builds, or lint. That standard boundary
+  is not material by itself. Mark it material only when the main explanation or
+  judgment depends on an execution result that static evidence cannot establish.
+  In that case, add one linked `verify` review item that states the missing
+  evidence and what would close the uncertainty.
 
 ## Review items
 

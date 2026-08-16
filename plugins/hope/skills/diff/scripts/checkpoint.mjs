@@ -4,6 +4,7 @@ import {
   LIMITS,
 } from "./constants.mjs";
 import { validateContextPath } from "./context.mjs";
+import { splitEvidenceRange } from "./evidence-range.mjs";
 import { containsBidiControl } from "./text.mjs";
 
 const OBSERVATION_KINDS = new Set(["fact", "risk", "question"]);
@@ -88,9 +89,9 @@ function validateEvidence(values, name, snapshot, page) {
   const evidence = array(
     values,
     name,
-    LIMITS.checkpointEvidence,
+    LIMITS.checkpointEvidenceReferences,
     { minimum: 1 },
-  ).map((value, index) => {
+  ).flatMap((value, index) => {
     const itemName = `${name}[${index}]`;
     object(value, itemName, ["sourceId", "startLine", "endLine"]);
     const source = sources?.get(value.sourceId);
@@ -102,25 +103,33 @@ function validateEvidence(values, name, snapshot, page) {
     if (!source && !deliveredChunk) {
       throw new Error(`${itemName} refers to an unknown source`);
     }
+    const lineCount = Number.isSafeInteger(value.startLine)
+      && Number.isSafeInteger(value.endLine)
+      ? value.endLine - value.startLine + 1
+      : undefined;
     if (
       !Number.isSafeInteger(value.startLine)
       || !Number.isSafeInteger(value.endLine)
       || value.startLine < 1
       || value.endLine < value.startLine
-      || value.endLine - value.startLine + 1 > LIMITS.checkpointEvidenceLines
+      || lineCount > LIMITS.authoredEvidenceLines
       || value.endLine > (source?.lineCount ?? deliveredChunk.endLine)
     ) {
-      throw new Error(`${itemName} has an invalid line range`);
+      const range = typeof value.sourceId === "string"
+        && Number.isSafeInteger(value.startLine)
+        && Number.isSafeInteger(value.endLine)
+        ? ` (${value.sourceId}:${value.startLine}-${value.endLine}, ${lineCount} lines; maximum ${LIMITS.authoredEvidenceLines})`
+        : "";
+      throw new Error(`${itemName} has an invalid line range${range}`);
     }
     if (!deliveredChunk) {
       throw new Error(`${itemName} must cite the current inspection page`);
     }
-    return Object.freeze({
-      endLine: value.endLine,
-      sourceId: value.sourceId,
-      startLine: value.startLine,
-    });
+    return splitEvidenceRange(value, LIMITS.checkpointEvidenceLines);
   });
+  if (evidence.length > LIMITS.checkpointEvidenceReferences) {
+    throw new Error(`${name} expands to too many evidence references`);
+  }
   return Object.freeze(evidence);
 }
 
@@ -313,7 +322,7 @@ export function validateDiffLedger(value, snapshot, runId) {
       const evidence = array(
         observation.evidence,
         `${observationName}.evidence`,
-        LIMITS.checkpointEvidence,
+        LIMITS.checkpointEvidenceReferences,
         { minimum: 1 },
       );
       for (const [evidenceIndex, item] of evidence.entries()) {
@@ -638,19 +647,107 @@ function ledgerCoverage(ledger) {
   });
 }
 
+function reviewContextGroups(snapshot) {
+  const fileLimits = new Map(snapshot.limits
+    .filter((limit) => limit.kind === "file-unavailable")
+    .map((limit) => [limit.subject, limit]));
+  const matchedLimitIds = new Set();
+  const groups = [[{
+    kind: "review-context",
+    value: Object.freeze({
+      kind: "overview",
+      pullRequest: snapshot.pullRequest,
+      repository: snapshot.repository,
+      settings: snapshot.settings,
+      snapshot: snapshot.snapshot,
+    }),
+  }]];
+  for (const file of snapshot.files) {
+    if (file.bodyState === "included") {
+      groups.push([{
+        kind: "review-context",
+        value: Object.freeze({
+          file: Object.freeze({
+            additions: file.additions,
+            deletions: file.deletions,
+            id: file.id,
+            path: file.path,
+            previousPath: file.previousPath,
+            providerStatus: file.providerStatus,
+            sourceIds: file.sourceIds,
+          }),
+          kind: "classifiable-file",
+        }),
+      }]);
+    } else {
+      const limit = fileLimits.get(file.path);
+      const group = [{
+        kind: "review-context",
+        value: Object.freeze({
+          file: Object.freeze(limit ? {
+            bodyState: file.bodyState,
+            id: file.id,
+            limitId: limit.id,
+            previousPath: file.previousPath,
+            providerStatus: file.providerStatus,
+          } : {
+            bodyReason: file.bodyReason,
+            bodyReasonKind: file.bodyReasonKind,
+            bodyState: file.bodyState,
+            id: file.id,
+            path: file.path,
+            previousPath: file.previousPath,
+            providerStatus: file.providerStatus,
+          }),
+          kind: "automatic-file",
+        }),
+      }];
+      if (limit) {
+        matchedLimitIds.add(limit.id);
+        group.push({
+          kind: "review-context",
+          value: Object.freeze({ kind: "limit", limit }),
+        });
+      }
+      groups.push(group);
+    }
+  }
+  for (const limit of snapshot.limits) {
+    if (matchedLimitIds.has(limit.id)) continue;
+    groups.push([{
+      kind: "review-context",
+      value: Object.freeze({ kind: "limit", limit }),
+    }]);
+  }
+  return groups;
+}
+
+function reviewNote(checkpoint, observation) {
+  return Object.freeze({
+    ...observation,
+    generation: checkpoint.generation,
+    page: checkpoint.page,
+    pageDigest: checkpoint.pageDigest,
+    snapshotDigest: checkpoint.snapshotDigest,
+  });
+}
+
 function ledgerPageEnvelope(ledger, snapshot, page, totalPages, entries) {
   return {
-    checkpoints: entries
-      .filter((entry) => entry.kind === "checkpoint")
-      .map((entry) => entry.value),
     contentIsUntrusted: true,
     coverage: ledgerCoverage(ledger),
     evidenceExcerpts: entries
       .filter((entry) => entry.kind === "evidence-excerpt")
       .map((entry) => entry.value),
+    notes: entries
+      .filter((entry) => entry.kind === "note")
+      .map((entry) => entry.value),
     page,
     pendingContextRequests: entries
       .filter((entry) => entry.kind === "pending-context-request")
+      .map((entry) => entry.value),
+    reviewContext: entries
+      .filter((entry) => entry.kind === "review-context")
       .map((entry) => entry.value),
     runId: ledger.runId,
     schemaVersion: ledger.schemaVersion,
@@ -726,11 +823,14 @@ function paginateLedgerEntryGroups(ledger, snapshot, groups) {
 export function diffLedgerView(ledger, snapshot, { page = 1 } = {}) {
   const pending = pendingContextRequests(ledger, snapshot);
   const sources = sourceMap(snapshot);
-  const groups = [];
+  const groups = reviewContextGroups(snapshot);
   for (const checkpoint of ledger.checkpoints) {
     if (checkpoint.observations.length === 0) continue;
-    const entries = [{ kind: "checkpoint", value: checkpoint }];
     for (const observation of checkpoint.observations) {
+      const entries = [{
+        kind: "note",
+        value: reviewNote(checkpoint, observation),
+      }];
       for (const evidence of observation.evidence) {
         const key = evidenceKey(evidence);
         const source = sources.get(evidence.sourceId);
@@ -747,8 +847,8 @@ export function diffLedgerView(ledger, snapshot, { page = 1 } = {}) {
           }),
         });
       }
+      groups.push(entries);
     }
-    groups.push(entries);
   }
   groups.push(...pending.map((value) => [{
     kind: "pending-context-request",

@@ -7,6 +7,7 @@ import {
   LIMITS,
   REVIEW_KINDS,
 } from "./constants.mjs";
+import { splitEvidenceRange } from "./evidence-range.mjs";
 import { deriveReviewResult, sortReviewItems } from "./derive.mjs";
 import {
   microworldSelections,
@@ -170,7 +171,7 @@ function boundedArray(value, name, minimum, maximum) {
   return values;
 }
 
-function evidenceReference(value, name, sourceMap) {
+function evidenceReferences(value, name, sourceMap) {
   object(value, name, ["sourceId", "startLine", "endLine"]);
   if (typeof value.sourceId !== "string") throw new TypeError(`${name}.sourceId is invalid`);
   const source = sourceMap.get(value.sourceId);
@@ -184,32 +185,37 @@ function evidenceReference(value, name, sourceMap) {
   ) {
     throw new RangeError(`${name} has an invalid line range`);
   }
-  if (value.endLine - value.startLine + 1 > LIMITS.evidenceLines) {
+  const lineCount = value.endLine - value.startLine + 1;
+  if (lineCount > LIMITS.authoredEvidenceLines) {
     throw new RangeError(
-      `${name} exceeds the ${LIMITS.evidenceLines}-line evidence limit`,
+      `${name} selects ${lineCount} evidence lines; the maximum authored range is ${LIMITS.authoredEvidenceLines}`,
     );
   }
-  const key = `${value.startLine}:${value.endLine}`;
-  const cached = source.referenceCache.get(key);
-  if (cached) return cached;
-  const excerpt = source.lines
+  const authoredExcerpt = source.lines
     .slice(value.startLine - 1, value.endLine)
     .join("\n");
-  if (excerpt.trim().length === 0) {
+  if (authoredExcerpt.trim().length === 0) {
     throw new Error(`${name} refers only to empty source text`);
   }
-  const validated = Object.freeze({
-    endLine: value.endLine,
-    excerpt,
-    fileId: source.fileId,
-    path: source.path,
-    revision: source.revision,
-    sourceId: source.id,
-    sourceKind: source.kind,
-    startLine: value.startLine,
+  return splitEvidenceRange(value, LIMITS.evidenceLines).map((range) => {
+    const key = `${range.startLine}:${range.endLine}`;
+    const cached = source.referenceCache.get(key);
+    if (cached) return cached;
+    const validated = Object.freeze({
+      endLine: range.endLine,
+      excerpt: source.lines
+        .slice(range.startLine - 1, range.endLine)
+        .join("\n"),
+      fileId: source.fileId,
+      path: source.path,
+      revision: source.revision,
+      sourceId: source.id,
+      sourceKind: source.kind,
+      startLine: range.startLine,
+    });
+    source.referenceCache.set(key, validated);
+    return validated;
   });
-  source.referenceCache.set(key, validated);
-  return validated;
 }
 
 function proseBytes(value, field) {
@@ -333,11 +339,13 @@ function evidenceList(
     throw new Error(`${name} must include evidence`);
   }
   const seen = new Set();
-  return values.map((item, index) => {
-    const validated = evidenceReference(item, `${name}[${index}]`, sourceMap);
-    const key = `${validated.sourceId}:${validated.startLine}:${validated.endLine}`;
-    if (seen.has(key)) throw new Error(`${name} contains duplicate evidence`);
-    seen.add(key);
+  return values.flatMap((item, index) => {
+    const validated = evidenceReferences(item, `${name}[${index}]`, sourceMap);
+    for (const reference of validated) {
+      const key = `${reference.sourceId}:${reference.startLine}:${reference.endLine}`;
+      if (seen.has(key)) throw new Error(`${name} contains duplicate evidence`);
+      seen.add(key);
+    }
     return validated;
   });
 }
@@ -853,6 +861,20 @@ function validateLimitImpacts(values, snapshot) {
   }));
 }
 
+function validateMaterialVerificationLimits(limits, reviewItems) {
+  for (const limit of limits) {
+    if (limit.kind !== "verification" || !limit.material) continue;
+    const linked = reviewItems.some((item) => (
+      item.kind === "verify" && item.limitIds.includes(limit.id)
+    ));
+    if (!linked) {
+      throw new Error(
+        `A material execution or CI limit needs a linked verify review item: ${limit.id}`,
+      );
+    }
+  }
+}
+
 function validateContextChecks(values, sourceMap, limitMap) {
   const entries = array(values, "contextChecks", 20);
   if (entries.length === 0) {
@@ -1068,6 +1090,7 @@ function validateAnalysisValue(analysis, snapshot, {
     originalIndex: undefined,
   }));
   const limits = validateLimitImpacts(analysis.limitImpacts, snapshot);
+  validateMaterialVerificationLimits(limits, reviewItems);
   const contextChecks = validateContextChecks(
     analysis.contextChecks,
     sourceMap,
@@ -1218,7 +1241,10 @@ function analysisIssue(error, path) {
     /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|teachingAids|title)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
   )?.[0] ?? "analysis";
   let code = "ANALYSIS_CONTRACT";
-  if (message.includes("evidence limit")) code = "EVIDENCE_RANGE_LIMIT";
+  if (
+    message.includes("evidence limit")
+    || message.includes("maximum authored range")
+  ) code = "EVIDENCE_RANGE_LIMIT";
   else if (message.includes("unknown source")) code = "EVIDENCE_SOURCE_UNKNOWN";
   else if (message.includes("invalid line range")) code = "EVIDENCE_RANGE_INVALID";
   else if (message.includes("evidence does not match its files")) {
@@ -1242,7 +1268,7 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
   const seen = new Set();
   const add = (error, path) => {
     const issue = analysisIssue(error, path);
-    const key = `${issue.code}\u0000${issue.path}\u0000${issue.message}`;
+    const key = `${issue.code}\u0000${issue.message}`;
     if (!seen.has(key)) {
       seen.add(key);
       issues.push(issue);
@@ -1356,18 +1382,32 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
     "reviewItems",
     () => array(analysis.reviewItems, "reviewItems", LIMITS.reviewItems),
   );
-  reviewItems?.forEach((value, index) => capture(
-    `reviewItems[${index}]`,
-    () => reviewItem(value, index, sourceMap, limitMap),
-  ));
+  const validatedReviewItems = [];
+  reviewItems?.forEach((value, index) => {
+    const validated = capture(
+      `reviewItems[${index}]`,
+      () => reviewItem(value, index, sourceMap, limitMap),
+    );
+    if (validated) validatedReviewItems.push(validated);
+  });
   capture("fileDispositions", () => validateFileDispositions(
     analysis.fileDispositions,
     snapshot,
   ));
-  capture("limitImpacts", () => validateLimitImpacts(
+  const limits = capture("limitImpacts", () => validateLimitImpacts(
     analysis.limitImpacts,
     snapshot,
   ));
+  if (
+    limits
+    && reviewItems
+    && validatedReviewItems.length === reviewItems.length
+  ) {
+    capture("limitImpacts", () => validateMaterialVerificationLimits(
+      limits,
+      validatedReviewItems,
+    ));
+  }
   capture("contextChecks", () => validateContextChecks(
     analysis.contextChecks,
     sourceMap,
@@ -1397,8 +1437,8 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
       && Object.hasOwn(value, "startLine")
       && Object.hasOwn(value, "endLine")
     ) {
-      const validated = capture(path, () => evidenceReference(value, path, sourceMap));
-      if (validated) validatedReferences.push(validated);
+      const validated = capture(path, () => evidenceReferences(value, path, sourceMap));
+      if (validated) validatedReferences.push(...validated);
       return;
     }
     for (const [key, item] of Object.entries(value)) {

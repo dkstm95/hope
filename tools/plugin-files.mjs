@@ -35,7 +35,7 @@ export const staticPluginFiles = Object.freeze([
   ...[
     "analysis-v3.schema.json",
     "artifact.mjs",
-    "checkpoint-window-v1.schema.json",
+    "checkpoint-window-v2.schema.json",
     "checkpoint.mjs",
     "cli.mjs",
     "code-evidence.mjs",
@@ -43,6 +43,7 @@ export const staticPluginFiles = Object.freeze([
     "constants.mjs",
     "context.mjs",
     "derive.mjs",
+    "evidence-range.mjs",
     "finalize.mjs",
     "github.mjs",
     "hash.mjs",
