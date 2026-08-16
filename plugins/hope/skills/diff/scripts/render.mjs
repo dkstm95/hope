@@ -162,11 +162,14 @@ function claimBlock(
   codeRenderer,
   className = "",
   evidenceContext = claim.text,
+  showBasis = true,
 ) {
   return `<div class="claim ${html(className)}">
     <p>${userText(claim.text)}</p>
     <div class="claim-meta">
-      <div class="claim-basis">${html(label(dictionary, basisKey(claim.basis)))}</div>
+      ${showBasis
+        ? `<div class="claim-basis">${html(label(dictionary, basisKey(claim.basis)))}</div>`
+        : ""}
       ${evidenceBlock(
         claim.evidence,
         dictionary,
@@ -183,6 +186,7 @@ function titledClaim(
   dictionary,
   review,
   codeRenderer,
+  showBasis = true,
 ) {
   return `<article class="explanation-step">
     <h3>${userText(item.title)}</h3>
@@ -193,6 +197,7 @@ function titledClaim(
       codeRenderer,
       "",
       `${item.title}: ${item.text}`,
+      showBasis,
     )}
   </article>`;
 }
@@ -607,7 +612,7 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
   const visibleLimits = materialLimits.slice(0, 3);
   const hiddenLimits = materialLimits.length - visibleLimits.length;
   const backgroundClaims = review.background.map(
-    (item) => titledClaim(item, dictionary, review, codeRenderer),
+    (item) => titledClaim(item, dictionary, review, codeRenderer, false),
   );
   const background = backgroundClaims.length === 0
     && review.beginnerPrimer.length === 0
@@ -627,28 +632,19 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
   return `<section class="synopsis" id="synopsis" aria-labelledby="synopsis-title">
     <header class="synopsis-head">
       <h1 id="review-title">${userText(title)}</h1>
-      <dl class="synopsis-meta">
-        <div>
-          <dt>${html(label(dictionary, "artifact.head"))}</dt>
-          <dd><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></dd>
-        </div>
-        <div>
-          <dt>${html(label(dictionary, "artifact.capturedAt"))}</dt>
-          <dd><time datetime="${html(review.snapshot.capturedAt)}" title="${html(review.snapshot.capturedAt)}">${html(formatTimestamp(review.snapshot.capturedAt))}</time></dd>
-        </div>
-      </dl>
+      <div class="goal-label">${html(label(dictionary, "synopsis.purpose"))}</div>
+      <div class="goal">${claimBlock(
+        review.purpose,
+        dictionary,
+        review,
+        codeRenderer,
+        "",
+        review.purpose.text,
+        false,
+      )}</div>
     </header>
     <h2 class="sr-only" id="synopsis-title">${html(label(dictionary, "section.synopsis"))}</h2>
     <div class="synopsis-grid">
-      <div class="synopsis-row synopsis-goal">
-        <h3>${html(label(dictionary, "synopsis.purpose"))}</h3>
-        <div class="synopsis-value">${claimBlock(
-          review.purpose,
-          dictionary,
-          review,
-          codeRenderer,
-        )}</div>
-      </div>
       ${background}
       <div class="before-after change-shift" role="group" aria-labelledby="synopsis-before-title synopsis-now-title">
         <div class="synopsis-row shift-card shift-before">
@@ -658,6 +654,9 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
             dictionary,
             review,
             codeRenderer,
+            "",
+            review.coreChange.before.text,
+            false,
           )}</div>
         </div>
         <div class="synopsis-row shift-card shift-now">
@@ -667,6 +666,9 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
             dictionary,
             review,
             codeRenderer,
+            "",
+            review.coreChange.after.text,
+            false,
           )}</div>
         </div>
       </div>
@@ -677,6 +679,9 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
           dictionary,
           review,
           codeRenderer,
+          "",
+          review.coreChange.why.text,
+          false,
         )}</div>
       </div>
       <div class="synopsis-row synopsis-review">
@@ -1118,7 +1123,7 @@ function codeThemeVariables(colors) {
 }
 
 function css(fontBase64) {
-  const [space1, space2, space3, space4, space5, space6] = SPACE;
+  const [space1, space2, space3, space4, space5, space6, space7, space8, space9] = SPACE;
   const wide = TYPE.body.wide;
   const narrow = TYPE.body.narrow;
   const wideCode = TYPE.code.wide;
@@ -1193,6 +1198,10 @@ h2,
 h3,
 strong,
 b { font-weight: 700; }
+p,
+ul,
+ol,
+dl { margin-block: 0; }
 code,
 pre {
   font-family: "Hope Code", ui-monospace, monospace;
@@ -1202,6 +1211,7 @@ a {
   color: var(--accent);
   text-underline-offset: .2em;
 }
+a:visited { color: var(--visited); }
 [id]:target { scroll-margin-top: 76px; }
 .evidence-item:target,
 .scope-limit:target,
@@ -1212,7 +1222,10 @@ a {
 button,
 select,
 textarea,
-summary { font: inherit; }
+summary {
+  font-family: "Hope Sans", sans-serif;
+  font-weight: 500;
+}
 button,
 select { color: inherit; }
 
@@ -1245,15 +1258,15 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   z-index: 30;
   top: 0;
   border-bottom: 1px solid var(--border);
-  background: var(--panel);
+  background: var(--bg);
 }
 .topbar-inner {
   display: flex;
   position: relative;
   max-width: ${LAYOUT.documentWidth}px;
-  margin: auto;
-  min-height: ${LAYOUT.topbarHeight}px;
-  padding: 0 ${space5}px;
+  height: ${LAYOUT.topbarInnerHeight}px;
+  margin: 0 auto;
+  padding: 0 ${LAYOUT.topbarWideGutter}px;
   align-items: center;
   gap: ${space5}px;
 }
@@ -1261,8 +1274,8 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   display: flex;
   align-items: center;
   gap: ${space2}px;
-  font: 700 ${TYPE.brand.fontSize}px/${TYPE.brand.lineHeight} "Hope Sans", sans-serif;
-  letter-spacing: -.02em;
+  font: 700 ${TYPE.brand.wide.fontSize}px/${TYPE.brand.wide.lineHeight} "Hope Sans", sans-serif;
+  letter-spacing: -.025em;
   white-space: nowrap;
 }
 .brand-icon {
@@ -1276,15 +1289,28 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   min-width: 0;
   align-items: center;
   gap: ${space2}px;
-  color: var(--muted);
+  color: var(--text);
   font-size: ${TYPE.supporting.wide.fontSize}px;
   font-weight: 500;
 }
 .repository-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
-  stroke: currentColor;
+  stroke: var(--muted);
+}
+.commit-status {
+  flex: 0 0 auto;
+  padding: ${space1}px ${space2}px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
+  font-size: ${TYPE.micro.compactFontSize}px;
+  font-weight: 700;
+}
+.commit-status code {
+  font: inherit;
 }
 .topbar-actions {
   display: flex;
@@ -1315,7 +1341,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .theme-button {
   border: 1px solid transparent;
-  border-radius: ${space1}px;
+  border-radius: 6px;
   background: transparent;
   cursor: pointer;
 }
@@ -1328,17 +1354,17 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .theme-button:hover {
   border-color: var(--border);
-  background: var(--bg);
+  background: var(--panel);
 }
 .theme-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
 }
 .theme-icon[hidden] { display: none; }
 .toc-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
 }
 
@@ -1346,14 +1372,13 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   display: grid;
   max-width: ${LAYOUT.documentWidth}px;
   margin: auto;
-  padding: 0 ${space5}px;
   grid-template-columns: minmax(0, 1fr) ${LAYOUT.tableOfContentsWidth}px;
   gap: 0;
 }
 .main {
   width: 100%;
   min-width: 0;
-  padding: 42px ${space6}px 80px ${space2}px;
+  padding: ${space7}px ${space7}px 80px;
 }
 .locale-warning {
   margin: 0 0 ${space4}px;
@@ -1367,7 +1392,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   top: ${LAYOUT.topbarHeight}px;
   align-self: start;
   min-height: calc(100vh - ${LAYOUT.topbarHeight}px);
-  padding: 42px 0 ${space6}px ${space5}px;
+  padding: ${space7}px ${space5}px;
   border-left: 1px solid var(--border);
 }
 .toc-desktop h2,
@@ -1409,54 +1434,37 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .toc-desktop a:focus { color: var(--text); }
 .toc-mobile { display: none; }
 
-.synopsis { margin: 0 0 ${space5}px; }
-.synopsis-head {
-  padding-bottom: ${space5}px;
-}
+.synopsis { margin: 0; }
+.synopsis-head { max-width: ${LAYOUT.proseWidth}; }
 .synopsis-head h1 {
   min-width: 0;
   margin: 0;
   font-size: ${widePageTitle.fontSize}px;
   line-height: ${widePageTitle.lineHeight};
+  letter-spacing: -.04em;
   overflow-wrap: anywhere;
 }
-.synopsis-meta {
-  display: flex;
+.goal-label {
   margin-top: ${space3}px;
-  color: var(--muted);
-  flex-wrap: wrap;
-  gap: ${space1}px ${space2}px;
+  color: var(--accent);
   font-size: ${TYPE.supporting.wide.fontSize}px;
-  line-height: ${TYPE.supporting.wide.lineHeight};
+  font-weight: 700;
 }
-.synopsis-meta > div {
-  display: inline-flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: ${space1}px;
-  white-space: nowrap;
+.goal {
+  margin-top: ${space1}px;
+  font-size: ${TYPE.goal.wide.fontSize}px;
+  line-height: ${TYPE.goal.wide.lineHeight};
 }
-.synopsis-meta dt {
-  font-weight: 500;
-}
-.synopsis-meta dd {
-  min-width: 0;
-  margin: 0;
-}
-.synopsis-meta code {
-  font-family: "Hope Code", ui-monospace, monospace;
-}
+.goal .claim-meta { margin-top: ${space1}px; }
 .synopsis-grid > div > h3,
 .synopsis-background > h3,
 .synopsis-review-head > h3,
 .before-after > div > h3 {
-  margin: 0 0 ${space1}px;
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  line-height: 1.3;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: .06em;
+  margin: 0;
+  color: var(--text);
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 700;
 }
 .status-row,
 .item-head {
@@ -1481,6 +1489,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .status.kind-verify { color: var(--verify); }
 .synopsis-grid {
   display: grid;
+  margin-top: ${space5}px;
   border-top: 1px solid var(--border);
 }
 .before-after {
@@ -1490,32 +1499,31 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .change-shift {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
-  border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
 .change-shift > .shift-card {
   display: block;
-  padding: ${space4}px ${space2}px;
+  padding: ${space4}px ${space2}px ${space5}px;
 }
+.change-shift > .shift-card > h3 { margin-bottom: ${space2}px; }
 .change-shift > .shift-card + .shift-card {
   padding-left: ${space5}px;
   border-left: 1px solid var(--border);
 }
-.shift-card > h3 { margin-bottom: ${space2}px; }
-.shift-before { color: var(--muted); }
 .synopsis-row {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  gap: ${space3}px;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: ${space5}px;
   align-items: start;
-  padding: ${space4}px ${space2}px;
+  padding: ${space3}px ${space2}px;
+  border-bottom: 1px solid var(--border);
 }
 .synopsis-background {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  gap: ${space3}px;
-  padding: ${space4}px ${space2}px;
-  border-top: 1px solid var(--border);
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: ${space5}px;
+  padding: ${space3}px ${space2}px;
+  border-bottom: 1px solid var(--border);
 }
 .synopsis-background > h3 {
   margin: 0;
@@ -1523,17 +1531,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .synopsis-background-content { min-width: 0; }
 .synopsis-row > h3 { padding-top: 2px; }
-.synopsis-goal .claim p {
-  font-size: 1.08em;
-  line-height: 1.5;
-}
-.synopsis-impact {
-  border-bottom: 1px solid var(--border);
-}
-.synopsis-review,
-.synopsis-grid > .synopsis-row:last-child {
-  border-top: 1px solid var(--border);
-}
 .synopsis-value {
   min-width: 0;
 }
@@ -1674,10 +1671,11 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 
 .review-section {
   margin: 0;
-  padding: 0 0 ${space5}px;
-  border-bottom: 1px solid var(--border);
+  padding: 0;
+  border: 0;
 }
-.review-section + .review-section { padding-top: ${space5}px; }
+.synopsis + .review-section,
+.review-section + .review-section { margin-top: ${space9}px; }
 .review-section-collapsible:not([open]) {
   padding-top: 0;
   padding-bottom: 0;
@@ -2564,16 +2562,15 @@ td:first-child {
   outline-offset: 3px;
 }
 
-@media (max-width: ${LAYOUT.tocBreakpoint}px) {
+@media (max-width: ${LAYOUT.tocBreakpoint - 1}px) {
   html:has(.toc-mobile[open]),
   body:has(.toc-mobile[open]) {
     overflow: hidden;
   }
   .layout {
     display: block;
-    padding: 0 ${space4}px;
   }
-  .main { padding: 38px 0 72px; }
+  .main { padding: ${space7}px ${space7}px 80px; }
   .toc-desktop { display: none; }
   .toc-mobile {
     display: block;
@@ -2586,14 +2583,14 @@ td:first-child {
     padding: ${space1}px;
     place-items: center;
     border: 1px solid transparent;
-    border-radius: ${space1}px;
+    border-radius: 6px;
     background: transparent;
     cursor: pointer;
     list-style: none;
   }
   .toc-mobile > summary:hover {
     border-color: var(--border);
-    background: var(--bg);
+    background: var(--panel);
   }
   .toc-mobile > summary::-webkit-details-marker { display: none; }
   .toc-mobile-panel {
@@ -2647,13 +2644,18 @@ td:first-child {
   .toc-mobile a:focus-visible { color: var(--text); }
 }
 
-@media (max-width: ${LAYOUT.narrowBreakpoint}px) {
+@media (max-width: ${LAYOUT.narrowBreakpoint - 1}px) {
   body {
     font-size: ${narrow.fontSize}px;
     line-height: ${narrow.lineHeight};
   }
   .topbar-inner {
     padding: 0 ${space4}px;
+    gap: ${space3}px;
+  }
+  .brand {
+    font-size: ${TYPE.brand.narrow.fontSize}px;
+    line-height: ${TYPE.brand.narrow.lineHeight};
   }
   .top-context {
     overflow: hidden;
@@ -2668,9 +2670,13 @@ td:first-child {
     font-size: ${narrowPageTitle.fontSize}px;
     line-height: ${narrowPageTitle.lineHeight};
   }
-  .synopsis-meta {
-    font-size: ${TYPE.supporting.narrow.fontSize}px;
-    line-height: ${TYPE.supporting.narrow.lineHeight};
+  .main { padding: ${space8}px ${space4}px ${space9}px; }
+  .synopsis + .review-section,
+  .review-section + .review-section { margin-top: ${space8}px; }
+  .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
+  .goal {
+    font-size: ${TYPE.goal.narrow.fontSize}px;
+    line-height: ${TYPE.goal.narrow.lineHeight};
   }
   .synopsis-grid > div > h3,
   .synopsis-background > h3,
@@ -2756,7 +2762,6 @@ td:first-child {
 }
 
 @media (max-width: ${LAYOUT.compactBreakpoint}px) {
-  .layout { padding: 0 ${space3}px; }
   .behavior-visual,
   .microworld { padding: ${space3}px; }
   .topbar-inner {
@@ -2770,6 +2775,13 @@ td:first-child {
     border-radius: 5px;
   }
   .brand-product { display: none; }
+  .commit-status {
+    max-width: 82px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+  }
   .status,
   .importance,
   .claim-basis,
@@ -2783,6 +2795,16 @@ td:first-child {
   .synopsis-background > h3 { padding-top: 0; }
 }
 
+@media (max-width: ${LAYOUT.tightProductBarBreakpoint}px) {
+  .topbar-inner {
+    padding-inline: ${space2}px;
+    gap: ${space1}px;
+  }
+  .topbar-actions { gap: ${space1}px; }
+  .commit-status { padding: 2px ${space1}px; }
+  .pull-request-link { padding-inline: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   * {
@@ -2793,6 +2815,7 @@ td:first-child {
 
 @media (forced-colors: active) {
   .status,
+  .commit-status,
   .locale-warning,
   .behavior-visual,
   .microworld,
@@ -2948,7 +2971,7 @@ export async function renderReview(review, { fonts } = {}) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src data:; font-src data:; style-src 'sha256-${hashSource(styles)}'; script-src 'sha256-${hashSource(script)}'">
   <link rel="icon" type="image/png" sizes="128x128" href="${iconDataUrl}">
-  <title>${html(title)} · Hope diff</title>
+  <title>${html(title)} · Hope Diff</title>
   <style>${styles}</style>
 </head>
 <body>
@@ -2963,6 +2986,7 @@ export async function renderReview(review, { fonts } = {}) {
         </svg>
         <span>${html(owner)}/${html(name)}</span>
       </div>
+      <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(review.snapshot.snapshot.head)}"><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></span>
       <div class="topbar-actions">
         <a class="pull-request-link" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
           <span>PR #${review.snapshot.pullRequest.number}</span>

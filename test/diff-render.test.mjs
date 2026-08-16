@@ -88,7 +88,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 8);
+  assert.equal(first.rendererVersion, 9);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -128,6 +128,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<a class="pull-request-link" href="https:\/\/github\.com\/example\/hope\/pull\/142" aria-label="Open PR #142" title="Open PR #142">/u,
   );
   assert.match(header, /<span>PR #142<\/span>/u);
+  assert.match(
+    header,
+    /<span class="commit-status" title="Reviewed commit b{40}"><code>bbbbbbbb<\/code><\/span>/u,
+  );
   const synopsisHead = html.match(
     /<header class="synopsis-head">[\s\S]*?<\/header>/u,
   )?.[0] ?? "";
@@ -138,11 +142,9 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><\/h1>/u,
   );
   assert.doesNotMatch(synopsisHead, /&lt;script/u);
-  assert.match(synopsisHead, /<dt>Commit<\/dt>\s*<dd><code>bbbbbbbb<\/code><\/dd>/u);
-  assert.match(
-    synopsisHead,
-    /<dt>Captured<\/dt>\s*<dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u,
-  );
+  assert.match(synopsisHead, /<div class="goal-label">Goal<\/div>/u);
+  assert.match(synopsisHead, /Return the final error after all retries fail\./u);
+  assert.doesNotMatch(synopsisHead, /<dl>|<dt>|Captured|Commit/u);
   assert.match(
     html,
     /<h2 class="sr-only" id="synopsis-title">Summary<\/h2>/u,
@@ -180,6 +182,14 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(
     artifactDetails,
     /<dt>Pull request title<\/dt><dd><bdi dir="auto">&lt;\/title&gt;&lt;script/u,
+  );
+  assert.match(
+    artifactDetails,
+    /<dt>Commit<\/dt><dd><code>b{40}<\/code><\/dd>/u,
+  );
+  assert.match(
+    artifactDetails,
+    /<dt>Captured<\/dt><dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u,
   );
   assert.doesNotMatch(html, /<details class="evidence" open>/u);
   assert.match(html, /<pre class="code-evidence"><code aria-label=/u);
@@ -350,11 +360,13 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(html, />TO-BE</u);
   assert.match(html, />영향</u);
   assert.doesNotMatch(html, /한눈에 보기/u);
-  assert.match(html, /<dt>커밋<\/dt>\s*<dd><code>bbbbbbbb<\/code><\/dd>/u);
   assert.match(
     html,
-    /<dt>수집 시각<\/dt>\s*<dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u,
+    /<span class="commit-status" title="검토 커밋 b{40}"><code>bbbbbbbb<\/code><\/span>/u,
   );
+  assert.match(html, /<div class="goal-label">목표<\/div>/u);
+  assert.match(html, /<dt>커밋<\/dt><dd><code>b{40}<\/code><\/dd>/u);
+  assert.match(html, /<dt>수집 시각<\/dt><dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u);
   assert.doesNotMatch(html, /class="review-result/u);
   assert.doesNotMatch(html, /class="review-count/u);
   assert.match(html, /2026-07-23 00:00 UTC/u);
@@ -364,7 +376,7 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(html, /그 밖의 수집 출처/u);
   assert.match(html, /관련 맥락/u);
   assert.match(html, /변경 파일/u);
-  assert.match(html, /주요 설명·판단을 제한함/u);
+  assert.match(html, /판단에 영향을 주는 제한/u);
   assert.match(html, /수집한 맥락 밖의 기존 코드/u);
   assert.match(html, /src\/retry\.js · 변경 조각 2–4/u);
   assert.match(html, /aria-label="라이트 모드로 전환"/u);
@@ -426,7 +438,7 @@ test("the artifact shows every teaching-aid decision when all aids are omitted",
   assert.match(section, /<h3>Teaching aid choices<\/h3>/u);
   assert.match(
     section,
-    /Why each teaching aid appears or does not appear in this review\./u,
+    /Why each teaching aid was included or omitted\./u,
   );
   assert.equal(
     (section.match(/class="teaching-aid-choice decision-omitted"/gu) ?? []).length,
@@ -677,7 +689,7 @@ test("a review with no items states the result once", async () => {
   )?.[0] ?? "";
 
   assert.equal(
-    (synopsis.match(/No important item was found in the checked scope\./gu) ?? []).length,
+    (synopsis.match(/No important review items in the checked scope\./gu) ?? []).length,
     1,
   );
   assert.match(synopsis, /class="review-empty"/u);
@@ -1052,7 +1064,7 @@ test("scope limits with one reason are grouped without losing member links", asy
   assert.match(html, /<details class="scope-limit-item" id="scope-limit-2">/u);
   assert.match(html, /<details class="scope-limit-item" id="scope-limit-3">/u);
   assert.equal((html.match(/Deployment secret values were deliberately excluded\./gu) ?? []).length, 1);
-  assert.match(html, /Other unchecked inputs · 2/u);
+  assert.match(html, /Other exclusions · 2/u);
 });
 
 test("equal base and merge-base revisions share one artifact row", async () => {

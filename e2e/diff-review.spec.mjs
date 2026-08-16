@@ -16,7 +16,7 @@ import {
 
 const runId = "4".repeat(32);
 const viewports = {
-  breakpoint: { height: 900, width: 1100 },
+  breakpoint: { height: 900, width: 1099 },
   desktop: { height: 900, width: 1440 },
   mobile: { height: 812, width: 375 },
   wide: { height: 1440, width: 2560 },
@@ -343,14 +343,15 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
     "example/hope · PR #142",
   );
-  await expect(page.locator("#synopsis > .synopsis-head dt")).toHaveText([
-    "커밋",
-    "수집 시각",
-  ]);
-  await expect(page.locator("#synopsis > .synopsis-head dd")).toHaveText([
-    "bbbbbbbb",
-    "2026-07-23 00:00 UTC",
-  ]);
+  await expect(page.locator("header .commit-status")).toHaveText("bbbbbbbb");
+  await expect(page.locator("header .commit-status")).toHaveAttribute(
+    "title",
+    `검토 커밋 ${"b".repeat(40)}`,
+  );
+  await expect(page.locator("#synopsis > .synopsis-head .goal-label")).toHaveText(
+    "목표",
+  );
+  await expect(page.locator("#synopsis > .synopsis-head dt")).toHaveCount(0);
   await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
     "이 오프라인 파일은 이후 PR 변경을 자동으로 반영하지 않습니다.",
   );
@@ -381,7 +382,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   ).toHaveCSS("text-decoration-line", "underline");
   await expect(page.locator('a[target="_blank"]')).toHaveCount(0);
   const synopsisLayouts = await page.evaluate(() => {
-    const purpose = document.querySelector(".synopsis-row");
+    const purpose = document.querySelector(".synopsis-impact");
     const review = document.querySelector(".synopsis-review");
     const items = [...document.querySelectorAll(".review-item-compact")];
     return {
@@ -452,6 +453,29 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     "AS-IS TO-BE",
   );
   await expect(page.locator(".topbar")).toHaveCSS("position", "sticky");
+  await expect(page.locator("body")).toHaveCSS("font-size", "14px");
+  await expect(page.locator("#review-title")).toHaveCSS("font-size", "32px");
+  await expect(page.locator(".goal")).toHaveCSS("font-size", "16px");
+  await expect(page.locator(".section-heading h2").first()).toHaveCSS(
+    "font-size",
+    "18px",
+  );
+  const baselineGeometry = await page.evaluate(() => ({
+    brandRepositoryGap: document.querySelector(".top-context").getBoundingClientRect().left
+      - document.querySelector(".brand").getBoundingClientRect().right,
+    railLeft: document.querySelector(".toc-desktop").getBoundingClientRect().left,
+    repositoryCommitGap: document.querySelector(".commit-status").getBoundingClientRect().left
+      - document.querySelector(".top-context").getBoundingClientRect().right,
+    titleLeft: document.querySelector("#review-title").getBoundingClientRect().left,
+    topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
+  }));
+  expect(baselineGeometry).toEqual({
+    brandRepositoryGap: 24,
+    railLeft: 1204,
+    repositoryCommitGap: 24,
+    titleLeft: 40,
+    topbarHeight: 58,
+  });
   await expect(
     page.locator('.toc-desktop a[href="#synopsis"]'),
   ).toHaveAttribute("aria-current", "location");
@@ -528,6 +552,12 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   expect(wideFlow.contentOverflow).toBe(false);
 
   await page.setViewportSize(viewports.mobile);
+  await expect(page.locator("#review-title")).toHaveCSS("font-size", "28px");
+  await expect(page.locator(".goal")).toHaveCSS("font-size", "14px");
+  await expect(page.locator(".section-heading h2").first()).toHaveCSS(
+    "font-size",
+    "16px",
+  );
   await expect(page.locator(".synopsis-row > h3").first()).toHaveCSS(
     "padding-top",
     "0px",
@@ -575,7 +605,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await page.locator(".behavior-visual > header > p").evaluate((element) => {
     element.textContent = "LongUnbrokenTeachingAidCaption".repeat(80);
   });
-  await page.locator(".synopsis-goal .claim p bdi").evaluate((element) => {
+  await page.locator(".goal .claim p bdi").evaluate((element) => {
     element.textContent = "LongUnbrokenGoal".repeat(120);
   });
   await page.locator(".shift-before .claim p bdi").evaluate((element) => {

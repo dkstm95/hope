@@ -20,22 +20,30 @@ Use these rules with the analysis schema and the shared Hope Write standard.
 
 ## Explanation
 
-- Write `title` as one short sentence that states the observable change in the
-  review locale. Ground it in changed code. Do not copy the pull-request title,
-  lead with a code identifier, or use a vague label such as "refactor retry
-  logic." Prefer the result a person can understand, such as "Some failures no
-  longer use a retry attempt." Name one decisive result. Leave secondary
-  mechanics for the summary when combining them makes the title longer or
-  harder to scan.
+- Write `title` as a short, direct statement of the observable change in the
+  review locale. Ground it in changed code. A natural noun phrase is valid when
+  it is clearer than a full sentence. Do not copy the pull-request title, lead
+  with a code identifier, or use a vague label such as "refactor retry logic."
+  Prefer the result a person can understand, such as "The last failure now
+  reaches the caller." Name one decisive result and normally stay within 60
+  characters. Leave secondary mechanics for the summary.
 - Reuse the exact changed-code evidence range from `coreChange` for `title`.
   The title names the core result; it does not introduce separate evidence.
 - Let the visible explanation answer these reader questions in order: what
   changed, why it matters, how previous and new behavior differ, when the
   outcome changes, what the review found, and how the review knows. Do not turn
   these questions into headings when the existing fields already answer them.
+- State `purpose` as the goal itself. Do not wrap it in phrases such as "this
+  change aims to," "this is intended to," or their translated equivalents.
+- Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` to one
+  main idea each. Start with the actor or affected thing, then state the
+  condition or result. Avoid a sentence whose subject changes halfway through.
+- Write `coreChange.why` as the practical effect. Do not end with a generic
+  purpose phrase when the reader can be told what becomes safer, faster, or
+  easier to decide.
 - Use `background` only for context a new reader needs before the comparison.
-  Prefer one small concrete situation over a general definition when both
-  explain the concept.
+  Normally use zero or one item. Prefer one small concrete situation over a
+  general definition when both explain the concept.
 - Keep `purpose`, `background`, `coreChange`, `behavior`, visual, microworld,
   and quiz prose understandable without code identifiers. Put identifiers and
   technical mechanics in `codeSteps`. When a public identifier is necessary
