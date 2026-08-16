@@ -30,9 +30,9 @@ can reach shared understanding.
 When the agreement is ready, Align writes one self-contained HTML brief inside
 the project.
 
-The brief keeps one agreed goal and its checks prominent. Each check says how
-to verify it and who decides whether it passes: an agent or person. Material
-changes stay as revisions in the same file, which serves as the implementation
+The document contains one agreed goal and a set of checks. Each check includes
+how it is verified and who—AI or the person—judges it. Material changes remain
+as new versions in the same file, and the document serves as the implementation
 contract.
 
 For material UI work without attached references, Align checks the project
