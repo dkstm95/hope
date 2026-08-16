@@ -78,6 +78,15 @@ mental model.
 Leave research and implementation checks open when the conversation cannot
 honestly settle them.
 
+## Show material UI choices
+
+When the task may require a new screen, component, or material visual redesign,
+read `references/design-directions.md` after inspecting the available project
+and conversation evidence.
+
+Use that guidance only when a visual choice could change the implemented
+result. Do not turn a small UI correction into a design exercise.
+
 ## Decide readiness
 
 Complete alignment only when:

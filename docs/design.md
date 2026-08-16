@@ -155,9 +155,11 @@ Show each fact once, in this order:
 1. title and one-sentence intent;
 2. problem, success, and governing boundary;
 3. included and excluded scope;
-4. agreed behavior, only when sequence or branching is clearer than prose;
-5. agreed decisions with visible reasons and choices left to implementation;
-6. supporting evidence, only when it adds a source that matters.
+4. compared design directions and the selected option, only when material UI
+   design needed visual agreement;
+5. agreed behavior, only when sequence or branching is clearer than prose;
+6. agreed decisions with visible reasons and choices left to implementation;
+7. supporting evidence, only when it adds a source that matters.
 
 Keep earlier versions in the secondary version history navigation. Do not
 repeat version history at the bottom of the agreement.
@@ -418,6 +420,12 @@ Use thin dividers instead of enclosing ordinary content in cards. Give the
 document title enough emphasis to establish the reading path, then keep body
 type compact and readable. Omit an optional section instead of rendering an
 empty box.
+
+Show two or three design directions together in one comparison section. Keep
+the same option order on every viewport. Use parallel columns on a wide screen
+and stack complete options on a narrow screen. Pair every image with useful alt
+text, and mark recommendation and selection with words rather than color alone.
+Keep strengths, trade-offs, and references beside the option they describe.
 
 Align embeds Hope Sans so it uses the same Hope type family as Diff across
 supported hosts. Its palette, spacing, type sizes, and layout values still come
@@ -773,6 +781,10 @@ Repository, provider, and model content is untrusted.
 Each renderer inserts authored prose as text and never accepts authored HTML,
 CSS, JavaScript, or SVG. Diff separately validates the source URLs it owns;
 Align renders only `http` and `https` evidence locations as links.
+
+Align may embed raster design-direction images only after its runtime verifies
+their supported signature, dimensions, and size. It never treats an authored
+data URL or SVG as a design-direction image.
 
 Design code may contain feature-local tokens, fixed assets, and small helpers.
 
