@@ -30,10 +30,10 @@ can reach shared understanding.
 When the agreement is ready, Align writes one self-contained HTML brief inside
 the project.
 
-The document contains one agreed goal and a set of checks. Each check includes
-how it is verified and who—AI or the person—judges it. Material changes remain
-as new versions in the same file, and the document serves as the implementation
-contract.
+The document contains one agreed goal and a set of completion criteria. Each
+criterion includes how it is verified and who—AI or the person—judges it.
+Material changes remain as new versions in the same file, and the document
+serves as the implementation contract.
 
 For material UI work without attached references, Align checks the project
 first, uses web search when needed, and presents two or three image mockups.
@@ -44,9 +44,9 @@ first, uses web search when needed, and presents two or three image mockups.
 
 ![Hope Align result showing the current agreement, scope, behavior, and version history](assets/readme/hope-align-en.png)
 
-| Agreed behavior · dark | Decisions and implementation choices · light |
+| Agreed behavior · dark | Decisions · light |
 | --- | --- |
-| [![A branched upload-recovery flow in an Align artifact using dark mode](assets/readme/hope-align-behavior-en.png)](assets/readme/hope-align-behavior-en.png) | [![Numbered decisions and implementation choices in an Align artifact using light mode](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
+| [![A branched upload-recovery flow in an Align artifact using dark mode](assets/readme/hope-align-behavior-en.png)](assets/readme/hope-align-behavior-en.png) | [![Numbered decisions in an Align artifact using light mode](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
 
 ---
 

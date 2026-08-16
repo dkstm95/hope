@@ -412,11 +412,13 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /class="outcome-mark" aria-hidden="true">×</u);
   assert.match(first, /class="behavior-connector"/u);
   assert.match(first, /<ol class="decision-list">/u);
-  assert.match(first, />결정과 구현 선택</u);
+  assert.match(first, />결정 사항</u);
   assert.doesNotMatch(first, /id="intent-history"/u);
   assert.doesNotMatch(first, /id="goal-history"/u);
   assert.match(first, />목표</u);
-  assert.match(first, />확인 조건</u);
+  assert.match(first, />완료 기준</u);
+  assert.match(first, />확정 사항</u);
+  assert.match(first, />구현 시 결정 사항</u);
   assert.match(first, />AI 에이전트 확인</u);
   assert.match(first, />사용자 확인</u);
   assert.match(first, /prefers-color-scheme: dark/u);
@@ -483,7 +485,7 @@ test("renderer omits empty optional sections instead of filling the screen", () 
     }],
   }, { digest: "0".repeat(64) });
   assert.match(decisionHtml, /agreement-grid agreement-grid-single/u);
-  assert.doesNotMatch(decisionHtml, />구현 중 선택</u);
+  assert.doesNotMatch(decisionHtml, />구현 시 결정 사항</u);
 });
 
 test("create publishes one owned project artifact without replacing a path", async () => {

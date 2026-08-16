@@ -108,7 +108,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("실패한 업로드 복구");
   await expect(page.locator(".goal-label")).toHaveText("목표");
   await expect(page.locator(".goal")).toContainText("중단된 업로드를 감지해");
-  await expect(page.locator(".synopsis dt").filter({ hasText: "확인 조건" })).toHaveCount(1);
+  await expect(page.locator(".synopsis dt").filter({ hasText: "완료 기준" })).toHaveCount(1);
   await expect(page.locator(".overview .check-list > li")).toHaveCount(3);
   await expect(page.locator(".overview .check-by")).toHaveText([
     "AI 에이전트 확인",
@@ -129,7 +129,11 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#agreement")).toContainText("자동 감지 기반 복구 우선");
   await expect(page.locator("#agreement")).toContainText("사용자 개입 없이");
-  await expect(page.locator("#agreement-title")).toHaveText("결정과 구현 선택");
+  await expect(page.locator("#agreement-title")).toHaveText("결정 사항");
+  await expect(page.locator("#agreement .subheading")).toHaveText([
+    "확정 사항",
+    "구현 시 결정 사항",
+  ]);
   await expect(page.locator("#design-directions-title")).toHaveText("디자인 시안");
   const currentDirections = page.locator("#design-directions");
   await expect(currentDirections.locator(".design-direction")).toHaveCount(2);
