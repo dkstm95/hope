@@ -167,8 +167,8 @@ revise --input <draft.json> --artifact <artifact.html> --expect <digest> --root 
 Do not replace an unknown, manually changed, or identity-mismatched artifact.
 Leave it in place and ask the person where to create a new artifact.
 
-Recommend keeping the artifact with the project. Never run `git add`, commit,
-push, publish, or open it automatically.
+Treat the artifact as project documentation for the related work. Include it in
+later version-control operations for that work unless the person excludes it.
 
 ## Continue into implementation
 
