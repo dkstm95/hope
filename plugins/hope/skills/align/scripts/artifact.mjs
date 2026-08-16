@@ -12,12 +12,17 @@ import {
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { inflateSync } from "node:zlib";
 
 import { renderAlignArtifact } from "./render.mjs";
 
 const execFileAsync = promisify(execFile);
 const INPUT_MAXIMUM_BYTES = 256 * 1024;
-const ARTIFACT_MAXIMUM_BYTES = 4 * 1024 * 1024;
+const ARTIFACT_MAXIMUM_BYTES = 12 * 1024 * 1024;
+const IMAGE_MAXIMUM_BYTES = 512 * 1024;
+const IMAGE_TOTAL_MAXIMUM_BYTES = 1024 * 1024;
+const IMAGE_MAXIMUM_EDGE = 4_096;
+const IMAGE_MAXIMUM_PIXELS = 8_000_000;
 const BIDI_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
 const DIGEST_PLACEHOLDER = "0".repeat(64);
@@ -32,6 +37,7 @@ const contentKeys = Object.freeze([
   "success",
   "boundary",
   "scope",
+  "designDirections",
   "behavior",
   "decisions",
   "openChoices",
@@ -130,6 +136,103 @@ function outcomeItems(value, path, { maximumItems } = {}) {
   });
 }
 
+function optionId(value, path) {
+  const id = text(value, path, 48);
+  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/u.test(id)) {
+    throw new TypeError(`${path} must use lowercase letters, numbers, and hyphens`);
+  }
+  return id;
+}
+
+function httpUrl(value, path) {
+  const source = text(value, path);
+  let url;
+  try {
+    url = new URL(source);
+  } catch {
+    throw new TypeError(`${path} must be an http or https URL`);
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
+    throw new TypeError(`${path} must be an http or https URL without credentials`);
+  }
+  return source;
+}
+
+function directionDecision(value, path, { selection = false } = {}) {
+  if (!isRecord(value)) throw new TypeError(`${path} must be an object`);
+  assertKeys(value, selection ? ["optionId", "reason", "decidedBy"] : ["optionId", "reason"], path);
+  if (selection && !["user", "delegated"].includes(value.decidedBy)) {
+    throw new TypeError(`${path}.decidedBy must be user or delegated`);
+  }
+  return Object.freeze({
+    optionId: optionId(value.optionId, `${path}.optionId`),
+    reason: text(value.reason, `${path}.reason`),
+    ...(selection ? { decidedBy: value.decidedBy } : {}),
+  });
+}
+
+function designDirections(value, path, { imageField, validateImage }) {
+  if (!isRecord(value)) throw new TypeError(`${path} must be an object`);
+  assertKeys(value, ["options", "recommendation", "selection"], path);
+  if (!Array.isArray(value.options) || value.options.length < 2 || value.options.length > 3) {
+    throw new TypeError(`${path}.options must contain between 2 and 3 items`);
+  }
+  const options = value.options.map((item, index) => {
+    const itemPath = `${path}.options[${index}]`;
+    if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
+    assertKeys(item, [
+      "id",
+      "title",
+      imageField,
+      "alt",
+      "summary",
+      "strengths",
+      "tradeoffs",
+      "references",
+    ], itemPath);
+    if (!Array.isArray(item.references) || item.references.length > 5) {
+      throw new TypeError(`${itemPath}.references must contain at most 5 items`);
+    }
+    const strengths = textList(item.strengths, `${itemPath}.strengths`, 4);
+    const tradeoffs = textList(item.tradeoffs, `${itemPath}.tradeoffs`, 4);
+    if (strengths.length === 0 || tradeoffs.length === 0) {
+      throw new TypeError(`${itemPath} must include at least one strength and trade-off`);
+    }
+    return Object.freeze({
+      id: optionId(item.id, `${itemPath}.id`),
+      title: text(item.title, `${itemPath}.title`, 160),
+      [imageField]: validateImage(item[imageField], `${itemPath}.${imageField}`),
+      alt: text(item.alt, `${itemPath}.alt`),
+      summary: text(item.summary, `${itemPath}.summary`),
+      strengths: Object.freeze(strengths),
+      tradeoffs: Object.freeze(tradeoffs),
+      references: Object.freeze(item.references.map((reference, referenceIndex) => {
+        const referencePath = `${itemPath}.references[${referenceIndex}]`;
+        if (!isRecord(reference)) throw new TypeError(`${referencePath} must be an object`);
+        assertKeys(reference, ["label", "url", "influence"], referencePath);
+        return Object.freeze({
+          label: text(reference.label, `${referencePath}.label`, 160),
+          url: httpUrl(reference.url, `${referencePath}.url`),
+          influence: text(reference.influence, `${referencePath}.influence`),
+        });
+      })),
+    });
+  });
+  if (options.some((option, index) => options.findIndex((item) => item.id === option.id) !== index)) {
+    throw new TypeError(`${path}.options must use unique ids`);
+  }
+  const recommendation = directionDecision(value.recommendation, `${path}.recommendation`);
+  const selection = directionDecision(value.selection, `${path}.selection`, { selection: true });
+  const ids = new Set(options.map((option) => option.id));
+  if (!ids.has(recommendation.optionId)) {
+    throw new TypeError(`${path}.recommendation.optionId must name an option`);
+  }
+  if (!ids.has(selection.optionId)) {
+    throw new TypeError(`${path}.selection.optionId must name an option`);
+  }
+  return Object.freeze({ options: Object.freeze(options), recommendation, selection });
+}
+
 export function validateAlignInput(value, defaults = {}) {
   if (!isRecord(value)) throw new TypeError("Align input must be an object");
   const allowed = [
@@ -171,6 +274,17 @@ export function validateAlignInput(value, defaults = {}) {
       }),
     });
   }
+
+  const validatedDesignDirections = value.designDirections === undefined
+    ? undefined
+    : designDirections(value.designDirections, "$.designDirections", {
+      imageField: "imagePath",
+      validateImage: (imagePath, path) => {
+        const normalized = text(imagePath, path);
+        if (!isAbsolute(normalized)) throw new TypeError(`${path} must be an absolute path`);
+        return normalized;
+      },
+    });
 
   if (!Array.isArray(value.decisions) || value.decisions.length > 20) {
     throw new TypeError("$.decisions must be an array with at most 20 items");
@@ -216,6 +330,9 @@ export function validateAlignInput(value, defaults = {}) {
       included: textList(value.scope.included, "$.scope.included"),
       excluded: textList(value.scope.excluded, "$.scope.excluded"),
     }),
+    ...(validatedDesignDirections === undefined
+      ? {}
+      : { designDirections: validatedDesignDirections }),
     ...(behavior === undefined ? {} : { behavior }),
     decisions: Object.freeze(decisions),
     openChoices: Object.freeze(textList(value.openChoices, "$.openChoices")),
@@ -252,6 +369,185 @@ async function readStableFile(path, maximumBytes, label) {
   }
 }
 
+function crc32(...chunks) {
+  let checksum = 0xffffffff;
+  for (const bytes of chunks) {
+    for (const byte of bytes) {
+      checksum ^= byte;
+      for (let bit = 0; bit < 8; bit += 1) {
+        checksum = (checksum >>> 1) ^ (checksum & 1 ? 0xedb88320 : 0);
+      }
+    }
+  }
+  return (checksum ^ 0xffffffff) >>> 0;
+}
+
+function assertImageDimensions(width, height, label) {
+  if (
+    width <= 0
+    || height <= 0
+    || width > IMAGE_MAXIMUM_EDGE
+    || height > IMAGE_MAXIMUM_EDGE
+    || width * height > IMAGE_MAXIMUM_PIXELS
+  ) {
+    throw new Error(`${label} exceeds the supported image dimensions`);
+  }
+}
+
+function pngImage(bytes, label) {
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (bytes.length < 8 || !bytes.subarray(0, 8).equals(signature)) {
+    throw new Error(`${label} must be a PNG image`);
+  }
+  let offset = 8;
+  let header;
+  let paletteEntries = 0;
+  let sawPalette = false;
+  let sawImageData = false;
+  let endedImageData = false;
+  let sawEnd = false;
+  const imageData = [];
+  while (offset < bytes.length) {
+    if (offset + 12 > bytes.length) throw new Error("PNG image has a truncated chunk");
+    const length = bytes.readUInt32BE(offset);
+    const chunkEnd = offset + 12 + length;
+    if (chunkEnd > bytes.length) throw new Error("PNG image has a truncated chunk");
+    const typeBytes = bytes.subarray(offset + 4, offset + 8);
+    const type = typeBytes.toString("ascii");
+    const data = bytes.subarray(offset + 8, offset + 8 + length);
+    const recordedChecksum = bytes.readUInt32BE(offset + 8 + length);
+    if (crc32(typeBytes, data) !== recordedChecksum) {
+      throw new Error(`PNG image has an invalid ${type} checksum`);
+    }
+    if (!header && type !== "IHDR") throw new Error("PNG image must start with IHDR");
+    if (type === "IHDR") {
+      if (header || length !== 13) throw new Error("PNG image has an invalid IHDR chunk");
+      const width = data.readUInt32BE(0);
+      const height = data.readUInt32BE(4);
+      const bitDepth = data[8];
+      const colorType = data[9];
+      const allowedDepths = new Map([
+        [0, [1, 2, 4, 8, 16]],
+        [2, [8, 16]],
+        [3, [1, 2, 4, 8]],
+        [4, [8, 16]],
+        [6, [8, 16]],
+      ]);
+      if (
+        !allowedDepths.get(colorType)?.includes(bitDepth)
+        || data[10] !== 0
+        || data[11] !== 0
+        || data[12] !== 0
+      ) {
+        throw new Error("PNG image uses an unsupported encoding");
+      }
+      assertImageDimensions(width, height, label);
+      header = { bitDepth, colorType, height, width };
+    } else if (type === "PLTE") {
+      if (sawPalette || sawImageData || length === 0 || length % 3 !== 0 || length > 768) {
+        throw new Error("PNG image has an invalid palette");
+      }
+      sawPalette = true;
+      paletteEntries = length / 3;
+    } else if (type === "IDAT") {
+      if (endedImageData) throw new Error("PNG image has non-consecutive image data");
+      if (header.colorType === 3 && !sawPalette) {
+        throw new Error("Indexed PNG image has no palette");
+      }
+      sawImageData = true;
+      imageData.push(data);
+    } else if (type === "IEND") {
+      if (!sawImageData || length !== 0 || chunkEnd !== bytes.length) {
+        throw new Error("PNG image has an invalid end chunk");
+      }
+      sawEnd = true;
+    } else {
+      if (sawImageData) endedImageData = true;
+      if ((typeBytes[0] & 0x20) === 0) {
+        throw new Error(`PNG image has unsupported critical chunk ${type}`);
+      }
+      if (type === "tRNS") {
+        const validTransparency = (
+          (header.colorType === 0 && length === 2)
+          || (header.colorType === 2 && length === 6)
+          || (header.colorType === 3 && sawPalette && length <= paletteEntries)
+        );
+        if (!validTransparency || sawImageData) {
+          throw new Error("PNG image has invalid transparency data");
+        }
+      }
+    }
+    offset = chunkEnd;
+    if (sawEnd) break;
+  }
+  if (!header || !sawEnd) throw new Error("PNG image is incomplete");
+  const channels = new Map([[0, 1], [2, 3], [3, 1], [4, 2], [6, 4]]).get(header.colorType);
+  const rowBytes = Math.ceil((header.width * channels * header.bitDepth) / 8);
+  const expectedBytes = header.height * (rowBytes + 1);
+  let pixels;
+  try {
+    pixels = inflateSync(Buffer.concat(imageData), { maxOutputLength: expectedBytes + 1 });
+  } catch (error) {
+    throw new Error("PNG image data cannot be decoded", { cause: error });
+  }
+  if (pixels.length !== expectedBytes) throw new Error("PNG image data has the wrong length");
+  for (let row = 0; row < header.height; row += 1) {
+    if (pixels[row * (rowBytes + 1)] > 4) throw new Error("PNG image uses an invalid row filter");
+  }
+  return Object.freeze({ mimeType: "image/png", width: header.width, height: header.height });
+}
+
+function rasterImage(bytes, label) {
+  try {
+    return pngImage(bytes, label);
+  } catch (error) {
+    if (error.message.startsWith(`${label} `)) throw error;
+    throw new Error(`${label} is not a valid PNG image`, { cause: error });
+  }
+}
+
+function embeddedImage(value, path) {
+  if (!isRecord(value)) throw new TypeError(`${path} must be an object`);
+  assertKeys(value, ["mimeType", "width", "height", "data"], path);
+  if (typeof value.data !== "string" || !/^[A-Za-z0-9+/]*={0,2}$/u.test(value.data)) {
+    throw new TypeError(`${path}.data must be canonical base64`);
+  }
+  const bytes = Buffer.from(value.data, "base64");
+  if (bytes.toString("base64") !== value.data || bytes.length > IMAGE_MAXIMUM_BYTES) {
+    throw new TypeError(`${path}.data must be bounded canonical base64`);
+  }
+  const image = rasterImage(bytes, path);
+  if (
+    image.mimeType !== value.mimeType
+    || image.width !== value.width
+    || image.height !== value.height
+  ) {
+    throw new TypeError(`${path} metadata does not match its image bytes`);
+  }
+  return Object.freeze({ ...image, data: value.data });
+}
+
+async function hydrateDesignDirections(value) {
+  if (!value) return undefined;
+  let totalBytes = 0;
+  const options = [];
+  for (const [index, option] of value.options.entries()) {
+    const label = `Design direction image ${index + 1}`;
+    const { bytes } = await readStableFile(option.imagePath, IMAGE_MAXIMUM_BYTES, label);
+    totalBytes += bytes.length;
+    if (totalBytes > IMAGE_TOTAL_MAXIMUM_BYTES) {
+      throw new Error(`Design direction images exceed ${IMAGE_TOTAL_MAXIMUM_BYTES} bytes`);
+    }
+    const image = rasterImage(bytes, label);
+    const { imagePath: _imagePath, ...content } = option;
+    options.push(Object.freeze({
+      ...content,
+      image: Object.freeze({ ...image, data: bytes.toString("base64") }),
+    }));
+  }
+  return Object.freeze({ ...value, options: Object.freeze(options) });
+}
+
 export async function readAlignInput(path, defaults) {
   const { bytes } = await readStableFile(path, INPUT_MAXIMUM_BYTES, "Align input");
   let value;
@@ -260,7 +556,11 @@ export async function readAlignInput(path, defaults) {
   } catch (error) {
     throw new Error("Align input is not valid JSON", { cause: error });
   }
-  return validateAlignInput(value, defaults);
+  const input = validateAlignInput(value, defaults);
+  const hydratedDirections = await hydrateDesignDirections(input.designDirections);
+  return hydratedDirections === undefined
+    ? input
+    : Object.freeze({ ...input, designDirections: hydratedDirections });
 }
 
 function sameFile(actual, expected) {
@@ -354,6 +654,20 @@ function validateArtifactData(value) {
       || !isRecord(revision.content)
     ) {
       throw new Error("Align artifact revision history is invalid");
+    }
+    if (revision.content.designDirections !== undefined) {
+      const directions = designDirections(
+        revision.content.designDirections,
+        `$.revisions[${index}].content.designDirections`,
+        { imageField: "image", validateImage: embeddedImage },
+      );
+      const totalBytes = directions.options.reduce(
+        (total, option) => total + Buffer.byteLength(option.image.data, "base64"),
+        0,
+      );
+      if (totalBytes > IMAGE_TOTAL_MAXIMUM_BYTES) {
+        throw new Error("Align artifact design direction images exceed their total limit");
+      }
     }
   }
   return value;

@@ -11,7 +11,9 @@ import {
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import test, { after } from "node:test";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { deflateSync } from "node:zlib";
 
 import {
   createAlignArtifact,
@@ -21,7 +23,7 @@ import {
   verifyAlignHtml,
 } from "../plugins/hope/skills/align/scripts/artifact.mjs";
 import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render.mjs";
-import { makeAlignInput } from "../test-support/align-fixture.mjs";
+import { makeAlignInput, makeDesignDirections } from "../test-support/align-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
 } from "../test-support/temporary-directory.mjs";
@@ -29,6 +31,46 @@ import {
 const execFileAsync = promisify(execFile);
 const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 const now = new Date("2026-08-14T00:00:00.000Z");
+const sampleImage = fileURLToPath(new URL("../plugins/hope/assets/hope-icon.png", import.meta.url));
+
+function crc32(bytes) {
+  let checksum = 0xffffffff;
+  for (const byte of bytes) {
+    checksum ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      checksum = (checksum >>> 1) ^ (checksum & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (checksum ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type, data) {
+  const typeBytes = Buffer.from(type, "ascii");
+  const chunk = Buffer.alloc(data.length + 12);
+  chunk.writeUInt32BE(data.length, 0);
+  typeBytes.copy(chunk, 4);
+  data.copy(chunk, 8);
+  chunk.writeUInt32BE(crc32(Buffer.concat([typeBytes, data])), data.length + 8);
+  return chunk;
+}
+
+function boundedLargePng() {
+  const width = 480;
+  const height = 256;
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  const rows = Buffer.alloc((width * 4 + 1) * height);
+  for (let row = 0; row < height; row += 1) rows[row * (width * 4 + 1)] = 0;
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  return Buffer.concat([
+    signature,
+    pngChunk("IHDR", header),
+    pngChunk("IDAT", deflateSync(rows, { level: 0 })),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
 
 async function repository(remote = "git@github.com:acme/storage.git") {
   const root = await createTestTemporaryDirectory("hope-align-test-");
@@ -95,6 +137,203 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
   );
 });
 
+test("design direction images are validated, embedded, and kept off the network", async () => {
+  const root = await repository();
+  const firstImage = join(root, "direction-one.png");
+  const secondImage = join(root, "direction-two.png");
+  await copyFile(sampleImage, firstImage);
+  await copyFile(sampleImage, secondImage);
+  const inputPath = await inputFile(root, "input.json", makeAlignInput({
+    designDirections: makeDesignDirections([firstImage, secondImage]),
+  }));
+  const outputPath = join(root, "docs", "alignments", "visual-agreement.html");
+  const created = await createAlignArtifact({ inputPath, outputPath, root });
+  const inspected = await inspectAlignArtifact(outputPath);
+  const directions = inspected.content.designDirections;
+
+  assert.equal(directions.options.length, 2);
+  assert.equal(directions.options[0].image.mimeType, "image/png");
+  assert.equal(directions.options[0].image.width, 128);
+  assert.equal(directions.options[0].image.height, 128);
+  assert.equal(directions.recommendation.optionId, "direction-1");
+  assert.equal(directions.selection.optionId, "direction-2");
+  const html = await readFile(outputPath, "utf8");
+  assert.equal(verifyAlignHtml(html), created.digest);
+  assert.equal((html.match(/class="direction-image"><img src="data:image\/png;base64,/gu) ?? []).length, 2);
+  assert.match(html, /id="design-directions"/u);
+  assert.match(html, />AI 추천</u);
+  assert.match(html, />사용자가 선택함</u);
+  assert.match(html, /href="https:\/\/example\.com\/recovery-reference"/u);
+  assert.match(html, /복구 선택을 첫 화면의 주 행동으로 배치했다/u);
+  assert.doesNotMatch(html, new RegExp(firstImage.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
+  assert.doesNotMatch(html, /<img[^>]+https?:/u);
+});
+
+test("design direction input rejects unsafe images and inconsistent choices", async () => {
+  const root = await repository();
+  const unsupported = join(root, "direction.svg");
+  await writeFile(unsupported, "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>", "utf8");
+  const unsupportedInput = await inputFile(root, "unsupported.json", makeAlignInput({
+    designDirections: makeDesignDirections([unsupported, unsupported]),
+  }));
+  await assert.rejects(
+    createAlignArtifact({
+      inputPath: unsupportedInput,
+      outputPath: join(root, "docs", "alignments", "unsupported.html"),
+      root,
+    }),
+    /must be a PNG image/u,
+  );
+
+  const oversized = join(root, "oversized.png");
+  await writeFile(oversized, Buffer.alloc((512 * 1024) + 1));
+  const oversizedInput = await inputFile(root, "oversized.json", makeAlignInput({
+    designDirections: makeDesignDirections([sampleImage, oversized]),
+  }));
+  await assert.rejects(
+    createAlignArtifact({
+      inputPath: oversizedInput,
+      outputPath: join(root, "docs", "alignments", "oversized-image.html"),
+      root,
+    }),
+    /exceeds 524288 bytes/u,
+  );
+
+  const hugeDimensions = join(root, "huge-dimensions.png");
+  const hugeBytes = await readFile(sampleImage);
+  hugeBytes.writeUInt32BE(5_000, 16);
+  hugeBytes.writeUInt32BE(crc32(hugeBytes.subarray(12, 29)), 29);
+  await writeFile(hugeDimensions, hugeBytes);
+  const hugeInput = await inputFile(root, "huge.json", makeAlignInput({
+    designDirections: makeDesignDirections([sampleImage, hugeDimensions]),
+  }));
+  await assert.rejects(
+    createAlignArtifact({
+      inputPath: hugeInput,
+      outputPath: join(root, "docs", "alignments", "huge-image.html"),
+      root,
+    }),
+    /exceeds the supported image dimensions/u,
+  );
+
+  const truncated = join(root, "truncated.png");
+  await writeFile(truncated, (await readFile(sampleImage)).subarray(0, 24));
+  const truncatedInput = await inputFile(root, "truncated.json", makeAlignInput({
+    designDirections: makeDesignDirections([sampleImage, truncated]),
+  }));
+  await assert.rejects(
+    createAlignArtifact({
+      inputPath: truncatedInput,
+      outputPath: join(root, "docs", "alignments", "truncated-image.html"),
+      root,
+    }),
+    /is not a valid PNG image/u,
+  );
+
+  const corrupt = join(root, "corrupt.png");
+  const corruptBytes = await readFile(sampleImage);
+  corruptBytes[corruptBytes.length - 5] ^= 0xff;
+  await writeFile(corrupt, corruptBytes);
+  const corruptInput = await inputFile(root, "corrupt.json", makeAlignInput({
+    designDirections: makeDesignDirections([sampleImage, corrupt]),
+  }));
+  await assert.rejects(
+    createAlignArtifact({
+      inputPath: corruptInput,
+      outputPath: join(root, "docs", "alignments", "corrupt-image.html"),
+      root,
+    }),
+    /is not a valid PNG image/u,
+  );
+
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      designDirections: {
+        ...makeDesignDirections([sampleImage, sampleImage]),
+        selection: { optionId: "missing", reason: "없는 안", decidedBy: "user" },
+      },
+    })),
+    /selection\.optionId must name an option/u,
+  );
+  const credentials = makeDesignDirections([sampleImage, sampleImage]);
+  credentials.options[0].references[0].url = "https://user:secret@example.com/reference";
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({ designDirections: credentials })),
+    /without credentials/u,
+  );
+  const uppercaseScheme = makeDesignDirections([sampleImage, sampleImage]);
+  uppercaseScheme.options[0].references[0].url = "HTTPS://example.com/reference";
+  assert.equal(
+    validateAlignInput(makeAlignInput({ designDirections: uppercaseScheme }))
+      .designDirections.options[0].references[0].url,
+    "HTTPS://example.com/reference",
+  );
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      designDirections: makeDesignDirections(["relative.png", sampleImage]),
+    })),
+    /must be an absolute path/u,
+  );
+  const missingInfluence = makeDesignDirections([sampleImage, sampleImage]);
+  delete missingInfluence.options[0].references[0].influence;
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({ designDirections: missingInfluence })),
+    /influence must be text/u,
+  );
+});
+
+test("two image-rich revisions remain complete within the artifact boundary", async () => {
+  const root = await repository();
+  const firstImage = join(root, "large-one.png");
+  const secondImage = join(root, "large-two.png");
+  const image = boundedLargePng();
+  assert.ok(image.length < 512 * 1024);
+  assert.ok(image.length * 2 < 1024 * 1024);
+  await writeFile(firstImage, image);
+  await writeFile(secondImage, image);
+  const directions = makeDesignDirections([firstImage, secondImage]);
+  const firstInput = await inputFile(root, "visual-one.json", makeAlignInput({
+    designDirections: directions,
+  }));
+  const outputPath = join(root, "docs", "alignments", "visual-history.html");
+  const created = await createAlignArtifact({ inputPath: firstInput, outputPath, root });
+  const revisedDirections = makeDesignDirections([firstImage, secondImage]);
+  revisedDirections.selection = {
+    optionId: "direction-1",
+    reason: "첫 번째 시안이 작업 집중도에 더 잘 맞는다.",
+    decidedBy: "delegated",
+  };
+  const secondInput = await inputFile(root, "visual-two.json", makeAlignInput({
+    designDirections: revisedDirections,
+    revisionSummary: "시안 선택 변경",
+  }));
+  const revised = await reviseAlignArtifact({
+    artifactPath: outputPath,
+    expectedDigest: created.digest,
+    inputPath: secondInput,
+    root,
+  });
+  const html = await readFile(outputPath, "utf8");
+  assert.ok(Buffer.byteLength(html) < 12 * 1024 * 1024);
+  assert.equal(verifyAlignHtml(html), revised.digest);
+  assert.match(html, /id="revision-1"/u);
+  assert.match(html, /revision-1-design-direction-direction-1/u);
+  assert.match(html, /복구 선택을 첫 화면의 주 행동으로 배치했다/u);
+  assert.equal((await inspectAlignArtifact(outputPath)).history.length, 2);
+
+  const tooManyImages = await inputFile(root, "visual-over-total.json", makeAlignInput({
+    designDirections: makeDesignDirections([firstImage, secondImage, firstImage]),
+  }));
+  await assert.rejects(
+    createAlignArtifact({
+      inputPath: tooManyImages,
+      outputPath: join(root, "docs", "alignments", "visual-over-total.html"),
+      root,
+    }),
+    /images exceed 1048576 bytes/u,
+  );
+});
+
 test("renderer is deterministic, self-contained, and keeps authored text inert", () => {
   const input = validateAlignInput(makeAlignInput({
     title: '</title><script src="https://evil.example/x.js"></script>',
@@ -124,7 +363,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="2"/u);
+  assert.match(first, /name="hope-align-design-version" content="3"/u);
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
@@ -335,7 +574,7 @@ test("revision rejects an artifact that would exceed the readable size", async (
   let current = await createAlignArtifact({ inputPath, outputPath, root });
   let rejection;
 
-  for (let attempt = 0; attempt < 12; attempt += 1) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
     const before = await readFile(outputPath);
     try {
       current = await reviseAlignArtifact({
@@ -346,7 +585,7 @@ test("revision rejects an artifact that would exceed the readable size", async (
       });
     } catch (error) {
       rejection = error;
-      assert.match(error.message, /exceeds 4194304 bytes/u);
+      assert.match(error.message, /exceeds 12582912 bytes/u);
       assert.deepEqual(await readFile(outputPath), before);
       const inspected = await inspectAlignArtifact(outputPath);
       assert.equal(inspected.digest, current.digest);

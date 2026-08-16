@@ -25,10 +25,14 @@ const dictionaries = Object.freeze({
     cancelOutcome: "cancel",
     completeOutcome: "complete",
     currentAgreement: "Current agreement",
+    decidedByDelegated: "AI choice delegated by the person",
+    decidedByUser: "Selected by the person",
+    designDirections: "Design directions",
     earlierRevisions: "earlier versions",
     evidence: "Basis",
     excluded: "Out of scope",
     history: "Version history",
+    influence: "Influence",
     included: "In scope",
     menu: "Contents",
     navigation: "Contents and version history",
@@ -37,13 +41,20 @@ const dictionaries = Object.freeze({
     openChoices: "Choose during implementation",
     overview: "Summary",
     problem: "Problem",
+    recommendation: "AI recommendation",
+    recommended: "Recommended",
+    references: "References",
     revisionDetails: "View changes",
     scope: "Scope",
     skip: "Skip to agreement",
     success: "Success",
+    selected: "Selected",
+    selection: "Selection",
+    strengths: "Strengths",
     toc: "Contents",
     useDarkTheme: "Switch to dark mode",
     useLightTheme: "Switch to light mode",
+    tradeoffs: "Trade-offs",
   }),
   "ko-KR": Object.freeze({
     agreement: "결정과 구현 선택",
@@ -53,10 +64,14 @@ const dictionaries = Object.freeze({
     cancelOutcome: "취소",
     completeOutcome: "완료",
     currentAgreement: "현재 합의",
+    decidedByDelegated: "사용자가 AI에 선택을 위임함",
+    decidedByUser: "사용자가 선택함",
+    designDirections: "디자인 시안",
     earlierRevisions: "개의 이전 버전",
     evidence: "근거",
     excluded: "제외 범위",
     history: "버전 이력",
+    influence: "반영한 점",
     included: "포함 범위",
     menu: "목차",
     navigation: "목차와 버전 이력",
@@ -65,13 +80,20 @@ const dictionaries = Object.freeze({
     openChoices: "구현 중 선택",
     overview: "요약",
     problem: "문제",
+    recommendation: "AI 추천",
+    recommended: "추천",
+    references: "참고 자료",
     revisionDetails: "변경 내용 보기",
     scope: "범위",
     skip: "합의 내용으로 건너뛰기",
     success: "성공",
+    selected: "선택",
+    selection: "선택 결과",
+    strengths: "장점",
     toc: "목차",
     useDarkTheme: "다크 모드로 전환",
     useLightTheme: "라이트 모드로 전환",
+    tradeoffs: "고려 사항",
   }),
 });
 
@@ -140,6 +162,53 @@ function scopeSection(content, dictionary) {
       <h3>${escapeHtml(label(dictionary, "excluded"))}</h3>
       ${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded") })}
     </div>
+  </section>`;
+}
+
+function directionReferences(references, dictionary) {
+  if (references.length === 0) return "";
+  return `<div class="direction-references"><h4>${escapeHtml(label(dictionary, "references"))}</h4><ul>${references.map(
+    (reference) => `<li><a href="${escapeHtml(reference.url)}">${authoredText(reference.label)}</a><p><strong>${escapeHtml(label(dictionary, "influence"))}:</strong> ${authoredText(reference.influence)}</p></li>`,
+  ).join("")}</ul></div>`;
+}
+
+function designDirectionsComparison(directions, dictionary, idPrefix = "") {
+  const optionById = new Map(directions.options.map((option) => [option.id, option]));
+  const status = (option) => [
+    option.id === directions.recommendation.optionId
+      ? `<span class="direction-status recommended">${escapeHtml(label(dictionary, "recommended"))}</span>`
+      : "",
+    option.id === directions.selection.optionId
+      ? `<span class="direction-status selected">${escapeHtml(label(dictionary, "selected"))}</span>`
+      : "",
+  ].join("");
+  const optionList = directions.options.map((option, index) => `<li class="design-direction" id="${escapeHtml(idPrefix)}design-direction-${escapeHtml(option.id)}">
+    <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><h3>${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></header>
+    <div class="direction-image"><img src="data:${option.image.mimeType};base64,${option.image.data}" alt="${escapeHtml(option.alt)}" width="${option.image.width}" height="${option.image.height}"></div>
+    <p class="direction-summary">${authoredText(option.summary)}</p>
+    <div class="direction-details">
+      <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
+      <div><h4>${escapeHtml(label(dictionary, "tradeoffs"))}</h4>${textList(option.tradeoffs)}</div>
+    </div>
+    ${directionReferences(option.references, dictionary)}
+  </li>`).join("");
+  const recommendation = optionById.get(directions.recommendation.optionId);
+  const selection = optionById.get(directions.selection.optionId);
+  const decidedBy = directions.selection.decidedBy === "delegated"
+    ? label(dictionary, "decidedByDelegated")
+    : label(dictionary, "decidedByUser");
+  return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>
+    <dl class="direction-decisions">
+      <div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd><strong>${authoredText(recommendation.title)}</strong><p>${authoredText(directions.recommendation.reason)}</p></dd></div>
+      <div><dt>${escapeHtml(label(dictionary, "selection"))}</dt><dd><strong>${authoredText(selection.title)}</strong><span class="selection-source">${escapeHtml(decidedBy)}</span><p>${authoredText(directions.selection.reason)}</p></dd></div>
+    </dl>`;
+}
+
+function designDirectionsSection(content, dictionary) {
+  if (!content.designDirections) return undefined;
+  return `<section class="body-section document-section" id="design-directions" aria-labelledby="design-directions-title">
+    <h2 id="design-directions-title">${escapeHtml(label(dictionary, "designDirections"))}</h2>
+    ${designDirectionsComparison(content.designDirections, dictionary)}
   </section>`;
 }
 
@@ -220,7 +289,7 @@ function evidenceSection(content, dictionary) {
   </section>`;
 }
 
-function compactRevisionContent(content, dictionary) {
+function compactRevisionContent(content, dictionary, idPrefix) {
   const detail = (title, value) => `${authoredText(title)}${value
     ? ` <span aria-hidden="true">—</span> ${authoredText(value)}`
     : ""}`;
@@ -235,6 +304,10 @@ function compactRevisionContent(content, dictionary) {
       )})`,
       outcome.detail,
     )}</li>`).join("")}</ul></dd>
+  </div>` : "";
+  const designDirectionsHtml = content.designDirections ? `<div>
+    <dt>${escapeHtml(label(dictionary, "designDirections"))}</dt>
+    <dd>${designDirectionsComparison(content.designDirections, dictionary, idPrefix)}</dd>
   </div>` : "";
   const decisions = content.decisions.length === 0 ? "" : `<div>
     <dt>${escapeHtml(label(dictionary, "agreedDecisions"))}</dt>
@@ -254,7 +327,7 @@ function compactRevisionContent(content, dictionary) {
     <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(content.boundary)}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.scope.included, { empty: label(dictionary, "noIncluded") })}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "excluded"))}</dt><dd>${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded") })}</dd></div>
-    ${behavior}${decisions}${openChoices}${evidence}
+    ${designDirectionsHtml}${behavior}${decisions}${openChoices}${evidence}
   </dl>`;
 }
 
@@ -262,7 +335,7 @@ function railRevision(revision, index, data, dictionary, idSuffix) {
   const current = index === 0;
   const details = current || data.revisions.length === 1 ? "" : `<details class="revision-disclosure" id="revision-${revision.number}${idSuffix}">
     <summary>${escapeHtml(label(dictionary, "revisionDetails"))}</summary>
-    <div class="revision-popup">${compactRevisionContent(revision.content, dictionary)}</div>
+    <div class="revision-popup">${compactRevisionContent(revision.content, dictionary, `revision-${revision.number}${idSuffix}-`)}</div>
   </details>`;
   return `<li class="${current ? "current" : "past"}">
     <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>v${revision.number} · ${current ? escapeHtml(label(dictionary, "currentAgreement")) : authoredText(revision.summary)}</strong><time datetime="${escapeHtml(revision.agreedAt)}">${escapeHtml(revision.agreedAt.slice(0, 10))}</time></div>
@@ -396,18 +469,21 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .toc a { display: block; padding: ${space2}px 0; color: var(--text); text-decoration: none; }
 .toc a[aria-current="location"] { color: var(--accent); font-weight: 700; }
 .rail-history { padding-top: ${space5}px; border-top: 1px solid var(--border); }
-.rail-history li { position: relative; padding: 0 0 ${space5}px ${space4}px; border-left: 1px solid var(--border); }
-.rail-history li:last-child { padding-bottom: ${space3}px; }
+.rail-history > ol > li, .older-history > ol > li { position: relative; padding: 0 0 ${space5}px ${space4}px; border-left: 1px solid var(--border); }
+.rail-history > ol > li:last-child, .older-history > ol > li:last-child { padding-bottom: ${space3}px; }
 .revision-dot { position: absolute; left: -5px; top: 7px; width: 9px; height: 9px; border: 1px solid var(--component-border); border-radius: 50%; background: var(--bg); }
-.rail-history .current .revision-dot { border-color: var(--accent); background: var(--accent); }
+.rail-history > ol > .current .revision-dot { border-color: var(--accent); background: var(--accent); }
 .revision-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: ${space2}px; align-items: baseline; }
 .revision-head strong { font-size: ${TYPE.menu.fontSize}px; }
 .revision-head time { color: var(--muted); font-size: ${TYPE.micro.fontSize}px; }
-.rail-history p { margin: ${space2}px 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.revision-head + p { margin: ${space2}px 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .revision-disclosure, .older-history { position: relative; }
 .revision-disclosure > summary, .older-history > summary { min-height: 32px; display: flex; align-items: center; color: var(--text); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; }
 .revision-disclosure > summary::marker, .older-history > summary::marker { color: var(--muted); }
 .revision-popup { position: absolute; z-index: 12; top: 100%; right: 0; width: min(560px, calc(100vw - ${LAYOUT.tableOfContentsWidth + 80}px)); max-height: min(70vh, 680px); overflow: auto; padding: ${space4}px; border: 1px solid var(--border); background: var(--panel); box-shadow: 0 12px 32px color-mix(in srgb, var(--text) 14%, transparent); }
+.revision-popup .design-direction-list, .revision-popup .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
+.revision-popup .design-direction { padding-inline: ${space2}px; }
+.revision-popup .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
 .older-history > ol { list-style: none; padding: ${space3}px 0 0; }
 .document-section + .document-section { margin-top: ${space9}px; }
 .document-head { max-width: 78ch; }
@@ -425,6 +501,30 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .scope h3, .body-section > h2 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
+.design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
+.design-direction-list.design-direction-count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.design-direction { min-width: 0; padding: ${space4}px ${space4}px ${space5}px; }
+.design-direction + .design-direction { border-left: 1px solid var(--border); }
+.direction-head { min-height: 46px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space2}px; align-items: start; }
+.direction-head h3 { margin: 0; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
+.direction-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
+.direction-statuses { grid-column: 2; display: flex; flex-wrap: wrap; gap: ${space1}px; }
+.direction-status { padding: 2px ${space2}px; border: 1px solid var(--component-border); border-radius: 999px; font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
+.direction-status.selected { border-color: var(--accent); color: var(--accent); }
+.direction-image { margin-top: ${space3}px; display: grid; min-height: 180px; place-items: center; overflow: hidden; border: 1px solid var(--component-border); background: var(--panel); }
+.direction-image img { display: block; width: 100%; height: auto; max-height: 440px; object-fit: contain; }
+.direction-summary { margin-top: ${space4}px; }
+.direction-details { margin-top: ${space4}px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: ${space4}px; }
+.direction-details h4, .direction-references h4 { margin: 0 0 ${space2}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.direction-details .plain-list, .direction-references ul { padding-left: ${space4}px; display: grid; gap: ${space1}px; }
+.direction-references { margin-top: ${space4}px; padding-top: ${space3}px; border-top: 1px solid var(--border); }
+.direction-references li p { margin: ${space1}px 0 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.direction-decisions { border-top: 1px solid var(--border); }
+.direction-decisions > div { display: grid; grid-template-columns: minmax(140px, .28fr) minmax(0, 1fr); gap: ${space4}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
+.direction-decisions dt { font-weight: 700; }
+.direction-decisions dd { margin: 0; }
+.direction-decisions p { margin-top: ${space1}px; color: var(--muted); }
+.selection-source { display: inline-block; margin-left: ${space2}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .behavior-layout { display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(190px, .34fr); align-items: stretch; }
 .behavior-layout-single { grid-template-columns: minmax(0,1fr); }
 .behavior-steps { list-style: none; padding: 0; display: flex; gap: ${space5}px; }
@@ -480,6 +580,12 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .intent { font-size: ${TYPE.intent.narrow.fontSize}px; line-height: ${TYPE.intent.narrow.lineHeight}; }
   .scope { grid-template-columns: 1fr; }
   .scope-column + .scope-column { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
+  .design-direction-list, .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
+  .design-direction { padding-inline: ${space2}px; }
+  .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
+  .direction-details { grid-template-columns: 1fr; }
+  .direction-decisions > div { grid-template-columns: 1fr; gap: ${space1}px; }
+  .selection-source { display: block; margin: ${space1}px 0 0; }
   .behavior-layout { grid-template-columns: 1fr; }
   .behavior-connector { display: none; }
   .behavior-steps { flex-direction: column; gap: ${space5}px; }
@@ -507,7 +613,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media (forced-colors: active) {
-  .status, .theme-button, .mobile-navigation > summary, .outcome-mark { border: 1px solid ButtonText; }
+  .status, .theme-button, .mobile-navigation > summary, .outcome-mark, .direction-status, .direction-image { border: 1px solid ButtonText; }
   .step-number { border: 1px solid ButtonText; background: Canvas; color: CanvasText; }
   .revision-dot, .rail-history .current .revision-dot { border-color: CanvasText; background: Canvas; }
 }
@@ -516,6 +622,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .topbar, .rail, .mobile-navigation, .skip { display: none !important; }
   .layout { display: block; }
   .main { padding: 0; }
+  .design-direction { break-inside: avoid; }
   a { color: inherit; text-decoration: none; }
 }
 `;
@@ -559,6 +666,7 @@ export function renderAlignArtifact(data, { digest }) {
   const sections = [
     { id: "overview", title: label(dictionary, "overview"), html: overview(content, dictionary) },
     { id: "scope", title: label(dictionary, "scope"), html: scopeSection(content, dictionary) },
+    { id: "design-directions", title: label(dictionary, "designDirections"), html: designDirectionsSection(content, dictionary) },
     { id: "behavior", title: label(dictionary, "behavior"), html: behaviorSection(content, dictionary) },
     { id: "agreement", title: label(dictionary, "agreement"), html: agreementSection(content, dictionary) },
     { id: "evidence", title: label(dictionary, "evidence"), html: evidenceSection(content, dictionary) },

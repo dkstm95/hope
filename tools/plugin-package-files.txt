@@ -13,6 +13,7 @@ assets/hope-protected-light.png
 skills/align/SKILL.md
 skills/align/agents/openai.yaml
 skills/align/references/artifact.md
+skills/align/references/design-directions.md
 skills/align/scripts/align-input-v1.schema.json
 skills/align/scripts/artifact.mjs
 skills/align/scripts/cli.mjs

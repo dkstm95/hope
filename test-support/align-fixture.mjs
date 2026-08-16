@@ -57,3 +57,41 @@ export function makeAlignInput(overrides = {}) {
     ...overrides,
   };
 }
+
+export function makeDesignDirections(imagePaths) {
+  if (!Array.isArray(imagePaths) || imagePaths.length < 2 || imagePaths.length > 3) {
+    throw new TypeError("imagePaths must contain two or three paths");
+  }
+  const options = imagePaths.map((imagePath, index) => ({
+    id: `direction-${index + 1}`,
+    title: index === 0 ? "차분한 작업 공간" : index === 1 ? "선명한 진행 흐름" : "밀도 높은 대시보드",
+    imagePath,
+    alt: `업로드 복구 화면 시안 ${index + 1}`,
+    summary: index === 0
+      ? "현재 작업과 복구 선택에 집중하는 차분한 구성이다."
+      : index === 1
+        ? "복구 진행 단계와 다음 행동을 강하게 드러내는 구성이다."
+        : "여러 복구 항목과 상태를 한 번에 비교하는 구성이다.",
+    strengths: [index === 0 ? "핵심 선택을 빠르게 찾을 수 있다." : "현재 단계가 분명하다."],
+    tradeoffs: [index === 0 ? "여러 항목을 한눈에 보기 어렵다." : "정보가 적을 때는 강조가 과할 수 있다."],
+    references: index === 0
+      ? [{
+          label: "복구 요구 참고",
+          url: "https://example.com/recovery-reference",
+          influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+        }]
+      : [],
+  }));
+  return {
+    options,
+    recommendation: {
+      optionId: "direction-1",
+      reason: "복구 선택을 이해하는 데 필요한 정보만 먼저 보여 준다.",
+    },
+    selection: {
+      optionId: "direction-2",
+      reason: "진행 단계를 더 분명하게 보여 주는 방향을 선택했다.",
+      decidedBy: "user",
+    },
+  };
+}

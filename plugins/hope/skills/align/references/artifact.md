@@ -7,18 +7,31 @@ and revision judgment.
 ## Input and rendering
 
 Align accepts one bounded JSON input that follows
-`scripts/align-input-v1.schema.json`. The runtime validates the same boundary
-without making a model call.
+`scripts/align-input-v1.schema.json`. The runtime revalidates that structure
+without making a model call and applies filesystem, URL, and image checks that
+JSON Schema cannot express safely.
 
 String limits count Unicode code points. Dangerous bidirectional controls and
 malformed Unicode are rejected before rendering. A finished artifact must fit
-the same 4 MiB bound used by `inspect`; an oversized revision fails without
+the same 12 MiB bound used by `inspect`; an oversized revision fails without
 changing the last readable artifact.
 
 The renderer escapes authored text and produces one self-contained HTML file.
 It makes no network request and keeps the current agreement readable without
 JavaScript. JavaScript adds only theme switching, current-section indication,
 and focused in-page navigation.
+
+An optional design-direction comparison may read two or three raster images
+from absolute local paths in the structured input. Each path must identify a
+stable ordinary file, not a symbolic link. Align limits each image to 512 KiB,
+limits all images in one revision to 1 MiB, and rejects an image wider or taller
+than 4,096 pixels or larger than 8 megapixels.
+
+Align accepts non-interlaced PNG for its first image boundary. It validates the
+complete chunk sequence and checksums, decompresses the bounded image data, and
+checks its row structure and dimensions before embedding its bytes.
+The published artifact contains no source path and loads no image from the
+network. Authored HTML, CSS, JavaScript, SVG, and data URLs remain unsupported.
 
 ## Project publication
 
