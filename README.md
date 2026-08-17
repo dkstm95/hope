@@ -21,7 +21,7 @@
 
 ## Features
 
-### Align — Reach shared understanding before implementation and prevent `intent debt`
+### ✨ Align — Reach shared understanding before implementation and prevent `intent debt`
 
 Align explains its understanding from verifiable evidence, such as the
 codebase, and asks about choices that can change the result so the person and AI
@@ -50,7 +50,7 @@ first, uses web search when needed, and presents two or three image mockups.
 
 ---
 
-### Diff — Understand what changed and how to judge it to prevent `cognitive debt`
+### ✨ Diff — Understand what changed and how to judge it to prevent `cognitive debt`
 
 A code change can be complete while its owner still cannot predict, explain, or
 judge it, and that gap is cognitive debt.
