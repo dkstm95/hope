@@ -42,6 +42,8 @@
 | --- | --- |
 | [![다크 모드로 표시한 Align 결과의 업로드 복구 분기 흐름](assets/readme/hope-align-behavior-ko.png)](assets/readme/hope-align-behavior-ko.png) | [![라이트 모드로 표시한 Align 결과의 번호가 있는 결정 사항](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
 
+**전체 HTML 예시:** [출처 충돌·변경·취소와 확인 책임을 합의한 팬 일정 Align 문서를 엽니다.](docs/alignments/rescene-fan-calendar.html)
+
 ---
 
 ### ✨ Diff — 무엇이 바뀌었고 어떻게 판단할지 이해하여 `인지 부채`를 방지합니다
@@ -71,6 +73,8 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 | [![Diff 결과가 설명 도구의 포함 여부와 이유를 보여 주는 화면](assets/readme/hope-diff-teaching-ko.png)](assets/readme/hope-diff-teaching-ko.png) | [![Diff 결과의 구현 단계와 근거 링크](assets/readme/hope-diff-code-ko.png)](assets/readme/hope-diff-code-ko.png) |
 | 판단에 필요한 다음 확인 | 근거와 확인 범위 |
 | [![Diff 결과의 다음 행동과 완료 조건](assets/readme/hope-diff-review-ko.png)](assets/readme/hope-diff-review-ko.png) | [![Diff 결과의 수집한 근거와 검토 범위](assets/readme/hope-diff-evidence-ko.png)](assets/readme/hope-diff-evidence-ko.png) |
+
+**전체 HTML 예시:** [Ky PR #867의 재시도 설정을 마이크로월드와 퀴즈로 설명한 Diff 문서를 엽니다.](docs/diffs/ky-867-retry-extend.html)
 
 ---
 

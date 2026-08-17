@@ -48,6 +48,10 @@ first, uses web search when needed, and presents two or three image mockups.
 | --- | --- |
 | [![A branched upload-recovery flow in an Align artifact using dark mode](assets/readme/hope-align-behavior-en.png)](assets/readme/hope-align-behavior-en.png) | [![Numbered decisions in an Align artifact using light mode](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
 
+**Complete example HTML:** [Open a Korean Align brief for a fan schedule that
+makes source conflicts, changes, cancellations, and verification ownership
+explicit.](docs/alignments/rescene-fan-calendar.html)
+
 ---
 
 ### ✨ Diff — Understand what changed and how to judge it to prevent `cognitive debt`
@@ -82,6 +86,9 @@ understanding in follow-up decisions and work.
 | [![A Diff artifact explaining which teaching aids it includes and why](assets/readme/hope-diff-teaching-en.png)](assets/readme/hope-diff-teaching-en.png) | [![Implementation steps and supporting evidence links in a Diff artifact](assets/readme/hope-diff-code-en.png)](assets/readme/hope-diff-code-en.png) |
 | Next check for an informed judgment | Evidence and checked scope |
 | [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
+
+**Complete example HTML:** [Open the Korean review of Ky PR #867 with its
+retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.html)
 
 ---
 
