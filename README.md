@@ -23,9 +23,14 @@
 
 ### ✨ Align — Reach shared understanding before implementation and prevent `intent debt`
 
-Align explains its understanding from verifiable evidence, such as the
-codebase, and asks about choices that can change the result so the person and AI
-can reach shared understanding.
+Before teaching back, Align checks the request against verifiable evidence and
+surfaces only material gaps, contradictions, risks, unsupported assumptions,
+edge cases, or simpler paths that could change the result.
+
+It separates required questions from optional improvements, closes declined
+options, and groups independent questions while sequencing dependent ones. For
+a specifically identified high-risk work product, it may offer a separate Toxic
+Review that starts only if the person chooses it.
 
 When the agreement is ready, Align writes one self-contained HTML brief inside
 the project.

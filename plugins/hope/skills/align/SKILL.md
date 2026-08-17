@@ -33,6 +33,26 @@ teach-back.
 Label any proposed check, scope exclusion, or expected behavior as
 an AI proposal and keep it open until the person confirms it.
 
+## Challenge the brief
+
+After inspection, test whether the requested work is likely to achieve the
+stated goal. Surface only a material omission, contradiction, risk,
+unsupported assumption, edge case, or materially simpler path that could
+change the work or prevent material harm. Do not invent a problem, treat taste
+as a defect, or widen the task merely because another product could be better.
+
+Classify each concern as one of:
+
+- a material question that must be resolved because its answer could change
+  the goal, checks, scope, or expected behavior;
+- an optional improvement the person may decline without blocking readiness;
+  or
+- uncertainty that belongs to research or implementation.
+
+State the concrete issue, practical impact, available evidence, and important
+uncertainty. Recommend a next action when one option is a sensible default. If
+no concern meets this bar, continue without manufacturing one.
+
 ## Teach back
 
 Start with a short account of:
@@ -60,10 +80,14 @@ Explain why the answer matters.
 Offer realistic options and a recommendation when one choice is a sensible
 default.
 
-Let the person delegate a reversible low-impact choice.
+Keep every optional improvement as an AI proposal until the person accepts or
+declines it, or delegates a reversible low-impact choice. A declined
+improvement is closed: do not repeat it, keep persuading the person, or let it
+block readiness.
 
-Ask material questions together when the person can answer them independently.
-Ask one at a time only when an answer determines the next question.
+Ask all related questions together when the person can answer them
+independently. Do not impose an arbitrary numerical limit. Ask one at a time
+only when an answer determines the content or need for the next question.
 
 Continue the interview until the person's goal and the agent's understanding
 agree on every point that could change the work.
@@ -78,6 +102,17 @@ mental model.
 
 Leave research and implementation checks open when the conversation cannot
 honestly settle them.
+
+## Offer independent review only when warranted
+
+Align's active-session challenge is not a Toxic Review.
+
+Only when a specifically identified work product exists, an error could cause
+material harm, and a fresh isolated review could realistically change the
+decision, explain why and offer a separate Toxic Review. Start it only if the
+person chooses, then follow `../toxic-review/SKILL.md` without importing its
+reviewer workflow or state into Align. Bring back only adjudicated findings as
+new AI proposals, material questions, or uncertainty.
 
 ## Show material UI choices
 
@@ -98,7 +133,8 @@ Complete alignment only when:
 - no material question or open assumption remains; and
 - the work can be divided into verifiable pieces.
 
-Model confidence is not approval.
+Model confidence is not approval. An unresolved material question or open
+assumption prevents completion.
 
 Write each check as one condition, one verification method, and one decision
 source. Use `agent` only when an implementation agent can perform the check and
