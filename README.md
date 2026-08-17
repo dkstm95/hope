@@ -42,11 +42,18 @@ first, uses web search when needed, and presents two or three image mockups.
 > Align briefs are project documentation. Later version-control work includes
 > them with related project changes unless the person excludes them.
 
-![Hope Align result showing the current agreement, scope, behavior, and version history](assets/readme/hope-align-en.png)
+**Complete example HTML:** [Open a Korean Align brief for a fan schedule that
+makes source conflicts, changes, cancellations, and verification ownership
+explicit.](docs/alignments/rescene-fan-calendar.html)
 
-| Agreed behavior · dark | Decisions · light |
+The captures below come from this example. It uses sample data and does not
+represent the live `rescene.fan` interface.
+
+![Korean Hope Align example showing the trusted fan-schedule goal, completion criteria, and boundary](assets/readme/hope-align.png)
+
+| Compared UI directions | Source and lifecycle decisions |
 | --- | --- |
-| [![A branched upload-recovery flow in an Align artifact using dark mode](assets/readme/hope-align-behavior-en.png)](assets/readme/hope-align-behavior-en.png) | [![Numbered decisions in an Align artifact using light mode](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
+| [![Two UI directions for the trusted fan schedule in a Korean Align artifact](assets/readme/hope-align-directions.png)](assets/readme/hope-align-directions.png) | [![Source priority, conflict, freshness, and cancellation decisions in a Korean Align artifact](assets/readme/hope-align-decisions.png)](assets/readme/hope-align-decisions.png) |
 
 ---
 
@@ -70,18 +77,19 @@ understanding in follow-up decisions and work.
 > Run Diff again when the pull request changes.
 
 > [!NOTE]
-> This is an actual Diff HTML artifact generated from
-> [nanoid PR #601](https://github.com/ai/nanoid/pull/601).
+> The captures below come from an actual Korean Diff HTML artifact generated
+> from [Ky PR #867](https://github.com/sindresorhus/ky/pull/867).
 
-![Hope Diff result for nanoid pull request 601 showing the goal, before and after behavior, impact, and verification item](assets/readme/hope-diff-en.png)
+**Complete example HTML:** [Open the Korean Diff artifact for Ky PR #867 with
+its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.html)
 
-| Core change | Behavior model |
+![Korean Hope Diff example for Ky pull request 867 showing the goal, before and after behavior, and verification item](assets/readme/hope-diff.png)
+
+| Core change | Interactive microworld |
 | --- | --- |
-| [![The core change explanation in a Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![The input comparison and behavior flow in a Diff artifact](assets/readme/hope-diff-behavior-en.png)](assets/readme/hope-diff-behavior-en.png) |
-| Teaching aid choices | Implementation details and evidence |
-| [![A Diff artifact explaining which teaching aids it includes and why](assets/readme/hope-diff-teaching-en.png)](assets/readme/hope-diff-teaching-en.png) | [![Implementation steps and supporting evidence links in a Diff artifact](assets/readme/hope-diff-code-en.png)](assets/readme/hope-diff-code-en.png) |
-| Next check for an informed judgment | Evidence and checked scope |
-| [![The next step and closing condition in a Diff artifact](assets/readme/hope-diff-review-en.png)](assets/readme/hope-diff-review-en.png) | [![The collected evidence and review scope in a Diff artifact](assets/readme/hope-diff-evidence-en.png)](assets/readme/hope-diff-evidence-en.png) |
+| [![The retry configuration change explained in a Korean Diff artifact](assets/readme/hope-diff-core.png)](assets/readme/hope-diff-core.png) | [![An interactive retry-configuration microworld in a Korean Diff artifact](assets/readme/hope-diff-microworld.png)](assets/readme/hope-diff-microworld.png) |
+
+[![An understanding quiz about retry behavior in a Korean Diff artifact](assets/readme/hope-diff-quiz.png)](assets/readme/hope-diff-quiz.png)
 
 ---
 

@@ -24,8 +24,8 @@ const execFileAsync = promisify(execFile);
 let artifactUrl;
 let temporaryRoot;
 const directionImages = [
-  fileURLToPath(new URL("../assets/readme/hope-align-en.png", import.meta.url)),
-  fileURLToPath(new URL("../assets/readme/hope-align-behavior-en.png", import.meta.url)),
+  fileURLToPath(new URL("../assets/readme/hope-align.png", import.meta.url)),
+  fileURLToPath(new URL("../assets/readme/hope-align-decisions.png", import.meta.url)),
 ];
 
 async function writeInput(name, value) {
