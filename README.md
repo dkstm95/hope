@@ -42,18 +42,18 @@ first, uses web search when needed, and presents two or three image mockups.
 > Align briefs are project documentation. Later version-control work includes
 > them with related project changes unless the person excludes them.
 
-The captures below come from the complete Korean example linked after them. It
-uses sample data and does not represent the live `rescene.fan` interface.
+**Complete example HTML:** [Open a Korean Align brief for a fan schedule that
+makes source conflicts, changes, cancellations, and verification ownership
+explicit.](docs/alignments/rescene-fan-calendar.html)
+
+The captures below come from this example. It uses sample data and does not
+represent the live `rescene.fan` interface.
 
 ![Korean Hope Align example showing the trusted fan-schedule goal, completion criteria, and boundary](assets/readme/hope-align.png)
 
 | Compared UI directions | Source and lifecycle decisions |
 | --- | --- |
 | [![Two UI directions for the trusted fan schedule in a Korean Align artifact](assets/readme/hope-align-directions.png)](assets/readme/hope-align-directions.png) | [![Source priority, conflict, freshness, and cancellation decisions in a Korean Align artifact](assets/readme/hope-align-decisions.png)](assets/readme/hope-align-decisions.png) |
-
-**Complete example HTML:** [Open a Korean Align brief for a fan schedule that
-makes source conflicts, changes, cancellations, and verification ownership
-explicit.](docs/alignments/rescene-fan-calendar.html)
 
 ---
 
@@ -80,6 +80,9 @@ understanding in follow-up decisions and work.
 > The captures below come from an actual Korean Diff HTML artifact generated
 > from [Ky PR #867](https://github.com/sindresorhus/ky/pull/867).
 
+**Complete example HTML:** [Open the Korean Diff artifact for Ky PR #867 with
+its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.html)
+
 ![Korean Hope Diff example for Ky pull request 867 showing the goal, before and after behavior, and verification item](assets/readme/hope-diff.png)
 
 | Core change | Interactive microworld |
@@ -87,9 +90,6 @@ understanding in follow-up decisions and work.
 | [![The retry configuration change explained in a Korean Diff artifact](assets/readme/hope-diff-core.png)](assets/readme/hope-diff-core.png) | [![An interactive retry-configuration microworld in a Korean Diff artifact](assets/readme/hope-diff-microworld.png)](assets/readme/hope-diff-microworld.png) |
 
 [![An understanding quiz about retry behavior in a Korean Diff artifact](assets/readme/hope-diff-quiz.png)](assets/readme/hope-diff-quiz.png)
-
-**Complete example HTML:** [Open the Korean review of Ky PR #867 with its
-retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.html)
 
 ---
 

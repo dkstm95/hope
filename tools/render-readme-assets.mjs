@@ -42,11 +42,10 @@ async function capturePage(page, htmlPath, outputPath, options = {}) {
   });
 }
 
-async function captureElement(page, htmlPath, outputPath, selector, {
+async function captureElement(page, outputPath, selector, {
   capturePadding = 16,
   expandDetails = false,
 } = {}) {
-  await loadPage(page, htmlPath);
   await page.locator(".topbar").evaluate((topbar) => {
     topbar.style.position = "absolute";
   });
@@ -98,13 +97,11 @@ async function main() {
     );
     await captureElement(
       page,
-      alignExample,
       join(outputDirectory, "hope-align-directions.png"),
       "#design-directions",
     );
     await captureElement(
       page,
-      alignExample,
       join(outputDirectory, "hope-align-decisions.png"),
       "#agreement",
     );
@@ -115,21 +112,19 @@ async function main() {
       join(outputDirectory, "hope-diff.png"),
       { height: 820 },
     );
+    await page.setViewportSize({ height: 900, width: 1440 });
     await captureElement(
       page,
-      diffExample,
       join(outputDirectory, "hope-diff-core.png"),
       "#core-change",
     );
     await captureElement(
       page,
-      diffExample,
       join(outputDirectory, "hope-diff-microworld.png"),
       ".microworld",
     );
     await captureElement(
       page,
-      diffExample,
       join(outputDirectory, "hope-diff-quiz.png"),
       "#quiz",
       { expandDetails: true },
