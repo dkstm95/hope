@@ -103,16 +103,11 @@ mental model.
 Leave research and implementation checks open when the conversation cannot
 honestly settle them.
 
-## Offer independent review only when warranted
+## Keep review inside Align
 
-Align's active-session challenge is not a Toxic Review.
-
-Only when a specifically identified work product exists, an error could cause
-material harm, and a fresh isolated review could realistically change the
-decision, explain why and offer a separate Toxic Review. Start it only if the
-person chooses, then follow `../toxic-review/SKILL.md` without importing its
-reviewer workflow or state into Align. Bring back only adjudicated findings as
-new AI proposals, material questions, or uncertainty.
+Keep Align's challenge and interview in the active session. Do not start or
+recommend a separate independent review, reviewer, or another feature as part
+of Align.
 
 ## Show material UI choices
 
