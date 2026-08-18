@@ -8,9 +8,10 @@ description: Use for a strict, skeptical, risk-focused review of a named work pr
 Be demanding about the work and respectful toward people.
 
 Use the active host session to bind one named work product, assign fresh
-reviewers, adjudicate their findings, and report the result.
+reviewers, validate consequential or uncertain findings when needed,
+adjudicate the findings, and report the result.
 
-Do not let the active session act as a reviewer.
+Do not let the active session act as a reviewer or finding verifier.
 
 ## Bind the target
 
@@ -21,36 +22,21 @@ Do not widen the review into unrelated work.
 
 Changed evidence starts a new review.
 
-## Choose reviewer roles
+## Choose red reviewer roles
 
-Choose the smallest useful role set.
+Choose the smallest useful role set: use one focused role when it covers the
+material question, and add roles only to test distinct risks.
 
-Use one focused role when it covers the material question.
-
-Use multiple roles only when they test distinct risks.
-
-Give every role:
-
-- one target;
-- risks to test;
-- evidence it may use;
-- explicit exclusions; and
-- the output expected from that role.
-
-Use a fresh context for every reviewer role, including a one-role review.
-
-Each reviewer must be a subagent that does not inherit the conversation,
-previous reasoning, drafts, implementation narrative, prior conclusions, or
-another reviewer's output.
-
-Give it only the exact target, role, risks, direct evidence, exclusions, the
-location of this Skill, and expected output.
+Use a fresh subagent context for every red reviewer role, including a one-role
+review. Give it only the exact target, its role and risks to test, direct
+evidence it may use, explicit exclusions, expected output, and the location of
+this Skill.
 
 Tell each reviewer to read this Skill before acting.
 
-Do not let one role see another role's input or output before adjudication.
-
-Parallel and isolated sequential execution are both valid.
+Do not let a reviewer inherit the active conversation, previous reasoning,
+drafts, implementation narrative, prior conclusions, or another red reviewer's
+input or output. Run roles in parallel or in separate sequential contexts.
 
 Repeated prompts in one shared context are not independent reviewers.
 
@@ -68,16 +54,15 @@ Each finding needs:
 - confidence; and
 - an important limit or uncertainty.
 
-Use the target's priority vocabulary when it exists.
-
-Otherwise use high, medium, or low.
+Use the target's priority vocabulary when it exists; otherwise use high,
+medium, or low.
 
 Do not assign a release-blocking label unless the available evidence shows that
 the work should stop.
 
 Do not manufacture criticism.
 
-No material issue is a valid role result.
+Finding no material issue is a valid result.
 
 Do not turn uncertainty into an established defect.
 
@@ -90,16 +75,55 @@ to one role.
 
 Do not activate it merely because the target is an incident.
 
+## Validate findings when needed
+
+Seal the red reviewers' candidate findings before validation.
+
+Use a blue verifier subagent in a fresh context when a candidate finding:
+
+- would stop a release or require costly or destructive action;
+- relies on incomplete or ambiguous evidence; or
+- has materially uncertain scope or impact.
+
+Review size alone does not call for a blue verifier. A small review may remain
+red-only only when no candidate finding meets these conditions.
+
+Give the verifier only the named target, scoped evidence, sealed candidate
+findings, explicit exclusions, the location of this Skill, and the expected
+output. Do not give it hidden reasoning, the active conversation, prior
+conclusions, or unsealed reviewer output.
+
+Tell the verifier to read this Skill before acting.
+
+The verifier tests the candidate findings. It does not defend the work product
+or try to cancel criticism. For each finding, it must:
+
+- try to falsify the claimed issue, impact, scope, and proposed action;
+- identify missing context, unsupported assumptions, and overstatement;
+- acknowledge evidence that survives the challenge; and
+- return uphold, qualify, or refute with direct evidence and any important
+  uncertainty.
+
+Use one verifier for related findings. Add another only when a distinct kind of
+expertise is needed.
+
+If a required fresh verifier is unavailable, stop and state which validation
+could not be performed.
+
 ## Adjudicate
 
-Use the active host to combine role output.
+Use the active host to combine red reviewer output and any blue verifier output.
 
-Adjudicate only from the named target, scoped evidence, and reviewer output.
+Adjudicate only from the named target, scoped evidence, red reviewer output,
+and any blue verifier output.
 
 Do not introduce hidden conversation context as evidence.
 
-Judge each material finding by evidence, impact, current scope, feasibility, and
-duplication.
+Treat blue verification as evidence for adjudication, not as a decision.
+
+Judge each material finding by the target evidence, impact, current scope,
+feasibility, duplication, and any blue challenge. Resolve red and blue
+disagreement from the evidence rather than choosing a side.
 
 Do not count reviewer votes.
 

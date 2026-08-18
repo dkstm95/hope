@@ -93,14 +93,22 @@ its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.htm
 
 ---
 
-### Toxic Review — Review a work product rigorously and critically
+### Toxic Review — Put a work product through a rigorous Red–Blue review
 
-Toxic Review uses multiple independent subagents when a review needs to examine
-distinct material risks.
+Red finds. Blue challenges. The active agent judges.
 
-The active agent judges which findings are supported.
+Independent Red reviewers probe distinct material risks. When a finding is
+consequential or materially uncertain, a fresh Blue verifier sees only the
+sealed finding and scoped evidence. Blue tries to disprove it and expose
+overstatement or missing context; it does not defend the work product or decide
+the result.
 
-Ask Hope to limit the reviewer count when you want a smaller run.
+The active agent retains final judgment and reports only the findings supported
+by the evidence.
+
+Ask Hope to limit the Red reviewer count when you want a smaller routine run.
+Review size alone does not add Blue, but a consequential or materially
+uncertain finding still triggers it.
 
 ---
 
