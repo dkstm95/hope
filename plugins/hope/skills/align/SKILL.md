@@ -35,23 +35,21 @@ an AI proposal and keep it open until the person confirms it.
 
 ## Challenge the brief
 
-After inspection, test whether the requested work is likely to achieve the
-stated goal. Surface only a material omission, contradiction, risk,
-unsupported assumption, edge case, or materially simpler path that could
-change the work or prevent material harm. Do not invent a problem, treat taste
-as a defect, or widen the task merely because another product could be better.
+After inspection and before teach-back, test whether the requested work is
+likely to achieve the goal. Surface only a material omission, contradiction,
+risk, unsupported assumption, edge case, or materially simpler path that could
+change the work or prevent material harm. Do not invent concerns, treat taste
+as a defect, or widen the task because another product could be better.
 
 Classify each concern as one of:
 
-- a material question that must be resolved because its answer could change
-  the goal, checks, scope, or expected behavior;
-- an optional improvement the person may decline without blocking readiness;
-  or
-- uncertainty that belongs to research or implementation.
+- a material question whose answer could change the goal, checks, scope, or
+  expected behavior;
+- a non-blocking optional improvement; or
+- research or implementation uncertainty.
 
-State the concrete issue, practical impact, available evidence, and important
-uncertainty. Recommend a next action when one option is a sensible default. If
-no concern meets this bar, continue without manufacturing one.
+For each concern, explain the issue, impact, evidence, and uncertainty, then
+recommend the sensible default when one exists. If none qualifies, continue.
 
 ## Teach back
 
@@ -80,14 +78,14 @@ Explain why the answer matters.
 Offer realistic options and a recommendation when one choice is a sensible
 default.
 
-Keep every optional improvement as an AI proposal until the person accepts or
-declines it, or delegates a reversible low-impact choice. A declined
-improvement is closed: do not repeat it, keep persuading the person, or let it
-block readiness.
+An optional improvement remains an AI proposal until the person accepts it,
+declines it, or delegates the choice when it is reversible and low-impact.
+Each outcome closes the proposal: do not reopen or keep advocating it, and
+never let it block readiness.
 
-Ask all related questions together when the person can answer them
-independently. Do not impose an arbitrary numerical limit. Ask one at a time
-only when an answer determines the content or need for the next question.
+Ask related questions together when the person can answer them independently;
+do not impose an arbitrary limit. Sequence them only when an answer determines
+the content or need for the next question.
 
 Continue the interview until the person's goal and the agent's understanding
 agree on every point that could change the work.
@@ -106,8 +104,7 @@ honestly settle them.
 ## Keep review inside Align
 
 Keep Align's challenge and interview in the active session. Do not start or
-recommend a separate independent review, reviewer, or another feature as part
-of Align.
+recommend a separate review, reviewer, or review feature.
 
 ## Show material UI choices
 
@@ -128,8 +125,7 @@ Complete alignment only when:
 - no material question or open assumption remains; and
 - the work can be divided into verifiable pieces.
 
-Model confidence is not approval. An unresolved material question or open
-assumption prevents completion.
+Model confidence is not approval.
 
 Write each check as one condition, one verification method, and one decision
 source. Use `agent` only when an implementation agent can perform the check and
