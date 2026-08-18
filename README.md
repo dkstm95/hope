@@ -23,9 +23,9 @@
 
 ### ✨ Align — Reach shared understanding before implementation and prevent `intent debt`
 
-Align explains its understanding from verifiable evidence, such as the
-codebase, and asks about choices that can change the result so the person and AI
-can reach shared understanding.
+Align reviews the request against verifiable evidence and interviews the person
+about material gaps, contradictions, risks, unsupported assumptions, edge
+cases, and simpler alternatives that could change the result.
 
 When the agreement is ready, Align writes one self-contained HTML brief inside
 the project.

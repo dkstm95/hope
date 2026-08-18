@@ -33,6 +33,24 @@ teach-back.
 Label any proposed check, scope exclusion, or expected behavior as
 an AI proposal and keep it open until the person confirms it.
 
+## Challenge the brief
+
+After inspection and before teach-back, test whether the requested work is
+likely to achieve the goal. Surface only a material omission, contradiction,
+risk, unsupported assumption, edge case, or materially simpler path that could
+change the work or prevent material harm. Do not invent concerns, treat taste
+as a defect, or widen the task because another product could be better.
+
+Classify each concern as one of:
+
+- a material question whose answer could change the goal, checks, scope, or
+  expected behavior;
+- a non-blocking optional improvement; or
+- research or implementation uncertainty.
+
+For each concern, explain the issue, impact, evidence, and uncertainty, then
+recommend the sensible default when one exists. If none qualifies, continue.
+
 ## Teach back
 
 Start with a short account of:
@@ -60,10 +78,14 @@ Explain why the answer matters.
 Offer realistic options and a recommendation when one choice is a sensible
 default.
 
-Let the person delegate a reversible low-impact choice.
+An optional improvement remains an AI proposal until the person accepts it,
+declines it, or delegates the choice when it is reversible and low-impact.
+Each outcome closes the proposal: do not reopen or keep advocating it, and
+never let it block readiness.
 
-Ask material questions together when the person can answer them independently.
-Ask one at a time only when an answer determines the next question.
+Ask related questions together when the person can answer them independently;
+do not impose an arbitrary limit. Sequence them only when an answer determines
+the content or need for the next question.
 
 Continue the interview until the person's goal and the agent's understanding
 agree on every point that could change the work.
@@ -78,6 +100,11 @@ mental model.
 
 Leave research and implementation checks open when the conversation cannot
 honestly settle them.
+
+## Keep review inside Align
+
+Keep Align's challenge and interview in the active session. Do not start or
+recommend a separate review, reviewer, or review feature.
 
 ## Show material UI choices
 
