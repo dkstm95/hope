@@ -43,6 +43,7 @@ const dictionaries = Object.freeze({
     noExcluded: "No explicit exclusion was needed.",
     noIncluded: "No separate included item was needed.",
     openChoices: "Decisions during implementation",
+    outcomes: "Results",
     overview: "Summary",
     problem: "Problem",
     recommendation: "AI recommendation",
@@ -85,6 +86,7 @@ const dictionaries = Object.freeze({
     noExcluded: "명시적으로 제외한 범위가 없습니다.",
     noIncluded: "별도로 포함한 범위가 없습니다.",
     openChoices: "구현 시 결정 사항",
+    outcomes: "판정 결과",
     overview: "요약",
     problem: "문제",
     recommendation: "AI 추천",
@@ -229,41 +231,28 @@ function designDirectionsSection(content, dictionary) {
   </section>`;
 }
 
-function behaviorConnector(outcomeCount) {
-  if (outcomeCount === 0) return "";
-  const positions = Array.from(
-    { length: outcomeCount },
-    (_, index) => ((index + 0.5) * 100) / outcomeCount,
-  );
-  const branches = positions.map((position) => `M32 ${position} H64`).join(" ");
-  const trunk = outcomeCount === 1
-    ? ""
-    : `M32 ${positions[0]} V${positions.at(-1)}`;
-  return `<svg class="behavior-connector" viewBox="0 0 64 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M0 50 H32 ${trunk} ${branches}" vector-effect="non-scaling-stroke"></path></svg>`;
-}
-
 function behaviorSection(content, dictionary) {
   if (!content.behavior) return undefined;
   const outcomeCount = content.behavior.outcomes.length;
-  const outcomes = outcomeCount === 0 ? "" : `<ul class="behavior-outcomes">${
+  const outcomes = outcomeCount === 0 ? "" : `<div class="behavior-outcomes-block">
+    <h3 class="behavior-outcomes-title">${escapeHtml(label(dictionary, "outcomes"))}</h3>
+    <ul class="behavior-outcomes behavior-outcome-count-${Math.min(outcomeCount, 3)}">${
     content.behavior.outcomes.map((outcome) => `<li class="${outcome.kind === "cancel" ? "cancel" : "complete"}">
       <span class="outcome-mark" aria-hidden="true">${outcome.kind === "cancel" ? "×" : "✓"}</span>
       <div><strong>${authoredText(outcome.title)}</strong>${outcome.detail
         ? `<p>${authoredText(outcome.detail)}</p>`
         : ""}</div>
     </li>`).join("")
-  }</ul>`;
+  }</ul></div>`;
   return `<section class="body-section document-section" id="behavior" aria-labelledby="behavior-title">
     <h2 id="behavior-title">${escapeHtml(label(dictionary, "behavior"))}</h2>
-    <div class="behavior-layout${outcomeCount === 0 ? " behavior-layout-single" : ""}">
-      <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
-        <span class="step-number">${index + 1}</span>
-        <strong>${authoredText(step.title)}</strong>
-        ${step.detail ? `<p>${authoredText(step.detail)}</p>` : ""}
-      </li>`).join("")}</ol>
-      ${behaviorConnector(outcomeCount)}
-      ${outcomes}
-    </div>
+    <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
+      <span class="step-number" aria-hidden="true">${index + 1}</span>
+      <strong>${authoredText(step.title)}</strong>${step.detail
+        ? `<p>${authoredText(step.detail)}</p>`
+        : ""}
+    </li>`).join("")}</ol>
+    ${outcomes}
   </section>`;
 }
 
@@ -549,19 +538,21 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .direction-decisions dd { margin: 0; }
 .direction-decisions p { margin-top: ${space1}px; color: var(--muted); }
 .selection-source { display: inline-block; margin-left: ${space2}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.behavior-layout { display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(190px, .34fr); align-items: stretch; }
-.behavior-layout-single { grid-template-columns: minmax(0,1fr); }
-.behavior-steps { list-style: none; padding: 0; display: flex; gap: ${space5}px; }
-.behavior-steps li { position: relative; flex: 1 1 0; min-width: 0; padding-right: ${space4}px; }
-.behavior-steps li:not(:last-child)::after { content: "→"; position: absolute; right: -${space3}px; top: 4px; color: var(--muted); }
-.step-number { display: grid; width: 24px; height: 24px; margin-bottom: ${space3}px; place-items: center; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
+.behavior-steps { list-style: none; padding: 0; display: grid; }
+.behavior-steps li { position: relative; display: grid; grid-template-columns: 32px minmax(160px, 220px) minmax(0, 1fr); column-gap: ${space4}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
+.behavior-steps li:not(:last-child)::after { content: ""; position: absolute; top: 28px; bottom: ${space1}px; left: 13px; width: 1px; background: var(--border); }
+.step-number { position: relative; z-index: 1; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
 .behavior-steps strong, .behavior-outcomes strong { display: block; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
-.behavior-steps p, .behavior-outcomes p { margin-top: ${space2}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.behavior-connector { width: 64px; height: 100%; min-height: 96px; overflow: visible; color: var(--component-border); }
-.behavior-connector path { fill: none; stroke: currentColor; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
-.behavior-outcomes { list-style: none; padding: 0; display: grid; grid-auto-rows: 1fr; }
-.behavior-outcomes li { display: grid; grid-template-columns: 24px minmax(0,1fr); gap: ${space3}px; align-items: center; padding: ${space2}px 0; }
-.outcome-mark { display: grid; width: 22px; height: 22px; place-items: center; border: 1px solid var(--accent); border-radius: 50%; color: var(--accent); font-weight: 700; }
+.behavior-steps p, .behavior-outcomes p { color: var(--muted); }
+.behavior-outcomes-block { margin-top: ${space2}px; padding-top: ${space4}px; }
+.behavior-outcomes-title { display: flex; align-items: center; gap: ${space3}px; margin: 0 0 ${space4}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.behavior-outcomes-title::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--border); }
+.behavior-outcomes { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: ${space5}px; }
+.behavior-outcomes.behavior-outcome-count-1 { grid-template-columns: minmax(0, 1fr); }
+.behavior-outcomes.behavior-outcome-count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.behavior-outcomes li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space3}px; align-items: start; min-width: 0; }
+.outcome-mark { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--accent); border-radius: 50%; color: var(--accent); font-weight: 700; }
+.behavior-outcomes .cancel .outcome-mark { border-color: var(--component-border); color: var(--muted); }
 .agreement-grid { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(220px, .8fr); border-top: 1px solid var(--border); }
 .agreement-grid-single { grid-template-columns: 1fr; }
 .agreement-grid > div { padding: ${space4}px ${space2}px 0; }
@@ -612,14 +603,10 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .direction-details { grid-template-columns: 1fr; }
   .direction-decisions > div { grid-template-columns: 1fr; gap: ${space1}px; }
   .selection-source { display: block; margin: ${space1}px 0 0; }
-  .behavior-layout { grid-template-columns: 1fr; }
-  .behavior-connector { display: none; }
-  .behavior-steps { flex-direction: column; gap: ${space5}px; }
-  .behavior-steps li { padding: 0 0 ${space4}px ${space6}px; }
-  .behavior-steps li:not(:last-child)::after { content: "↓"; right: auto; top: auto; bottom: -${space3}px; left: 10px; }
-  .step-number { position: absolute; left: 0; top: 0; }
-  .behavior-outcomes { margin-top: ${space4}px; padding-top: ${space4}px; border-top: 1px solid var(--border); gap: ${space4}px; }
-  .behavior-outcomes li { align-items: start; padding: 0; }
+  .behavior-steps li { grid-template-columns: 32px minmax(130px, 180px) minmax(0, 1fr); column-gap: ${space3}px; }
+  .behavior-outcomes { grid-template-columns: 1fr; gap: 0; }
+  .behavior-outcomes.behavior-outcome-count-2 { grid-template-columns: 1fr; }
+  .behavior-outcomes li + li { margin-top: ${space4}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
   .agreement-grid { grid-template-columns: 1fr; }
   .agreement-grid > div + div { padding: ${space5}px ${space2}px 0; border-top: 1px solid var(--border); border-left: 0; }
   .decision-list li { grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px ${space3}px; }
@@ -636,6 +623,8 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .mobile-navigation-panel .mobile-repository { display: flex; }
   .status { max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .synopsis > div { grid-template-columns: 1fr; gap: ${space1}px; padding-inline: 0; }
+  .behavior-steps li { grid-template-columns: 32px minmax(0, 1fr); min-height: 0; padding-bottom: ${space5}px; }
+  .behavior-steps p { grid-column: 2; margin-top: ${space1}px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media (forced-colors: active) {

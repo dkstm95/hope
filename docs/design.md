@@ -417,16 +417,20 @@ history instead of repeating it in the document.
 
 On a narrow screen, use one column. Put one 44-pixel navigation control to the
 right of the theme control and open the table of contents and version history in
-a bounded right-side panel. Stack included scope before excluded scope, and
-turn a horizontal behavior flow into the same ordered vertical sequence.
+a bounded right-side panel. Stack included scope before excluded scope.
+
+Render agreed behavior as one ordered vertical sequence at every viewport.
+Keep each step's number, title, and detail on one readable row when space
+allows, then move the detail below the title on a compact screen. Place outcomes
+after the sequence in a responsive grid and stack them in their original order
+when the screen is narrow. Do not invent phase groups or branches that the
+artifact data does not contain.
 
 In the product bar, use one gap between the brand, repository, version, and
 action group. Use the next smaller gap only between controls inside the action
 group. Do not add one-off margins to an individual product-bar item.
 
-Number agreed decisions in reading order. In a branched behavior flow, derive
-connector endpoints from the result rows so every line terminates on the same
-geometry as its result marker.
+Number agreed decisions in reading order.
 
 Use thin dividers instead of enclosing ordinary content in cards. Give the
 document title enough emphasis to establish the reading path, then keep body
