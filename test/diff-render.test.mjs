@@ -132,6 +132,22 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     header,
     /<span class="commit-status" title="Reviewed commit b{40}"><code>bbbbbbbb<\/code><\/span>/u,
   );
+  assert.doesNotMatch(header, /class="locale-link"/u);
+  const localizedHeader = (await renderReview(review, {
+    alternateLocale: { href: "retry.ko.html", locale: "ko-KR" },
+  })).bytes.toString("utf8").match(
+    /<header class="topbar">[\s\S]*?<\/header>/u,
+  )?.[0] ?? "";
+  assert.match(
+    localizedHeader,
+    /<a class="locale-link" href="retry\.ko\.html" hreflang="ko-KR" lang="ko-KR">한국어<\/a>/u,
+  );
+  await assert.rejects(
+    renderReview(review, {
+      alternateLocale: { href: "..\/outside.html", locale: "ko-KR" },
+    }),
+    /alternateLocale must name a supported locale and sibling HTML file/u,
+  );
   const synopsisHead = html.match(
     /<header class="synopsis-head">[\s\S]*?<\/header>/u,
   )?.[0] ?? "";
