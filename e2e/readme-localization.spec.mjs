@@ -25,6 +25,15 @@ async function expectNoOverflow(page) {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 }
 
+async function expectNarrowLayouts(page) {
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ height: 844, width });
+    await page.reload();
+    await expect(page.locator(".locale-link")).toBeVisible();
+    await expectNoOverflow(page);
+  }
+}
+
 for (const example of examples) {
   test(`${example.name} README example switches between complete locales`, async ({ page }) => {
     await page.setViewportSize({ height: 900, width: 1168 });
@@ -38,7 +47,10 @@ for (const example of examples) {
       example.korean.split("/").at(-1),
     );
     await expectNoOverflow(page);
+    await expectNarrowLayouts(page);
 
+    await page.setViewportSize({ height: 900, width: 1168 });
+    await page.reload();
     await page.locator(".locale-link").click();
     await expect(page).toHaveURL(localUrl(example.korean));
     await expect(page.locator("html")).toHaveAttribute("lang", "ko-KR");
@@ -49,12 +61,6 @@ for (const example of examples) {
       example.english.split("/").at(-1),
     );
     await expectNoOverflow(page);
-
-    for (const width of [390, 320]) {
-      await page.setViewportSize({ height: 844, width });
-      await page.reload();
-      await expect(page.locator(".locale-link")).toBeVisible();
-      await expectNoOverflow(page);
-    }
+    await expectNarrowLayouts(page);
   });
 }

@@ -47,6 +47,13 @@ function html(value) {
     .replaceAll("'", "&#39;");
 }
 
+function htmlAttribute(value) {
+  return html(value)
+    .replaceAll("\r", "&#13;")
+    .replaceAll("\n", "&#10;")
+    .replaceAll("\t", "&#9;");
+}
+
 function hashSource(value) {
   return createHash("sha256").update(value).digest("base64");
 }
@@ -139,7 +146,7 @@ function evidenceBlock(
             : `<span>${html(title)}</span>`}
         </div>
         <pre class="${codeSource ? "code-evidence" : "source-text"}"><code${codeSource
-          ? ` aria-label="${html(item.excerpt)}"`
+          ? ` aria-label="${htmlAttribute(item.excerpt)}"`
           : ""}>${codeSource
           ? codeRenderer.render(item)
           : html(item.excerpt)}</code></pre>

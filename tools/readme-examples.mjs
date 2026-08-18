@@ -21,7 +21,6 @@ function reference(sourceId, startLine, endLine = startLine) {
 }
 
 export function makeAlignArtifactData(locale, images) {
-  const en = locale === "en-US";
   const local = (english, korean) => text(locale, english, korean);
   const image = (key) => ({
     data: images[key].data,
@@ -216,52 +215,141 @@ export function makeAlignArtifactData(locale, images) {
     revisions: [{
       number: 1,
       agreedAt: ALIGN_CREATED_AT,
-      summary: en
-        ? "Agreed on the source policy and selected the monthly trust map."
-        : "출처 정책에 합의하고 월간 신뢰 지도를 선택했다.",
+      summary: local(
+        "Agreed on the source policy and selected the monthly trust map.",
+        "출처 정책에 합의하고 월간 신뢰 지도를 선택했다.",
+      ),
       content,
     }],
   };
 }
 
 export function makeDiffSnapshot(locale) {
+  const pullRequestTitle = "Fix `extend()` dropping numeric `retry` limit when merging with an object";
+  const baseRevision = "61d6d66d27911001b9b4d57ab93139f9ad61384b";
+  const headRevision = "61b90ed1cab2756b095facc5b3c7ccac9bc5f487";
   const mergePatch = [
-    "@@ -21,7 +21,15 @@ export const deepMerge = (...sources) => {",
-    "-export const deepMerge = (...sources) => {",
-    "+const deepMergeInternal = (isRoot, ...sources) => {",
+    "@@ -204,7 +204,7 @@ const appendSearchParameters = (target: any, source: any): URLSearchParams => {",
+    " };",
     " ",
-    "+\t\tif (isRoot && key === 'retry' && isObject(value) && !isReplace && typeof returnValue[key] === 'number') {",
-    "+\t\t\treturnValue = {...returnValue, [key]: {limit: returnValue[key]}};",
-    "+\t\t}",
+    " // TODO: Make this strongly-typed (no `any`).",
+    "-export const deepMerge = <T>(...sources: Array<Partial<T> | undefined>): T => {",
+    "+const deepMergeInternal = <T>(isRoot: boolean, ...sources: Array<Partial<T> | undefined>): T => {",
+    " \tlet returnValue: any = {};",
+    " \tlet headers: KyHeadersInit = {};",
+    " \tlet hooks = {};",
+    "@@ -264,8 +264,17 @@ export const deepMerge = <T>(...sources: Array<Partial<T> | undefined>): T => {",
+    " \t\t\t\t\tcontinue;",
+    " \t\t\t\t}",
     " ",
-    "-\t\t\tvalue = deepMerge(returnValue[key], value);",
-    "+\t\t\tvalue = deepMergeInternal(false, returnValue[key], value);",
+    "+\t\t\t\t// `retry` accepts a number as shorthand for `{limit: number}`. Expand it before",
+    "+\t\t\t\t// merging so extending a numeric `retry` with an object keeps the limit instead",
+    "+\t\t\t\t// of dropping it (e.g. `ky.create({retry: 3}).extend({retry: {methods: ['get']}})`).",
+    "+\t\t\t\t// Scoped to the root options level so it never rewrites nested user data that",
+    "+\t\t\t\t// happens to contain a `retry` key (e.g. a `json` request body).",
+    "+\t\t\t\tif (isRoot && key === 'retry' && isObject(value) && !isReplace && typeof returnValue[key] === 'number') {",
+    "+\t\t\t\t\treturnValue = {...returnValue, [key]: {limit: returnValue[key]}};",
+    "+\t\t\t\t}",
+    "+",
+    " \t\t\t\tif (isObject(value) && !isReplace && key in returnValue) {",
+    "-\t\t\t\t\tvalue = deepMerge(returnValue[key], value);",
+    "+\t\t\t\t\tvalue = deepMergeInternal(false, returnValue[key], value);",
+    " \t\t\t\t}",
     " ",
-    "+export const deepMerge = (...sources) => deepMergeInternal(true, ...sources);",
+    " \t\t\t\treturnValue = {...returnValue, [key]: value};",
+    "@@ -310,3 +319,6 @@ export const deepMerge = <T>(...sources: Array<Partial<T> | undefined>): T => {",
+    " ",
+    " \treturn returnValue;",
+    " };",
+    "+",
+    "+export const deepMerge = <T>(...sources: Array<Partial<T> | undefined>): T =>",
+    "+\tdeepMergeInternal<T>(true, ...sources);",
   ].join("\n");
   const testPatch = [
-    "@@ -112,6 +112,16 @@ test('retry merging', async t => {",
-    "+test('preserves a numeric retry limit when extending with conditions', async t => {",
-    "+\tconst instance = ky.create({retry: 3}).extend({retry: {methods: ['get']}});",
-    "+\tawait instance('https://example.com');",
+    "@@ -433,6 +433,39 @@ test('retry - can provide retry as number', async t => {",
+    " \tt.is(requestCount, 5);",
+    " });",
+    " ",
+    "+test('retry - extending a numeric `retry` with an object keeps the limit', async t => {",
+    "+\tlet requestCount = 0;",
+    "+",
+    "+\tconst server = await createHttpTestServer(t);",
+    "+\tserver.get('/', async (_request, response) => {",
+    "+\t\trequestCount++;",
+    "+\t\tresponse.sendStatus(408);",
+    "+\t});",
+    "+",
+    "+\t// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object",
+    "+\t// should preserve that limit instead of falling back to the default.",
+    "+\tconst extended = ky.create({retry: 3}).extend({retry: {methods: ['get']}});",
+    "+",
+    "+\tawait t.throwsAsync(extended(server.url).text(), {",
+    "+\t\tmessage: /Request Timeout/",
+    "+\t});",
     "+\tt.is(requestCount, 4);",
     "+});",
     "+",
-    "+test('does not rewrite a nested retry key', async t => {",
-    "+\tt.deepEqual(deepMerge({json: {retry: 3}}, {json: {retry: {methods: ['get']}}}), expectedBody);",
+    "+test('retry - shorthand expansion does not rewrite nested user data with a `retry` key', async t => {",
+    "+\tconst server = await createHttpTestServer(t);",
+    "+\tserver.post('/', (request, response) => {",
+    "+\t\tresponse.json({body: request.body});",
+    "+\t});",
+    "+",
+    "+\t// A `retry` key inside the `json` body is user data, not the `retry` option,",
+    "+\t// so the number-to-`{limit}` shorthand must not touch it.",
+    "+\tconst client = ky.create({json: {retry: 3}}).extend({json: {retry: {foo: 'bar'}}});",
+    "+",
+    "+\tconst {body} = await client.post(server.url).json<{body: {retry: unknown}}>();",
+    "+\tt.deepEqual(body.retry, {foo: 'bar'});",
     "+});",
+    "+",
+    " test('doesn\\'t retry on 413 with empty statusCodes and methods', async t => {",
+    " \tlet requestCount = 0;",
   ].join("\n");
   const description = [
-    "A numeric retry value is shorthand for the maximum retry count.",
-    "Extending it with an object should keep that count while adding detailed conditions.",
-    "The special merge applies only to the root retry option, not nested request data.",
-    "The focused tests cover the preserved request count and the nested-data boundary.",
+    "### Problem",
+    "",
+    "`retry` accepts a number as shorthand for `{limit: number}` (per the docs: *\"If `retry` is a number, it will be used as `limit` and other defaults will remain in place.\"*).",
+    "",
+    "However, when a numeric `retry` is set on a parent instance and then extended with an **object**, the numeric limit is silently dropped and falls back to the default (`2`):",
+    "",
+    "```js",
+    "import ky from 'ky';",
+    "",
+    "const api = ky.create({retry: 3});",
+    "",
+    "// Intent: keep limit 3, only narrow the retriable methods.",
+    "const extended = api.extend({retry: {methods: ['get']}});",
+    "",
+    "// Bug: `extended` retries with the default limit of 2, not 3.",
+    "```",
+    "",
+    "The reverse direction (object on the parent, number on the child) and the all-object case both work correctly — only the *number → object* merge loses data.",
+    "",
+    "### Cause",
+    "",
+    "In `deepMerge`, `retry` is merged like any other nested object. When the parent value is the numeric shorthand (`3`) and the incoming value is an object, the recursion ends up as `deepMerge(3, {methods: ['get']})`. A non-object source is skipped entirely by `deepMerge`, so the `3` is discarded and only `{methods: ['get']}` survives — the limit is lost.",
+    "",
+    "### Fix",
+    "",
+    "Expand the numeric `retry` shorthand to `{limit: number}` before the deep merge, so extending it with an object preserves the limit. This mirrors the documented shorthand semantics and leaves every other case (object → object, object → number replacement, `replaceOption`) unchanged.",
+    "",
+    "```js",
+    "deepMerge({retry: 3}, {retry: {methods: ['get']}})",
+    "// before: {retry: {methods: ['get']}}",
+    "// after:  {retry: {limit: 3, methods: ['get']}}",
+    "```",
+    "",
+    "### Test",
+    "",
+    "Added a test in `test/retry.ts` that sets `retry: 3` on a parent, extends it with `retry: {methods: ['get']}`, and asserts the request is attempted `limit + 1` times. It fails on `main` (3 attempts) and passes with the fix (4 attempts).",
+    "",
   ].join("\n");
   const value = {
     capturedAt: "2026-08-17T06:08:16.951Z",
     files: [
-      { additions: 10, bodyState: "included", deletions: 2, id: "file-1", path: "source/utils/merge.ts", providerStatus: "modified", sourceIds: ["source-4"] },
-      { additions: 9, bodyState: "included", deletions: 0, id: "file-2", path: "test/retry.ts", providerStatus: "modified", sourceIds: ["source-5"] },
+      { additions: 14, bodyState: "included", deletions: 2, id: "file-1", path: "source/utils/merge.ts", providerStatus: "modified", sourceIds: ["source-4"] },
+      { additions: 33, bodyState: "included", deletions: 0, id: "file-2", path: "test/retry.ts", providerStatus: "modified", sourceIds: ["source-5"] },
     ],
     limits: [{
       id: "limit-1",
@@ -270,33 +358,32 @@ export function makeDiffSnapshot(locale) {
       subject: text(locale, "Full retry-suite result", "전체 재시도 테스트 결과"),
     }],
     pullRequest: {
-      author: "sindresorhus",
+      author: "chatman-media",
       number: 867,
-      state: "open",
-      title: "Fix `extend()` dropping numeric `retry` limit when merging with an object",
+      state: "closed",
+      title: pullRequestTitle,
       url: "https://github.com/sindresorhus/ky/pull/867",
     },
     repository: { name: "ky", owner: "sindresorhus", provider: "github" },
     schemaVersion: 1,
     settings: { locale, localeSource: "override", theme: "system", themeSource: "override" },
     snapshot: {
-      base: "61d6d66d27911001b9b4d57ab93139f9ad61384b",
-      head: "61b90ed1cab2756b095facc5b3c7ccac9bc5f487",
-      mergeBase: "61d6d66d27911001b9b4d57ab93139f9ad61384b",
+      base: baseRevision,
+      head: headRevision,
+      mergeBase: baseRevision,
     },
     sources: [
-      { id: "source-1", kind: "pull-request-title", lineCount: 1, text: "Fix `extend()` dropping numeric `retry` limit when merging with an object" },
-      { id: "source-2", kind: "pull-request-description", lineCount: 4, text: description },
-      { id: "source-3", kind: "commit-title", lineCount: 1, revision: "61b90ed1cab2756b095facc5b3c7ccac9bc5f487", text: "Preserve numeric retry limits when extending options" },
-      { fileId: "file-1", id: "source-4", kind: "patch", lineCount: mergePatch.split("\n").length, path: "source/utils/merge.ts", revision: "61b90ed1cab2756b095facc5b3c7ccac9bc5f487", text: mergePatch },
-      { fileId: "file-2", id: "source-5", kind: "patch", lineCount: testPatch.split("\n").length, path: "test/retry.ts", revision: "61b90ed1cab2756b095facc5b3c7ccac9bc5f487", text: testPatch },
+      { id: "source-1", kind: "pull-request-title", lineCount: 1, text: pullRequestTitle },
+      { id: "source-2", kind: "pull-request-description", lineCount: description.split("\n").length, text: description },
+      { id: "source-3", kind: "commit-title", lineCount: 1, revision: headRevision, text: "Scope retry shorthand expansion to root options merge" },
+      { fileId: "file-1", id: "source-4", kind: "patch", lineCount: mergePatch.split("\n").length, path: "source/utils/merge.ts", revision: headRevision, text: mergePatch },
+      { fileId: "file-2", id: "source-5", kind: "patch", lineCount: testPatch.split("\n").length, path: "test/retry.ts", revision: headRevision, text: testPatch },
     ],
   };
   return Object.freeze({ ...value, digest: digestJson(value) });
 }
 
-function makeRetryMicroworld(locale) {
-  const evidence = [reference("source-4", 2, 12)];
+function makeRetryMicroworld(locale, evidence) {
   const combinations = [
     ["number", "object"],
     ["number", "number"],
@@ -369,8 +456,9 @@ function makeRetryMicroworld(locale) {
 
 export function makeDiffAnalysis(snapshot) {
   const locale = snapshot.settings.locale;
-  const mergeEvidence = [reference("source-4", 2, 12)];
-  const testEvidence = [reference("source-5", 2, 10)];
+  const mergeEvidence = [reference("source-4", 14, 25)];
+  const retrySetupEvidence = [reference("source-5", 14, 16)];
+  const testEvidence = [reference("source-5", 14, 21)];
   return {
     schemaVersion: 3,
     runId: DIFF_RUN_ID,
@@ -381,26 +469,26 @@ export function makeDiffAnalysis(snapshot) {
       locale,
       "Keep a numeric retry limit when an extended instance adds detailed retry conditions.",
       "확장된 인스턴스가 세부 재시도 조건을 추가해도 숫자 재시도 한도를 유지한다.",
-      [reference("source-2", 1, 3)],
+      [reference("source-2", 3, 5)],
       "stated",
     ),
     coreChange: {
-      before: claim(locale, "Adding object conditions replaced the parent's numeric retry limit.", "객체 조건을 추가하면 부모의 숫자 재시도 한도가 사라졌다.", [reference("source-4", 2, 9)]),
+      before: claim(locale, "Adding object conditions replaced the parent's numeric retry limit.", "객체 조건을 추가하면 부모의 숫자 재시도 한도가 사라졌다.", mergeEvidence),
       after: claim(locale, "A root numeric retry value becomes a limit field before the child conditions are merged.", "최상위 숫자 재시도 값을 한도 필드로 펼친 뒤 자식 조건을 병합한다.", mergeEvidence),
-      why: claim(locale, "The extended instance keeps the requested retry count and the added conditions.", "확장된 인스턴스가 요청한 재시도 횟수와 추가 조건을 함께 유지한다.", [reference("source-2", 1, 3)], "stated"),
+      why: claim(locale, "The extended instance keeps the requested retry count and the added conditions.", "확장된 인스턴스가 요청한 재시도 횟수와 추가 조건을 함께 유지한다.", [reference("source-2", 24, 26)], "stated"),
       details: [
         claim(locale, "A retry limit of 3 still produces four total attempts after methods are added.", "재시도 한도 3에 메서드 조건을 추가해도 전체 요청은 네 번이다.", testEvidence),
-        claim(locale, "Nested request data with a retry key keeps ordinary object merging.", "재시도 키가 있는 중첩 요청 데이터는 일반 객체 병합을 유지한다.", [reference("source-4", 5, 10), reference("source-5", 8, 10)]),
+        claim(locale, "Nested request data with a retry key keeps ordinary object merging.", "재시도 키가 있는 중첩 요청 데이터는 일반 객체 병합을 유지한다.", [reference("source-4", 17, 25), reference("source-5", 24, 35)]),
       ],
     },
     behavior: {
       summary: claim(locale, "The special preservation rule applies only when a root numeric retry value meets child object conditions.", "특별 보존 규칙은 최상위 숫자 재시도 값과 자식 객체 조건이 만날 때만 적용된다.", mergeEvidence),
       steps: [
-        claim(locale, "The parent sets retry as a number.", "부모가 재시도를 숫자로 정한다.", [reference("source-4", 2, 6)]),
-        claim(locale, "The child adds detailed retry conditions as an object.", "자식이 세부 재시도 조건을 객체로 추가한다.", [reference("source-4", 5, 7)]),
+        claim(locale, "The parent sets retry as a number.", "부모가 재시도를 숫자로 정한다.", retrySetupEvidence),
+        claim(locale, "The child adds detailed retry conditions as an object.", "자식이 세부 재시도 조건을 객체로 추가한다.", retrySetupEvidence),
         claim(locale, "The root merge expands the number into a limit and then merges the child object.", "최상위 병합이 숫자를 한도로 펼친 뒤 자식 객체를 병합한다.", mergeEvidence),
       ],
-      microworld: makeRetryMicroworld(locale),
+      microworld: makeRetryMicroworld(locale, mergeEvidence),
     },
     contextChecks: [
       {
@@ -408,7 +496,7 @@ export function makeDiffAnalysis(snapshot) {
         status: "checked",
         basis: "code",
         explanation: text(locale, "The changed merge branch and focused tests cover both boundaries.", "변경된 병합 분기와 집중 테스트가 두 경계를 모두 확인한다."),
-        evidence: [reference("source-4", 2, 12), reference("source-5", 2, 10)],
+        evidence: [reference("source-4", 14, 25), reference("source-5", 14, 35)],
         limitIds: [],
       },
       {
@@ -421,9 +509,9 @@ export function makeDiffAnalysis(snapshot) {
       },
     ],
     codeSteps: [
-      { title: text(locale, "Separate root and recursive merging", "최상위 병합과 재귀 병합 분리"), text: text(locale, "Pass root state through the internal merge function.", "내부 병합 함수에 최상위 상태를 전달한다."), basis: "code", evidence: mergeEvidence },
-      { title: text(locale, "Expand numeric retry shorthand", "숫자 재시도 축약형 펼치기"), text: text(locale, "Convert the existing number to a limit field before merging child conditions.", "자식 조건을 병합하기 전에 기존 숫자를 한도 필드로 바꾼다."), basis: "code", evidence: [reference("source-4", 5, 7)] },
-      { title: text(locale, "Cover request count and nested data", "요청 횟수와 중첩 데이터 확인"), text: text(locale, "Focused tests check four attempts and preserve a nested retry key as request data.", "집중 테스트가 요청 네 번과 중첩 재시도 키의 요청 데이터 보존을 확인한다."), basis: "code", evidence: testEvidence },
+      { title: text(locale, "Separate root and recursive merging", "최상위 병합과 재귀 병합 분리"), text: text(locale, "Pass root state through the internal merge function.", "내부 병합 함수에 최상위 상태를 전달한다."), basis: "code", evidence: [reference("source-4", 5, 6), reference("source-4", 23, 35)] },
+      { title: text(locale, "Expand numeric retry shorthand", "숫자 재시도 축약형 펼치기"), text: text(locale, "Convert the existing number to a limit field before merging child conditions.", "자식 조건을 병합하기 전에 기존 숫자를 한도 필드로 바꾼다."), basis: "code", evidence: [reference("source-4", 14, 21)] },
+      { title: text(locale, "Cover request count and nested data", "요청 횟수와 중첩 데이터 확인"), text: text(locale, "Focused tests check four attempts and preserve a nested retry key as request data.", "집중 테스트가 요청 네 번과 중첩 재시도 키의 요청 데이터 보존을 확인한다."), basis: "code", evidence: [...testEvidence, reference("source-5", 24, 35)] },
     ],
     reviewItems: [{
       kind: "verify",
@@ -434,7 +522,7 @@ export function makeDiffAnalysis(snapshot) {
       effect: text(locale, "A failure in another retry path would remain unknown.", "다른 재시도 경로의 실패는 확인되지 않은 채 남는다."),
       nextStep: text(locale, "Run the repository's full retry test suite at the reviewed commit.", "검토한 커밋에서 저장소의 전체 재시도 테스트를 실행한다."),
       doneWhen: text(locale, "The full retry suite passes at the reviewed commit.", "검토한 커밋에서 전체 재시도 테스트가 통과한다."),
-      evidence: [reference("source-2", 4), reference("source-5", 2, 10)],
+      evidence: [reference("source-2", 36), reference("source-5", 5, 21)],
       limitIds: ["limit-1"],
     }],
     fileDispositions: [
@@ -454,7 +542,7 @@ export function makeDiffAnalysis(snapshot) {
     quiz: [{
       question: text(locale, "If the retry limit is 3 and every attempt times out, how many requests run in total?", "재시도 한도가 3이고 모든 시도가 시간 초과라면 전체 요청은 몇 번인가?"),
       answer: text(locale, "Four. The limit counts retries after the first request.", "네 번이다. 한도는 첫 요청 뒤의 재시도 횟수를 센다."),
-      evidence: [reference("source-5", 2, 5)],
+      evidence: testEvidence,
     }],
   };
 }

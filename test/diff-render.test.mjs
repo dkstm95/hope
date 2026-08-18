@@ -209,6 +209,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   );
   assert.doesNotMatch(html, /<details class="evidence" open>/u);
   assert.match(html, /<pre class="code-evidence"><code aria-label=/u);
+  assert.doesNotMatch(html, /aria-label="[^"]*[\r\n\t][^"]*"/u);
+  assert.match(html, /aria-label="[^"]*&#10;[^"]*"/u);
   assert.doesNotMatch(html, /syntax-/u);
   assert.doesNotMatch(html, /\/blob\/[^"]+\/src\/retry\.js#L/u);
   assert.doesNotMatch(html, /<span[^>]+style=/u);

@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { chromium } from "@playwright/test";
 
-import { sealAlignHtml } from "../plugins/hope/skills/align/scripts/artifact.mjs";
+import {
+  inspectAlignArtifact,
+  sealAlignHtml,
+} from "../plugins/hope/skills/align/scripts/artifact.mjs";
 import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render.mjs";
 import { renderReview } from "../plugins/hope/skills/diff/scripts/render.mjs";
 import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
@@ -19,17 +22,53 @@ import {
 } from "./readme-examples.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const outputDirectory = join(root, "assets", "readme");
-const alignDirectory = join(root, "docs", "alignments");
-const diffDirectory = join(root, "docs", "diffs");
 const digestPlaceholder = "0".repeat(64);
 
 const examples = [
   { alternateLocale: "ko-KR", alternateSuffix: "ko", locale: "en-US", suffix: "en" },
   { alternateLocale: "en-US", alternateSuffix: "en", locale: "ko-KR", suffix: "ko" },
 ];
+const captureNames = [
+  "align",
+  "align-directions",
+  "align-decisions",
+  "diff",
+  "diff-core",
+  "diff-microworld",
+  "diff-quiz",
+];
+const generatedPaths = [
+  ...examples.flatMap(({ suffix }) => [
+    `docs/alignments/rescene-fan-calendar.${suffix}.html`,
+    `docs/diffs/ky-867-retry-extend.${suffix}.html`,
+  ]),
+  ...examples.flatMap(({ suffix }) => captureNames
+    .map((name) => `assets/readme/hope-${name}-${suffix}.png`)),
+];
+const mockupFontFiles = {
+  bold: "HopeSansBold.woff2",
+  light: "HopeSansLight.woff2",
+  medium: "HopeSansMedium.woff2",
+};
 
-function mockupHtml(locale, variant) {
+function exampleLocations(destinationRoot) {
+  return {
+    alignDirectory: join(destinationRoot, "docs", "alignments"),
+    diffDirectory: join(destinationRoot, "docs", "diffs"),
+    outputDirectory: join(destinationRoot, "assets", "readme"),
+  };
+}
+
+async function loadMockupFonts() {
+  return Object.fromEntries(await Promise.all(
+    Object.entries(mockupFontFiles).map(async ([weight, filename]) => [
+      weight,
+      (await readFile(join(root, "plugins", "hope", "assets", "fonts", filename))).toString("base64"),
+    ]),
+  ));
+}
+
+function mockupHtml(locale, variant, fonts) {
   const ko = locale === "ko-KR";
   const copy = ko
     ? {
@@ -99,16 +138,16 @@ function mockupHtml(locale, variant) {
       </section>
     </main>`;
   return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><style>
-    *{box-sizing:border-box}body{margin:0;background:#f6f4ef;color:#171717;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{width:850px;height:566px;padding:26px 30px;background:linear-gradient(145deg,#fff 0%,#f7f5ef 100%)}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}header div{display:grid;gap:4px}header b{font-size:23px;letter-spacing:-.03em}header span,.muted{color:#777;font-size:12px}button{min-height:34px;padding:0 13px;border:1px solid #d7d2c9;border-radius:9px;background:#fff;color:#282522;font-weight:650}.filters{margin-bottom:18px;color:#625d55;font-size:12px}.month-layout,.radar-layout{display:grid;grid-template-columns:minmax(0,1fr) 244px;gap:18px}.calendar,.actions,.mini,aside{border:1px solid #ded9d0;border-radius:16px;background:rgba(255,255,255,.86);box-shadow:0 12px 30px rgba(80,65,45,.06)}.calendar{padding:16px}.week,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.week span{text-align:center;font-size:10px}.grid{margin-top:8px}.day{min-height:91px;padding:7px;border:1px solid #eeeae2;border-radius:10px;font-size:11px}.day.selected{border:2px solid #5f57d9;background:#f3f1ff}.event{margin-top:7px;padding:5px 6px;border-radius:6px;overflow:hidden;font-size:9px;font-weight:700;white-space:nowrap}.blue{background:#e4efff;color:#285b9b}.pink{background:#ffe5ee;color:#9a3159}.yellow{background:#fff2c9;color:#775a09}aside{padding:20px}.eyebrow{margin:0 0 10px;color:#6659d8;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}h1{margin:0 0 8px;font-size:19px;letter-spacing:-.025em}.deadline{color:#a33b48;font-size:13px;font-weight:750}.status{margin:10px 0;font-size:12px}.good{color:#277557}.warn{color:#9a6b18}.source{margin-top:18px;padding-top:15px;border-top:1px solid #e4dfd7;font-size:11px}.source p{margin:7px 0;color:#666}.primary{border-color:#5d55d5;background:#5d55d5;color:#fff}.radar-layout{grid-template-columns:minmax(0,1fr) 230px}.actions{padding:20px}.actions article{display:flex;min-height:105px;margin-top:12px;padding:16px;justify-content:space-between;align-items:center;border:1px solid #e4dfd7;border-radius:13px}.actions article.urgent{border-color:#ef9eac;background:#fff7f8}.badge{display:inline-block;margin-bottom:8px;padding:3px 7px;border-radius:999px;background:#d94e67;color:#fff;font-size:9px;font-weight:800}.soft{background:#6659d8}.muted-badge{background:#e8e5df;color:#6b665e}.mini h2{margin:0 0 15px;font-size:16px}.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.mini-grid span{display:grid;aspect-ratio:1;place-items:center;border-radius:7px;color:#736d65;font-size:10px}.mini-grid .marked{background:#eeeaff;color:#4e45c4;font-weight:800}
+    @font-face{font-family:"Hope README";src:url(data:font/woff2;base64,${fonts.light}) format("woff2");font-weight:300}@font-face{font-family:"Hope README";src:url(data:font/woff2;base64,${fonts.medium}) format("woff2");font-weight:500}@font-face{font-family:"Hope README";src:url(data:font/woff2;base64,${fonts.bold}) format("woff2");font-weight:700}*{box-sizing:border-box}body{margin:0;background:#f6f4ef;color:#171717;font-family:"Hope README",sans-serif;font-weight:300}.shell{width:850px;height:566px;padding:26px 30px;background:linear-gradient(145deg,#fff 0%,#f7f5ef 100%)}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}header div{display:grid;gap:4px}header b{font-size:23px;letter-spacing:-.03em}header span,.muted{color:#777;font-size:12px}button{min-height:34px;padding:0 13px;border:1px solid #d7d2c9;border-radius:9px;background:#fff;color:#282522;font-weight:700}.filters{margin-bottom:18px;color:#625d55;font-size:12px}.month-layout,.radar-layout{display:grid;grid-template-columns:minmax(0,1fr) 244px;gap:18px}.calendar,.actions,.mini,aside{border:1px solid #ded9d0;border-radius:16px;background:rgba(255,255,255,.86);box-shadow:0 12px 30px rgba(80,65,45,.06)}.calendar{padding:16px}.week,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.week span{text-align:center;font-size:10px}.grid{margin-top:8px}.day{min-height:91px;padding:7px;border:1px solid #eeeae2;border-radius:10px;font-size:11px}.day.selected{border:2px solid #5f57d9;background:#f3f1ff}.event{margin-top:7px;padding:5px 6px;border-radius:6px;overflow:hidden;font-size:9px;font-weight:700;white-space:nowrap}.blue{background:#e4efff;color:#285b9b}.pink{background:#ffe5ee;color:#9a3159}.yellow{background:#fff2c9;color:#775a09}aside{padding:20px}.eyebrow{margin:0 0 10px;color:#6659d8;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}h1{margin:0 0 8px;font-size:19px;letter-spacing:-.025em}.deadline{color:#a33b48;font-size:13px;font-weight:700}.status{margin:10px 0;font-size:12px}.good{color:#277557}.warn{color:#9a6b18}.source{margin-top:18px;padding-top:15px;border-top:1px solid #e4dfd7;font-size:11px}.source p{margin:7px 0;color:#666}.primary{border-color:#5d55d5;background:#5d55d5;color:#fff}.radar-layout{grid-template-columns:minmax(0,1fr) 230px}.actions{padding:20px}.actions article{display:flex;min-height:105px;margin-top:12px;padding:16px;justify-content:space-between;align-items:center;border:1px solid #e4dfd7;border-radius:13px}.actions article.urgent{border-color:#ef9eac;background:#fff7f8}.badge{display:inline-block;margin-bottom:8px;padding:3px 7px;border-radius:999px;background:#d94e67;color:#fff;font-size:9px;font-weight:700}.soft{background:#6659d8}.muted-badge{background:#e8e5df;color:#6b665e}.mini h2{margin:0 0 15px;font-size:16px}.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.mini-grid span{display:grid;aspect-ratio:1;place-items:center;border-radius:7px;color:#736d65;font-size:10px}.mini-grid .marked{background:#eeeaff;color:#4e45c4;font-weight:700}
   </style></head><body>${variant === "monthMap" ? monthMap : actionRadar}</body></html>`;
 }
 
-async function captureMockup(page, temporary, locale, variant) {
-  const output = join(temporary, `${locale}-${variant}.png`);
+async function captureMockup(page, locale, variant, fonts) {
   await page.setViewportSize({ height: 566, width: 850 });
-  await page.setContent(mockupHtml(locale, variant), { waitUntil: "load" });
-  await page.screenshot({ animations: "disabled", path: output, type: "png" });
-  return { data: (await readFile(output)).toString("base64"), height: 566, width: 850 };
+  await page.setContent(mockupHtml(locale, variant, fonts), { waitUntil: "load" });
+  await page.evaluate(async () => await document.fonts.ready);
+  const data = await page.screenshot({ animations: "disabled", type: "png" });
+  return { data: data.toString("base64"), height: 566, width: 850 };
 }
 
 function generatedHtml(bytes) {
@@ -119,7 +158,10 @@ async function loadPage(page, htmlPath, { height = 900, width = 1440 } = {}) {
   await page.setViewportSize({ height, width });
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load" });
-  await page.evaluate(async () => await document.fonts.ready);
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    window.scrollTo(0, 0);
+  });
 }
 
 async function capturePage(page, htmlPath, outputPath, options = {}) {
@@ -163,21 +205,22 @@ async function captureElement(page, outputPath, selector, { capturePadding = 16,
   }
 }
 
-async function renderHtmlExamples(page, temporary) {
+async function renderHtmlExamples(page, locations, fonts) {
   const paths = {};
   for (const example of examples) {
     const mockups = {
-      actionRadar: await captureMockup(page, temporary, example.locale, "actionRadar"),
-      monthMap: await captureMockup(page, temporary, example.locale, "monthMap"),
+      actionRadar: await captureMockup(page, example.locale, "actionRadar", fonts),
+      monthMap: await captureMockup(page, example.locale, "monthMap", fonts),
     };
-    const alignPath = join(alignDirectory, `rescene-fan-calendar.${example.suffix}.html`);
+    const alignPath = join(locations.alignDirectory, `rescene-fan-calendar.${example.suffix}.html`);
     const alignSource = renderAlignArtifact(makeAlignArtifactData(example.locale, mockups), {
       alternateLocale: alternateLocale(example.alternateLocale, `rescene-fan-calendar.${example.alternateSuffix}.html`),
       digest: digestPlaceholder,
     });
     await writeFile(alignPath, sealAlignHtml(alignSource).bytes);
+    await inspectAlignArtifact(alignPath);
 
-    const diffPath = join(diffDirectory, `ky-867-retry-extend.${example.suffix}.html`);
+    const diffPath = join(locations.diffDirectory, `ky-867-retry-extend.${example.suffix}.html`);
     const snapshot = makeDiffSnapshot(example.locale);
     const review = validateAnalysis(makeDiffAnalysis(snapshot), snapshot, { runId: "86786786786786786786786786786786" });
     const rendered = await renderReview(review, {
@@ -189,7 +232,7 @@ async function renderHtmlExamples(page, temporary) {
   return paths;
 }
 
-async function captureReadmeAssets(page, paths) {
+async function captureReadmeAssets(page, paths, outputDirectory) {
   for (const { suffix } of examples) {
     const { alignPath, diffPath } = paths[suffix];
     await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`));
@@ -204,21 +247,55 @@ async function captureReadmeAssets(page, paths) {
   }
 }
 
-async function main() {
-  await Promise.all([access(alignDirectory), access(diffDirectory)]);
-  await mkdir(outputDirectory, { recursive: true });
-  const temporary = await mkdtemp(join(tmpdir(), "hope-readme-examples-"));
+async function generateExamples(destinationRoot) {
+  const locations = exampleLocations(destinationRoot);
+  await Promise.all(Object.values(locations)
+    .map((directory) => mkdir(directory, { recursive: true })));
   let browser;
   try {
+    const fonts = await loadMockupFonts();
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    const paths = await renderHtmlExamples(page, temporary);
-    await captureReadmeAssets(page, paths);
+    const paths = await renderHtmlExamples(page, locations, fonts);
+    await captureReadmeAssets(page, paths, locations.outputDirectory);
   } finally {
     await browser?.close();
-    await rm(temporary, { force: true, recursive: true });
   }
-  process.stdout.write(`Rendered bilingual README examples in ${outputDirectory}\n`);
+}
+
+async function checkExamples(generatedRoot) {
+  const mismatches = [];
+  for (const path of generatedPaths) {
+    const [committed, generated] = await Promise.all([
+      readFile(join(root, path)),
+      readFile(join(generatedRoot, path)),
+    ]);
+    if (!committed.equals(generated)) mismatches.push(path);
+  }
+  if (mismatches.length > 0) {
+    throw new Error(`README examples need regeneration:\n${mismatches.join("\n")}`);
+  }
+}
+
+async function main() {
+  const arguments_ = process.argv.slice(2);
+  if (arguments_.length > 1 || (arguments_.length === 1 && arguments_[0] !== "--check")) {
+    throw new TypeError("Usage: render-readme-assets.mjs [--check]");
+  }
+  if (arguments_[0] !== "--check") {
+    await generateExamples(root);
+    process.stdout.write(`Rendered bilingual README examples in ${exampleLocations(root).outputDirectory}\n`);
+    return;
+  }
+
+  const generatedRoot = await mkdtemp(join(tmpdir(), "hope-readme-check-"));
+  try {
+    await generateExamples(generatedRoot);
+    await checkExamples(generatedRoot);
+  } finally {
+    await rm(generatedRoot, { force: true, recursive: true });
+  }
+  process.stdout.write(`README examples match ${generatedPaths.length} generated files.\n`);
 }
 
 await main();

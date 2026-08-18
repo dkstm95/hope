@@ -1836,13 +1836,13 @@ td:first-child {
       <details class="evidence">
     <summary aria-label="Keep a numeric retry limit when an extended instance adds detailed retry conditions. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
-    <article class="evidence-item" id="evidence-e64cc0f68686">
+    <article class="evidence-item" id="evidence-71f8c021c510">
         <div class="evidence-meta">
-          <span>pull request description 1–3</span>
+          <span>pull request description 3–5</span>
         </div>
-        <pre class="source-text"><code>A numeric retry value is shorthand for the maximum retry count.
-Extending it with an object should keep that count while adding detailed conditions.
-The special merge applies only to the root retry option, not nested request data.</code></pre>
+        <pre class="source-text"><code>`retry` accepts a number as shorthand for `{limit: number}` (per the docs: *&quot;If `retry` is a number, it will be used as `limit` and other defaults will remain in place.&quot;*).
+
+However, when a numeric `retry` is set on a parent instance and then extended with an **object**, the numeric limit is silently dropped and falls back to the default (`2`):</code></pre>
       </article>
   </div>
   </details>
@@ -1862,26 +1862,9 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="Adding object conditions replaced the parent&#39;s numeric retry limit. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
-    <article class="evidence-item" id="evidence-46d53adfd9e0">
-        <div class="evidence-meta">
-          <span>source/utils/merge.ts · change excerpt 2–9</span>
-        </div>
-        <pre class="code-evidence"><code aria-label="-export const deepMerge = (...sources) =&gt; {
-+const deepMergeInternal = (isRoot, ...sources) =&gt; {
-
-+		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {
-+			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};
-+		}
-
--			value = deepMerge(returnValue[key], value);"><span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>export const deepMerge = (...sources) =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>const deepMergeInternal = (isRoot, ...sources) =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span></span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		}</span></span>
-<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span></span></span>
-<span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>			value = deepMerge(returnValue[key], value);</span></span></code></pre>
-      </article>
+    <article class="evidence-reference">
+          <a href="#evidence-1a1289505816">source/utils/merge.ts · change excerpt 14–25</a>
+        </article>
   </div>
   </details>
     </div>
@@ -1897,7 +1880,7 @@ The special merge applies only to the root retry option, not nested request data
     <summary aria-label="A root numeric retry value becomes a limit field before the child conditions are merged. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
     <article class="evidence-reference">
-          <a href="#evidence-bee978cfc753">source/utils/merge.ts · change excerpt 2–12</a>
+          <a href="#evidence-1a1289505816">source/utils/merge.ts · change excerpt 14–25</a>
         </article>
   </div>
   </details>
@@ -1914,9 +1897,14 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="The extended instance keeps the requested retry count and the added conditions. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
-    <article class="evidence-reference">
-          <a href="#evidence-e64cc0f68686">pull request description 1–3</a>
-        </article>
+    <article class="evidence-item" id="evidence-16b076eb4df2">
+        <div class="evidence-meta">
+          <span>pull request description 24–26</span>
+        </div>
+        <pre class="source-text"><code>### Fix
+
+Expand the numeric `retry` shorthand to `{limit: number}` before the deep merge, so extending it with an object preserves the limit. This mirrors the documented shorthand semantics and leaves every other case (object → object, object → number replacement, `replaceOption`) unchanged.</code></pre>
+      </article>
   </div>
   </details>
     </div>
@@ -1961,27 +1949,18 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="A retry limit of 3 still produces four total attempts after methods are added. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
-    <article class="evidence-item" id="evidence-7b7917414b94">
+    <article class="evidence-item" id="evidence-4aaebc2becc1">
         <div class="evidence-meta">
-          <span>test/retry.ts · change excerpt 2–10</span>
+          <span>test/retry.ts · change excerpt 14–21</span>
         </div>
-        <pre class="code-evidence"><code aria-label="+test(&#39;preserves a numeric retry limit when extending with conditions&#39;, async t =&gt; {
-+	const instance = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});
-+	await instance(&#39;https://example.com&#39;);
-+	t.is(requestCount, 4);
-+});
-+
-+test(&#39;does not rewrite a nested retry key&#39;, async t =&gt; {
-+	t.deepEqual(deepMerge({json: {retry: 3}}, {json: {retry: {methods: [&#39;get&#39;]}}}), expectedBody);
-+});"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>test(&#39;preserves a numeric retry limit when extending with conditions&#39;, async t =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const instance = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	await instance(&#39;https://example.com&#39;);</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.is(requestCount, 4);</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>});</span></span>
+        <pre class="code-evidence"><code aria-label="+&#9;// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object&#10;+&#9;// should preserve that limit instead of falling back to the default.&#10;+&#9;const extended = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});&#10;+&#10;+&#9;await t.throwsAsync(extended(server.url).text(), {&#10;+&#9;&#9;message: /Request Timeout/&#10;+&#9;});&#10;+&#9;t.is(requestCount, 4);"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// should preserve that limit instead of falling back to the default.</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const extended = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});</span></span>
 <span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>test(&#39;does not rewrite a nested retry key&#39;, async t =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.deepEqual(deepMerge({json: {retry: 3}}, {json: {retry: {methods: [&#39;get&#39;]}}}), expectedBody);</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>});</span></span></code></pre>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	await t.throwsAsync(extended(server.url).text(), {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		message: /Request Timeout/</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.is(requestCount, 4);</span></span></code></pre>
       </article>
   </div>
   </details>
@@ -1993,30 +1972,35 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="Nested request data with a retry key keeps ordinary object merging. · Evidence · 2">Evidence · 2</summary>
     <div class="evidence-list">
-    <article class="evidence-item" id="evidence-7240e67525d2">
+    <article class="evidence-item" id="evidence-be624f5ace21">
         <div class="evidence-meta">
-          <span>source/utils/merge.ts · change excerpt 5–10</span>
+          <span>source/utils/merge.ts · change excerpt 17–25</span>
         </div>
-        <pre class="code-evidence"><code aria-label="+		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {
-+			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};
-+		}
-
--			value = deepMerge(returnValue[key], value);
-+			value = deepMergeInternal(false, returnValue[key], value);"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		}</span></span>
-<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span></span></span>
-<span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>			value = deepMerge(returnValue[key], value);</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>			value = deepMergeInternal(false, returnValue[key], value);</span></span></code></pre>
-      </article><article class="evidence-item" id="evidence-a22bef161b6b">
+        <pre class="code-evidence"><code aria-label="+&#9;&#9;&#9;&#9;// Scoped to the root options level so it never rewrites nested user data that&#10;+&#9;&#9;&#9;&#9;// happens to contain a `retry` key (e.g. a `json` request body).&#10;+&#9;&#9;&#9;&#9;if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {&#10;+&#9;&#9;&#9;&#9;&#9;returnValue = {...returnValue, [key]: {limit: returnValue[key]}};&#10;+&#9;&#9;&#9;&#9;}&#10;+&#10; &#9;&#9;&#9;&#9;if (isObject(value) &amp;&amp; !isReplace &amp;&amp; key in returnValue) {&#10;-&#9;&#9;&#9;&#9;&#9;value = deepMerge(returnValue[key], value);&#10;+&#9;&#9;&#9;&#9;&#9;value = deepMergeInternal(false, returnValue[key], value);"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// Scoped to the root options level so it never rewrites nested user data that</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// happens to contain a `retry` key (e.g. a `json` request body).</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>					returnValue = {...returnValue, [key]: {limit: returnValue[key]}};</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				}</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span>				if (isObject(value) &amp;&amp; !isReplace &amp;&amp; key in returnValue) {</span></span>
+<span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>					value = deepMerge(returnValue[key], value);</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>					value = deepMergeInternal(false, returnValue[key], value);</span></span></code></pre>
+      </article><article class="evidence-item" id="evidence-5f848f81965f">
         <div class="evidence-meta">
-          <span>test/retry.ts · change excerpt 8–10</span>
+          <span>test/retry.ts · change excerpt 24–35</span>
         </div>
-        <pre class="code-evidence"><code aria-label="+test(&#39;does not rewrite a nested retry key&#39;, async t =&gt; {
-+	t.deepEqual(deepMerge({json: {retry: 3}}, {json: {retry: {methods: [&#39;get&#39;]}}}), expectedBody);
-+});"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>test(&#39;does not rewrite a nested retry key&#39;, async t =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.deepEqual(deepMerge({json: {retry: 3}}, {json: {retry: {methods: [&#39;get&#39;]}}}), expectedBody);</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>});</span></span></code></pre>
+        <pre class="code-evidence"><code aria-label="+test(&#39;retry - shorthand expansion does not rewrite nested user data with a `retry` key&#39;, async t =&gt; {&#10;+&#9;const server = await createHttpTestServer(t);&#10;+&#9;server.post(&#39;/&#39;, (request, response) =&gt; {&#10;+&#9;&#9;response.json({body: request.body});&#10;+&#9;});&#10;+&#10;+&#9;// A `retry` key inside the `json` body is user data, not the `retry` option,&#10;+&#9;// so the number-to-`{limit}` shorthand must not touch it.&#10;+&#9;const client = ky.create({json: {retry: 3}}).extend({json: {retry: {foo: &#39;bar&#39;}}});&#10;+&#10;+&#9;const {body} = await client.post(server.url).json&lt;{body: {retry: unknown}}&gt;();&#10;+&#9;t.deepEqual(body.retry, {foo: &#39;bar&#39;});"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>test(&#39;retry - shorthand expansion does not rewrite nested user data with a `retry` key&#39;, async t =&gt; {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const server = await createHttpTestServer(t);</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	server.post(&#39;/&#39;, (request, response) =&gt; {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		response.json({body: request.body});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// A `retry` key inside the `json` body is user data, not the `retry` option,</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// so the number-to-`{limit}` shorthand must not touch it.</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const client = ky.create({json: {retry: 3}}).extend({json: {retry: {foo: &#39;bar&#39;}}});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const {body} = await client.post(server.url).json&lt;{body: {retry: unknown}}&gt;();</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.deepEqual(body.retry, {foo: &#39;bar&#39;});</span></span></code></pre>
       </article>
   </div>
   </details>
@@ -2029,31 +2013,22 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="The special preservation rule applies only when a root numeric retry value meets child object conditions. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
-    <article class="evidence-item" id="evidence-bee978cfc753">
+    <article class="evidence-item" id="evidence-1a1289505816">
         <div class="evidence-meta">
-          <span>source/utils/merge.ts · change excerpt 2–12</span>
+          <span>source/utils/merge.ts · change excerpt 14–25</span>
         </div>
-        <pre class="code-evidence"><code aria-label="-export const deepMerge = (...sources) =&gt; {
-+const deepMergeInternal = (isRoot, ...sources) =&gt; {
-
-+		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {
-+			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};
-+		}
-
--			value = deepMerge(returnValue[key], value);
-+			value = deepMergeInternal(false, returnValue[key], value);
-
-+export const deepMerge = (...sources) =&gt; deepMergeInternal(true, ...sources);"><span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>export const deepMerge = (...sources) =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>const deepMergeInternal = (isRoot, ...sources) =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span></span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		}</span></span>
-<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span></span></span>
-<span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>			value = deepMerge(returnValue[key], value);</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>			value = deepMergeInternal(false, returnValue[key], value);</span></span>
-<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span></span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>export const deepMerge = (...sources) =&gt; deepMergeInternal(true, ...sources);</span></span></code></pre>
+        <pre class="code-evidence"><code aria-label="+&#9;&#9;&#9;&#9;// `retry` accepts a number as shorthand for `{limit: number}`. Expand it before&#10;+&#9;&#9;&#9;&#9;// merging so extending a numeric `retry` with an object keeps the limit instead&#10;+&#9;&#9;&#9;&#9;// of dropping it (e.g. `ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}})`).&#10;+&#9;&#9;&#9;&#9;// Scoped to the root options level so it never rewrites nested user data that&#10;+&#9;&#9;&#9;&#9;// happens to contain a `retry` key (e.g. a `json` request body).&#10;+&#9;&#9;&#9;&#9;if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {&#10;+&#9;&#9;&#9;&#9;&#9;returnValue = {...returnValue, [key]: {limit: returnValue[key]}};&#10;+&#9;&#9;&#9;&#9;}&#10;+&#10; &#9;&#9;&#9;&#9;if (isObject(value) &amp;&amp; !isReplace &amp;&amp; key in returnValue) {&#10;-&#9;&#9;&#9;&#9;&#9;value = deepMerge(returnValue[key], value);&#10;+&#9;&#9;&#9;&#9;&#9;value = deepMergeInternal(false, returnValue[key], value);"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// `retry` accepts a number as shorthand for `{limit: number}`. Expand it before</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// merging so extending a numeric `retry` with an object keeps the limit instead</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// of dropping it (e.g. `ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}})`).</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// Scoped to the root options level so it never rewrites nested user data that</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// happens to contain a `retry` key (e.g. a `json` request body).</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>					returnValue = {...returnValue, [key]: {limit: returnValue[key]}};</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				}</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span>				if (isObject(value) &amp;&amp; !isReplace &amp;&amp; key in returnValue) {</span></span>
+<span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>					value = deepMerge(returnValue[key], value);</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>					value = deepMergeInternal(false, returnValue[key], value);</span></span></code></pre>
       </article>
   </div>
   </details>
@@ -2067,19 +2042,13 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="The parent sets retry as a number. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
-    <article class="evidence-item" id="evidence-3492117ce384">
+    <article class="evidence-item" id="evidence-e7ef9b3723f8">
         <div class="evidence-meta">
-          <span>source/utils/merge.ts · change excerpt 2–6</span>
+          <span>test/retry.ts · change excerpt 14–16</span>
         </div>
-        <pre class="code-evidence"><code aria-label="-export const deepMerge = (...sources) =&gt; {
-+const deepMergeInternal = (isRoot, ...sources) =&gt; {
-
-+		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {
-+			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};"><span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>export const deepMerge = (...sources) =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>const deepMergeInternal = (isRoot, ...sources) =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span></span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};</span></span></code></pre>
+        <pre class="code-evidence"><code aria-label="+&#9;// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object&#10;+&#9;// should preserve that limit instead of falling back to the default.&#10;+&#9;const extended = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// should preserve that limit instead of falling back to the default.</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const extended = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});</span></span></code></pre>
       </article>
   </div>
   </details>
@@ -2091,16 +2060,9 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="The child adds detailed retry conditions as an object. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
-    <article class="evidence-item" id="evidence-3ab66c692d1a">
-        <div class="evidence-meta">
-          <span>source/utils/merge.ts · change excerpt 5–7</span>
-        </div>
-        <pre class="code-evidence"><code aria-label="+		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {
-+			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};
-+		}"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>			returnValue = {...returnValue, [key]: {limit: returnValue[key]}};</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		}</span></span></code></pre>
-      </article>
+    <article class="evidence-reference">
+          <a href="#evidence-e7ef9b3723f8">test/retry.ts · change excerpt 14–16</a>
+        </article>
   </div>
   </details>
     </div>
@@ -2112,7 +2074,7 @@ The special merge applies only to the root retry option, not nested request data
     <summary aria-label="The root merge expands the number into a limit and then merges the child object. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
     <article class="evidence-reference">
-          <a href="#evidence-bee978cfc753">source/utils/merge.ts · change excerpt 2–12</a>
+          <a href="#evidence-1a1289505816">source/utils/merge.ts · change excerpt 14–25</a>
         </article>
   </div>
   </details>
@@ -2328,7 +2290,7 @@ The special merge applies only to the root retry option, not nested request data
     <summary aria-label="Retry merge explorer · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
     <article class="evidence-reference">
-          <a href="#evidence-bee978cfc753">source/utils/merge.ts · change excerpt 2–12</a>
+          <a href="#evidence-1a1289505816">source/utils/merge.ts · change excerpt 14–25</a>
         </article>
   </div>
   </details>
@@ -2351,18 +2313,9 @@ The special merge applies only to the root retry option, not nested request data
             <div class="quiz-answer-content">
               <p><bdi dir="auto">Four. The limit counts retries after the first request.</bdi></p>
               <div class="evidence evidence-inline" role="group" aria-label="Evidence"><div class="evidence-list">
-    <article class="evidence-item" id="evidence-b3f692890e95">
-        <div class="evidence-meta">
-          <span>test/retry.ts · change excerpt 2–5</span>
-        </div>
-        <pre class="code-evidence"><code aria-label="+test(&#39;preserves a numeric retry limit when extending with conditions&#39;, async t =&gt; {
-+	const instance = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});
-+	await instance(&#39;https://example.com&#39;);
-+	t.is(requestCount, 4);"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>test(&#39;preserves a numeric retry limit when extending with conditions&#39;, async t =&gt; {</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const instance = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	await instance(&#39;https://example.com&#39;);</span></span>
-<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.is(requestCount, 4);</span></span></code></pre>
-      </article>
+    <article class="evidence-reference">
+          <a href="#evidence-4aaebc2becc1">test/retry.ts · change excerpt 14–21</a>
+        </article>
   </div></div>
             </div>
           </details>
@@ -2448,14 +2401,33 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="Confirm the full retry suite · Evidence · 2">Evidence · 2</summary>
     <div class="evidence-list">
-    <article class="evidence-item" id="evidence-171a0dc00658">
+    <article class="evidence-item" id="evidence-cdf127ec7262">
         <div class="evidence-meta">
-          <span>pull request description 4–4</span>
+          <span>pull request description 36–36</span>
         </div>
-        <pre class="source-text"><code>The focused tests cover the preserved request count and the nested-data boundary.</code></pre>
-      </article><article class="evidence-reference">
-          <a href="#evidence-7b7917414b94">test/retry.ts · change excerpt 2–10</a>
-        </article>
+        <pre class="source-text"><code>Added a test in `test/retry.ts` that sets `retry: 3` on a parent, extends it with `retry: {methods: [&#39;get&#39;]}`, and asserts the request is attempted `limit + 1` times. It fails on `main` (3 attempts) and passes with the fix (4 attempts).</code></pre>
+      </article><article class="evidence-item" id="evidence-6069b7ca7263">
+        <div class="evidence-meta">
+          <span>test/retry.ts · change excerpt 5–21</span>
+        </div>
+        <pre class="code-evidence"><code aria-label="+test(&#39;retry - extending a numeric `retry` with an object keeps the limit&#39;, async t =&gt; {&#10;+&#9;let requestCount = 0;&#10;+&#10;+&#9;const server = await createHttpTestServer(t);&#10;+&#9;server.get(&#39;/&#39;, async (_request, response) =&gt; {&#10;+&#9;&#9;requestCount++;&#10;+&#9;&#9;response.sendStatus(408);&#10;+&#9;});&#10;+&#10;+&#9;// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object&#10;+&#9;// should preserve that limit instead of falling back to the default.&#10;+&#9;const extended = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});&#10;+&#10;+&#9;await t.throwsAsync(extended(server.url).text(), {&#10;+&#9;&#9;message: /Request Timeout/&#10;+&#9;});&#10;+&#9;t.is(requestCount, 4);"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>test(&#39;retry - extending a numeric `retry` with an object keeps the limit&#39;, async t =&gt; {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	let requestCount = 0;</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const server = await createHttpTestServer(t);</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	server.get(&#39;/&#39;, async (_request, response) =&gt; {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		requestCount++;</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		response.sendStatus(408);</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// should preserve that limit instead of falling back to the default.</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const extended = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	await t.throwsAsync(extended(server.url).text(), {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		message: /Request Timeout/</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.is(requestCount, 4);</span></span></code></pre>
+      </article>
   </div>
   </details>
 
@@ -2475,11 +2447,32 @@ The special merge applies only to the root retry option, not nested request data
     <div class="claim-meta">
       <div class="claim-basis">Code</div>
       <details class="evidence">
-    <summary aria-label="Separate root and recursive merging: Pass root state through the internal merge function. · Evidence · 1">Evidence · 1</summary>
+    <summary aria-label="Separate root and recursive merging: Pass root state through the internal merge function. · Evidence · 2">Evidence · 2</summary>
     <div class="evidence-list">
-    <article class="evidence-reference">
-          <a href="#evidence-bee978cfc753">source/utils/merge.ts · change excerpt 2–12</a>
-        </article>
+    <article class="evidence-item" id="evidence-eda39f9445f1">
+        <div class="evidence-meta">
+          <span>source/utils/merge.ts · change excerpt 5–6</span>
+        </div>
+        <pre class="code-evidence"><code aria-label="-export const deepMerge = &lt;T&gt;(...sources: Array&lt;Partial&lt;T&gt; | undefined&gt;): T =&gt; {&#10;+const deepMergeInternal = &lt;T&gt;(isRoot: boolean, ...sources: Array&lt;Partial&lt;T&gt; | undefined&gt;): T =&gt; {"><span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>export const deepMerge = &lt;T&gt;(...sources: Array&lt;Partial&lt;T&gt; | undefined&gt;): T =&gt; {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>const deepMergeInternal = &lt;T&gt;(isRoot: boolean, ...sources: Array&lt;Partial&lt;T&gt; | undefined&gt;): T =&gt; {</span></span></code></pre>
+      </article><article class="evidence-item" id="evidence-17f3090e58ab">
+        <div class="evidence-meta">
+          <span>source/utils/merge.ts · change excerpt 23–35</span>
+        </div>
+        <pre class="code-evidence"><code aria-label=" &#9;&#9;&#9;&#9;if (isObject(value) &amp;&amp; !isReplace &amp;&amp; key in returnValue) {&#10;-&#9;&#9;&#9;&#9;&#9;value = deepMerge(returnValue[key], value);&#10;+&#9;&#9;&#9;&#9;&#9;value = deepMergeInternal(false, returnValue[key], value);&#10; &#9;&#9;&#9;&#9;}&#10; &#10; &#9;&#9;&#9;&#9;returnValue = {...returnValue, [key]: value};&#10;@@ -310,3 +319,6 @@ export const deepMerge = &lt;T&gt;(...sources: Array&lt;Partial&lt;T&gt; | undefined&gt;): T =&gt; {&#10; &#10; &#9;return returnValue;&#10; };&#10;+&#10;+export const deepMerge = &lt;T&gt;(...sources: Array&lt;Partial&lt;T&gt; | undefined&gt;): T =&gt;&#10;+&#9;deepMergeInternal&lt;T&gt;(true, ...sources);"><span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span>				if (isObject(value) &amp;&amp; !isReplace &amp;&amp; key in returnValue) {</span></span>
+<span class="code-line code-line-patch code-line-removed code-line-unlocated"><span class="code-content"><span class="code-prefix">-</span>					value = deepMerge(returnValue[key], value);</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>					value = deepMergeInternal(false, returnValue[key], value);</span></span>
+<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span>				}</span></span>
+<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span></span></span>
+<span class="code-line code-line-patch code-line-context code-line-unlocated"><span class="code-content"><span class="code-prefix"> </span>				returnValue = {...returnValue, [key]: value};</span></span>
+<span class="code-line code-line-patch code-line-hunk code-line-unlocated"><span class="code-content">@@ -310,3 +319,6 @@ export const deepMerge = &lt;T&gt;(...sources: Array&lt;Partial&lt;T&gt; | undefined&gt;): T =&gt; {</span></span>
+<span class="code-line code-line-patch code-line-context" data-old-line="310" data-new-line="319"><span class="code-content"><span class="code-prefix"> </span></span></span>
+<span class="code-line code-line-patch code-line-context" data-old-line="311" data-new-line="320"><span class="code-content"><span class="code-prefix"> </span>	return returnValue;</span></span>
+<span class="code-line code-line-patch code-line-context" data-old-line="312" data-new-line="321"><span class="code-content"><span class="code-prefix"> </span>};</span></span>
+<span class="code-line code-line-patch code-line-added" data-old-line="" data-new-line="322"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added" data-old-line="" data-new-line="323"><span class="code-content"><span class="code-prefix">+</span>export const deepMerge = &lt;T&gt;(...sources: Array&lt;Partial&lt;T&gt; | undefined&gt;): T =&gt;</span></span>
+<span class="code-line code-line-patch code-line-added" data-old-line="" data-new-line="324"><span class="code-content"><span class="code-prefix">+</span>	deepMergeInternal&lt;T&gt;(true, ...sources);</span></span></code></pre>
+      </article>
   </div>
   </details>
     </div>
@@ -2493,9 +2486,19 @@ The special merge applies only to the root retry option, not nested request data
       <details class="evidence">
     <summary aria-label="Expand numeric retry shorthand: Convert the existing number to a limit field before merging child conditions. · Evidence · 1">Evidence · 1</summary>
     <div class="evidence-list">
-    <article class="evidence-reference">
-          <a href="#evidence-3ab66c692d1a">source/utils/merge.ts · change excerpt 5–7</a>
-        </article>
+    <article class="evidence-item" id="evidence-02465f21e05c">
+        <div class="evidence-meta">
+          <span>source/utils/merge.ts · change excerpt 14–21</span>
+        </div>
+        <pre class="code-evidence"><code aria-label="+&#9;&#9;&#9;&#9;// `retry` accepts a number as shorthand for `{limit: number}`. Expand it before&#10;+&#9;&#9;&#9;&#9;// merging so extending a numeric `retry` with an object keeps the limit instead&#10;+&#9;&#9;&#9;&#9;// of dropping it (e.g. `ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}})`).&#10;+&#9;&#9;&#9;&#9;// Scoped to the root options level so it never rewrites nested user data that&#10;+&#9;&#9;&#9;&#9;// happens to contain a `retry` key (e.g. a `json` request body).&#10;+&#9;&#9;&#9;&#9;if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {&#10;+&#9;&#9;&#9;&#9;&#9;returnValue = {...returnValue, [key]: {limit: returnValue[key]}};&#10;+&#9;&#9;&#9;&#9;}"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// `retry` accepts a number as shorthand for `{limit: number}`. Expand it before</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// merging so extending a numeric `retry` with an object keeps the limit instead</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// of dropping it (e.g. `ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}})`).</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// Scoped to the root options level so it never rewrites nested user data that</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				// happens to contain a `retry` key (e.g. a `json` request body).</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				if (isRoot &amp;&amp; key === &#39;retry&#39; &amp;&amp; isObject(value) &amp;&amp; !isReplace &amp;&amp; typeof returnValue[key] === &#39;number&#39;) {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>					returnValue = {...returnValue, [key]: {limit: returnValue[key]}};</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>				}</span></span></code></pre>
+      </article>
   </div>
   </details>
     </div>
@@ -2507,10 +2510,12 @@ The special merge applies only to the root retry option, not nested request data
     <div class="claim-meta">
       <div class="claim-basis">Code</div>
       <details class="evidence">
-    <summary aria-label="Cover request count and nested data: Focused tests check four attempts and preserve a nested retry key as request data. · Evidence · 1">Evidence · 1</summary>
+    <summary aria-label="Cover request count and nested data: Focused tests check four attempts and preserve a nested retry key as request data. · Evidence · 2">Evidence · 2</summary>
     <div class="evidence-list">
     <article class="evidence-reference">
-          <a href="#evidence-7b7917414b94">test/retry.ts · change excerpt 2–10</a>
+          <a href="#evidence-4aaebc2becc1">test/retry.ts · change excerpt 14–21</a>
+        </article><article class="evidence-reference">
+          <a href="#evidence-5f848f81965f">test/retry.ts · change excerpt 24–35</a>
         </article>
   </div>
   </details>
@@ -2535,7 +2540,7 @@ The special merge applies only to the root retry option, not nested request data
       <td>pull request description</td>
       <td>sindresorhus/ky · PR #867</td>
       <td>—</td>
-      <td>4 lines</td>
+      <td>37 lines</td>
     </tr><tr>
       <td>commit title</td>
       <td>—</td>
@@ -2562,10 +2567,34 @@ The special merge applies only to the root retry option, not nested request data
     <summary aria-label="Root retry merge and nested-data boundary · Evidence · 2">Evidence · 2</summary>
     <div class="evidence-list">
     <article class="evidence-reference">
-          <a href="#evidence-bee978cfc753">source/utils/merge.ts · change excerpt 2–12</a>
-        </article><article class="evidence-reference">
-          <a href="#evidence-7b7917414b94">test/retry.ts · change excerpt 2–10</a>
-        </article>
+          <a href="#evidence-1a1289505816">source/utils/merge.ts · change excerpt 14–25</a>
+        </article><article class="evidence-item" id="evidence-a175ccf41bc5">
+        <div class="evidence-meta">
+          <span>test/retry.ts · change excerpt 14–35</span>
+        </div>
+        <pre class="code-evidence"><code aria-label="+&#9;// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object&#10;+&#9;// should preserve that limit instead of falling back to the default.&#10;+&#9;const extended = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});&#10;+&#10;+&#9;await t.throwsAsync(extended(server.url).text(), {&#10;+&#9;&#9;message: /Request Timeout/&#10;+&#9;});&#10;+&#9;t.is(requestCount, 4);&#10;+});&#10;+&#10;+test(&#39;retry - shorthand expansion does not rewrite nested user data with a `retry` key&#39;, async t =&gt; {&#10;+&#9;const server = await createHttpTestServer(t);&#10;+&#9;server.post(&#39;/&#39;, (request, response) =&gt; {&#10;+&#9;&#9;response.json({body: request.body});&#10;+&#9;});&#10;+&#10;+&#9;// A `retry` key inside the `json` body is user data, not the `retry` option,&#10;+&#9;// so the number-to-`{limit}` shorthand must not touch it.&#10;+&#9;const client = ky.create({json: {retry: 3}}).extend({json: {retry: {foo: &#39;bar&#39;}}});&#10;+&#10;+&#9;const {body} = await client.post(server.url).json&lt;{body: {retry: unknown}}&gt;();&#10;+&#9;t.deepEqual(body.retry, {foo: &#39;bar&#39;});"><span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// `retry: 3` is shorthand for `{limit: 3}`. Extending it with an object</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// should preserve that limit instead of falling back to the default.</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const extended = ky.create({retry: 3}).extend({retry: {methods: [&#39;get&#39;]}});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	await t.throwsAsync(extended(server.url).text(), {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		message: /Request Timeout/</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.is(requestCount, 4);</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>test(&#39;retry - shorthand expansion does not rewrite nested user data with a `retry` key&#39;, async t =&gt; {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const server = await createHttpTestServer(t);</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	server.post(&#39;/&#39;, (request, response) =&gt; {</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>		response.json({body: request.body});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// A `retry` key inside the `json` body is user data, not the `retry` option,</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	// so the number-to-`{limit}` shorthand must not touch it.</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const client = ky.create({json: {retry: 3}}).extend({json: {retry: {foo: &#39;bar&#39;}}});</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span></span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	const {body} = await client.post(server.url).json&lt;{body: {retry: unknown}}&gt;();</span></span>
+<span class="code-line code-line-patch code-line-added code-line-unlocated"><span class="code-content"><span class="code-prefix">+</span>	t.deepEqual(body.retry, {foo: &#39;bar&#39;});</span></span></code></pre>
+      </article>
   </div>
   </details>
     </div>
@@ -2607,14 +2636,14 @@ The special merge applies only to the root retry option, not nested request data
       <td><bdi dir="auto">source/utils/merge.ts</bdi></td>
       <td>modified</td>
       <td>explained</td>
-      <td>change excerpt · 12 lines</td>
-      <td>+10 −2</td>
+      <td>change excerpt · 35 lines</td>
+      <td>+14 −2</td>
     </tr><tr>
       <td><bdi dir="auto">test/retry.ts</bdi></td>
       <td>modified</td>
       <td>supporting</td>
-      <td>change excerpt · 10 lines</td>
-      <td>+9 −0</td>
+      <td>change excerpt · 39 lines</td>
+      <td>+33 −0</td>
     </tr></tbody>
             </table>
           </div>
