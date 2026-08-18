@@ -23,14 +23,9 @@
 
 ### ✨ Align — Reach shared understanding before implementation and prevent `intent debt`
 
-Before teaching back, Align checks the request against verifiable evidence and
-surfaces only material gaps, contradictions, risks, unsupported assumptions,
-edge cases, or simpler paths that could change the result.
-
-It separates required questions from optional improvements, closes declined
-options, and groups independent questions while sequencing dependent ones. For
-a specifically identified high-risk work product, it may offer a separate Toxic
-Review that starts only if the person chooses it.
+Align reviews the request against verifiable evidence and interviews the person
+about material gaps, contradictions, risks, unsupported assumptions, edge
+cases, and simpler alternatives that could change the result.
 
 When the agreement is ready, Align writes one self-contained HTML brief inside
 the project.
