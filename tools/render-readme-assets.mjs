@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 import { chromium } from "@playwright/test";
 
@@ -49,6 +50,10 @@ const mockupFontFiles = {
   bold: "HopeSansBold.woff2",
   light: "HopeSansLight.woff2",
   medium: "HopeSansMedium.woff2",
+};
+const visualDifferenceLimits = {
+  changedPixelFraction: 0.04,
+  meanChannelError: 1,
 };
 
 function exampleLocations(destinationRoot) {
@@ -263,14 +268,147 @@ async function generateExamples(destinationRoot) {
   }
 }
 
+function comparableAlignArtifact(artifact) {
+  const {
+    artifactPath: _artifactPath,
+    digest: _digest,
+    ...comparable
+  } = artifact;
+  return {
+    ...comparable,
+    content: {
+      ...comparable.content,
+      designDirections: {
+        ...comparable.content.designDirections,
+        options: comparable.content.designDirections.options.map((option) => ({
+          ...option,
+          image: {
+            ...option.image,
+            data: "[generated image]",
+          },
+        })),
+      },
+    },
+  };
+}
+
+async function imageDifference(page, committed, generated) {
+  if (committed.equals(generated)) {
+    return { changedPixelFraction: 0, dimensionsMatch: true, meanChannelError: 0 };
+  }
+  const sources = [committed, generated]
+    .map((value) => `data:image/png;base64,${value.toString("base64")}`);
+  return page.evaluate(async ([committedSource, generatedSource]) => {
+    const loadImage = (source) => new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener("load", () => resolve(image), { once: true });
+      image.addEventListener("error", reject, { once: true });
+      image.src = source;
+    });
+    const [committedImage, generatedImage] = await Promise.all([
+      loadImage(committedSource),
+      loadImage(generatedSource),
+    ]);
+    const dimensionsMatch = committedImage.naturalWidth === generatedImage.naturalWidth
+      && committedImage.naturalHeight === generatedImage.naturalHeight;
+    const pixels = (image) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64;
+      canvas.height = 64;
+      const context = canvas.getContext("2d");
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return context.getImageData(0, 0, canvas.width, canvas.height).data;
+    };
+    const committedPixels = pixels(committedImage);
+    const generatedPixels = pixels(generatedImage);
+    let changedPixels = 0;
+    let totalError = 0;
+    for (let index = 0; index < committedPixels.length; index += 4) {
+      const error = (
+        Math.abs(committedPixels[index] - generatedPixels[index])
+        + Math.abs(committedPixels[index + 1] - generatedPixels[index + 1])
+        + Math.abs(committedPixels[index + 2] - generatedPixels[index + 2])
+      ) / 3;
+      totalError += error;
+      if (error > 8) changedPixels += 1;
+    }
+    const pixelCount = committedPixels.length / 4;
+    return {
+      changedPixelFraction: changedPixels / pixelCount,
+      dimensionsMatch,
+      meanChannelError: totalError / pixelCount,
+    };
+  }, sources);
+}
+
 async function checkExamples(generatedRoot) {
   const mismatches = [];
-  for (const path of generatedPaths) {
-    const [committed, generated] = await Promise.all([
-      readFile(join(root, path)),
-      readFile(join(generatedRoot, path)),
+  const visualComparisons = [];
+  for (const { suffix } of examples) {
+    const alignPath = `docs/alignments/rescene-fan-calendar.${suffix}.html`;
+    const [committedAlign, generatedAlign] = await Promise.all([
+      inspectAlignArtifact(join(root, alignPath)),
+      inspectAlignArtifact(join(generatedRoot, alignPath)),
     ]);
-    if (!committed.equals(generated)) mismatches.push(path);
+    if (!isDeepStrictEqual(
+      comparableAlignArtifact(committedAlign),
+      comparableAlignArtifact(generatedAlign),
+    )) {
+      mismatches.push(alignPath);
+    }
+    for (const [index, option] of committedAlign.content.designDirections.options.entries()) {
+      visualComparisons.push({
+        committed: Buffer.from(option.image.data, "base64"),
+        generated: Buffer.from(
+          generatedAlign.content.designDirections.options[index].image.data,
+          "base64",
+        ),
+        label: `${alignPath}#${option.id}`,
+      });
+    }
+
+    const diffPath = `docs/diffs/ky-867-retry-extend.${suffix}.html`;
+    const [committedDiff, generatedDiff] = await Promise.all([
+      readFile(join(root, diffPath)),
+      readFile(join(generatedRoot, diffPath)),
+    ]);
+    if (!committedDiff.equals(generatedDiff)) mismatches.push(diffPath);
+  }
+
+  for (const { suffix } of examples) {
+    for (const name of captureNames) {
+      const path = `assets/readme/hope-${name}-${suffix}.png`;
+      const [committed, generated] = await Promise.all([
+        readFile(join(root, path)),
+        readFile(join(generatedRoot, path)),
+      ]);
+      visualComparisons.push({ committed, generated, label: path });
+    }
+  }
+
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    for (const comparison of visualComparisons) {
+      const difference = await imageDifference(
+        page,
+        comparison.committed,
+        comparison.generated,
+      );
+      if (
+        !difference.dimensionsMatch
+        || difference.changedPixelFraction > visualDifferenceLimits.changedPixelFraction
+        || difference.meanChannelError > visualDifferenceLimits.meanChannelError
+      ) {
+        mismatches.push(
+          `${comparison.label} (visual difference: ${difference.meanChannelError.toFixed(3)} mean error, `
+          + `${(difference.changedPixelFraction * 100).toFixed(2)}% changed pixels)`,
+        );
+      }
+    }
+  } finally {
+    await browser?.close();
   }
   if (mismatches.length > 0) {
     throw new Error(`README examples need regeneration:\n${mismatches.join("\n")}`);
