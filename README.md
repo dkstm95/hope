@@ -21,7 +21,7 @@
 
 ## Features
 
-### ✨ Align — Reach shared understanding before implementation and prevent `intent debt`
+### 🤝 Align — Reach shared understanding before implementation and prevent `intent debt`
 
 Align reviews the request against verifiable evidence and interviews the person
 about material gaps, contradictions, risks, unsupported assumptions, edge
@@ -57,7 +57,7 @@ represent the live `rescene.fan` interface.
 
 ---
 
-### ✨ Diff — Understand what changed and how to judge it to prevent `cognitive debt`
+### 🔎 Diff — Understand what changed and how to judge it to prevent `cognitive debt`
 
 A code change can be complete while its owner still cannot predict, explain, or
 judge it, and that gap is cognitive debt.
@@ -93,7 +93,7 @@ its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.htm
 
 ---
 
-### Toxic Review — Put a work product through a rigorous Red–Blue review
+### ⚖️ Toxic Review — Put a work product through a rigorous Red–Blue review
 
 Red finds. Blue challenges. The active agent judges.
 
@@ -112,7 +112,7 @@ uncertain finding still triggers it.
 
 ---
 
-### Polish — Refine implemented work
+### ✨ Polish — Refine implemented work
 
 Independent review agents look for useful improvements.
 
@@ -127,7 +127,7 @@ broad maintenance.
 
 ---
 
-### Sweep — Clean up a codebase
+### 🧹 Sweep — Clean up a codebase
 
 Sweep performs a read-only review of a codebase.
 
@@ -139,7 +139,7 @@ Select a candidate from the review results to start work.
 
 ---
 
-### Write — Make language clearer without losing meaning
+### ✍️ Write — Make language clearer without losing meaning
 
 Hope also uses Write within other tasks, including implementation and other
 Skills.
