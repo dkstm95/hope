@@ -159,11 +159,18 @@ test("Align presents one compact current agreement with secondary history", asyn
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(directionTops[0]).toBe(directionTops[1]);
+  const behaviorTops = await page.locator(".behavior-steps > li").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(behaviorTops[1]).toBeGreaterThan(behaviorTops[0]);
+  expect(behaviorTops[2]).toBeGreaterThan(behaviorTops[1]);
+  const outcomeTops = await page.locator(".behavior-outcomes > li").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(outcomeTops[0]).toBe(outcomeTops[1]);
   const geometry = await page.evaluate(() => ({
     brandRepositoryGap: document.querySelector(".repository").getBoundingClientRect().left
       - document.querySelector(".brand").getBoundingClientRect().right,
-    connectorRight: document.querySelector(".behavior-connector").getBoundingClientRect().right,
-    outcomeLeft: document.querySelector(".outcome-mark").getBoundingClientRect().left,
     railLeft: document.querySelector(".rail").getBoundingClientRect().left,
     repositoryStatusGap: document.querySelector(".status").getBoundingClientRect().left
       - document.querySelector(".repository").getBoundingClientRect().right,
@@ -172,7 +179,6 @@ test("Align presents one compact current agreement with secondary history", asyn
   }));
   expect(geometry.brandRepositoryGap).toBe(24);
   expect(geometry.repositoryStatusGap).toBe(24);
-  expect(geometry.connectorRight).toBe(geometry.outcomeLeft);
   expect(geometry.railLeft).toBe(932);
   expect(geometry.titleLeft).toBe(40);
   expect(geometry.topbarHeight).toBe(58);
@@ -241,6 +247,10 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(behaviorTops[1]).toBeGreaterThan(behaviorTops[0]);
+  const outcomeTops = await page.locator(".behavior-outcomes > li").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(outcomeTops[1]).toBeGreaterThan(outcomeTops[0]);
   const directionTops = await page.locator("#design-directions .design-direction").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );

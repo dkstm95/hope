@@ -404,13 +404,13 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="4"/u);
+  assert.match(first, /name="hope-align-design-version" content="5"/u);
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
   assert.match(first, /aria-label="다크 모드로 전환"/u);
   assert.match(first, /class="outcome-mark" aria-hidden="true">×</u);
-  assert.match(first, /class="behavior-connector"/u);
+  assert.match(first, />판정 결과</u);
   assert.match(first, /<ol class="decision-list">/u);
   assert.match(first, />결정 사항</u);
   assert.doesNotMatch(first, /id="intent-history"/u);
