@@ -183,6 +183,10 @@ verified and who decides whether it passes: an agent or person. Keep completion
 criteria in the summary near the goal. Do not turn them into progress controls
 or store their execution results in the artifact.
 
+Number every completion criterion in reading order with `01`, `02`, `03`, even
+when the list is short. Use body prose weight for each passing condition and
+reserve stronger emphasis for the number and verification source label.
+
 Do not show implementation progress, completion controls, work owners, comments,
 changed files, test status, or model and interview metrics.
 
