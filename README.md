@@ -27,10 +27,12 @@ Align reviews the request against verifiable evidence and interviews the person
 about material gaps, contradictions, risks, unsupported assumptions, edge
 cases, and simpler alternatives that could change the result.
 
-When the agreement is ready, Align writes one self-contained HTML brief inside
-the project.
+When the agreement needs a durable record for later work or review, or the
+person asks for an artifact, Align writes one self-contained HTML brief inside
+the project. A small, clear task that will continue in the current session can
+stay in the conversation without creating a file.
 
-The document contains one agreed goal and a set of completion criteria. Each
+A brief contains one agreed goal and a set of completion criteria. Each
 criterion includes how it is verified and who—AI or the person—judges it.
 Material changes remain as new versions in the same file, and the document
 serves as the implementation contract.
@@ -39,8 +41,8 @@ For material UI work without attached references, Align checks the project
 first, uses web search when needed, and presents two or three image mockups.
 
 > [!IMPORTANT]
-> Align briefs are project documentation. Later version-control work includes
-> them with related project changes unless the person excludes them.
+> Generated Align briefs are project documentation. Later version-control work
+> includes them with related project changes unless the person excludes them.
 
 **Complete example HTML:** [Open the English Align brief for a fan schedule that
 makes source conflicts, changes, cancellations, and verification ownership
