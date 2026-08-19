@@ -45,4 +45,10 @@ Before completing any file-changing task, follow the release decision and
 preparation steps in [docs/release.md](docs/release.md), then run
 `npm run check`.
 
-Do not finish, commit, or push while that check fails.
+Before committing or opening a pull request, choose one final title that follows
+[the contribution rule](CONTRIBUTING.md#record-and-submit-the-change). Validate
+it with `npm run check:title -- "<title>"`, then use it for both the commit and
+pull request.
+
+Do not finish while `npm run check` fails. Do not commit, open a pull request,
+or push while the selected title fails `npm run check:title -- "<title>"`.

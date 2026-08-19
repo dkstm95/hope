@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build:plugin": "node tools/build-plugin.mjs",
+    "check:title": "node tools/check-change-title.mjs",
     "check:readme-assets": "node tools/render-readme-assets.mjs --check",
     "plugin:dev:install": "node tools/install-plugin-dev.mjs",
     "render:readme-assets": "node tools/render-readme-assets.mjs",

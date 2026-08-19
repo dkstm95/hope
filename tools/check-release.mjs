@@ -78,6 +78,7 @@ const claudeMarketplaceEntry = claudeMarketplace.plugins.find(
 assert.equal(claudeMarketplaceEntry.source, "./plugins/hope");
 assert.equal(claudeMarketplaceEntry.version, undefined);
 assert.equal(packageJson.scripts["plugin:dev:install"], "node tools/install-plugin-dev.mjs");
+assert.equal(packageJson.scripts["check:title"], "node tools/check-change-title.mjs");
 assert.equal(
   packageJson.scripts["render:readme-assets"],
   "node tools/render-readme-assets.mjs",
