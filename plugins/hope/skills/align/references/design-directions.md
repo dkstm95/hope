@@ -56,8 +56,17 @@ review. Record the reason and waiver in the agreement.
 
 ## Preserve the selection
 
-When visual directions were used, include their local image paths, descriptions,
-references, recommendation, and selection in the structured Align input. Use
-absolute paths to ordinary non-interlaced PNG files that meet the limits in
-`artifact.md`. For every material outside reference, record a short explanation
-of how it influenced the option.
+Before writing the structured Align input, review the conversation evidence for
+every direction shown, the recommendation, and the selected option. In
+`designDirections`, include each direction's local image path, description, and
+material references, along with the recommendation and selection. Do not record
+a design-direction image only as general evidence. Use absolute paths to
+ordinary non-interlaced PNG files that meet the limits in `artifact.md`. For
+every material outside reference, record a short explanation of how it
+influenced the option.
+
+Do not report alignment complete until both conditions hold: the inspected
+current content includes every direction shown, and its recommendation and
+selection match those recorded in the conversation. If an image is missing or
+fails the artifact boundary, resolve that problem instead of silently omitting
+the visual agreement.

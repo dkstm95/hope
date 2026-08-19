@@ -145,6 +145,10 @@ created.
 Read `references/artifact.md` and the complete
 `scripts/align-input-v2.schema.json` before creating structured input.
 
+If visual directions were used, re-read `references/design-directions.md` at
+this point and follow its **Preserve the selection** section before writing the
+input.
+
 Apply the shared Write standard to the artifact language. Put each fact in one
 section only. Omit optional behavior, decisions, implementation choices, and
 evidence when they add no information. Add a behavior flow only when sequence
@@ -200,6 +204,9 @@ still the same goal:
 ```text
 revise --input <draft.json> --artifact <artifact.html> --expect <digest> --root <repository>
 ```
+
+When visual directions were used, run `inspect` on the created or revised
+artifact before reporting alignment complete.
 
 Do not replace an unknown, manually changed, or identity-mismatched artifact.
 Leave it in place and ask the person where to create a new artifact.
