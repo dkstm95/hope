@@ -38,7 +38,7 @@ serves as the implementation contract.
 For material UI work without attached references, Align checks the project
 first, uses web search when needed, and presents two or three image mockups.
 
-> [!NOTE]
+> [!IMPORTANT]
 > Align briefs are project documentation. Later version-control work includes
 > them with related project changes unless the person excludes them.
 
@@ -51,9 +51,14 @@ represent the live `rescene.fan` interface.
 
 ![English Hope Align example showing the trusted fan-schedule goal, completion criteria, and boundary](assets/readme/hope-align-en.png)
 
+<details>
+<summary>View detailed Align captures</summary>
+
 | Compared UI directions | Source and lifecycle decisions |
 | --- | --- |
 | [![Two UI directions for the trusted fan schedule in an English Align artifact](assets/readme/hope-align-directions-en.png)](assets/readme/hope-align-directions-en.png) | [![Source priority, conflict, freshness, and cancellation decisions in an English Align artifact](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
+
+</details>
 
 ---
 
@@ -76,20 +81,24 @@ understanding in follow-up decisions and work.
 > If none exists, it selects your latest open pull request in the repository.
 > Run Diff again when the pull request changes.
 
-> [!NOTE]
-> The captures below come from a fixed English Diff example based on
-> [Ky PR #867](https://github.com/sindresorhus/ky/pull/867).
+The captures below come from a fixed English Diff example based on
+[Ky PR #867](https://github.com/sindresorhus/ky/pull/867).
 
 **Complete example HTML:** [Open the English Diff artifact for Ky PR #867 with
 its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.en.html)
 
 ![English Hope Diff example for Ky pull request 867 showing the goal, before and after behavior, and verification item](assets/readme/hope-diff-en.png)
 
+<details>
+<summary>View detailed Diff captures</summary>
+
 | Core change | Interactive microworld |
 | --- | --- |
 | [![The retry configuration change explained in an English Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![An interactive retry-configuration microworld in an English Diff artifact](assets/readme/hope-diff-microworld-en.png)](assets/readme/hope-diff-microworld-en.png) |
 
 [![An understanding quiz about retry behavior in an English Diff artifact](assets/readme/hope-diff-quiz-en.png)](assets/readme/hope-diff-quiz-en.png)
+
+</details>
 
 ---
 
@@ -106,9 +115,10 @@ the result.
 The active agent retains final judgment and reports only the findings supported
 by the evidence.
 
-Ask Hope to limit the Red reviewer count when you want a smaller routine run.
-Review size alone does not add Blue, but a consequential or materially
-uncertain finding still triggers it.
+> [!TIP]
+> Ask Hope to limit the Red reviewer count when you want a smaller routine run.
+> Review size alone does not add Blue, but a consequential or materially
+> uncertain finding still triggers it.
 
 ---
 
@@ -157,12 +167,13 @@ You need:
 - An authenticated [GitHub CLI](https://cli.github.com/) to use Diff. Run
   `gh auth login` first if needed.
 
-The simplest option is to ask an AI:
-
-```text
-Install Hope from https://github.com/dkstm95/hope for this host.
-Follow the repository README and tell me if I need to restart.
-```
+> [!TIP]
+> The simplest option is to ask an AI:
+>
+> ```text
+> Install Hope from https://github.com/dkstm95/hope for this host.
+> Follow the repository README and tell me if I need to restart.
+> ```
 
 To install it yourself, run the commands for your host.
 

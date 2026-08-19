@@ -22,6 +22,12 @@ function readmeImages(source) {
     .map((match) => match[1]);
 }
 
+function collapsedExampleImages(source) {
+  return [...source.matchAll(/<details>([\s\S]*?)<\/details>/gu)]
+    .map((match) => readmeImages(match[1]))
+    .filter((images) => images.length > 0);
+}
+
 function expectedImages(suffix) {
   return captureNames.map((name) => `assets/readme/hope-${name}-${suffix}.png`);
 }
@@ -43,6 +49,21 @@ test("README examples keep English and Korean assets separate", async () => {
   assert.match(english, /docs\/diffs\/ky-867-retry-extend\.en\.html/u);
   assert.match(korean, /docs\/alignments\/rescene-fan-calendar\.ko\.html/u);
   assert.match(korean, /docs\/diffs\/ky-867-retry-extend\.ko\.html/u);
+});
+
+test("README examples show overviews and collapse detailed captures by default", async () => {
+  const [english, korean] = await Promise.all([
+    read("README.md"),
+    read("README.ko.md"),
+  ]);
+
+  for (const [source, suffix] of [[english, "en"], [korean, "ko"]]) {
+    const images = expectedImages(suffix);
+    assert.deepEqual(collapsedExampleImages(source), [
+      images.slice(1, 3),
+      images.slice(4),
+    ]);
+  }
 });
 
 test("generated README HTML links each locale to its sibling", async () => {
