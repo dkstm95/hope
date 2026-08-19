@@ -32,20 +32,22 @@ Align은 확인 가능한 근거로 검토하고, 결과를 바꿀 수 있는 �
 
 첨부 자료가 없는 중요한 UI 작업에서는 프로젝트를 먼저 살피고, 필요하면 웹 서치로 조사해 2~3개의 이미지 시안을 제시합니다.
 
-> [!NOTE]
+> [!IMPORTANT]
 > Align 문서는 프로젝트 문서입니다. 사용자가 제외하지 않는 한 관련 변경과
 > 함께 버전 관리에 포함합니다.
 
 **전체 HTML 예시:** [출처 충돌·변경·취소와 확인 책임을 합의한 한국어 팬 일정 Align 문서를 엽니다.](docs/alignments/rescene-fan-calendar.ko.html)
 
-아래 이미지는 이 Align 예시에서 만들었습니다. 샘플 데이터를 사용하며 실제
-`rescene.fan` 운영 화면이 아닙니다.
-
 ![신뢰 가능한 팬 일정의 목표, 완료 기준, 경계를 보여 주는 한국어 Hope Align 예시](assets/readme/hope-align-ko.png)
+
+<details>
+<summary>Align 세부 이미지 보기</summary>
 
 | 비교한 UI 방향 | 출처와 데이터 운영 결정 |
 | --- | --- |
 | [![한국어 Align 문서에서 비교한 신뢰 가능한 팬 일정 UI 두 가지](assets/readme/hope-align-directions-ko.png)](assets/readme/hope-align-directions-ko.png) | [![한국어 Align 문서의 출처 우선순위, 충돌, 최신성, 취소 결정](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
+
+</details>
 
 ---
 
@@ -64,18 +66,23 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 > 없으면 저장소에서 사용자가 만든 최신 열린 PR을 선택합니다.
 > PR이 바뀌면 Diff를 다시 실행하세요.
 
-> [!NOTE]
-> 아래 이미지는 [Ky PR #867](https://github.com/sindresorhus/ky/pull/867)을 바탕으로 고정된 한국어 Diff 예시에서 만들었습니다.
+아래 이미지는 [Ky PR #867](https://github.com/sindresorhus/ky/pull/867)을 바탕으로
+고정된 한국어 Diff 예시에서 만들었습니다.
 
 **전체 HTML 예시:** [Ky PR #867의 재시도 설정을 마이크로월드와 퀴즈로 설명한 한국어 Diff 결과물을 엽니다.](docs/diffs/ky-867-retry-extend.ko.html)
 
 ![Ky PR 867의 목표, 이전과 이후 동작, 검증 항목을 보여 주는 한국어 Hope Diff 예시](assets/readme/hope-diff-ko.png)
+
+<details>
+<summary>Diff 세부 이미지 보기</summary>
 
 | 핵심 변경 | 인터랙티브 마이크로월드 |
 | --- | --- |
 | [![한국어 Diff 문서의 재시도 설정 핵심 변경 설명](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![한국어 Diff 문서의 인터랙티브 재시도 설정 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
 
 [![한국어 Diff 문서의 재시도 동작 이해 퀴즈](assets/readme/hope-diff-quiz-ko.png)](assets/readme/hope-diff-quiz-ko.png)
+
+</details>
 
 ---
 
@@ -90,9 +97,10 @@ Red가 제출한 지적 사항과 범위 안의 근거만 보고 반증을 시�
 
 메인 에이전트는 최종 판정을 유지하고 근거로 뒷받침되는 지적 사항만 보고합니다.
 
-일상적인 실행 규모를 줄이려면 Hope에 Red 리뷰어 수를 제한해 달라고 요청하세요.
-규모만으로 Blue를 추가하지는 않지만, 영향이 크거나 실질적으로 불확실한 지적
-사항에는 여전히 Blue가 붙습니다.
+> [!TIP]
+> 일상적인 실행 규모를 줄이려면 Hope에 Red 리뷰어 수를 제한해 달라고 요청하세요.
+> 규모만으로 Blue를 추가하지는 않지만, 영향이 크거나 실질적으로 불확실한 지적
+> 사항에는 여전히 Blue가 붙습니다.
 
 ---
 
@@ -133,12 +141,13 @@ Write의 공통 기준은 조지 오웰의
 - Node.js 22 이상
 - Diff를 사용하려면 인증된 [GitHub CLI](https://cli.github.com/)가 필요합니다. 필요하다면 먼저 `gh auth login`을 실행하세요.
 
-가장 간단한 설치 방법은 AI에게 다음과 같이 요청하는 것입니다.
-
-```text
-https://github.com/dkstm95/hope 저장소의 Hope를 현재 AI 도구에 설치해 주세요.
-저장소의 README에 따라 설치하고, 다시 시작해야 한다면 알려 주세요.
-```
+> [!TIP]
+> 가장 간단한 설치 방법은 AI에게 다음과 같이 요청하는 것입니다.
+>
+> ```text
+> https://github.com/dkstm95/hope 저장소의 Hope를 현재 AI 도구에 설치해 주세요.
+> 저장소의 README에 따라 설치하고, 다시 시작해야 한다면 알려 주세요.
+> ```
 
 직접 설치하려면 사용 중인 도구의 명령을 실행하세요.
 
