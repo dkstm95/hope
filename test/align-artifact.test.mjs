@@ -433,6 +433,23 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.doesNotMatch(first, /현재 구현 기준|구현 계약/u);
   assert.match(first, /<script id="hope-align-data" type="application\/json">/u);
   assert.doesNotMatch(first, /target="_blank"/u);
+  assert.doesNotMatch(first, /class="locale-link"/u);
+
+  const withAlternateLocale = renderAlignArtifact(data, {
+    alternateLocale: { href: "upload-recovery.en.html", locale: "en-US" },
+    digest: "0".repeat(64),
+  });
+  assert.match(
+    withAlternateLocale,
+    /<a class="locale-link" href="upload-recovery\.en\.html" hreflang="en-US" lang="en-US">English<\/a>/u,
+  );
+  assert.throws(
+    () => renderAlignArtifact(data, {
+      alternateLocale: { href: "..\/outside.html", locale: "en-US" },
+      digest: "0".repeat(64),
+    }),
+    /alternateLocale must name a supported locale and sibling HTML file/u,
+  );
 });
 
 test("renderer omits empty optional sections instead of filling the screen", () => {

@@ -36,16 +36,16 @@ Align은 확인 가능한 근거로 검토하고, 결과를 바꿀 수 있는 �
 > Align 문서는 프로젝트 문서입니다. 사용자가 제외하지 않는 한 관련 변경과
 > 함께 버전 관리에 포함합니다.
 
-**전체 HTML 예시:** [출처 충돌·변경·취소와 확인 책임을 합의한 팬 일정 Align 문서를 엽니다.](docs/alignments/rescene-fan-calendar.html)
+**전체 HTML 예시:** [출처 충돌·변경·취소와 확인 책임을 합의한 한국어 팬 일정 Align 문서를 엽니다.](docs/alignments/rescene-fan-calendar.ko.html)
 
 아래 이미지는 이 Align 예시에서 만들었습니다. 샘플 데이터를 사용하며 실제
 `rescene.fan` 운영 화면이 아닙니다.
 
-![신뢰 가능한 팬 일정의 목표, 완료 기준, 경계를 보여 주는 한국어 Hope Align 예시](assets/readme/hope-align.png)
+![신뢰 가능한 팬 일정의 목표, 완료 기준, 경계를 보여 주는 한국어 Hope Align 예시](assets/readme/hope-align-ko.png)
 
 | 비교한 UI 방향 | 출처와 데이터 운영 결정 |
 | --- | --- |
-| [![한국어 Align 문서에서 비교한 신뢰 가능한 팬 일정 UI 두 가지](assets/readme/hope-align-directions.png)](assets/readme/hope-align-directions.png) | [![한국어 Align 문서의 출처 우선순위, 충돌, 최신성, 취소 결정](assets/readme/hope-align-decisions.png)](assets/readme/hope-align-decisions.png) |
+| [![한국어 Align 문서에서 비교한 신뢰 가능한 팬 일정 UI 두 가지](assets/readme/hope-align-directions-ko.png)](assets/readme/hope-align-directions-ko.png) | [![한국어 Align 문서의 출처 우선순위, 충돌, 최신성, 취소 결정](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
 
 ---
 
@@ -65,17 +65,17 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 > PR이 바뀌면 Diff를 다시 실행하세요.
 
 > [!NOTE]
-> 아래 이미지는 [Ky PR #867](https://github.com/sindresorhus/ky/pull/867)로 생성한 실제 한국어 Diff HTML 결과물입니다.
+> 아래 이미지는 [Ky PR #867](https://github.com/sindresorhus/ky/pull/867)을 바탕으로 고정된 한국어 Diff 예시에서 만들었습니다.
 
-**전체 HTML 예시:** [Ky PR #867의 재시도 설정을 마이크로월드와 퀴즈로 설명한 Diff 결과물을 엽니다.](docs/diffs/ky-867-retry-extend.html)
+**전체 HTML 예시:** [Ky PR #867의 재시도 설정을 마이크로월드와 퀴즈로 설명한 한국어 Diff 결과물을 엽니다.](docs/diffs/ky-867-retry-extend.ko.html)
 
-![Ky PR 867의 목표, 이전과 이후 동작, 검증 항목을 보여 주는 한국어 Hope Diff 예시](assets/readme/hope-diff.png)
+![Ky PR 867의 목표, 이전과 이후 동작, 검증 항목을 보여 주는 한국어 Hope Diff 예시](assets/readme/hope-diff-ko.png)
 
 | 핵심 변경 | 인터랙티브 마이크로월드 |
 | --- | --- |
-| [![한국어 Diff 문서의 재시도 설정 핵심 변경 설명](assets/readme/hope-diff-core.png)](assets/readme/hope-diff-core.png) | [![한국어 Diff 문서의 인터랙티브 재시도 설정 마이크로월드](assets/readme/hope-diff-microworld.png)](assets/readme/hope-diff-microworld.png) |
+| [![한국어 Diff 문서의 재시도 설정 핵심 변경 설명](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![한국어 Diff 문서의 인터랙티브 재시도 설정 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
 
-[![한국어 Diff 문서의 재시도 동작 이해 퀴즈](assets/readme/hope-diff-quiz.png)](assets/readme/hope-diff-quiz.png)
+[![한국어 Diff 문서의 재시도 동작 이해 퀴즈](assets/readme/hope-diff-quiz-ko.png)](assets/readme/hope-diff-quiz-ko.png)
 
 ---
 

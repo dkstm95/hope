@@ -1,6 +1,6 @@
 {
   "name": "hope",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "private": true,
   "type": "module",
   "description": "Hope plugin source and release tooling for AI-assisted work.",
@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build:plugin": "node tools/build-plugin.mjs",
+    "check:readme-assets": "node tools/render-readme-assets.mjs --check",
     "plugin:dev:install": "node tools/install-plugin-dev.mjs",
     "render:readme-assets": "node tools/render-readme-assets.mjs",
     "release:check": "node tools/release-impact.mjs",

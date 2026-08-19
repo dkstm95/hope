@@ -2,6 +2,8 @@ name: Verify
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -50,7 +52,7 @@ jobs:
         run: node --test test/platform-smoke.test.mjs
 
   browser:
-    runs-on: ubuntu-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
         with:
@@ -60,6 +62,7 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - run: npm run check:readme-assets
       - run: npm run test:browser
 
   required:

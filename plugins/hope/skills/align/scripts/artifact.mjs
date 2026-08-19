@@ -621,7 +621,7 @@ function artifactRevision(number, agreedAt, input) {
   });
 }
 
-function sealHtml(source) {
+export function sealAlignHtml(source) {
   const matches = source.match(new RegExp(DIGEST_META_PATTERN.source, "gu")) ?? [];
   if (matches.length !== 1 || !source.includes(DIGEST_PLACEHOLDER)) {
     throw new Error("Align renderer did not produce one digest placeholder");
@@ -1081,7 +1081,7 @@ export async function createAlignArtifact({ inputPath, outputPath, root }, depen
     createdAt: agreedAt,
     revisions: Object.freeze([artifactRevision(1, agreedAt, input)]),
   });
-  const sealed = sealHtml(renderAlignArtifact(data, { digest: DIGEST_PLACEHOLDER }));
+  const sealed = sealAlignHtml(renderAlignArtifact(data, { digest: DIGEST_PLACEHOLDER }));
   assertArtifactSize(sealed.bytes);
   const parent = await ensureSafeParent(resolvedRoot, target, { create: true });
   await publishNew(resolvedRoot, target, parent, sealed.bytes, dependencies);
@@ -1153,7 +1153,7 @@ export async function reviseAlignArtifact({
     theme: input.theme,
     revisions: Object.freeze([...original.data.revisions, revision]),
   });
-  const sealed = sealHtml(renderAlignArtifact(data, { digest: DIGEST_PLACEHOLDER }));
+  const sealed = sealAlignHtml(renderAlignArtifact(data, { digest: DIGEST_PLACEHOLDER }));
   assertArtifactSize(sealed.bytes);
   await replaceOwned(
     resolvedRoot,

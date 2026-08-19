@@ -42,18 +42,18 @@ first, uses web search when needed, and presents two or three image mockups.
 > Align briefs are project documentation. Later version-control work includes
 > them with related project changes unless the person excludes them.
 
-**Complete example HTML:** [Open a Korean Align brief for a fan schedule that
+**Complete example HTML:** [Open the English Align brief for a fan schedule that
 makes source conflicts, changes, cancellations, and verification ownership
-explicit.](docs/alignments/rescene-fan-calendar.html)
+explicit.](docs/alignments/rescene-fan-calendar.en.html)
 
 The captures below come from this example. It uses sample data and does not
 represent the live `rescene.fan` interface.
 
-![Korean Hope Align example showing the trusted fan-schedule goal, completion criteria, and boundary](assets/readme/hope-align.png)
+![English Hope Align example showing the trusted fan-schedule goal, completion criteria, and boundary](assets/readme/hope-align-en.png)
 
 | Compared UI directions | Source and lifecycle decisions |
 | --- | --- |
-| [![Two UI directions for the trusted fan schedule in a Korean Align artifact](assets/readme/hope-align-directions.png)](assets/readme/hope-align-directions.png) | [![Source priority, conflict, freshness, and cancellation decisions in a Korean Align artifact](assets/readme/hope-align-decisions.png)](assets/readme/hope-align-decisions.png) |
+| [![Two UI directions for the trusted fan schedule in an English Align artifact](assets/readme/hope-align-directions-en.png)](assets/readme/hope-align-directions-en.png) | [![Source priority, conflict, freshness, and cancellation decisions in an English Align artifact](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
 
 ---
 
@@ -77,19 +77,19 @@ understanding in follow-up decisions and work.
 > Run Diff again when the pull request changes.
 
 > [!NOTE]
-> The captures below come from an actual Korean Diff HTML artifact generated
-> from [Ky PR #867](https://github.com/sindresorhus/ky/pull/867).
+> The captures below come from a fixed English Diff example based on
+> [Ky PR #867](https://github.com/sindresorhus/ky/pull/867).
 
-**Complete example HTML:** [Open the Korean Diff artifact for Ky PR #867 with
-its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.html)
+**Complete example HTML:** [Open the English Diff artifact for Ky PR #867 with
+its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.en.html)
 
-![Korean Hope Diff example for Ky pull request 867 showing the goal, before and after behavior, and verification item](assets/readme/hope-diff.png)
+![English Hope Diff example for Ky pull request 867 showing the goal, before and after behavior, and verification item](assets/readme/hope-diff-en.png)
 
 | Core change | Interactive microworld |
 | --- | --- |
-| [![The retry configuration change explained in a Korean Diff artifact](assets/readme/hope-diff-core.png)](assets/readme/hope-diff-core.png) | [![An interactive retry-configuration microworld in a Korean Diff artifact](assets/readme/hope-diff-microworld.png)](assets/readme/hope-diff-microworld.png) |
+| [![The retry configuration change explained in an English Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![An interactive retry-configuration microworld in an English Diff artifact](assets/readme/hope-diff-microworld-en.png)](assets/readme/hope-diff-microworld-en.png) |
 
-[![An understanding quiz about retry behavior in a Korean Diff artifact](assets/readme/hope-diff-quiz.png)](assets/readme/hope-diff-quiz.png)
+[![An understanding quiz about retry behavior in an English Diff artifact](assets/readme/hope-diff-quiz-en.png)](assets/readme/hope-diff-quiz-en.png)
 
 ---
 

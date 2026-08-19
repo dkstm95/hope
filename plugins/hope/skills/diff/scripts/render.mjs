@@ -47,6 +47,13 @@ function html(value) {
     .replaceAll("'", "&#39;");
 }
 
+function htmlAttribute(value) {
+  return html(value)
+    .replaceAll("\r", "&#13;")
+    .replaceAll("\n", "&#10;")
+    .replaceAll("\t", "&#9;");
+}
+
 function hashSource(value) {
   return createHash("sha256").update(value).digest("base64");
 }
@@ -139,7 +146,7 @@ function evidenceBlock(
             : `<span>${html(title)}</span>`}
         </div>
         <pre class="${codeSource ? "code-evidence" : "source-text"}"><code${codeSource
-          ? ` aria-label="${html(item.excerpt)}"`
+          ? ` aria-label="${htmlAttribute(item.excerpt)}"`
           : ""}>${codeSource
           ? codeRenderer.render(item)
           : html(item.excerpt)}</code></pre>
@@ -1333,6 +1340,15 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .pull-request-link:hover,
 .pull-request-link:focus-visible { color: var(--text); }
+.locale-link {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.locale-link:hover,
+.locale-link:focus-visible { color: var(--text); }
 .external-link-icon {
   width: 16px;
   height: 16px;
@@ -2775,6 +2791,7 @@ td:first-child {
     border-radius: 5px;
   }
   .brand-product { display: none; }
+  .topbar-inner.has-locale-switch .commit-status { display: none; }
   .commit-status {
     max-width: 82px;
     overflow: hidden;
@@ -2930,8 +2947,24 @@ syncCurrent();
 })();`;
 }
 
-export async function renderReview(review, { fonts } = {}) {
+function alternateLocaleLink(value) {
+  if (value === undefined) return "";
+  if (
+    value === null
+    || typeof value !== "object"
+    || !["en-US", "ko-KR"].includes(value.locale)
+    || typeof value.href !== "string"
+    || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.html$/u.test(value.href)
+  ) {
+    throw new TypeError("alternateLocale must name a supported locale and sibling HTML file");
+  }
+  const text = value.locale === "ko-KR" ? "한국어" : "English";
+  return `<a class="locale-link" href="${html(value.href)}" hreflang="${html(value.locale)}" lang="${html(value.locale)}">${text}</a>`;
+}
+
+export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const dictionary = await loadLocale(review.snapshot.settings.locale);
+  const localeLink = alternateLocaleLink(alternateLocale);
   const fontBytes = fonts ?? Object.fromEntries(await Promise.all(
     Object.entries(fontUrls).map(async ([name, url]) => [name, await readFile(url)]),
   ));
@@ -2977,7 +3010,7 @@ export async function renderReview(review, { fonts } = {}) {
 <body>
   <a class="skip" href="#review">${html(label(dictionary, "common.skip"))}</a>
   <header class="topbar">
-    <div class="topbar-inner">
+    <div class="topbar-inner${localeLink === "" ? "" : " has-locale-switch"}">
       <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· DIFF</span></div>
       <div class="top-context">
         <svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -2988,7 +3021,7 @@ export async function renderReview(review, { fonts } = {}) {
       </div>
       <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(review.snapshot.snapshot.head)}"><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></span>
       <div class="topbar-actions">
-        <a class="pull-request-link" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
+${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-request-link" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
           <span>PR #${review.snapshot.pullRequest.number}</span>
           <svg class="external-link-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M14 5h5v5"></path>

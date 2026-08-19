@@ -461,6 +461,8 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .theme-button, .mobile-navigation > summary { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; }
 .theme-button:hover, .mobile-navigation > summary:hover { border-color: var(--border); background: var(--panel); }
 .theme-button:focus-visible, .mobile-navigation > summary:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.locale-link { color: var(--muted); font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.locale-link:hover, .locale-link:focus-visible { color: var(--text); }
 .theme-icon, .navigation-icon { width: 20px; height: 20px; stroke: currentColor; }
 .theme-icon[hidden] { display: none; }
 .mobile-navigation { display: none; }
@@ -621,6 +623,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .brand-product { display: none; }
   .repository { display: none; }
   .mobile-navigation-panel .mobile-repository { display: flex; }
+  .topbar-inner.has-locale-switch .status { display: none; }
   .status { max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .synopsis > div { grid-template-columns: 1fr; gap: ${space1}px; padding-inline: 0; }
   .behavior-steps li { grid-template-columns: 32px minmax(0, 1fr); min-height: 0; padding-bottom: ${space5}px; }
@@ -674,8 +677,24 @@ openTarget();syncCurrent();
 })();`;
 }
 
-export function renderAlignArtifact(data, { digest }) {
+function alternateLocaleLink(value) {
+  if (value === undefined) return "";
+  if (
+    value === null
+    || typeof value !== "object"
+    || !["en-US", "ko-KR"].includes(value.locale)
+    || typeof value.href !== "string"
+    || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.html$/u.test(value.href)
+  ) {
+    throw new TypeError("alternateLocale must name a supported locale and sibling HTML file");
+  }
+  const text = value.locale === "ko-KR" ? "한국어" : "English";
+  return `<a class="locale-link" href="${escapeHtml(value.href)}" hreflang="${escapeHtml(value.locale)}" lang="${escapeHtml(value.locale)}">${text}</a>`;
+}
+
+export function renderAlignArtifact(data, { alternateLocale, digest }) {
   const dictionary = dictionaries[data.locale];
+  const localeLink = alternateLocaleLink(alternateLocale);
   const current = data.revisions.at(-1);
   const content = current.content;
   const sections = [
@@ -722,12 +741,12 @@ export function renderAlignArtifact(data, { digest }) {
 <body>
   <a class="skip" href="#overview">${escapeHtml(label(dictionary, "skip"))}</a>
   <header class="topbar">
-    <div class="topbar-inner">
+    <div class="topbar-inner${localeLink === "" ? "" : " has-locale-switch"}">
       <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· ALIGN</span></div>
       ${repositoryMark(data.repository, "repository")}
       <span class="status">v${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))}</span>
       <div class="top-actions">
-        <button class="theme-button" id="theme-toggle" type="button" aria-label="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}" title="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}">
+${localeLink === "" ? "" : `        ${localeLink}\n`}        <button class="theme-button" id="theme-toggle" type="button" aria-label="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}" title="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}">
           <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${data.theme === "dark" ? " hidden" : ""}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path></svg>
           <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${data.theme === "dark" ? "" : " hidden"}><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path></svg>
         </button>
