@@ -110,6 +110,12 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator(".goal")).toContainText("중단된 업로드를 감지해");
   await expect(page.locator(".synopsis dt").filter({ hasText: "완료 기준" })).toHaveCount(1);
   await expect(page.locator(".overview .check-list > li")).toHaveCount(3);
+  await expect(page.locator(".overview .check-list")).toHaveCSS(
+    "list-style-type",
+    "decimal-leading-zero",
+  );
+  expect(await page.locator(".overview .check-list").evaluate((list) => list.tagName)).toBe("OL");
+  await expect(page.locator(".overview .check-condition").first()).toHaveCSS("font-weight", "300");
   await expect(page.locator(".overview .check-by")).toHaveText([
     "AI 에이전트 확인",
     "AI 에이전트 확인",

@@ -146,13 +146,13 @@ function goalValue(content) {
 
 function checkList(content, dictionary) {
   const checks = content.checks ?? content.success.map((condition) => ({ condition }));
-  return `<ul class="check-list">${checks.map((check) => {
+  return `<ol class="check-list">${checks.map((check) => {
     const verification = check.verify === undefined ? "" : `<p class="check-verification"><span class="check-by">${escapeHtml(label(
       dictionary,
       check.by === "human" ? "checkedByHuman" : "checkedByAgent",
     ))}</span>${authoredText(check.verify)}</p>`;
-    return `<li><strong>${authoredText(check.condition)}</strong>${verification}</li>`;
-  }).join("")}</ul>`;
+    return `<li><span class="check-condition">${authoredText(check.condition)}</span>${verification}</li>`;
+  }).join("")}</ol>`;
 }
 
 function overview(content, dictionary) {
@@ -503,10 +503,10 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .synopsis > div { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: ${space5}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
 .synopsis dt { font-weight: 700; }
 .synopsis dd { margin: 0; }
-.check-list { list-style: none; padding: 0; display: grid; gap: ${space3}px; }
-.check-list li { position: relative; padding-left: ${space4}px; }
-.check-list li::before { content: ""; position: absolute; top: .62em; left: ${space1}px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-.check-list strong { display: block; }
+.check-list { list-style: decimal-leading-zero; padding-left: ${space6}px; display: grid; gap: ${space3}px; }
+.check-list li { padding-left: ${space1}px; }
+.check-list li::marker { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.check-condition { display: block; }
 .check-verification { margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .check-by { margin-right: ${space2}px; color: var(--accent); font-weight: 700; }
 .overview + .scope { margin-top: ${space7}px; }
