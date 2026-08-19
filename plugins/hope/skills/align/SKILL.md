@@ -1,13 +1,13 @@
 ---
 name: align
-description: Use before implementation when requirements, scope, design, expected behavior, or an important assumption needs shared agreement and a durable implementation brief.
+description: Use before implementation when requirements, scope, design, expected behavior, or an important assumption needs shared agreement.
 ---
 
 # Hope Align
 
 Use the active host session to inspect the task, build a shared understanding
-with the person, and preserve the agreed goal as one self-contained HTML
-artifact.
+with the person, and preserve the agreed goal in a durable implementation brief
+when one is needed.
 
 Align does not implement the task.
 
@@ -136,11 +136,38 @@ human check passed.
 Align owns this agreed goal contract. It does not start or manage a host's goal
 feature, implementation loop, retry state, progress, or completion evidence.
 
-## Preserve the agreement
+## Decide whether the agreement needs an artifact
 
-When Align starts and reaches agreement, always create or revise its HTML
-artifact. Task size changes the amount of detail, not whether an artifact is
-created.
+When the person supplies an artifact path or available evidence identifies one
+that may own the same goal, inspect it before deciding the artifact outcome:
+
+```text
+inspect --artifact <artifact.html>
+```
+
+Do not search for a repository-wide latest artifact. If inspection verifies
+the same goal and the agreement changed materially, revise it. If the agreement
+did not change materially, retain the artifact. If inspection cannot verify the
+artifact, or shows that it is unknown, manually changed, or identity-mismatched,
+leave it in place and ask the person where to create a new artifact.
+
+After alignment reaches readiness, create or revise an HTML artifact when:
+
+- the person asks for one;
+- implementation is expected to continue in another session or pass to another
+  worker;
+- a material decision, assumption, or scope boundary must survive the active
+  conversation; or
+- a completion check depends on a person's later observation or approval.
+
+When none applies, keep the agreement in the conversation and do not create an
+artifact. This commonly covers a small, clear task that will continue in the
+active session. Do not create an artifact merely because Align ran.
+
+Decide from the available evidence. Do not ask the person to choose unless the
+need for a durable record is itself material or uncertain.
+
+When an artifact is required, preserve the agreement as follows.
 
 Read `references/artifact.md` and the complete
 `scripts/align-input-v2.schema.json` before creating structured input.
@@ -188,12 +215,6 @@ Create a first artifact with:
 create --input <draft.json> --output <artifact.html> --root <repository>
 ```
 
-If an artifact may already own the same goal, inspect it first:
-
-```text
-inspect --artifact <artifact.html>
-```
-
 A material change to the goal, checks, scope, expected behavior, constraint,
 or non-goal creates a new revision in the same artifact. A reversible technical
 choice does not.
@@ -208,19 +229,25 @@ revise --input <draft.json> --artifact <artifact.html> --expect <digest> --root 
 When visual directions were used, run `inspect` on the created or revised
 artifact before reporting alignment complete.
 
-Do not replace an unknown, manually changed, or identity-mismatched artifact.
-Leave it in place and ask the person where to create a new artifact.
-
 Treat the artifact as project documentation for the related work. Include it in
 later version-control operations for that work unless the person excludes it.
 
 ## Continue into implementation
 
-Report the absolute artifact path and the current revision.
+Report that alignment is ready. Report the artifact outcome—created, revised,
+retained, or skipped—and why. For a created, revised, or retained artifact,
+report its absolute path and current revision. If it was skipped, state that
+the agreement remains in the active conversation.
 
 Wait for an explicit user response before implementation. When implementation
-is approved in the same session, run `inspect` again and use its current content
-as the implementation contract before editing files.
+is approved in the same session, use the current agreement as the
+implementation contract. If an artifact exists, run `inspect` again before
+editing files and use its current content as that contract.
+
+Before work moves to another session or worker, create or revise the artifact
+if the agreement exists only in the conversation. Report its absolute path and
+revision, and pass that explicit path with the work. The receiving session or
+worker must inspect it before editing files.
 
 In a later session, one explicit artifact path is enough. Inspect it and use
 the current revision; do not guess a global or repository-wide “latest” Align
