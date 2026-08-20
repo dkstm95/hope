@@ -216,12 +216,13 @@ test("design direction images are validated, embedded, and kept off the network"
   assert.match(html, /복구 선택을 첫 화면의 주 행동으로 배치했다/u);
   const firstDirection = html.indexOf('id="design-direction-direction-1"');
   const secondDirection = html.indexOf('id="design-direction-direction-2"');
-  const referenceList = html.indexOf('class="direction-reference-list"');
+  const firstReference = html.indexOf("복구 요구 참고");
   assert.ok(firstDirection < html.indexOf("핵심 선택을 빠르게 찾을 수 있다."));
-  assert.ok(html.indexOf("핵심 선택을 빠르게 찾을 수 있다.") < secondDirection);
+  assert.ok(html.indexOf("핵심 선택을 빠르게 찾을 수 있다.") < firstReference);
+  assert.ok(firstReference < secondDirection);
   assert.ok(secondDirection < html.indexOf("현재 단계가 분명하다."));
-  assert.ok(html.indexOf("현재 단계가 분명하다.") < referenceList);
-  assert.ok(referenceList < html.indexOf("복구 요구 참고"));
+  assert.match(html, /<details class="direction-references">[\s\S]*?<summary>참고 자료 · 1<\/summary>/u);
+  assert.doesNotMatch(html, /direction-reference-list|class="direction-reference"/u);
   assert.doesNotMatch(html, /design-direction-detail-list/u);
   assert.doesNotMatch(html, new RegExp(firstImage.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
   assert.doesNotMatch(html, /<img[^>]+https?:/u);
@@ -421,7 +422,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="8"/u);
+  assert.match(first, /name="hope-align-design-version" content="9"/u);
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
@@ -429,6 +430,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /class="outcome-mark" aria-hidden="true">×</u);
   assert.match(first, />판정 결과</u);
   assert.match(first, /<ol class="decision-list">/u);
+  assert.match(first, /<details class="decision-disclosure">/u);
   assert.match(first, />결정 사항</u);
   assert.doesNotMatch(first, /id="intent-history"/u);
   assert.doesNotMatch(first, /id="goal-history"/u);
@@ -440,6 +442,9 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, />사용자 확인</u);
   assert.match(first, /<ol class="check-list">/u);
   assert.match(first, /<span class="check-condition">/u);
+  assert.match(first, /<details class="check-verification">/u);
+  assert.match(first, /<summary>AI 에이전트 확인<\/summary>/u);
+  assert.match(first, /<details class="body-section document-section section-disclosure" id="evidence">/u);
   assert.doesNotMatch(first, /<ul class="check-list">/u);
   assert.doesNotMatch(first, /<ol class="check-list"><li><strong>/u);
   assert.match(first, /list-style: decimal-leading-zero/u);

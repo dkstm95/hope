@@ -153,10 +153,13 @@ function goalValue(content) {
 function checkList(content, dictionary) {
   const checks = content.checks ?? content.success.map((condition) => ({ condition }));
   return `<ol class="check-list">${checks.map((check) => {
-    const verification = check.verify === undefined ? "" : `<p class="check-verification"><span class="check-by">${escapeHtml(label(
-      dictionary,
-      check.by === "human" ? "checkedByHuman" : "checkedByAgent",
-    ))}</span>${authoredText(check.verify)}</p>`;
+    const verification = check.verify === undefined ? "" : `<details class="check-verification">
+      <summary>${escapeHtml(label(
+        dictionary,
+        check.by === "human" ? "checkedByHuman" : "checkedByAgent",
+      ))}</summary>
+      <div class="check-verification-content">${authoredParagraphs(check.verify)}</div>
+    </details>`;
     return `<li><span class="check-condition">${authoredText(check.condition)}</span>${verification}</li>`;
   }).join("")}</ol>`;
 }
@@ -192,9 +195,12 @@ function scopeSection(content, dictionary) {
 
 function directionReferences(references, dictionary) {
   if (references.length === 0) return "";
-  return `<div class="direction-references"><h4>${escapeHtml(label(dictionary, "references"))}</h4><ul>${references.map(
+  return `<details class="direction-references">
+    <summary>${escapeHtml(label(dictionary, "references"))} · ${references.length}</summary>
+    <div class="direction-reference-content"><ul>${references.map(
     (reference) => `<li><a href="${escapeHtml(reference.url)}">${authoredText(reference.label)}</a><p><strong>${escapeHtml(label(dictionary, "influence"))}:</strong> ${authoredText(reference.influence)}</p></li>`,
-  ).join("")}</ul></div>`;
+  ).join("")}</ul></div>
+  </details>`;
 }
 
 function designDirectionsComparison(directions, dictionary, idPrefix = "") {
@@ -217,29 +223,15 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
       <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
       <div><h4>${escapeHtml(label(dictionary, "tradeoffs"))}</h4>${textList(option.tradeoffs)}</div>
     </div>
+    ${directionReferences(option.references, dictionary)}
   </li>`;
   }).join("");
-  const optionReferences = directions.options.flatMap((option, index) => {
-    if (option.references.length === 0) return [];
-    const optionId = `${idPrefix}design-direction-${option.id}`;
-    return [`<li class="direction-reference" aria-labelledby="${escapeHtml(optionId)}-reference-title">
-    <span class="direction-reference-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
-    <div class="direction-reference-content">
-      <h3 id="${escapeHtml(optionId)}-reference-title">${authoredText(option.title)}</h3>
-      ${directionReferences(option.references, dictionary)}
-    </div>
-  </li>`];
-  });
-  const referenceList = optionReferences.length === 0
-    ? ""
-    : `<ol class="direction-reference-list">${optionReferences.join("")}</ol>`;
   const recommendation = optionById.get(directions.recommendation.optionId);
   const selection = optionById.get(directions.selection.optionId);
   const decidedBy = directions.selection.decidedBy === "delegated"
     ? label(dictionary, "decidedByDelegated")
     : label(dictionary, "decidedByUser");
   return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>
-    ${referenceList}
     <dl class="direction-decisions">
       <div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd><strong>${authoredText(recommendation.title)}</strong>${authoredParagraphs(directions.recommendation.reason)}</dd></div>
       <div><dt>${escapeHtml(label(dictionary, "selection"))}</dt><dd><strong>${authoredText(selection.title)}</strong><span class="selection-source">${escapeHtml(decidedBy)}</span>${authoredParagraphs(directions.selection.reason)}</dd></div>
@@ -284,8 +276,10 @@ function agreementSection(content, dictionary) {
     <h3 class="subheading">${escapeHtml(label(dictionary, "agreedDecisions"))}</h3>
     <ol class="decision-list">${content.decisions.map((decision, index) => `<li>
       <span class="decision-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
-      <h3>${authoredText(decision.decision)}</h3>
-      ${authoredParagraphs(decision.reason)}
+      <details class="decision-disclosure">
+        <summary><h3>${authoredText(decision.decision)}</h3></summary>
+        <div class="decision-reason">${authoredParagraphs(decision.reason)}</div>
+      </details>
     </li>`).join("")}</ol>
   </div>`;
   const choiceColumn = content.openChoices.length === 0 ? "" : `<div>
@@ -307,13 +301,13 @@ function evidenceLocation(item) {
 
 function evidenceSection(content, dictionary) {
   if (content.evidence.length === 0) return undefined;
-  return `<section class="body-section document-section" id="evidence" aria-labelledby="evidence-title">
-    <h2 id="evidence-title">${escapeHtml(label(dictionary, "evidence"))}</h2>
-    <dl class="evidence-list">${content.evidence.map((item) => `<div>
+  return `<details class="body-section document-section section-disclosure" id="evidence">
+    <summary class="section-disclosure-summary"><h2 id="evidence-title">${escapeHtml(label(dictionary, "evidence"))} · ${content.evidence.length}</h2></summary>
+    <div class="section-disclosure-content"><dl class="evidence-list">${content.evidence.map((item) => `<div>
       <dt>${authoredText(item.label)}</dt>
       <dd>${evidenceLocation(item)}</dd>
-    </div>`).join("")}</dl>
-  </section>`;
+    </div>`).join("")}</dl></div>
+  </details>`;
 }
 
 function compactRevisionContent(content, dictionary, idPrefix) {
@@ -531,12 +525,17 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .check-list li::marker { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .check-condition { display: block; }
 .check-verification { margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.check-by { margin-right: ${space2}px; color: var(--accent); font-weight: 700; }
+.check-verification > summary { min-height: 32px; display: flex; align-items: center; color: var(--accent); cursor: pointer; font-weight: 700; list-style: none; }
+.check-verification > summary::-webkit-details-marker { display: none; }
+.check-verification > summary::after { margin-left: ${space2}px; content: "›"; transition: transform 120ms ease; }
+.check-verification[open] > summary::after { transform: rotate(90deg); }
+.check-verification-content { padding: 0 0 ${space1}px; }
+.check-verification-content p + p { margin-top: ${space1}px; }
 .overview + .scope { margin-top: ${space7}px; }
 .scope { display: grid; }
 .scope-column { padding: ${space4}px ${space2}px ${space5}px; }
 .scope-column + .scope-column { border-top: 1px solid var(--border); }
-.scope h3, .body-section > h2 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
+.scope h3, .body-section > h2, .section-disclosure-summary h2 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
 .design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
@@ -554,14 +553,14 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .direction-summary { margin-top: ${space4}px; }
 .direction-summary p + p { margin-top: ${space2}px; }
 .direction-details { display: grid; gap: ${space4}px; margin-top: ${space4}px; padding-top: ${space3}px; border-top: 1px solid var(--border); }
-.direction-details h4, .direction-references h4 { margin: 0 0 ${space2}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.direction-details h4 { margin: 0 0 ${space2}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-details .plain-list, .direction-references ul { padding-left: ${space4}px; display: grid; gap: ${space1}px; }
-.direction-reference-list { list-style: none; padding: 0; border-top: 1px solid var(--border); }
-.direction-reference { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space4}px; padding: ${space4}px ${space2}px ${space5}px; }
-.direction-reference + .direction-reference { border-top: 1px solid var(--border); }
-.direction-reference-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
-.direction-reference-content { min-width: 0; }
-.direction-reference-content > h3 { margin: 0 0 ${space3}px; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
+.direction-references { margin-top: ${space4}px; padding-top: ${space3}px; border-top: 1px solid var(--border); }
+.direction-references > summary { min-height: 32px; display: flex; align-items: center; color: var(--accent); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; list-style: none; }
+.direction-references > summary::-webkit-details-marker { display: none; }
+.direction-references > summary::after { margin-left: ${space2}px; content: "›"; transition: transform 120ms ease; }
+.direction-references[open] > summary::after { transform: rotate(90deg); }
+.direction-reference-content { min-width: 0; padding-top: ${space2}px; }
 .direction-references li p { margin: ${space1}px 0 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-decisions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
 .direction-decisions > div { display: grid; gap: ${space1}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
@@ -591,12 +590,24 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .agreement-groups > div + div { margin-top: ${space5}px; padding-top: ${space5}px; border-top: 1px solid var(--border); }
 .subheading { margin: 0 0 ${space3}px; color: var(--accent); font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .decision-list { list-style: none; padding: 0; }
-.decision-list li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space1}px ${space4}px; padding: ${space3}px 0; border-top: 1px solid var(--border); }
+.decision-list li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space1}px ${space4}px; padding: ${space2}px 0; border-top: 1px solid var(--border); }
 .decision-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .decision-list li:first-child { border-top: 0; }
-.decision-list h3 { grid-column: 2; margin: 0; font-size: inherit; }
-.decision-list p { grid-column: 2; color: var(--muted); }
-.decision-number { grid-row: 1 / span 2; }
+.decision-disclosure { min-width: 0; }
+.decision-disclosure > summary { min-height: 32px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: ${space2}px; cursor: pointer; list-style: none; }
+.decision-disclosure > summary::-webkit-details-marker { display: none; }
+.decision-disclosure > summary::after { content: "›"; transition: transform 120ms ease; }
+.decision-disclosure[open] > summary::after { transform: rotate(90deg); }
+.decision-list h3 { margin: 0; font-size: inherit; }
+.decision-reason { padding: 0 ${space5}px ${space1}px 0; color: var(--muted); }
+.decision-number { padding-top: ${space2}px; }
+.section-disclosure { border: 0; }
+.section-disclosure-summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; list-style: none; }
+.section-disclosure-summary::-webkit-details-marker { display: none; }
+.section-disclosure-summary h2 { display: flex; width: 100%; align-items: center; gap: ${space2}px; }
+.section-disclosure-summary h2::after { margin-left: auto; color: var(--text); content: "›"; transition: transform 120ms ease; }
+.section-disclosure[open] > .section-disclosure-summary h2::after { transform: rotate(90deg); }
+.section-disclosure:not([open]) > .section-disclosure-summary h2 { margin-bottom: 0; }
 .evidence-list > div { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(0,1fr); gap: ${space4}px; padding: ${space3}px ${space2}px; border-top: 1px solid var(--border); }
 .evidence-list dt { font-weight: 700; }
 .evidence-list dd { margin: 0; overflow-wrap: anywhere; }
@@ -628,6 +639,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
   .goal { font-size: ${TYPE.goal.narrow.fontSize}px; line-height: ${TYPE.goal.narrow.lineHeight}; }
   .check-verification { font-size: ${TYPE.supporting.narrow.fontSize}px; }
+  .check-verification > summary, .direction-references > summary, .decision-disclosure > summary { min-height: 44px; }
   .design-direction-list, .design-direction-list.design-direction-count-3, .direction-decisions { grid-template-columns: 1fr; }
   .design-direction { padding-inline: ${space2}px; }
   .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
@@ -659,6 +671,14 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .layout { display: block; }
   .main { padding: 0; }
   .design-direction { break-inside: avoid; }
+  .check-verification-content,
+  .direction-reference-content,
+  .decision-reason,
+  .section-disclosure-content { display: block !important; }
+  .check-verification::details-content,
+  .direction-references::details-content,
+  .decision-disclosure::details-content,
+  .section-disclosure::details-content { content-visibility: visible; }
   a { color: inherit; text-decoration: none; }
 }
 `;

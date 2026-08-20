@@ -89,7 +89,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 10);
+  assert.equal(first.rendererVersion, 11);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -220,7 +220,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /class="review-count/u);
   assert.doesNotMatch(html, /class="review-kind-counts/u);
   assert.match(html, /<ul class="review-items review-items-compact" role="list"><li><article/u);
-  assert.match(html, /<ul class="review-items review-items-full" role="list"><li><article/u);
+  assert.match(
+    html,
+    /<details class="review-section review-section-collapsible" id="judge">[\s\S]*?<ul class="review-items review-items-full" role="list"><li><article/u,
+  );
   assert.match(html, /id="summary-review-item-1"/u);
   assert.match(html, /id="summary-review-item-1"[\s\S]*?<h4><a href="#review-item-1">/u);
   const compactItem = html.match(
@@ -782,6 +785,8 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.match(html, />Case<\/th>/u);
   assert.match(html, /class="microworld" data-microworld/u);
   assert.match(html, /class="microworld-eyebrow">Try it<\/p>/u);
+  assert.match(html, /<details class="microworld-disclosure">\s*<summary>Change the model<\/summary>/u);
+  assert.doesNotMatch(html, /<details class="microworld-disclosure" open>/u);
   assert.match(
     html,
     /Explanation model only\. It does not run repository code or report a test result\./u,

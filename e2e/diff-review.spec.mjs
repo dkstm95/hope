@@ -492,6 +492,11 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#review-title")).toHaveText(
     "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
   );
+  const judge = page.locator("#judge");
+  await expect(judge).not.toHaveAttribute("open", "");
+  await expect(judge.locator(".section-content")).not.toBeVisible();
+  await judge.locator(":scope > summary").click();
+  await expect(judge.locator(".section-content")).toBeVisible();
   const itemActionColumns = await page.locator(
     ".review-items-full .item-actions",
   ).first().evaluate((element) => getComputedStyle(element).gridTemplateColumns);
@@ -623,6 +628,8 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
 
   await page.emulateMedia({ media: "print" });
   await expect(page.locator("#beginner-primer .beginner-primer-content")).toBeVisible();
+  await expect(page.locator("#judge .section-content")).toBeVisible();
+  await expect(page.locator(".microworld-content")).toBeVisible();
   await page.emulateMedia({ media: "screen" });
 
   for (const viewport of [
@@ -668,8 +675,10 @@ test("contents tracks the current section and keeps sticky navigation clear", as
 }) => {
   await openArtifact(page, viewports.desktop);
   const judge = page.locator("#judge");
+  await expect(judge).not.toHaveAttribute("open", "");
   await page.locator('.toc-desktop a[href="#judge"]').click();
   await expect(judge).toBeFocused();
+  await expect(judge).toHaveAttribute("open", "");
 
   const currentLinks = page.locator('.toc-desktop a[aria-current="location"]');
   await expect(currentLinks).toHaveCount(1);
@@ -697,6 +706,11 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   );
   await expect(page.locator("#explore .behavior-visual")).toBeVisible();
   await expect(page.locator("#explore .decision-table")).toBeVisible();
+  const disclosure = world.locator(".microworld-disclosure");
+  await expect(disclosure).not.toHaveAttribute("open", "");
+  await expect(disclosure.locator(".microworld-content")).not.toBeVisible();
+  await disclosure.locator(":scope > summary").click();
+  await expect(disclosure.locator(".microworld-content")).toBeVisible();
 
   const groups = world.locator(".microworld-control-group");
   await expect(groups).toHaveCount(2);
@@ -998,7 +1012,10 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
 }) => {
   await openArtifact(page, { height: 220, width: 320 });
   await page.locator("#judge").evaluate(
-    (element) => element.scrollIntoView({ behavior: "instant", block: "start" }),
+    (element) => {
+      element.open = true;
+      element.scrollIntoView({ behavior: "instant", block: "start" });
+    },
   );
 
   const toc = page.locator(".toc-mobile");
@@ -1166,7 +1183,13 @@ test("closed disclosures stay compact", async ({
 }) => {
   await openArtifact(page, viewports.desktop);
 
-  for (const selector of ["#teaching-aids", ".quiz-question:first-child", ".artifact-details"]) {
+  for (const selector of [
+    "#judge",
+    ".microworld-disclosure",
+    "#teaching-aids",
+    ".quiz-question:first-child",
+    ".artifact-details",
+  ]) {
     const disclosure = page.locator(selector);
     await expect(disclosure).not.toHaveAttribute("open", "");
     const dimensions = await disclosure.evaluate((element) => ({
@@ -1344,6 +1367,10 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await expect(evidenceSection).toContainText("그 밖의 수집 출처");
     await expect(evidenceSection).toContainText("관련 맥락");
     await expect(evidenceSection).toContainText("변경 파일");
+    const judge = page.locator("#judge");
+    await expect(judge).not.toHaveAttribute("open", "");
+    await judge.locator(":scope > summary").click();
+    await expect(judge.locator(".review-items-full")).toBeVisible();
     await expect(page.locator(
       '.code-evidence code[aria-label*="throw new Error()"]',
     ).first()).toContainText(
@@ -1351,6 +1378,7 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     );
     const world = page.locator("#explore .microworld");
     await expect(world).toBeVisible();
+    await world.locator(".microworld-disclosure > summary").click();
     await expect(world.locator(".microworld-noscript")).toBeVisible();
     await expect(world.locator(".microworld-noscript")).toContainText(
       "기본 상황을 표시합니다.",

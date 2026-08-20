@@ -338,9 +338,12 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
       ${userParagraphs(world.instructions)}
       <p class="microworld-notice">${html(label(dictionary, "microworld.notice"))}</p>
     </header>
-    <div class="microworld-controls" role="group" aria-labelledby="microworld-controls-title">
-      <p class="microworld-controls-title" id="microworld-controls-title">${html(label(dictionary, "microworld.controls"))}</p>
-      <div>${world.controls.map((control) => `<fieldset
+    <details class="microworld-disclosure">
+      <summary>${html(label(dictionary, "microworld.controls"))}</summary>
+      <div class="microworld-content">
+        <div class="microworld-controls" role="group" aria-labelledby="microworld-controls-title">
+          <p class="sr-only" id="microworld-controls-title">${html(label(dictionary, "microworld.controls"))}</p>
+          <div>${world.controls.map((control) => `<fieldset
         class="microworld-control-group"
         data-control-id="${html(control.id)}"
         data-control-kind="${html(control.kind)}"
@@ -365,13 +368,13 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
           }).join("")}
         </div>
       </fieldset>`).join("")}</div>
-    </div>
-    <noscript><p class="microworld-noscript">${html(label(dictionary, "microworld.noScript"))}</p></noscript>
-    <p class="sr-only" role="status" aria-live="polite" data-microworld-status>${html(
-      scenarioStatus(defaultScenario),
-    )}</p>
-    <div class="microworld-scenarios" role="region" aria-label="${html(label(dictionary, "microworld.selection"))}">
-      ${world.scenarios.map((scenario) => `<article
+        </div>
+        <noscript><p class="microworld-noscript">${html(label(dictionary, "microworld.noScript"))}</p></noscript>
+        <p class="sr-only" role="status" aria-live="polite" data-microworld-status>${html(
+          scenarioStatus(defaultScenario),
+        )}</p>
+        <div class="microworld-scenarios" role="region" aria-label="${html(label(dictionary, "microworld.selection"))}">
+          ${world.scenarios.map((scenario) => `<article
         class="microworld-scenario"
         data-selection-key="${html(scenario.selectionKey)}"
         data-status="${html(scenarioStatus(scenario))}"
@@ -394,18 +397,20 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
           ${userParagraphs(scenario.lesson)}
         </div>
       </article>`).join("")}
-    </div>
-    <dl class="microworld-boundary">
-      <div>
-        <dt>${html(label(dictionary, "microworld.simplifies"))}</dt>
-        <dd>${userParagraphs(world.simplifies)}</dd>
+        </div>
+        <dl class="microworld-boundary">
+          <div>
+            <dt>${html(label(dictionary, "microworld.simplifies"))}</dt>
+            <dd>${userParagraphs(world.simplifies)}</dd>
+          </div>
+          <div>
+            <dt>${html(label(dictionary, "microworld.omits"))}</dt>
+            <dd>${userParagraphs(world.omits)}</dd>
+          </div>
+        </dl>
+        ${aidEvidence(world, dictionary, review, codeRenderer)}
       </div>
-      <div>
-        <dt>${html(label(dictionary, "microworld.omits"))}</dt>
-        <dd>${userParagraphs(world.omits)}</dd>
-      </div>
-    </dl>
-    ${aidEvidence(world, dictionary, review, codeRenderer)}
+    </details>
   </aside>`;
 }
 
@@ -1089,8 +1094,8 @@ function buildSections(review, dictionary, codeRenderer) {
   });
   if (review.reviewItems.length > 0) {
     sections.push({
-      html: section({
-          content: `<ul class="review-items review-items-full" role="list">${review.reviewItems.map(
+      html: collapsibleSection({
+        content: `<ul class="review-items review-items-full" role="list">${review.reviewItems.map(
           (item) => `<li>${reviewItem(
             item,
             dictionary,
@@ -2167,15 +2172,29 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   font-size: ${TYPE.supporting.wide.fontSize}px;
   font-weight: 500;
 }
+.microworld-disclosure { margin-top: ${space3}px; }
+.microworld-disclosure > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+.microworld-disclosure > summary::-webkit-details-marker { display: none; }
+.microworld-disclosure > summary::after {
+  margin-left: ${space2}px;
+  content: "›";
+  transition: transform 120ms ease;
+}
+.microworld-disclosure[open] > summary::after { transform: rotate(90deg); }
+.microworld-content { padding-bottom: ${space2}px; }
 .microworld-controls {
   min-width: 0;
-  margin: ${space4}px 0 0;
+  margin: ${space2}px 0 0;
   padding: 0;
   border: 0;
-}
-.microworld-controls-title {
-  margin: 0 0 ${space2}px;
-  font-weight: 700;
 }
 .microworld-control-group {
   min-width: 0;
@@ -2889,6 +2908,7 @@ td:first-child {
   .quiz-question { break-inside: avoid; }
   .review-section-collapsible > .section-content,
   .review-subsection-collapsible > .subsection-content,
+  .microworld-disclosure > .microworld-content,
   .beginner-primer > .beginner-primer-content,
   .evidence-group > .evidence-group-content,
   .context-check > .disclosure-content,
@@ -2899,6 +2919,8 @@ td:first-child {
   .beginner-primer::details-content {
     content-visibility: visible;
   }
+  .review-section-collapsible::details-content,
+  .microworld-disclosure::details-content,
   .review-subsection-collapsible::details-content {
     content-visibility: visible;
   }

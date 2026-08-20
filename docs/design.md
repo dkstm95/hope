@@ -99,6 +99,11 @@ value:
 3. Review items
 4. Evidence and scope
 
+Summary previews the most important review items. Keep the complete **Review
+items** section in a native disclosure that starts closed; a fragment link to a
+specific item opens it. This keeps the first reading path focused without
+removing the full finding, effect, next step, completion condition, or evidence.
+
 Keep background in Summary. In Behavior change, show the core change first,
 then any behavior model, the understanding check, and teaching aid choices.
 Give each behavior model a visible subheading so its application conditions
@@ -177,7 +182,8 @@ Show each fact once, in this order:
 4. compared design directions and the selected option, only when material UI
    design needed visual agreement;
 5. agreed behavior, only when sequence or branching is clearer than prose;
-6. confirmed decisions with visible reasons and decisions left to implementation;
+6. confirmed decision titles, their folded reasons, and decisions left to
+   implementation;
 7. supporting evidence, only when it adds a source that matters.
 
 Keep earlier versions in the secondary version history navigation. Do not
@@ -190,10 +196,17 @@ approval workflow.
 The whole document is the implementation contract. Do not repeat it in a
 separate contract summary.
 
-Show each completion criterion as one passing condition followed by how it is
-verified and who decides whether it passes: an agent or person. Keep completion
-criteria in the summary near the goal. Do not turn them into progress controls
-or store their execution results in the artifact.
+Keep conclusions, actions, boundaries, behavior, and unresolved choices
+visible. Fold verification methods, decision reasons, option references, and
+the supporting-evidence section. Use these information roles directly; do not
+add length or item-count thresholds that make the same field change layout
+unpredictably.
+
+Show each completion criterion as one visible passing condition. Keep its
+verification method and the agent-or-person decision source in a native
+disclosure directly below it. Keep completion criteria in the summary near the
+goal. Do not turn them into progress controls or store their execution results
+in the artifact.
 
 Number every completion criterion in reading order with `01`, `02`, `03`, even
 when the list is short. Use body prose weight for each passing condition and
@@ -455,11 +468,13 @@ empty box.
 Show two or three design directions together in one comparison section. Keep
 the same option order. On a wide screen, compare each option's title, image,
 brief summary, strengths, and trade-offs in parallel; stack each complete
-option on a narrow screen. Put longer supporting context and references below
-the comparison in one reading column, still grouped and numbered by option.
-Pair every image with useful alt text, and mark recommendation and selection
-with words rather than color alone. Recommendation and selection may share one
-compact comparison row on a wide screen and must stack when narrow.
+option on a narrow screen. Keep an option's references inside that option and
+fold them by default. Do not repeat them in a full-width group below the
+comparison. Put only context shared by all options below the comparison in one
+reading column. Pair every image with useful alt text, and mark recommendation
+and selection with words rather than color alone. Recommendation and selection
+may share one compact comparison row on a wide screen and must stack when
+narrow.
 
 Align embeds Hope Sans so it uses the same Hope type family as Diff across
 supported hosts. Its palette, spacing, type sizes, and layout values still come
@@ -728,6 +743,11 @@ Supported interactions can include:
 - draft an optional quiz response without submitting or saving it; and
 - reveal the quiz answer and evidence through a separate disclosure.
 
+Keep a microworld's title, instructions, and model warning visible. Fold its
+controls, scenarios, simplifying assumptions, omissions, and evidence into one
+native disclosure. These are optional exploration details, not prerequisites
+for understanding the behavior summary and flow.
+
 Use the visible quiz question as the response field's persistent label.
 
 When that question and a clear placeholder make the purpose evident, do not
@@ -743,8 +763,8 @@ question.
 
 Print output omits the reader's transient quiz response.
 
-It shows each question, answer, and supporting evidence regardless of the
-current disclosure state.
+It shows every review item, microworld detail, question, answer, and supporting
+evidence regardless of the current disclosure state.
 
 The **Evidence and scope** section is a dense reference appendix.
 
