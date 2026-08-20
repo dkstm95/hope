@@ -6,16 +6,17 @@ and revision judgment.
 
 ## Input and rendering
 
-New agreements use one bounded JSON input that follows
+`create` and `revise` accept one bounded JSON input that follows
 `scripts/align-input-v2.schema.json`. Its `goal` names the agreed result. Every
 item in `checks` binds one passing condition to its verification method and to
 the `agent` or `human` that decides whether it passes.
 
-The runtime continues to accept `scripts/align-input-v1.schema.json` so
-existing callers and artifact history remain readable. A current revision
-should use v2. The runtime revalidates both structures without making a model
-call and applies filesystem, URL, and image checks that JSON Schema cannot
-express safely.
+`inspect` still validates existing artifact histories that contain the earlier
+`intent` and `success` contract. `revise` preserves those revisions while
+appending a v2 revision. The artifact's internal schema version is separate
+from the accepted input version. The runtime revalidates both current inputs
+and retained history without making a model call, then applies filesystem, URL,
+and image checks that JSON Schema cannot express safely.
 
 String limits count Unicode code points. Dangerous bidirectional controls and
 malformed Unicode are rejected before rendering. A finished artifact must fit

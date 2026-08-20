@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -169,9 +170,78 @@ async function loadPage(page, htmlPath, { height = 900, width = 1440 } = {}) {
   });
 }
 
+async function assertPrimaryCaptureState(page, expectedTopSection) {
+  const state = await page.evaluate((topSectionSelector) => {
+    const isVisible = (element) => {
+      if (!element) return false;
+      const style = getComputedStyle(element);
+      const bounds = element.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number.parseFloat(style.opacity) !== 0
+        && bounds.height > 0
+        && bounds.width > 0;
+    };
+    const isWithinViewport = (element) => {
+      if (!isVisible(element)) return false;
+      const bounds = element.getBoundingClientRect();
+      return bounds.top >= 0
+        && bounds.right <= window.innerWidth
+        && bounds.bottom <= window.innerHeight
+        && bounds.left >= 0;
+    };
+    const startsWithinViewport = (element) => {
+      if (!isVisible(element)) return false;
+      const bounds = element.getBoundingClientRect();
+      return bounds.top >= 0
+        && bounds.top < window.innerHeight
+        && bounds.right > 0
+        && bounds.left < window.innerWidth;
+    };
+    const productBar = document.querySelector(".topbar");
+    const productBarParts = [
+      ".brand",
+      ".top-context",
+      ".commit-status",
+      ".topbar-actions",
+    ].map((selector) => document.querySelector(selector));
+    const topSection = document.querySelector(topSectionSelector);
+    const firstSection = document.querySelector("main > section");
+
+    return {
+      firstSectionMatches: firstSection === topSection,
+      fragment: location.hash,
+      productBarContentWithinViewport: productBarParts.every(isWithinViewport),
+      productBarVisible: isVisible(productBar),
+      productBarWithinViewport: isWithinViewport(productBar),
+      scrollY: window.scrollY,
+      topSectionVisible: isVisible(topSection),
+      topSectionStartsWithinViewport: startsWithinViewport(topSection),
+    };
+  }, expectedTopSection);
+
+  assert.deepEqual(state, {
+    firstSectionMatches: true,
+    fragment: "",
+    productBarContentWithinViewport: true,
+    productBarVisible: true,
+    productBarWithinViewport: true,
+    scrollY: 0,
+    topSectionVisible: true,
+    topSectionStartsWithinViewport: true,
+  }, `Primary README capture must show ${expectedTopSection} at the document top`);
+}
+
 async function capturePage(page, htmlPath, outputPath, options = {}) {
-  const { height = 900, width = 1440 } = options;
+  const {
+    expectedTopSection,
+    height = 900,
+    width = 1440,
+  } = options;
   await loadPage(page, htmlPath, { height, width });
+  if (expectedTopSection) {
+    await assertPrimaryCaptureState(page, expectedTopSection);
+  }
   await page.screenshot({ animations: "disabled", clip: { height, width, x: 0, y: 0 }, path: outputPath, type: "png" });
 }
 
@@ -237,18 +307,26 @@ async function renderHtmlExamples(page, locations, fonts) {
   return paths;
 }
 
-async function captureReadmeAssets(page, paths, outputDirectory) {
+async function captureReadmeAssets(browser, paths, outputDirectory) {
   for (const { suffix } of examples) {
-    const { alignPath, diffPath } = paths[suffix];
-    await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`));
-    await captureElement(page, join(outputDirectory, `hope-align-directions-${suffix}.png`), "#design-directions");
-    await captureElement(page, join(outputDirectory, `hope-align-decisions-${suffix}.png`), "#agreement");
+    const page = await browser.newPage();
+    try {
+      const { alignPath, diffPath } = paths[suffix];
+      await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`));
+      await captureElement(page, join(outputDirectory, `hope-align-directions-${suffix}.png`), "#design-directions");
+      await captureElement(page, join(outputDirectory, `hope-align-decisions-${suffix}.png`), "#agreement");
 
-    await capturePage(page, diffPath, join(outputDirectory, `hope-diff-${suffix}.png`), { height: 820 });
-    await page.setViewportSize({ height: 900, width: 1440 });
-    await captureElement(page, join(outputDirectory, `hope-diff-core-${suffix}.png`), "#core-change");
-    await captureElement(page, join(outputDirectory, `hope-diff-microworld-${suffix}.png`), ".microworld");
-    await captureElement(page, join(outputDirectory, `hope-diff-quiz-${suffix}.png`), "#quiz", { expandDetails: true });
+      await capturePage(page, diffPath, join(outputDirectory, `hope-diff-${suffix}.png`), {
+        expectedTopSection: "#synopsis",
+        height: 820,
+      });
+      await page.setViewportSize({ height: 900, width: 1440 });
+      await captureElement(page, join(outputDirectory, `hope-diff-core-${suffix}.png`), "#core-change");
+      await captureElement(page, join(outputDirectory, `hope-diff-microworld-${suffix}.png`), ".microworld");
+      await captureElement(page, join(outputDirectory, `hope-diff-quiz-${suffix}.png`), "#quiz", { expandDetails: true });
+    } finally {
+      await page.close();
+    }
   }
 }
 
@@ -260,9 +338,14 @@ async function generateExamples(destinationRoot) {
   try {
     const fonts = await loadMockupFonts();
     browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
-    const paths = await renderHtmlExamples(page, locations, fonts);
-    await captureReadmeAssets(page, paths, locations.outputDirectory);
+    const renderPage = await browser.newPage();
+    let paths;
+    try {
+      paths = await renderHtmlExamples(renderPage, locations, fonts);
+    } finally {
+      await renderPage.close();
+    }
+    await captureReadmeAssets(browser, paths, locations.outputDirectory);
   } finally {
     await browser?.close();
   }

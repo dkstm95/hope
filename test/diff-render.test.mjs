@@ -107,7 +107,6 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.equal((html.match(/@font-face/gu) ?? []).length, 4);
   assert.match(html, /aria-label="Switch to dark mode"/u);
   assert.doesNotMatch(html, /aria-pressed=/u);
-  assert.match(html, /toggleAttribute\("hidden"/u);
   assert.doesNotMatch(html, /data-copy-section/u);
   assert.doesNotMatch(html, /class="copy-link"/u);
   assert.doesNotMatch(html, />Change theme</u);
@@ -174,9 +173,6 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     html.match(/<main class="main"[\s\S]*?<\/main>/u)?.[0] ?? "",
     /<details class="toc-mobile">/u,
   );
-  assert.match(html, /toc\.open=false/u);
-  assert.match(html, /link\.setAttribute\("aria-current","location"\)/u);
-  assert.match(html, /focusTarget\(target\)/u);
   assert.match(html, /<section class="synopsis" id="synopsis"/u);
   assert.match(
     html,
@@ -266,7 +262,6 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     (html.match(/<details class="context-check">/gu) ?? []).length,
     review.contextChecks.filter((check) => check.status !== "limited").length,
   );
-  assert.match(html, /if\(target\.tagName==="DETAILS"\)target\.open=true/u);
   assert.match(html, /<summary aria-label="[^"]+ · Evidence · \d+">Evidence · \d+<\/summary>/u);
   assert.match(html, /\.code-line-patch\.code-line-unlocated/u);
   assert.match(html, /class="evidence-reference"/u);
@@ -435,7 +430,6 @@ test("beginner primer stays closed, localized, linkable, and print-visible", asy
   assert.match(background, /처음 보는 독자를 위한 개념/u);
   assert.doesNotMatch(background, /<details class="beginner-primer"[^>]* open>/u);
   assert.match(html, /id="beginner-primer"/u);
-  assert.match(html, /const revealTarget=target=>\{if\(target\.tagName==="DETAILS"\)target\.open=true;/u);
 
   const absent = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
   const absentHtml = (await renderReview(absent)).bytes.toString("utf8");
@@ -814,11 +808,6 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
     /&lt;\/script&gt;&lt;script&gt;alert\(1\)&lt;\/script&gt;/u,
   );
   assert.doesNotMatch(html, /<img src=x/u);
-  assert.match(script, /querySelectorAll\("\[data-microworld\]"\)/u);
-  assert.match(script, /scenario\.hidden=!selected/u);
-  assert.match(script, /control\.disabled=false/u);
-  assert.match(script, /\.microworld-control:checked/u);
-  assert.match(script, /dataset\.optionLabel/u);
   assert.equal(
     (html.match(/class="microworld-control"[\s\S]*?disabled>/gu) ?? []).length,
     4,

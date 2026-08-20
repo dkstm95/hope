@@ -1,3 +1,13 @@
+import {
+  mkdir,
+  readFile,
+  writeFile,
+} from "node:fs/promises";
+import { dirname } from "node:path";
+
+import { sealAlignHtml } from "../plugins/hope/skills/align/scripts/artifact.mjs";
+import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render.mjs";
+
 export function makeAlignInput(overrides = {}) {
   return {
     schemaVersion: 2,
@@ -71,21 +81,82 @@ export function makeAlignInput(overrides = {}) {
   };
 }
 
-export function makeLegacyAlignInput(overrides = {}) {
+async function embedLegacyDesignDirections(value) {
+  if (value === undefined) return undefined;
+  return {
+    ...value,
+    options: await Promise.all(value.options.map(async (option) => {
+      const bytes = await readFile(option.imagePath);
+      const { imagePath: _imagePath, ...content } = option;
+      return {
+        ...content,
+        image: {
+          mimeType: "image/png",
+          width: bytes.readUInt32BE(16),
+          height: bytes.readUInt32BE(20),
+          data: bytes.toString("base64"),
+        },
+      };
+    })),
+  };
+}
+
+export async function writeLegacyAlignArtifact({
+  artifactPath,
+  content: contentOverrides = {},
+  createdAt = "2026-08-14T00:00:00.000Z",
+  alignId = "11111111-1111-4111-8111-111111111111",
+  repository = "acme/storage",
+  repositoryIdentity = "remote://github.com/acme/storage",
+}) {
   const current = makeAlignInput();
   const {
     goal,
     checks,
     schemaVersion: _schemaVersion,
+    locale,
+    theme,
+    revisionSummary,
     ...shared
   } = current;
-  return {
+  const content = {
     ...shared,
-    schemaVersion: 1,
     intent: goal,
     success: checks.map((check) => check.condition),
-    ...overrides,
+    ...contentOverrides,
   };
+  const designDirections = await embedLegacyDesignDirections(content.designDirections);
+  if (designDirections === undefined) {
+    delete content.designDirections;
+  } else {
+    content.designDirections = designDirections;
+  }
+  const data = {
+    schemaVersion: 1,
+    alignId,
+    repository,
+    repositoryIdentity,
+    locale,
+    theme,
+    createdAt,
+    revisions: [{
+      number: 1,
+      agreedAt: createdAt,
+      summary: revisionSummary,
+      content,
+    }],
+  };
+  const sealed = sealAlignHtml(renderAlignArtifact(data, { digest: "0".repeat(64) }));
+  await mkdir(dirname(artifactPath), { recursive: true });
+  await writeFile(artifactPath, sealed.bytes);
+  return Object.freeze({
+    alignId,
+    artifactPath,
+    digest: sealed.digest,
+    repository,
+    revision: 1,
+    title: content.title,
+  });
 }
 
 export function makeDesignDirections(imagePaths) {

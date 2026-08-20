@@ -11,13 +11,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import {
-  createAlignArtifact,
   reviseAlignArtifact,
 } from "../plugins/hope/skills/align/scripts/artifact.mjs";
 import {
   makeAlignInput,
   makeDesignDirections,
-  makeLegacyAlignInput,
+  writeLegacyAlignArtifact,
 } from "../test-support/align-fixture.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -54,25 +53,21 @@ test.beforeAll(async () => {
     "git@github.com:acme/storage.git",
   ]);
   const artifactPath = join(temporaryRoot, "docs", "alignments", "upload-recovery.html");
-  const firstInput = await writeInput("first.json", makeLegacyAlignInput({
-    designDirections: makeDesignDirections(directionImages),
-    behavior: {
-      ...makeAlignInput().behavior,
-      outcomes: [{
-        title: "이전 결과 전용",
-        detail: "이전 버전에서만 합의한 결과다.",
-        kind: "cancel",
-      }],
+  const created = await writeLegacyAlignArtifact({
+    artifactPath,
+    content: {
+      designDirections: makeDesignDirections(directionImages),
+      behavior: {
+        ...makeAlignInput().behavior,
+        outcomes: [{
+          title: "이전 결과 전용",
+          detail: "이전 버전에서만 합의한 결과다.",
+          kind: "cancel",
+        }],
+      },
+      evidence: [{ label: "이전 근거 전용", location: "docs/previous.md" }],
     },
-    evidence: [{ label: "이전 근거 전용", location: "docs/previous.md" }],
-  }));
-  const created = await createAlignArtifact(
-    { inputPath: firstInput, outputPath: artifactPath, root: temporaryRoot },
-    {
-      now: () => new Date("2026-08-14T00:00:00.000Z"),
-      randomUUID: () => "11111111-1111-4111-8111-111111111111",
-    },
-  );
+  });
   const secondInput = await writeInput("second.json", makeAlignInput({
     boundary: "복구 기간은 24시간이며 만료된 항목은 복구하지 않는다.",
     designDirections: {

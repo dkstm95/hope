@@ -27,7 +27,7 @@ import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render
 import {
   makeAlignInput,
   makeDesignDirections,
-  makeLegacyAlignInput,
+  writeLegacyAlignArtifact,
 } from "../test-support/align-fixture.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
@@ -140,13 +140,21 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
     })),
     /by must be agent or human/u,
   );
-  const legacy = validateAlignInput(makeLegacyAlignInput());
-  assert.equal(legacy.schemaVersion, 1);
-  assert.equal(legacy.intent, makeAlignInput().goal);
-  assert.deepEqual(legacy.success, makeAlignInput().checks.map((check) => check.condition));
+  const current = makeAlignInput();
+  const {
+    goal,
+    checks,
+    schemaVersion: _schemaVersion,
+    ...legacyShared
+  } = current;
   assert.throws(
-    () => validateAlignInput(makeLegacyAlignInput({ success: [] })),
-    /must not be empty/u,
+    () => validateAlignInput({
+      ...legacyShared,
+      schemaVersion: 1,
+      intent: goal,
+      success: checks.map((check) => check.condition),
+    }),
+    /schemaVersion must be 2/u,
   );
   assert.throws(
     () => validateAlignInput(makeAlignInput({
@@ -543,21 +551,28 @@ test("create publishes one owned project artifact without replacing a path", asy
 
 test("revise appends a current goal contract to a legacy artifact", async () => {
   const root = await repository();
-  const firstInput = await inputFile(root, "first.json", makeLegacyAlignInput({
-    behavior: {
-      ...makeAlignInput().behavior,
-      outcomes: [{
-        title: "이전 결과 전용",
-        detail: "이전 버전에서만 합의한 결과다.",
-        kind: "cancel",
-      }],
-    },
-    evidence: [{ label: "이전 근거 전용", location: "docs/previous.md" }],
-  }));
   const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
-  const created = await createAlignArtifact(
-    { inputPath: firstInput, outputPath, root },
-    { now: () => now, randomUUID: () => "11111111-1111-4111-8111-111111111111" },
+  const created = await writeLegacyAlignArtifact({
+    artifactPath: outputPath,
+    content: {
+      behavior: {
+        ...makeAlignInput().behavior,
+        outcomes: [{
+          title: "이전 결과 전용",
+          detail: "이전 버전에서만 합의한 결과다.",
+          kind: "cancel",
+        }],
+      },
+      evidence: [{ label: "이전 근거 전용", location: "docs/previous.md" }],
+    },
+  });
+  const legacy = await inspectAlignArtifact(outputPath);
+  assert.equal(legacy.digest, created.digest);
+  assert.equal(legacy.revision, 1);
+  assert.equal(legacy.content.intent, makeAlignInput().goal);
+  assert.deepEqual(
+    legacy.content.success,
+    makeAlignInput().checks.map((check) => check.condition),
   );
   const revisedAt = new Date("2026-08-15T00:00:00.000Z");
   const secondInput = await inputFile(root, "second.json", makeAlignInput({
