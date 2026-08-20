@@ -44,7 +44,8 @@ Use these rules with the analysis schema and the shared Hope Write standard.
   cannot establish either code state by itself.
 - Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` to one
   main idea each. Start with the actor or affected thing, then state the
-  condition or result. Avoid a sentence whose subject changes halfway through.
+  condition or result. Normally use one sentence for each compact comparison
+  summary. Avoid a sentence whose subject changes halfway through.
 - Write `coreChange.why` as the practical effect. Do not end with a generic
   purpose phrase when the reader can be told what becomes safer, faster, or
   easier to decide.
@@ -127,6 +128,10 @@ Use these rules with the analysis schema and the shared Hope Write standard.
   name instead.
 - Keep one idea in one primary field. Reuse the smallest exact evidence range
   only when another field genuinely needs it.
+- Keep each prose value to one semantic paragraph. Put a distinct idea in the
+  existing field or array item that owns it. When one field genuinely needs a
+  second paragraph, separate the paragraphs with a newline so the renderer
+  keeps the boundary.
 - Normally use at most 12 review items, 4 core details, and 12 code steps. Do
   not fill maxima for their own sake.
 

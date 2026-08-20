@@ -312,20 +312,18 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
   });
   await openArtifact(page, viewports.desktop);
-  await expect(page.locator("#synopsis > h2")).toHaveText("요약");
-  const synopsisLabelStyle = await page.locator("#synopsis > h2").evaluate(
+  await expect(page.locator("#synopsis-title")).toHaveText("01요약");
+  const synopsisLabelStyle = await page.locator("#synopsis-title").evaluate(
     (element) => ({
-      clip: getComputedStyle(element).clip,
+      display: getComputedStyle(element).display,
       position: getComputedStyle(element).position,
       width: getComputedStyle(element).width,
     }),
   );
-  expect(synopsisLabelStyle).toEqual({
-    clip: "rect(0px, 0px, 0px, 0px)",
-    position: "absolute",
-    width: "1px",
-  });
-  await expect(page.locator("#synopsis > .synopsis-head > h1")).toBeVisible();
+  expect(synopsisLabelStyle.display).toBe("grid");
+  expect(synopsisLabelStyle.position).toBe("static");
+  expect(Number.parseFloat(synopsisLabelStyle.width)).toBeGreaterThan(100);
+  await expect(page.locator(".document-title > h1")).toBeVisible();
   await expect(page.locator(".synopsis-row > h3").first()).toHaveCSS(
     "padding-top",
     "2px",
@@ -340,7 +338,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   );
   await expect(pullRequestLink).toHaveAttribute("aria-label", "PR #142 열기");
   await expect(page.locator(".pr-hero")).toHaveCount(0);
-  await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
+  await expect(page.locator(".document-title")).not.toContainText(
     "example/hope · PR #142",
   );
   await expect(page.locator("header .commit-status")).toHaveText("bbbbbbbb");
@@ -348,11 +346,22 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     "title",
     `검토 커밋 ${"b".repeat(40)}`,
   );
-  await expect(page.locator("#synopsis > .synopsis-head .goal-label")).toHaveText(
-    "목표",
+  const synopsisPurpose = page.locator("#synopsis .synopsis-purpose");
+  await expect(synopsisPurpose.locator(":scope > h3")).toHaveText("목표");
+  await expect(synopsisPurpose).toContainText("Return the final error after all retries fail.");
+  const stackedSummaryLabels = page.locator("#synopsis .summary-label-stacked");
+  await expect(stackedSummaryLabels).toHaveText(["검토 결과", "검토 제한"]);
+  const stackedSummaryLabelTops = await stackedSummaryLabels.evaluateAll(
+    (labels) => labels.map((summaryLabel) => [...summaryLabel.children].map(
+      (line) => line.getBoundingClientRect().top,
+    )),
   );
-  await expect(page.locator("#synopsis > .synopsis-head dt")).toHaveCount(0);
-  await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
+  expect(stackedSummaryLabelTops.every(
+    ([firstLine, secondLine]) => secondLine > firstLine,
+  )).toBe(true);
+  await expect(page.locator("#synopsis > .goal-label, #synopsis > .goal")).toHaveCount(0);
+  await expect(page.locator("#synopsis > dt")).toHaveCount(0);
+  await expect(page.locator("#synopsis")).not.toContainText(
     "이 오프라인 파일은 이후 PR 변경을 자동으로 반영하지 않습니다.",
   );
   await expect(page.locator("#synopsis .review-result")).toHaveCount(0);
@@ -382,13 +391,18 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   ).toHaveCSS("text-decoration-line", "underline");
   await expect(page.locator('a[target="_blank"]')).toHaveCount(0);
   const synopsisLayouts = await page.evaluate(() => {
-    const purpose = document.querySelector(".synopsis-impact");
+    const purpose = document.querySelector(".synopsis-purpose");
+    const impact = document.querySelector(".synopsis-impact");
     const review = document.querySelector(".synopsis-review");
     const items = [...document.querySelectorAll(".review-item-compact")];
     return {
       purpose: {
         display: getComputedStyle(purpose).display,
         columns: getComputedStyle(purpose).gridTemplateColumns,
+      },
+      impact: {
+        display: getComputedStyle(impact).display,
+        columns: getComputedStyle(impact).gridTemplateColumns,
       },
       review: {
         display: getComputedStyle(review).display,
@@ -403,6 +417,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
       ).getBoundingClientRect().top,
     };
   });
+  expect(synopsisLayouts.purpose).toEqual(synopsisLayouts.impact);
   expect(synopsisLayouts.review).toEqual(synopsisLayouts.purpose);
   expect(Math.abs(synopsisLayouts.labelTop - synopsisLayouts.firstItemTop)).toBeLessThanOrEqual(
     1,
@@ -426,6 +441,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
         afterTitleBottom: afterTitle.bottom,
         afterTitleLeft: afterTitle.left,
         afterValueTop: afterValue.top,
+        beforeBottom: before.bottom,
         beforeContentLeft: beforeValue.left,
         beforeTop: before.top,
         beforeTitleBottom: beforeTitle.bottom,
@@ -442,7 +458,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   );
   expect(changeShift.display).toBe("grid");
   expect(changeShift.columns.split(" ")).toHaveLength(2);
-  expect(Math.abs(changeShift.beforeTop - changeShift.afterTop)).toBeLessThanOrEqual(1);
+  expect(changeShift.afterTop).toBe(changeShift.beforeTop);
   expect(changeShift.beforeTitleLeft).toBe(changeShift.beforeContentLeft);
   expect(changeShift.afterTitleLeft).toBe(changeShift.afterContentLeft);
   expect(changeShift.beforeValueTop).toBeGreaterThan(changeShift.beforeTitleBottom);
@@ -455,7 +471,12 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator(".topbar")).toHaveCSS("position", "sticky");
   await expect(page.locator("body")).toHaveCSS("font-size", "14px");
   await expect(page.locator("#review-title")).toHaveCSS("font-size", "32px");
-  await expect(page.locator(".goal")).toHaveCSS("font-size", "16px");
+  await expect(page.locator(".synopsis-purpose > h3")).toHaveCSS(
+    "font-size",
+    await page.locator(".synopsis-impact > h3").evaluate(
+      (element) => getComputedStyle(element).fontSize,
+    ),
+  );
   await expect(page.locator(".section-heading h2").first()).toHaveCSS(
     "font-size",
     "18px",
@@ -463,16 +484,30 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   const baselineGeometry = await page.evaluate(() => ({
     brandRepositoryGap: document.querySelector(".top-context").getBoundingClientRect().left
       - document.querySelector(".brand").getBoundingClientRect().right,
+    firstSectionBorder: getComputedStyle(document.querySelector("#synopsis")).borderTopWidth,
+    firstSectionMargin: getComputedStyle(document.querySelector("#synopsis")).marginTop,
+    firstSectionPadding: getComputedStyle(document.querySelector("#synopsis")).paddingTop,
     railLeft: document.querySelector(".toc-desktop").getBoundingClientRect().left,
     repositoryCommitGap: document.querySelector(".commit-status").getBoundingClientRect().left
       - document.querySelector(".top-context").getBoundingClientRect().right,
+    summaryLabelFontSize: getComputedStyle(document.querySelector("#synopsis-title > span:last-child")).fontSize,
+    summaryLabelLeft: document.querySelector("#synopsis-title > span:last-child").getBoundingClientRect().left,
+    summaryNumberFontSize: getComputedStyle(document.querySelector("#synopsis-title > .section-number")).fontSize,
+    summaryNumberLeft: document.querySelector("#synopsis-title > .section-number").getBoundingClientRect().left,
     titleLeft: document.querySelector("#review-title").getBoundingClientRect().left,
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
   expect(baselineGeometry).toEqual({
     brandRepositoryGap: 24,
+    firstSectionBorder: "0px",
+    firstSectionMargin: "24px",
+    firstSectionPadding: "16px",
     railLeft: 1204,
     repositoryCommitGap: 24,
+    summaryLabelFontSize: "18px",
+    summaryLabelLeft: 76,
+    summaryNumberFontSize: "18px",
+    summaryNumberLeft: 40,
     titleLeft: 40,
     topbarHeight: 58,
   });
@@ -491,10 +526,22 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#review-title")).toHaveText(
     "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
   );
+  const judge = page.locator("#judge");
+  await expect(judge).not.toHaveAttribute("open", "");
+  await expect(judge.locator(".section-content")).not.toBeVisible();
+  await judge.locator(":scope > summary").click();
+  await expect(judge.locator(".section-content")).toBeVisible();
   const itemActionColumns = await page.locator(
     ".review-items-full .item-actions",
   ).first().evaluate((element) => getComputedStyle(element).gridTemplateColumns);
-  expect(itemActionColumns.split(" ")).toHaveLength(3);
+  expect(itemActionColumns.split(" ")).toHaveLength(1);
+  const itemActionTops = await page.locator(
+    ".review-items-full .item-actions",
+  ).first().locator(":scope > div").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(itemActionTops[1]).toBeGreaterThan(itemActionTops[0]);
+  expect(itemActionTops[2]).toBeGreaterThan(itemActionTops[1]);
   await expect(page.locator("#core-change .core-narrative")).toHaveCount(0);
   await expect(page.locator("#core-change .core-detail")).toHaveCount(1);
   await expect(page.locator("#core-change")).toContainText(
@@ -503,10 +550,31 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#core-change")).not.toContainText(
     "Return the final error after all retries fail.",
   );
+  await expect(page.locator("#behavior-flow > .subsection-heading > h3")).toHaveText(
+    "적용 조건과 흐름",
+  );
+  await expect(page.locator("#behavior-flow")).toContainText(
+    "네 단계로 이어지는 변경 동작입니다.",
+  );
+  await expect(page.locator("#core-change")).not.toContainText(
+    "네 단계로 이어지는 변경 동작입니다.",
+  );
+  const behaviorSectionOrder = await page.locator("#explore").evaluate((section) => ({
+    behaviorTop: section.querySelector("#behavior-flow").getBoundingClientRect().top,
+    coreBottom: section.querySelector("#core-change").getBoundingClientRect().bottom,
+    headingTop: section.querySelector("#behavior-flow h3").getBoundingClientRect().top,
+    summaryTop: section.querySelector("#behavior-flow .behavior-summary").getBoundingClientRect().top,
+  }));
+  expect(behaviorSectionOrder.behaviorTop).toBeGreaterThanOrEqual(
+    behaviorSectionOrder.coreBottom,
+  );
+  expect(behaviorSectionOrder.summaryTop).toBeGreaterThan(
+    behaviorSectionOrder.headingTop,
+  );
   await expect(page.locator("#synopsis .synopsis-state")).toHaveCount(0);
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
   await expect(page.locator("#explore .flow")).toHaveCount(1);
-  await expect(page.locator("#explore .flow-short")).toHaveCount(1);
+  await expect(page.locator("#explore .flow-short")).toHaveCount(0);
   const primer = page.locator("#beginner-primer");
   await expect(primer).toHaveCount(1);
   await expect(primer).not.toHaveAttribute("open", "");
@@ -539,7 +607,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expectNoPageOverflow(page);
 
   await page.setViewportSize(viewports.breakpoint);
-  const wideFlow = await page.locator("#explore .flow-short").evaluate((flow) => ({
+  const wideFlow = await page.locator("#explore .flow").evaluate((flow) => ({
     contentOverflow: [...flow.querySelectorAll(".claim p")].some(
       (content) => content.scrollWidth > content.clientWidth,
     ),
@@ -547,13 +615,23 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     display: getComputedStyle(flow).display,
     scrollWidth: flow.scrollWidth,
   }));
-  expect(wideFlow.display).toBe("flex");
+  expect(wideFlow.display).toBe("grid");
   expect(wideFlow.scrollWidth).toBeLessThanOrEqual(wideFlow.clientWidth);
   expect(wideFlow.contentOverflow).toBe(false);
+  const flowTops = await page.locator("#explore .flow > li").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(flowTops[1]).toBeGreaterThan(flowTops[0]);
+  expect(flowTops[2]).toBeGreaterThan(flowTops[1]);
 
   await page.setViewportSize(viewports.mobile);
   await expect(page.locator("#review-title")).toHaveCSS("font-size", "28px");
-  await expect(page.locator(".goal")).toHaveCSS("font-size", "14px");
+  await expect(page.locator(".synopsis-purpose > h3")).toHaveCSS(
+    "font-size",
+    await page.locator(".synopsis-impact > h3").evaluate(
+      (element) => getComputedStyle(element).fontSize,
+    ),
+  );
   await expect(page.locator(".section-heading h2").first()).toHaveCSS(
     "font-size",
     "16px",
@@ -579,7 +657,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     ".review-items-full .item-actions",
   ).first().evaluate((element) => getComputedStyle(element).gridTemplateColumns);
   expect(narrowActionColumns.split(" ")).toHaveLength(1);
-  const narrowFlow = await page.locator("#explore .flow-short").evaluate((flow) => ({
+  const narrowFlow = await page.locator("#explore .flow").evaluate((flow) => ({
     clientWidth: flow.clientWidth,
     display: getComputedStyle(flow).display,
     scrollWidth: flow.scrollWidth,
@@ -589,6 +667,8 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
 
   await page.emulateMedia({ media: "print" });
   await expect(page.locator("#beginner-primer .beginner-primer-content")).toBeVisible();
+  await expect(page.locator("#judge .section-content")).toBeVisible();
+  await expect(page.locator(".microworld-content")).toBeVisible();
   await page.emulateMedia({ media: "screen" });
 
   for (const viewport of [
@@ -605,7 +685,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await page.locator(".behavior-visual > header > p").evaluate((element) => {
     element.textContent = "LongUnbrokenTeachingAidCaption".repeat(80);
   });
-  await page.locator(".goal .claim p bdi").evaluate((element) => {
+  await page.locator(".synopsis-purpose .claim p bdi").evaluate((element) => {
     element.textContent = "LongUnbrokenGoal".repeat(120);
   });
   await page.locator(".shift-before .claim p bdi").evaluate((element) => {
@@ -634,12 +714,22 @@ test("contents tracks the current section and keeps sticky navigation clear", as
 }) => {
   await openArtifact(page, viewports.desktop);
   const judge = page.locator("#judge");
+  await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("1 / 4");
+  await expect(judge).not.toHaveAttribute("open", "");
   await page.locator('.toc-desktop a[href="#judge"]').click();
   await expect(judge).toBeFocused();
+  await expect(judge).toHaveAttribute("open", "");
 
   const currentLinks = page.locator('.toc-desktop a[aria-current="location"]');
   await expect(currentLinks).toHaveCount(1);
   await expect(currentLinks).toHaveAttribute("href", "#judge");
+  await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("3 / 4");
+  const currentStyle = await currentLinks.evaluate((element) => ({
+    backgroundColor: getComputedStyle(element).backgroundColor,
+    borderLeftWidth: getComputedStyle(element).borderLeftWidth,
+  }));
+  expect(currentStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(currentStyle.borderLeftWidth).toBe("4px");
   const clearance = await page.evaluate(() => ({
     headerBottom: document.querySelector(".topbar").getBoundingClientRect().bottom,
     targetTop: document.querySelector("#judge").getBoundingClientRect().top,
@@ -663,6 +753,11 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   );
   await expect(page.locator("#explore .behavior-visual")).toBeVisible();
   await expect(page.locator("#explore .decision-table")).toBeVisible();
+  const disclosure = world.locator(".microworld-disclosure");
+  await expect(disclosure).not.toHaveAttribute("open", "");
+  await expect(disclosure.locator(".microworld-content")).not.toBeVisible();
+  await disclosure.locator(":scope > summary").click();
+  await expect(disclosure.locator(".microworld-content")).toBeVisible();
 
   const groups = world.locator(".microworld-control-group");
   await expect(groups).toHaveCount(2);
@@ -686,11 +781,23 @@ test("the microworld switches fixed scenarios with accessible native controls", 
     items.map((item) => item.getBoundingClientRect().height)
   ));
   expect(controlHeights.every((height) => height >= 44)).toBe(true);
+  const controlGroupTops = await groups.evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(controlGroupTops[1]).toBe(controlGroupTops[0]);
 
   const visibleScenario = world.locator(".microworld-scenario:not([hidden])");
   await expect(visibleScenario).toHaveCount(1);
   await expect(visibleScenario).toContainText("실패했고 저장된 오류가 있음");
   await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
+  const traceTops = await visibleScenario.locator(".microworld-trace").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(traceTops[1]).toBe(traceTops[0]);
+  const boundaryTops = await world.locator(".microworld-boundary > div").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(boundaryTops[1]).toBe(boundaryTops[0]);
 
   await failed.focus();
   await expect(failed).toBeFocused();
@@ -709,12 +816,22 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
 
   await page.setViewportSize(viewports.mobile);
+  const narrowControlTops = await groups.evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(narrowControlTops[1]).toBeGreaterThan(narrowControlTops[0]);
+  const narrowTraceTops = await visibleScenario.locator(
+    ".microworld-trace",
+  ).evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(narrowTraceTops[1]).toBeGreaterThan(narrowTraceTops[0]);
   await expectNoPageOverflow(page);
   expect(remoteRequests).toEqual([]);
 });
 
 test("the artifact explains every teaching-aid omission", async ({ page }) => {
-  await page.setViewportSize(viewports.mobile);
+  await page.setViewportSize(viewports.desktop);
   await page.goto(omittedArtifactUrl);
 
   const section = page.locator("#teaching-aids");
@@ -742,6 +859,11 @@ test("the artifact explains every teaching-aid omission", async ({ page }) => {
     "글만으로도 이 변경을 쉽게 이해할 수 있습니다.",
     "글만으로도 이 변경을 쉽게 이해할 수 있습니다.",
   ]);
+  const choiceTops = await section.locator(".teaching-aid-choice").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(choiceTops[1]).toBe(choiceTops[0]);
+  expect(choiceTops[2]).toBe(choiceTops[1]);
   await expectNoPageOverflow(page);
 });
 
@@ -769,12 +891,18 @@ test("the artifact distinguishes mixed teaching-aid decisions", async ({ page })
   );
   await expect(cards.nth(1).getByText("Teaching job", { exact: true })).toHaveCount(0);
   await expect(cards.nth(2).getByText("Teaching job", { exact: true })).toHaveCount(0);
+  const cardTops = await cards.evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(cardTops[1]).toBeGreaterThan(cardTops[0]);
+  expect(cardTops[2]).toBeGreaterThan(cardTops[1]);
   await expectNoPageOverflow(page);
 });
 
 test("visual routes expose endpoints and direction to the accessibility tree", async ({
   page,
 }) => {
+  await page.setViewportSize(viewports.desktop);
   await page.goto(visualArtifactUrls.sequence);
   const sequenceRoute = await page.locator(
     ".visual-sequence > li",
@@ -786,25 +914,40 @@ test("visual routes expose endpoints and direction to the accessibility tree", a
     ".visual-connections li",
   ).first().ariaSnapshot();
   expect(componentRoute).toContain("Retry branch to Caller");
+  const componentTops = await page.locator(".visual-components > article").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(componentTops[1]).toBe(componentTops[0]);
+  await page.setViewportSize(viewports.mobile);
+  const narrowComponentTops = await page.locator(
+    ".visual-components > article",
+  ).evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(narrowComponentTops[1]).toBeGreaterThan(narrowComponentTops[0]);
 });
 
-test("theme and contents controls share one visual control family", async ({ page }) => {
+test("display and contents controls share one visual control family", async ({ page }) => {
   await openArtifact(page, viewports.breakpoint);
   const theme = page.locator("#theme-toggle");
+  const display = page.locator(".display-controls");
   const contents = page.locator(".toc-mobile > summary");
-  const [themeBox, contentsBox] = await Promise.all([
+  const [themeBox, displayBox, contentsBox] = await Promise.all([
     theme.boundingBox(),
+    display.boundingBox(),
     contents.boundingBox(),
   ]);
 
   expect(themeBox).not.toBeNull();
+  expect(displayBox).not.toBeNull();
   expect(contentsBox).not.toBeNull();
-  expect(themeBox.height).toBe(44);
+  expect(themeBox.height).toBe(42);
+  expect(displayBox.height).toBe(44);
   expect(contentsBox.height).toBe(44);
-  expect(contentsBox.x - (themeBox.x + themeBox.width)).toBe(8);
+  expect(contentsBox.x - (displayBox.x + displayBox.width)).toBe(8);
 
   const styles = await page.evaluate(() => {
-    const themeControl = document.querySelector("#theme-toggle");
+    const displayControl = document.querySelector(".display-controls");
     const contentsControl = document.querySelector(".toc-mobile > summary");
     const topbar = document.querySelector(".topbar-inner");
     return {
@@ -813,15 +956,15 @@ test("theme and contents controls share one visual control family", async ({ pag
         borderStyle: getComputedStyle(contentsControl).borderStyle,
         borderWidth: getComputedStyle(contentsControl).borderWidth,
       },
-      theme: {
-        borderRadius: getComputedStyle(themeControl).borderRadius,
-        borderStyle: getComputedStyle(themeControl).borderStyle,
-        borderWidth: getComputedStyle(themeControl).borderWidth,
+      display: {
+        borderRadius: getComputedStyle(displayControl).borderRadius,
+        borderStyle: getComputedStyle(displayControl).borderStyle,
+        borderWidth: getComputedStyle(displayControl).borderWidth,
       },
       topbarGap: getComputedStyle(topbar).columnGap,
     };
   });
-  expect(styles.theme).toEqual(styles.contents);
+  expect(styles.display).toEqual(styles.contents);
   expect(styles.topbarGap).toBe("24px");
 });
 
@@ -886,16 +1029,20 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   const mobileToc = page.locator(".toc-mobile");
   const mobileTocSummary = mobileToc.locator(":scope > summary");
   await expect(mobileToc.locator("xpath=ancestor::header[1]")).toHaveCount(1);
-  const { contentTop, synopsisTop } = await page.evaluate(() => {
+  const { contentTop, synopsisTop, titleBottom, titleTop } = await page.evaluate(() => {
     const main = document.querySelector("main");
     const synopsis = document.querySelector("#synopsis");
+    const title = document.querySelector(".document-title").getBoundingClientRect();
     const mainBox = main.getBoundingClientRect();
     return {
       contentTop: mainBox.top + Number.parseFloat(getComputedStyle(main).paddingTop),
       synopsisTop: synopsis.getBoundingClientRect().top,
+      titleBottom: title.bottom,
+      titleTop: title.top,
     };
   });
-  expect(Math.abs(synopsisTop - contentTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(titleTop - contentTop)).toBeLessThanOrEqual(1);
+  expect(synopsisTop).toBeGreaterThan(titleBottom);
   const synopsis = await page.locator("#synopsis").boundingBox();
   expect(synopsis).not.toBeNull();
   const synopsisTopBeforeOpen = synopsis.y;
@@ -920,7 +1067,10 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
 }) => {
   await openArtifact(page, { height: 220, width: 320 });
   await page.locator("#judge").evaluate(
-    (element) => element.scrollIntoView({ behavior: "instant", block: "start" }),
+    (element) => {
+      element.open = true;
+      element.scrollIntoView({ behavior: "instant", block: "start" });
+    },
   );
 
   const toc = page.locator(".toc-mobile");
@@ -961,7 +1111,7 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
     borderLeftWidth: getComputedStyle(element).borderLeftWidth,
     fontWeight: getComputedStyle(element).fontWeight,
   }));
-  expect(currentStyle.borderLeftWidth).toBe("2px");
+  expect(currentStyle.borderLeftWidth).toBe("4px");
   expect(Number(currentStyle.fontWeight)).toBeGreaterThanOrEqual(700);
 
   await page.keyboard.press("Escape");
@@ -1088,14 +1238,34 @@ test("closed disclosures stay compact", async ({
 }) => {
   await openArtifact(page, viewports.desktop);
 
-  for (const selector of ["#teaching-aids", ".quiz-question:first-child", ".artifact-details"]) {
+  expect(await page.locator(".evidence > summary").first().evaluate(
+    (summary) => summary.getBoundingClientRect().height,
+  )).toBe(24);
+
+  for (const selector of [
+    "#judge",
+    ".microworld-disclosure",
+    "#teaching-aids",
+    ".quiz-question:first-child",
+    ".artifact-details",
+  ]) {
     const disclosure = page.locator(selector);
     await expect(disclosure).not.toHaveAttribute("open", "");
-    const dimensions = await disclosure.evaluate((element) => ({
-      disclosure: element.getBoundingClientRect().height,
-      summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
-    }));
-    expect(dimensions.disclosure - dimensions.summary).toBeLessThanOrEqual(2);
+    const dimensions = await disclosure.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        chrome: [
+          style.borderTopWidth,
+          style.borderBottomWidth,
+          style.paddingTop,
+          style.paddingBottom,
+        ].reduce((total, value) => total + Number.parseFloat(value), 0),
+        disclosure: element.getBoundingClientRect().height,
+        summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
+      };
+    });
+    expect(Math.abs(dimensions.disclosure - dimensions.summary - dimensions.chrome))
+      .toBeLessThanOrEqual(1);
   }
 
   const artifactDetails = page.locator(".artifact-details");
@@ -1110,11 +1280,22 @@ test("closed disclosures stay compact", async ({
 
   const evidence = page.locator("#evidence-and-scope");
   await evidence.locator(":scope > summary").click();
-  const collapsedDimensions = await evidence.evaluate((element) => ({
-    disclosure: element.getBoundingClientRect().height,
-    summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
-  }));
-  expect(collapsedDimensions.disclosure - collapsedDimensions.summary).toBeLessThanOrEqual(2);
+  const collapsedDimensions = await evidence.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      chrome: [
+        style.borderTopWidth,
+        style.borderBottomWidth,
+        style.paddingTop,
+        style.paddingBottom,
+      ].reduce((total, value) => total + Number.parseFloat(value), 0),
+      disclosure: element.getBoundingClientRect().height,
+      summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
+    };
+  });
+  expect(Math.abs(
+    collapsedDimensions.disclosure - collapsedDimensions.summary - collapsedDimensions.chrome,
+  )).toBeLessThanOrEqual(1);
 });
 
 test("the evidence appendix starts open while its groups and code evidence stay closed", async ({
@@ -1266,6 +1447,10 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await expect(evidenceSection).toContainText("그 밖의 수집 출처");
     await expect(evidenceSection).toContainText("관련 맥락");
     await expect(evidenceSection).toContainText("변경 파일");
+    const judge = page.locator("#judge");
+    await expect(judge).not.toHaveAttribute("open", "");
+    await judge.locator(":scope > summary").click();
+    await expect(judge.locator(".review-items-full")).toBeVisible();
     await expect(page.locator(
       '.code-evidence code[aria-label*="throw new Error()"]',
     ).first()).toContainText(
@@ -1273,6 +1458,7 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     );
     const world = page.locator("#explore .microworld");
     await expect(world).toBeVisible();
+    await world.locator(".microworld-disclosure > summary").click();
     await expect(world.locator(".microworld-noscript")).toBeVisible();
     await expect(world.locator(".microworld-noscript")).toContainText(
       "기본 상황을 표시합니다.",

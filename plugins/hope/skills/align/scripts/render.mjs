@@ -38,6 +38,7 @@ const dictionaries = Object.freeze({
     goal: "Goal",
     influence: "Influence",
     included: "In scope",
+    language: "Language",
     menu: "Contents",
     navigation: "Contents and version history",
     noExcluded: "No explicit exclusion was needed.",
@@ -81,6 +82,7 @@ const dictionaries = Object.freeze({
     goal: "목표",
     influence: "반영한 점",
     included: "포함 범위",
+    language: "언어",
     menu: "목차",
     navigation: "목차와 버전 이력",
     noExcluded: "명시적으로 제외한 범위가 없습니다.",
@@ -115,7 +117,13 @@ function escapeHtml(value) {
 }
 
 function authoredText(value) {
-  return `<bdi dir="auto">${escapeHtml(value)}</bdi>`;
+  return `<bdi dir="auto">${String(value).split(/\r?\n/u).map(escapeHtml).join("<br>")}</bdi>`;
+}
+
+function authoredParagraphs(value) {
+  return String(value).split(/\r?\n+/u).map(
+    (paragraph) => `<p>${authoredText(paragraph.trim())}</p>`,
+  ).join("");
 }
 
 function embeddedJson(value) {
@@ -133,6 +141,15 @@ function label(dictionary, key) {
   return dictionary[key];
 }
 
+function summaryLabelElement(tag, value) {
+  const text = String(value);
+  const balanced = /^(\p{Script=Hangul}{2}) (\p{Script=Hangul}{2})$/u.exec(text);
+  if (!balanced) return `<${tag}>${escapeHtml(text)}</${tag}>`;
+  return `<${tag}><span class="summary-label-stacked"><span>${escapeHtml(
+    balanced[1],
+  )}</span> <span>${escapeHtml(balanced[2])}</span></span></${tag}>`;
+}
+
 function textList(items, { empty, className = "plain-list" } = {}) {
   if (items.length === 0) return `<p class="empty">${escapeHtml(empty)}</p>`;
   return `<ul class="${className}">${items.map(
@@ -144,35 +161,53 @@ function goalValue(content) {
   return content.goal ?? content.intent;
 }
 
+function sectionOrdinal(number) {
+  return String(number).padStart(2, "0");
+}
+
+function tocHeading(dictionary, count) {
+  return `<h2 class="toc-heading"><span>${escapeHtml(label(dictionary, "toc"))}</span><span class="toc-progress"><span data-toc-current>1</span> / ${count}</span></h2>`;
+}
+
+function sectionTitle(id, title, number, suffix = "") {
+  return `<h2 class="section-title" id="${escapeHtml(id)}"><span class="section-number">${sectionOrdinal(number)}</span><span>${escapeHtml(title)}${suffix}</span></h2>`;
+}
+
+function documentTitle(content) {
+  return `<header class="document-head">
+    <h1 id="artifact-title">${authoredText(content.title)}</h1>
+  </header>`;
+}
+
 function checkList(content, dictionary) {
   const checks = content.checks ?? content.success.map((condition) => ({ condition }));
   return `<ol class="check-list">${checks.map((check) => {
-    const verification = check.verify === undefined ? "" : `<p class="check-verification"><span class="check-by">${escapeHtml(label(
-      dictionary,
-      check.by === "human" ? "checkedByHuman" : "checkedByAgent",
-    ))}</span>${authoredText(check.verify)}</p>`;
+    const verification = check.verify === undefined ? "" : `<details class="check-verification">
+      <summary>${escapeHtml(label(
+        dictionary,
+        check.by === "human" ? "checkedByHuman" : "checkedByAgent",
+      ))}</summary>
+      <div class="check-verification-content">${authoredParagraphs(check.verify)}</div>
+    </details>`;
     return `<li><span class="check-condition">${authoredText(check.condition)}</span>${verification}</li>`;
   }).join("")}</ol>`;
 }
 
-function overview(content, dictionary) {
-  return `<section class="overview document-section" id="overview" aria-labelledby="artifact-title">
-    <header class="document-head">
-      <h1 id="artifact-title">${authoredText(content.title)}</h1>
-      <p class="goal-label">${escapeHtml(label(dictionary, "goal"))}</p>
-      <p class="goal">${authoredText(goalValue(content))}</p>
-    </header>
+function overview(content, dictionary, number) {
+  return `<section class="overview document-section" id="overview" aria-labelledby="overview-title">
+    ${sectionTitle("overview-title", label(dictionary, "overview"), number)}
     <dl class="synopsis">
-      <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd><p>${authoredText(content.problem)}</p></dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd><p>${authoredText(content.boundary)}</p></dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "goal"))}<dd>${authoredParagraphs(goalValue(content))}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "problem"))}<dd>${authoredParagraphs(content.problem)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "checks"))}<dd>${checkList(content, dictionary)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "boundary"))}<dd>${authoredParagraphs(content.boundary)}</dd></div>
     </dl>
   </section>`;
 }
 
-function scopeSection(content, dictionary) {
+function scopeSection(content, dictionary, number) {
   return `<section class="scope document-section" id="scope" aria-labelledby="scope-title">
-    <h2 class="sr-only" id="scope-title">${escapeHtml(label(dictionary, "scope"))}</h2>
+    ${sectionTitle("scope-title", label(dictionary, "scope"), number)}
     <div class="scope-column">
       <h3>${escapeHtml(label(dictionary, "included"))}</h3>
       ${textList(content.scope.included, { empty: label(dictionary, "noIncluded") })}
@@ -186,13 +221,15 @@ function scopeSection(content, dictionary) {
 
 function directionReferences(references, dictionary) {
   if (references.length === 0) return "";
-  return `<div class="direction-references"><h4>${escapeHtml(label(dictionary, "references"))}</h4><ul>${references.map(
+  return `<details class="direction-references">
+    <summary>${escapeHtml(label(dictionary, "references"))} · ${references.length}</summary>
+    <div class="direction-reference-content"><ul>${references.map(
     (reference) => `<li><a href="${escapeHtml(reference.url)}">${authoredText(reference.label)}</a><p><strong>${escapeHtml(label(dictionary, "influence"))}:</strong> ${authoredText(reference.influence)}</p></li>`,
-  ).join("")}</ul></div>`;
+  ).join("")}</ul></div>
+  </details>`;
 }
 
 function designDirectionsComparison(directions, dictionary, idPrefix = "") {
-  const optionById = new Map(directions.options.map((option) => [option.id, option]));
   const status = (option) => [
     option.id === directions.recommendation.optionId
       ? `<span class="direction-status recommended">${escapeHtml(label(dictionary, "recommended"))}</span>`
@@ -201,79 +238,87 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
       ? `<span class="direction-status selected">${escapeHtml(label(dictionary, "selected"))}</span>`
       : "",
   ].join("");
-  const optionList = directions.options.map((option, index) => `<li class="design-direction" id="${escapeHtml(idPrefix)}design-direction-${escapeHtml(option.id)}">
-    <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><h3>${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></header>
+  const rationale = (option) => {
+    const rows = [];
+    if (option.id === directions.recommendation.optionId) {
+      rows.push(`<div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd>${authoredParagraphs(directions.recommendation.reason)}</dd></div>`);
+    }
+    if (option.id === directions.selection.optionId) {
+      const decidedBy = directions.selection.decidedBy === "delegated"
+        ? label(dictionary, "decidedByDelegated")
+        : label(dictionary, "decidedByUser");
+      rows.push(`<div><dt>${escapeHtml(label(dictionary, "selection"))}<span class="selection-source">${escapeHtml(decidedBy)}</span></dt><dd>${authoredParagraphs(directions.selection.reason)}</dd></div>`);
+    }
+    return rows.length === 0 ? "" : `<dl class="direction-rationales">${rows.join("")}</dl>`;
+  };
+  const optionList = directions.options.map((option, index) => {
+    const optionId = `${idPrefix}design-direction-${option.id}`;
+    const rationaleHtml = rationale(option);
+    return `<li class="design-direction" id="${escapeHtml(optionId)}">
+    <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><div class="direction-title-line"><h3 id="${escapeHtml(optionId)}-title">${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></div></header>
     <div class="direction-image"><img src="data:${option.image.mimeType};base64,${option.image.data}" alt="${escapeHtml(option.alt)}" width="${option.image.width}" height="${option.image.height}"></div>
-    <p class="direction-summary">${authoredText(option.summary)}</p>
+    <div class="direction-summary">${authoredParagraphs(option.summary)}</div>
     <div class="direction-details">
       <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
       <div><h4>${escapeHtml(label(dictionary, "tradeoffs"))}</h4>${textList(option.tradeoffs)}</div>
     </div>
-    ${directionReferences(option.references, dictionary)}
-  </li>`).join("");
-  const recommendation = optionById.get(directions.recommendation.optionId);
-  const selection = optionById.get(directions.selection.optionId);
-  const decidedBy = directions.selection.decidedBy === "delegated"
-    ? label(dictionary, "decidedByDelegated")
-    : label(dictionary, "decidedByUser");
-  return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>
-    <dl class="direction-decisions">
-      <div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd><strong>${authoredText(recommendation.title)}</strong><p>${authoredText(directions.recommendation.reason)}</p></dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "selection"))}</dt><dd><strong>${authoredText(selection.title)}</strong><span class="selection-source">${escapeHtml(decidedBy)}</span><p>${authoredText(directions.selection.reason)}</p></dd></div>
-    </dl>`;
+${rationaleHtml === "" ? "" : `    ${rationaleHtml}\n`}    ${directionReferences(option.references, dictionary)}
+  </li>`;
+  }).join("");
+  return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>`;
 }
 
-function designDirectionsSection(content, dictionary) {
+function designDirectionsSection(content, dictionary, number) {
   if (!content.designDirections) return undefined;
   return `<section class="body-section document-section" id="design-directions" aria-labelledby="design-directions-title">
-    <h2 id="design-directions-title">${escapeHtml(label(dictionary, "designDirections"))}</h2>
+    ${sectionTitle("design-directions-title", label(dictionary, "designDirections"), number)}
     ${designDirectionsComparison(content.designDirections, dictionary)}
   </section>`;
 }
 
-function behaviorSection(content, dictionary) {
+function behaviorSection(content, dictionary, number) {
   if (!content.behavior) return undefined;
-  const outcomeCount = content.behavior.outcomes.length;
-  const outcomes = outcomeCount === 0 ? "" : `<div class="behavior-outcomes-block">
+  const outcomes = content.behavior.outcomes.length === 0 ? "" : `<div class="behavior-outcomes-block">
     <h3 class="behavior-outcomes-title">${escapeHtml(label(dictionary, "outcomes"))}</h3>
-    <ul class="behavior-outcomes behavior-outcome-count-${Math.min(outcomeCount, 3)}">${
+    <ul class="behavior-outcomes">${
     content.behavior.outcomes.map((outcome) => `<li class="${outcome.kind === "cancel" ? "cancel" : "complete"}">
       <span class="outcome-mark" aria-hidden="true">${outcome.kind === "cancel" ? "×" : "✓"}</span>
       <div><strong>${authoredText(outcome.title)}</strong>${outcome.detail
-        ? `<p>${authoredText(outcome.detail)}</p>`
+        ? authoredParagraphs(outcome.detail)
         : ""}</div>
     </li>`).join("")
   }</ul></div>`;
   return `<section class="body-section document-section" id="behavior" aria-labelledby="behavior-title">
-    <h2 id="behavior-title">${escapeHtml(label(dictionary, "behavior"))}</h2>
+    ${sectionTitle("behavior-title", label(dictionary, "behavior"), number)}
     <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
-      <span class="step-number" aria-hidden="true">${index + 1}</span>
+      <span class="step-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
       <strong>${authoredText(step.title)}</strong>${step.detail
-        ? `<p>${authoredText(step.detail)}</p>`
+        ? authoredParagraphs(step.detail)
         : ""}
     </li>`).join("")}</ol>
     ${outcomes}
   </section>`;
 }
 
-function agreementSection(content, dictionary) {
+function agreementSection(content, dictionary, number) {
   if (content.decisions.length === 0 && content.openChoices.length === 0) return undefined;
   const decisionColumn = content.decisions.length === 0 ? "" : `<div>
     <h3 class="subheading">${escapeHtml(label(dictionary, "agreedDecisions"))}</h3>
     <ol class="decision-list">${content.decisions.map((decision, index) => `<li>
       <span class="decision-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
-      <h3>${authoredText(decision.decision)}</h3>
-      <p>${authoredText(decision.reason)}</p>
+      <details class="decision-disclosure">
+        <summary><h3>${authoredText(decision.decision)}</h3></summary>
+        <div class="decision-reason">${authoredParagraphs(decision.reason)}</div>
+      </details>
     </li>`).join("")}</ol>
   </div>`;
   const choiceColumn = content.openChoices.length === 0 ? "" : `<div>
     <h3 class="subheading">${escapeHtml(label(dictionary, "openChoices"))}</h3>
     ${textList(content.openChoices)}
   </div>`;
-  const singleColumn = content.decisions.length === 0 || content.openChoices.length === 0;
   return `<section class="body-section document-section" id="agreement" aria-labelledby="agreement-title">
-    <h2 id="agreement-title">${escapeHtml(label(dictionary, "agreement"))}</h2>
-    <div class="agreement-grid${singleColumn ? " agreement-grid-single" : ""}">${decisionColumn}${choiceColumn}</div>
+    ${sectionTitle("agreement-title", label(dictionary, "agreement"), number)}
+    <div class="agreement-groups">${decisionColumn}${choiceColumn}</div>
   </section>`;
 }
 
@@ -284,15 +329,15 @@ function evidenceLocation(item) {
   return `<code>${authoredText(item.location)}</code>`;
 }
 
-function evidenceSection(content, dictionary) {
+function evidenceSection(content, dictionary, number) {
   if (content.evidence.length === 0) return undefined;
-  return `<section class="body-section document-section" id="evidence" aria-labelledby="evidence-title">
-    <h2 id="evidence-title">${escapeHtml(label(dictionary, "evidence"))}</h2>
-    <dl class="evidence-list">${content.evidence.map((item) => `<div>
+  return `<details class="body-section document-section section-disclosure" id="evidence">
+    <summary class="section-disclosure-summary">${sectionTitle("evidence-title", label(dictionary, "evidence"), number, ` · ${content.evidence.length}`)}</summary>
+    <div class="section-disclosure-content"><dl class="evidence-list">${content.evidence.map((item) => `<div>
       <dt>${authoredText(item.label)}</dt>
       <dd>${evidenceLocation(item)}</dd>
-    </div>`).join("")}</dl>
-  </section>`;
+    </div>`).join("")}</dl></div>
+  </details>`;
 }
 
 function compactRevisionContent(content, dictionary, idPrefix) {
@@ -376,7 +421,7 @@ function railHistory(data, dictionary, idSuffix = "") {
 }
 
 function repositoryMark(repository, className) {
-  return `<span class="${className}"><svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>${authoredText(repository)}</span></span>`;
+  return `<span class="${className}"><svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 9.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"></path></svg><span>${authoredText(repository)}</span></span>`;
 }
 
 function themeVariables(colors) {
@@ -453,16 +498,29 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .topbar-inner { max-width: ${LAYOUT.documentWidth}px; height: ${LAYOUT.topbarInnerHeight}px; margin: 0 auto; padding: 0 ${LAYOUT.topbarWideGutter}px; display: flex; align-items: center; gap: ${space5}px; }
 .brand { flex: none; display: flex; align-items: center; gap: ${space2}px; font-size: ${TYPE.brand.wide.fontSize}px; line-height: ${TYPE.brand.wide.lineHeight}; font-weight: 700; letter-spacing: -.025em; white-space: nowrap; }
 .brand-icon { flex: none; width: 24px; height: 24px; border-radius: 6px; }
-.repository, .mobile-repository { min-width: 0; display: flex; align-items: center; gap: ${space2}px; color: var(--text); }
+.repository, .mobile-repository { min-width: 0; display: flex; align-items: center; gap: ${space2}px; color: var(--text); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; }
 .repository > span, .mobile-repository > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repository-icon { flex: none; width: 16px; height: 16px; stroke: var(--muted); }
 .status { flex: none; padding: ${space1}px ${space2}px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)); border-radius: 4px; background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
 .top-actions { margin-left: auto; display: flex; align-items: center; gap: ${space2}px; }
+.display-controls { flex: none; display: flex; align-items: center; height: 44px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.locale-menu { position: relative; }
+.locale-menu > summary { height: 42px; min-width: 80px; display: flex; align-items: center; justify-content: space-between; gap: ${space2}px; padding: 0 ${space2}px 0 ${space3}px; color: var(--text); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; list-style: none; }
+.locale-menu > summary::-webkit-details-marker { display: none; }
+.locale-chevron { width: 14px; height: 14px; stroke: currentColor; transition: transform 120ms ease; }
+.locale-menu[open] .locale-chevron { transform: rotate(180deg); }
+.locale-options { position: absolute; z-index: 13; top: calc(100% + ${space1}px); right: 0; min-width: 124px; display: grid; gap: 2px; margin: 0; padding: ${space1}px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); box-shadow: 0 10px 28px color-mix(in srgb, var(--text) 14%, transparent); list-style: none; }
+.locale-option, .locale-current { min-height: 44px; display: flex; align-items: center; padding: ${space2}px ${space3}px; border-radius: 4px; font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; text-decoration: none; }
+.locale-current { color: var(--muted); }
+.locale-option { color: var(--text); }
+.locale-option:visited { color: var(--text); }
+.locale-option:hover, .locale-option:focus-visible { background: var(--bg); }
 .theme-button, .mobile-navigation > summary { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; }
-.theme-button:hover, .mobile-navigation > summary:hover { border-color: var(--border); background: var(--panel); }
+.display-controls .theme-button { width: 42px; height: 42px; border: 0; border-radius: 5px; }
+.display-controls.has-locale-menu .theme-button { border-left: 1px solid var(--border); border-radius: 0 5px 5px 0; }
+.theme-button:hover, .mobile-navigation > summary:hover { background: var(--panel); }
+.mobile-navigation > summary:hover { border-color: var(--border); }
 .theme-button:focus-visible, .mobile-navigation > summary:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.locale-link { color: var(--muted); font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.locale-link:hover, .locale-link:focus-visible { color: var(--text); }
 .theme-icon, .navigation-icon { width: 20px; height: 20px; stroke: currentColor; }
 .theme-icon[hidden] { display: none; }
 .mobile-navigation { display: none; }
@@ -474,9 +532,16 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .rail { border-left: 1px solid var(--border); padding: ${space7}px ${space5}px; }
 .rail-inner { position: sticky; top: ${LAYOUT.topbarHeight + 40}px; display: grid; gap: ${space6}px; }
 .toc h2, .rail-history h2 { margin: 0 0 ${space4}px; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
-.toc ol, .rail-history ol { list-style: none; padding: 0; }
-.toc a { display: block; padding: ${space2}px 0; color: var(--text); text-decoration: none; }
-.toc a[aria-current="location"] { color: var(--accent); font-weight: 700; }
+.toc-heading { display: flex; align-items: baseline; justify-content: space-between; gap: ${space2}px; }
+.toc-progress { color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.toc-list, .rail-history ol { list-style: none; padding: 0; }
+.toc-list { display: grid; gap: 2px; }
+.toc-link { min-height: 36px; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: center; padding: ${space1}px ${space2}px; border-left: 4px solid transparent; color: var(--muted); font-size: ${TYPE.body.wide.fontSize}px; font-weight: 500; text-decoration: none; }
+.toc-link:visited { color: var(--muted); }
+.toc-number { color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.toc-link[aria-current="location"], .toc-link[aria-current="location"]:visited { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); font-weight: 700; }
+.toc-link[aria-current="location"] .toc-number { color: var(--accent); }
+.toc-link:hover, .toc-link:focus-visible { background: var(--panel); color: var(--text); }
 .rail-history { padding-top: ${space5}px; border-top: 1px solid var(--border); }
 .rail-history > ol > li, .older-history > ol > li { position: relative; padding: 0 0 ${space5}px ${space4}px; border-left: 1px solid var(--border); }
 .rail-history > ol > li:last-child, .older-history > ol > li:last-child { padding-bottom: ${space3}px; }
@@ -490,82 +555,120 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .revision-disclosure > summary, .older-history > summary { min-height: 32px; display: flex; align-items: center; color: var(--text); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; }
 .revision-disclosure > summary::marker, .older-history > summary::marker { color: var(--muted); }
 .revision-popup { position: absolute; z-index: 12; top: 100%; right: 0; width: min(560px, calc(100vw - ${LAYOUT.tableOfContentsWidth + 80}px)); max-height: min(70vh, 680px); overflow: auto; padding: ${space4}px; border: 1px solid var(--border); background: var(--panel); box-shadow: 0 12px 32px color-mix(in srgb, var(--text) 14%, transparent); }
-.revision-popup .design-direction-list, .revision-popup .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
+.revision-popup .design-direction-list { grid-template-columns: 1fr; }
 .revision-popup .design-direction { padding-inline: ${space2}px; }
 .revision-popup .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
 .older-history > ol { list-style: none; padding: ${space3}px 0 0; }
-.document-section + .document-section { margin-top: ${space9}px; }
 .document-head { max-width: 78ch; }
+.document-head + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
+.document-section + .document-section { margin-top: ${space6}px; padding-top: ${space4}px; }
+.section-title { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: baseline; }
+.section-number { color: var(--accent); font-size: inherit; line-height: inherit; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
-.goal-label { margin-top: ${space3}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
-.goal { margin-top: ${space1}px; font-size: ${TYPE.goal.wide.fontSize}px; line-height: ${TYPE.goal.wide.lineHeight}; }
-.synopsis { margin-top: ${space5}px; border-top: 1px solid var(--border); }
+.synopsis dd p + p { margin-top: ${space2}px; }
 .synopsis > div { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: ${space5}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
 .synopsis dt { font-weight: 700; }
+.summary-label-stacked { display: inline-flex; flex-direction: column; align-items: flex-start; }
 .synopsis dd { margin: 0; }
 .check-list { list-style: decimal-leading-zero; padding-left: ${space6}px; display: grid; gap: ${space3}px; }
 .check-list li { padding-left: ${space1}px; }
 .check-list li::marker { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .check-condition { display: block; }
 .check-verification { margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.check-by { margin-right: ${space2}px; color: var(--accent); font-weight: 700; }
-.overview + .scope { margin-top: ${space7}px; }
-.scope { display: grid; grid-template-columns: minmax(0,.45fr) minmax(0,.55fr); }
+.check-verification > summary { min-height: ${space5}px; display: flex; align-items: center; color: var(--muted); cursor: pointer; font-weight: 300; list-style: none; }
+.check-verification > summary::-webkit-details-marker { display: none; }
+.check-verification > summary::after { margin-left: ${space2}px; content: "›"; transition: transform 120ms ease; }
+.check-verification[open] > summary::after { transform: rotate(90deg); }
+.check-verification-content { padding: 0 0 ${space1}px; }
+.check-verification-content p + p { margin-top: ${space1}px; }
+.scope { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.scope > .section-title { grid-column: 1 / -1; }
 .scope-column { padding: ${space4}px ${space2}px ${space5}px; }
-.scope-column + .scope-column { padding-left: ${space6}px; border-left: 1px solid var(--border); }
-.scope h3, .body-section > h2 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
+.scope-column { min-width: 0; }
+.scope-column + .scope-column { padding-left: ${space5}px; border-left: 1px solid var(--border); }
+.scope h3 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
+.section-title { width: 100%; margin: 0 0 ${space4}px; padding-bottom: ${space3}px; border-bottom: 2px solid var(--component-border); color: var(--text); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
-.design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
+.design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .design-direction-list.design-direction-count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .design-direction { min-width: 0; padding: ${space4}px ${space4}px ${space5}px; }
 .design-direction + .design-direction { border-left: 1px solid var(--border); }
-.direction-head { min-height: 46px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space2}px; align-items: start; }
+.direction-head { min-height: ${space6}px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space2}px; align-items: start; }
 .direction-head h3 { margin: 0; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .direction-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
-.direction-statuses { grid-column: 2; display: flex; flex-wrap: wrap; gap: ${space1}px; }
+.direction-title-line { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: ${space1}px ${space2}px; }
+.direction-statuses { display: flex; flex-wrap: wrap; gap: ${space1}px; }
 .direction-status { padding: 2px ${space2}px; border: 1px solid var(--component-border); border-radius: 999px; font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
 .direction-status.selected { border-color: var(--accent); color: var(--accent); }
 .direction-image { margin-top: ${space3}px; display: grid; min-height: 180px; place-items: center; overflow: hidden; border: 1px solid var(--component-border); background: var(--panel); }
 .direction-image img { display: block; width: 100%; height: auto; max-height: 440px; object-fit: contain; }
 .direction-summary { margin-top: ${space4}px; }
-.direction-details { margin-top: ${space4}px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: ${space4}px; }
-.direction-details h4, .direction-references h4 { margin: 0 0 ${space2}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.direction-summary p + p { margin-top: ${space2}px; }
+.direction-details { display: grid; gap: ${space4}px; margin-top: ${space4}px; padding-top: ${space3}px; border-top: 1px solid var(--border); }
+.direction-details h4 { margin: 0 0 ${space2}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-details .plain-list, .direction-references ul { padding-left: ${space4}px; display: grid; gap: ${space1}px; }
 .direction-references { margin-top: ${space4}px; padding-top: ${space3}px; border-top: 1px solid var(--border); }
+.direction-references > summary { min-height: 32px; display: flex; align-items: center; color: var(--accent); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; list-style: none; }
+.direction-references > summary::-webkit-details-marker { display: none; }
+.direction-references > summary::after { margin-left: ${space2}px; content: "›"; transition: transform 120ms ease; }
+.direction-references[open] > summary::after { transform: rotate(90deg); }
+.direction-reference-content { min-width: 0; padding-top: ${space2}px; }
 .direction-references li p { margin: ${space1}px 0 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.direction-decisions { border-top: 1px solid var(--border); }
-.direction-decisions > div { display: grid; grid-template-columns: minmax(140px, .28fr) minmax(0, 1fr); gap: ${space4}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
-.direction-decisions dt { font-weight: 700; }
-.direction-decisions dd { margin: 0; }
-.direction-decisions p { margin-top: ${space1}px; color: var(--muted); }
-.selection-source { display: inline-block; margin-left: ${space2}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.direction-rationales { margin: ${space4}px 0 0; border-top: 1px solid var(--border); }
+.direction-rationales > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: ${space3}px; padding: ${space3}px 0; }
+.direction-rationales > div + div { border-top: 1px solid var(--border); }
+.direction-rationales dt { color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
+.direction-rationales dd { margin: 0; }
+.direction-rationales p + p { margin-top: ${space2}px; }
+.selection-source { display: block; margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 500; }
+@supports (grid-template-rows: subgrid) {
+  .design-direction { display: grid; grid-row: span 6; grid-template-rows: subgrid; }
+  .direction-head { grid-row: 1; }
+  .direction-image { grid-row: 2; }
+  .direction-summary { grid-row: 3; }
+  .direction-details { grid-row: 4; }
+  .direction-rationales { grid-row: 5; }
+  .direction-references { grid-row: 6; }
+}
 .behavior-steps { list-style: none; padding: 0; display: grid; }
-.behavior-steps li { position: relative; display: grid; grid-template-columns: 32px minmax(160px, 220px) minmax(0, 1fr); column-gap: ${space4}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
-.behavior-steps li:not(:last-child)::after { content: ""; position: absolute; top: 28px; bottom: ${space1}px; left: 13px; width: 1px; background: var(--border); }
-.step-number { position: relative; z-index: 1; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
+.behavior-steps li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: ${space3}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
+.behavior-steps li:not(:last-child)::after { content: ""; position: absolute; top: 22px; bottom: ${space1}px; left: 13px; width: 1px; background: var(--border); }
+.step-number { position: relative; z-index: 1; display: block; width: 28px; background: var(--bg); color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .behavior-steps strong, .behavior-outcomes strong { display: block; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
+.behavior-steps p { grid-column: 2; margin-top: ${space1}px; }
 .behavior-steps p, .behavior-outcomes p { color: var(--muted); }
+.behavior-steps p + p, .behavior-outcomes p + p, .decision-list p + p { margin-top: ${space2}px; }
 .behavior-outcomes-block { margin-top: ${space2}px; padding-top: ${space4}px; }
 .behavior-outcomes-title { display: flex; align-items: center; gap: ${space3}px; margin: 0 0 ${space4}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .behavior-outcomes-title::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--border); }
-.behavior-outcomes { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: ${space5}px; }
-.behavior-outcomes.behavior-outcome-count-1 { grid-template-columns: minmax(0, 1fr); }
-.behavior-outcomes.behavior-outcome-count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.behavior-outcomes { list-style: none; padding: 0; display: grid; }
 .behavior-outcomes li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space3}px; align-items: start; min-width: 0; }
+.behavior-outcomes li + li { margin-top: ${space4}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
 .outcome-mark { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--accent); border-radius: 50%; color: var(--accent); font-weight: 700; }
 .behavior-outcomes .cancel .outcome-mark { border-color: var(--component-border); color: var(--muted); }
-.agreement-grid { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(220px, .8fr); border-top: 1px solid var(--border); }
-.agreement-grid-single { grid-template-columns: 1fr; }
-.agreement-grid > div { padding: ${space4}px ${space2}px 0; }
-.agreement-grid > div + div { padding-left: ${space6}px; border-left: 1px solid var(--border); }
+.agreement-groups > div { padding: ${space4}px ${space2}px 0; }
+.agreement-groups > div + div { margin-top: ${space5}px; padding-top: ${space5}px; border-top: 1px solid var(--border); }
 .subheading { margin: 0 0 ${space3}px; color: var(--accent); font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .decision-list { list-style: none; padding: 0; }
-.decision-list li { display: grid; grid-template-columns: 28px minmax(180px, .44fr) minmax(0,1fr); gap: ${space4}px; padding: ${space3}px 0; border-top: 1px solid var(--border); }
+.decision-list li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space1}px ${space4}px; padding: ${space2}px 0; border-top: 1px solid var(--border); }
 .decision-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .decision-list li:first-child { border-top: 0; }
+.decision-disclosure { min-width: 0; }
+.decision-disclosure > summary { min-height: 32px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: ${space2}px; cursor: pointer; list-style: none; }
+.decision-disclosure > summary::-webkit-details-marker { display: none; }
+.decision-disclosure > summary::after { content: "›"; transition: transform 120ms ease; }
+.decision-disclosure[open] > summary::after { transform: rotate(90deg); }
 .decision-list h3 { margin: 0; font-size: inherit; }
-.decision-list p { color: var(--muted); }
+.decision-reason { padding: 0 ${space5}px ${space1}px 0; color: var(--muted); }
+.decision-number { padding-top: ${space2}px; }
+.section-disclosure { border: 0; }
+.section-disclosure-summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; list-style: none; }
+.section-disclosure-summary::-webkit-details-marker { display: none; }
+.section-disclosure-summary .section-title { flex: 1 1 auto; }
+.section-disclosure-summary::after { margin-left: ${space2}px; color: var(--text); content: "›"; transition: transform 120ms ease; }
+.section-disclosure[open] > .section-disclosure-summary::after { transform: rotate(90deg); }
+.section-disclosure:not([open]) > .section-disclosure-summary .section-title { margin-bottom: 0; }
 .evidence-list > div { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(0,1fr); gap: ${space4}px; padding: ${space3}px ${space2}px; border-top: 1px solid var(--border); }
 .evidence-list dt { font-weight: 700; }
 .evidence-list dd { margin: 0; overflow-wrap: anywhere; }
@@ -581,8 +684,8 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .mobile-navigation-panel { position: fixed; z-index: 11; top: ${LAYOUT.topbarHeight}px; right: 0; width: min(360px, 100vw); max-height: calc(100dvh - ${LAYOUT.topbarHeight}px); overflow: auto; padding: ${space5}px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); background: var(--panel); box-shadow: -12px 16px 32px color-mix(in srgb, var(--text) 14%, transparent); }
   .mobile-navigation-panel .toc { padding-bottom: ${space5}px; }
   .mobile-navigation-panel .mobile-repository { margin-bottom: ${space5}px; padding-bottom: ${space4}px; border-bottom: 1px solid var(--border); }
-  .mobile-navigation-panel .toc ol { display: grid; gap: ${space1}px; }
-  .mobile-navigation-panel .toc a { padding-block: ${space1}px; }
+  .mobile-navigation-panel .toc-list { display: grid; gap: ${space1}px; }
+  .mobile-navigation-panel .toc-link { min-height: 44px; }
   .mobile-navigation-panel .rail-history { padding-top: ${space5}px; }
   .mobile-navigation-panel .revision-popup { position: static; width: auto; max-height: none; margin-top: ${space2}px; padding: ${space3}px; box-shadow: none; }
 }
@@ -592,28 +695,17 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .brand { font-size: ${TYPE.brand.narrow.fontSize}px; line-height: ${TYPE.brand.narrow.lineHeight}; }
   .repository { max-width: 30vw; }
   .main { padding: ${space8}px ${space4}px ${space9}px; }
-  .document-section + .document-section { margin-top: 48px; }
+  .document-head + .document-section,
+  .document-section + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .document-head h1 { font-size: ${TYPE.pageTitle.narrow.fontSize}px; line-height: ${TYPE.pageTitle.narrow.lineHeight}; }
-  .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
-  .goal { font-size: ${TYPE.goal.narrow.fontSize}px; line-height: ${TYPE.goal.narrow.lineHeight}; }
   .check-verification { font-size: ${TYPE.supporting.narrow.fontSize}px; }
+  .check-verification > summary, .direction-references > summary, .decision-disclosure > summary { min-height: 44px; }
   .scope { grid-template-columns: 1fr; }
   .scope-column + .scope-column { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
   .design-direction-list, .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
-  .design-direction { padding-inline: ${space2}px; }
+  .design-direction { display: block; grid-row: auto; padding-inline: ${space2}px; }
   .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
-  .direction-details { grid-template-columns: 1fr; }
-  .direction-decisions > div { grid-template-columns: 1fr; gap: ${space1}px; }
-  .selection-source { display: block; margin: ${space1}px 0 0; }
-  .behavior-steps li { grid-template-columns: 32px minmax(130px, 180px) minmax(0, 1fr); column-gap: ${space3}px; }
-  .behavior-outcomes { grid-template-columns: 1fr; gap: 0; }
-  .behavior-outcomes.behavior-outcome-count-2 { grid-template-columns: 1fr; }
-  .behavior-outcomes li + li { margin-top: ${space4}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
-  .agreement-grid { grid-template-columns: 1fr; }
-  .agreement-grid > div + div { padding: ${space5}px ${space2}px 0; border-top: 1px solid var(--border); border-left: 0; }
-  .decision-list li { grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px ${space3}px; }
-  .decision-number { grid-row: 1 / span 2; }
-  .decision-list p { grid-column: 2; }
+  .direction-rationales > div { grid-template-columns: 1fr; gap: ${space1}px; }
   .revision-content > div, .evidence-list > div { grid-template-columns: 1fr; gap: ${space1}px; }
 }
 @media (max-width: ${LAYOUT.compactBreakpoint}px) {
@@ -626,13 +718,12 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .topbar-inner.has-locale-switch .status { display: none; }
   .status { max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .synopsis > div { grid-template-columns: 1fr; gap: ${space1}px; padding-inline: 0; }
-  .behavior-steps li { grid-template-columns: 32px minmax(0, 1fr); min-height: 0; padding-bottom: ${space5}px; }
-  .behavior-steps p { grid-column: 2; margin-top: ${space1}px; }
+  .behavior-steps li { min-height: 0; padding-bottom: ${space5}px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media (forced-colors: active) {
-  .status, .theme-button, .mobile-navigation > summary, .outcome-mark, .direction-status, .direction-image { border: 1px solid ButtonText; }
-  .step-number { border: 1px solid ButtonText; background: Canvas; color: CanvasText; }
+  .status, .display-controls, .mobile-navigation > summary, .locale-options, .outcome-mark, .direction-status, .direction-image { border: 1px solid ButtonText; }
+  .step-number { background: Canvas; color: CanvasText; }
   .revision-dot, .rail-history .current .revision-dot { border-color: CanvasText; background: Canvas; }
 }
 @media print {
@@ -641,6 +732,14 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .layout { display: block; }
   .main { padding: 0; }
   .design-direction { break-inside: avoid; }
+  .check-verification-content,
+  .direction-reference-content,
+  .decision-reason,
+  .section-disclosure-content { display: block !important; }
+  .check-verification::details-content,
+  .direction-references::details-content,
+  .decision-disclosure::details-content,
+  .section-disclosure::details-content { content-visibility: visible; }
   a { color: inherit; text-decoration: none; }
 }
 `;
@@ -658,13 +757,14 @@ const theme=document.getElementById("theme-toggle");
 const navigation=document.querySelector(".mobile-navigation");
 const links=[...document.querySelectorAll('nav a[href^="#"]')];
 const sections=[...document.querySelectorAll(".document-section[id]")];
+const progress=[...document.querySelectorAll("[data-toc-current]")];
 let frame=0;
 const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
 const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
 const focusTarget=target=>{const had=target.hasAttribute("tabindex");if(!had)target.setAttribute("tabindex","-1");target.focus({preventScroll:true});if(!had)target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});};
 const reveal=target=>{for(let item=target;item;item=item.parentElement)if(item.tagName==="DETAILS")item.open=true;};
 const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;reveal(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({block:"start"});});};
-const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}for(const link of links){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
+const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}const index=sections.indexOf(current);for(const item of progress)item.textContent=String(index+1);for(const link of links){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
 syncTheme();
 theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
 navigation?.addEventListener("click",event=>{if(event.target.closest?.('a[href^="#"]'))navigation.open=false;});
@@ -677,7 +777,7 @@ openTarget();syncCurrent();
 })();`;
 }
 
-function alternateLocaleLink(value) {
+function localeMenu(value, currentLocale, dictionary) {
   if (value === undefined) return "";
   if (
     value === null
@@ -688,32 +788,40 @@ function alternateLocaleLink(value) {
   ) {
     throw new TypeError("alternateLocale must name a supported locale and sibling HTML file");
   }
-  const text = value.locale === "ko-KR" ? "한국어" : "English";
-  return `<a class="locale-link" href="${escapeHtml(value.href)}" hreflang="${escapeHtml(value.locale)}" lang="${escapeHtml(value.locale)}">${text}</a>`;
+  const currentText = currentLocale === "ko-KR" ? "한국어" : "English";
+  const alternateText = value.locale === "ko-KR" ? "한국어" : "English";
+  return `<details class="locale-menu">
+    <summary aria-label="${escapeHtml(label(dictionary, "language"))}" title="${escapeHtml(label(dictionary, "language"))}"><span lang="${escapeHtml(currentLocale)}">${currentText}</span><svg class="locale-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 10 4 4 4-4"></path></svg></summary>
+    <ul class="locale-options"><li><span class="locale-current" aria-current="page" lang="${escapeHtml(currentLocale)}">${currentText}</span></li><li><a class="locale-option" href="${escapeHtml(value.href)}" hreflang="${escapeHtml(value.locale)}" lang="${escapeHtml(value.locale)}">${alternateText}</a></li></ul>
+  </details>`;
 }
 
 export function renderAlignArtifact(data, { alternateLocale, digest }) {
   const dictionary = dictionaries[data.locale];
-  const localeLink = alternateLocaleLink(alternateLocale);
+  const locale = localeMenu(alternateLocale, data.locale, dictionary);
   const current = data.revisions.at(-1);
   const content = current.content;
   const sections = [
-    { id: "overview", title: label(dictionary, "overview"), html: overview(content, dictionary) },
-    { id: "scope", title: label(dictionary, "scope"), html: scopeSection(content, dictionary) },
-    { id: "design-directions", title: label(dictionary, "designDirections"), html: designDirectionsSection(content, dictionary) },
-    { id: "behavior", title: label(dictionary, "behavior"), html: behaviorSection(content, dictionary) },
-    { id: "agreement", title: label(dictionary, "agreement"), html: agreementSection(content, dictionary) },
-    { id: "evidence", title: label(dictionary, "evidence"), html: evidenceSection(content, dictionary) },
-  ].filter((section) => section.html !== undefined);
+    { id: "overview", title: label(dictionary, "overview"), include: true, render: (number) => overview(content, dictionary, number) },
+    { id: "scope", title: label(dictionary, "scope"), include: true, render: (number) => scopeSection(content, dictionary, number) },
+    { id: "design-directions", title: label(dictionary, "designDirections"), include: content.designDirections !== undefined, render: (number) => designDirectionsSection(content, dictionary, number) },
+    { id: "behavior", title: label(dictionary, "behavior"), include: content.behavior !== undefined, render: (number) => behaviorSection(content, dictionary, number) },
+    { id: "agreement", title: label(dictionary, "agreement"), include: content.decisions.length > 0 || content.openChoices.length > 0, render: (number) => agreementSection(content, dictionary, number) },
+    { id: "evidence", title: label(dictionary, "evidence"), include: content.evidence.length > 0, render: (number) => evidenceSection(content, dictionary, number) },
+  ].filter((section) => section.include).map((section, index) => ({
+    ...section,
+    number: index + 1,
+    html: section.render(index + 1),
+  }));
   const showToc = sections.length >= 3;
-  const toc = showToc ? `<ol>${sections.map(
-    (section) => `<li><a href="#${section.id}">${escapeHtml(section.title)}</a></li>`,
+  const toc = showToc ? `<ol class="toc-list">${sections.map(
+    (section) => `<li><a class="toc-link" href="#${section.id}"><span class="toc-number">${sectionOrdinal(section.number)}</span><span>${escapeHtml(section.title)}</span></a></li>`,
   ).join("")}</ol>` : "";
   const mobileNavigation = `<details class="mobile-navigation">
     <summary aria-label="${escapeHtml(label(dictionary, "navigation"))}" title="${escapeHtml(label(dictionary, "navigation"))}"><svg class="navigation-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h10"></path><circle cx="18" cy="18" r="2.5"></circle></svg></summary>
     <div class="mobile-navigation-panel">
       ${repositoryMark(data.repository, "mobile-repository")}
-      ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}"><h2>${escapeHtml(label(dictionary, "toc"))}</h2>${toc}</nav>` : ""}
+      ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}">${tocHeading(dictionary, sections.length)}${toc}</nav>` : ""}
       ${railHistory(data, dictionary, "-mobile")}
     </div>
   </details>`;
@@ -741,23 +849,25 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
 <body>
   <a class="skip" href="#overview">${escapeHtml(label(dictionary, "skip"))}</a>
   <header class="topbar">
-    <div class="topbar-inner${localeLink === "" ? "" : " has-locale-switch"}">
+    <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
       <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· ALIGN</span></div>
       ${repositoryMark(data.repository, "repository")}
       <span class="status">v${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))}</span>
       <div class="top-actions">
-${localeLink === "" ? "" : `        ${localeLink}\n`}        <button class="theme-button" id="theme-toggle" type="button" aria-label="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}" title="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}">
+        <div class="display-controls${locale === "" ? "" : " has-locale-menu"}">
+${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-button" id="theme-toggle" type="button" aria-label="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}" title="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}">
           <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${data.theme === "dark" ? " hidden" : ""}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path></svg>
           <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${data.theme === "dark" ? "" : " hidden"}><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path></svg>
-        </button>
+          </button>
+        </div>
         ${mobileNavigation}
       </div>
     </div>
   </header>
   <div class="layout">
-    <main class="main" id="agreement-document">${sections.map((section) => section.html).join("")}</main>
+    <main class="main" id="agreement-document">${documentTitle(content)}${sections.map((section) => section.html).join("")}</main>
     <aside class="rail"><div class="rail-inner">
-      ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}"><h2>${escapeHtml(label(dictionary, "toc"))}</h2>${toc}</nav>` : ""}
+      ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}">${tocHeading(dictionary, sections.length)}${toc}</nav>` : ""}
       ${railHistory(data, dictionary)}
     </div></aside>
   </div>

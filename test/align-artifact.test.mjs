@@ -214,6 +214,22 @@ test("design direction images are validated, embedded, and kept off the network"
   assert.match(html, />사용자가 선택함</u);
   assert.match(html, /href="https:\/\/example\.com\/recovery-reference"/u);
   assert.match(html, /복구 선택을 첫 화면의 주 행동으로 배치했다/u);
+  const firstDirection = html.indexOf('id="design-direction-direction-1"');
+  const secondDirection = html.indexOf('id="design-direction-direction-2"');
+  const firstStrength = html.indexOf("핵심 선택을 빠르게 찾을 수 있다.");
+  const firstRecommendation = html.indexOf(">AI 추천<", firstDirection);
+  const firstReference = html.indexOf("복구 요구 참고");
+  assert.ok(firstDirection < firstStrength);
+  assert.ok(firstStrength < firstRecommendation);
+  assert.ok(firstRecommendation < firstReference);
+  assert.ok(firstReference < secondDirection);
+  const secondStrength = html.indexOf("현재 단계가 분명하다.");
+  const secondSelection = html.indexOf(">선택 결과<", secondDirection);
+  assert.ok(secondDirection < secondStrength);
+  assert.ok(secondStrength < secondSelection);
+  assert.match(html, /<details class="direction-references">[\s\S]*?<summary>참고 자료 · 1<\/summary>/u);
+  assert.doesNotMatch(html, /direction-reference-list|class="direction-reference"/u);
+  assert.doesNotMatch(html, /design-direction-detail-list/u);
   assert.doesNotMatch(html, new RegExp(firstImage.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
   assert.doesNotMatch(html, /<img[^>]+https?:/u);
 });
@@ -386,7 +402,7 @@ test("two image-rich revisions remain complete within the artifact boundary", as
 test("renderer is deterministic, self-contained, and keeps authored text inert", () => {
   const input = validateAlignInput(makeAlignInput({
     title: '</title><script src="https://evil.example/x.js"></script>',
-    goal: "Keep <img src=x onerror=alert(1)> as text.",
+    goal: "Keep <img src=x onerror=alert(1)> as text.\nKeep the second idea distinct.",
   }));
   const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
   const data = {
@@ -410,9 +426,14 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.equal(first, second);
   assert.match(first, /<img class="brand-icon" src="data:image\/png;base64,/u);
   assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
+  assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="6"/u);
+  assert.match(first, /name="hope-align-design-version" content="15"/u);
+  assert.match(
+    first,
+    /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
+  );
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
@@ -420,17 +441,34 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /class="outcome-mark" aria-hidden="true">×</u);
   assert.match(first, />판정 결과</u);
   assert.match(first, /<ol class="decision-list">/u);
+  assert.match(first, /<details class="decision-disclosure">/u);
   assert.match(first, />결정 사항</u);
   assert.doesNotMatch(first, /id="intent-history"/u);
   assert.doesNotMatch(first, /id="goal-history"/u);
   assert.match(first, />목표</u);
-  assert.match(first, />완료 기준</u);
+  assert.match(
+    first,
+    /<dl class="synopsis">\s*<div><dt>목표<\/dt><dd><p><bdi dir="auto">/u,
+  );
+  assert.doesNotMatch(first, /class="goal(?:-label)?"/u);
+  assert.match(
+    first,
+    /<header class="document-head">\s*<h1 id="artifact-title">[\s\S]*?<\/h1>\s*<\/header><section class="overview document-section" id="overview" aria-labelledby="overview-title">\s*<h2 class="section-title" id="overview-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u,
+  );
+  assert.doesNotMatch(first, /artifact-title-line/u);
+  assert.match(
+    first,
+    /<dt><span class="summary-label-stacked"><span>완료<\/span> <span>기준<\/span><\/span><\/dt>/u,
+  );
   assert.match(first, />확정 사항</u);
   assert.match(first, />구현 시 결정 사항</u);
   assert.match(first, />AI 에이전트 확인</u);
   assert.match(first, />사용자 확인</u);
   assert.match(first, /<ol class="check-list">/u);
   assert.match(first, /<span class="check-condition">/u);
+  assert.match(first, /<details class="check-verification">/u);
+  assert.match(first, /<summary>AI 에이전트 확인<\/summary>/u);
+  assert.match(first, /<details class="body-section document-section section-disclosure" id="evidence">/u);
   assert.doesNotMatch(first, /<ul class="check-list">/u);
   assert.doesNotMatch(first, /<ol class="check-list"><li><strong>/u);
   assert.match(first, /list-style: decimal-leading-zero/u);
@@ -441,12 +479,27 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /default-src &#39;none&#39;|default-src 'none'/u);
   assert.match(first, /&lt;script src=/u);
   assert.match(first, /&lt;img src=x onerror=alert\(1\)&gt;/u);
+  assert.match(
+    first,
+    /<dt>목표<\/dt><dd><p><bdi dir="auto">Keep &lt;img src=x onerror=alert\(1\)&gt; as text\.<\/bdi><\/p><p><bdi dir="auto">Keep the second idea distinct\.<\/bdi><\/p><\/dd>/u,
+  );
   assert.doesNotMatch(first, /<script src="https:\/\/evil/u);
   assert.doesNotMatch(first, /localStorage/u);
   assert.doesNotMatch(first, /현재 구현 기준|구현 계약/u);
   assert.match(first, /<script id="hope-align-data" type="application\/json">/u);
   assert.doesNotMatch(first, /target="_blank"/u);
-  assert.doesNotMatch(first, /class="locale-link"/u);
+  assert.doesNotMatch(first, /class="locale-menu"/u);
+  assert.match(first, /<div class="display-controls">[\s\S]*?<button class="theme-button"/u);
+  const main = first.match(/<main class="main"[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
+  assert.deepEqual(
+    [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
+    ["01", "02", "03", "04", "05"],
+  );
+  const toc = first.match(/<nav class="toc"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
+  assert.deepEqual(
+    [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
+    ["01", "02", "03", "04", "05"],
+  );
 
   const withAlternateLocale = renderAlignArtifact(data, {
     alternateLocale: { href: "upload-recovery.en.html", locale: "en-US" },
@@ -454,8 +507,9 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   });
   assert.match(
     withAlternateLocale,
-    /<a class="locale-link" href="upload-recovery\.en\.html" hreflang="en-US" lang="en-US">English<\/a>/u,
+    /<a class="locale-option" href="upload-recovery\.en\.html" hreflang="en-US" lang="en-US">English<\/a>/u,
   );
+  assert.match(withAlternateLocale, /<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu">[\s\S]*?<button class="theme-button"/u);
   assert.throws(
     () => renderAlignArtifact(data, {
       alternateLocale: { href: "..\/outside.html", locale: "en-US" },
@@ -514,7 +568,8 @@ test("renderer omits empty optional sections instead of filling the screen", () 
       content: decisionContent,
     }],
   }, { digest: "0".repeat(64) });
-  assert.match(decisionHtml, /agreement-grid agreement-grid-single/u);
+  assert.match(decisionHtml, /class="agreement-groups"/u);
+  assert.doesNotMatch(decisionHtml, /agreement-grid/u);
   assert.doesNotMatch(decisionHtml, />구현 시 결정 사항</u);
 });
 

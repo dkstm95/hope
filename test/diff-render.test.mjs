@@ -68,6 +68,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     title: '</title><script src="https://evil.example/x.js"></script>',
   });
   const analysis = makeAnalysis(snapshot, runId);
+  analysis.coreChange.why.text = "The caller sees the original failure.\nThe fallback no longer hides it.";
   analysis.coreChange.details[0].text = "<img src=x onerror=alert(1)>";
   analysis.coreChange.details.push({
     ...analysis.coreChange.details[0],
@@ -88,11 +89,16 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 9);
+  assert.equal(first.rendererVersion, 14);
+  assert.equal(first.designVersion, 10);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
   assert.match(html, /&lt;script src=/u);
+  assert.match(
+    html,
+    /<p><bdi dir="auto">The caller sees the original failure\.<\/bdi><\/p><p><bdi dir="auto">The fallback no longer hides it\.<\/bdi><\/p>/u,
+  );
   assert.match(html, /Content-Security-Policy/u);
   assert.match(html, /default-src &#39;none&#39;|default-src 'none'/u);
   assert.match(
@@ -101,6 +107,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   );
   assert.match(html, /<img class="brand-icon" src="data:image\/png;base64,iVBOR/u);
   assert.match(html, /<span>HOPE<\/span><span class="brand-product">· DIFF<\/span>/u);
+  assert.match(
+    html,
+    /<h2 class="toc-heading"><span>Contents<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
+  );
   assert.match(html, /data:font\/woff2;base64/u);
   assert.match(html, /font-family: "Hope Sans"/u);
   assert.match(html, /font-family: "Hope Code"/u);
@@ -114,14 +124,16 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /class="pr-hero"/u);
   assert.match(
     html,
-    /<section class="synopsis" id="synopsis"[\s\S]*?<header class="synopsis-head">[\s\S]*?<h1 id="review-title">/u,
+    /<header class="document-title">[\s\S]*?<h1 id="review-title">[\s\S]*?<\/h1>[\s\S]*?<\/header>[\s\S]*?<section class="synopsis" id="synopsis"[\s\S]*?<h2 id="synopsis-title"><span class="section-number">01<\/span><span>Summary<\/span><\/h2>/u,
   );
+  assert.doesNotMatch(html, /artifact-title-line|synopsis-head/u);
   assert.doesNotMatch(html, /target="_blank"/u);
   assert.doesNotMatch(header, /<h1>/u);
   assert.match(header, /<details class="toc-mobile">/u);
   assert.match(header, /class="toc-mobile-panel"/u);
   assert.match(header, /class="toc-icon"/u);
   assert.match(header, /<span>example\/hope<\/span>/u);
+  assert.match(header, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path>[\s\n]*<path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(
     header,
     /<a class="pull-request-link" href="https:\/\/github\.com\/example\/hope\/pull\/142" aria-label="Open PR #142" title="Open PR #142">/u,
@@ -131,7 +143,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     header,
     /<span class="commit-status" title="Reviewed commit b{40}"><code>bbbbbbbb<\/code><\/span>/u,
   );
-  assert.doesNotMatch(header, /class="locale-link"/u);
+  assert.doesNotMatch(header, /class="locale-menu"/u);
+  assert.match(header, /<div class="display-controls">[\s\S]*?<button class="theme-button"/u);
   const localizedHeader = (await renderReview(review, {
     alternateLocale: { href: "retry.ko.html", locale: "ko-KR" },
   })).bytes.toString("utf8").match(
@@ -139,30 +152,37 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   )?.[0] ?? "";
   assert.match(
     localizedHeader,
-    /<a class="locale-link" href="retry\.ko\.html" hreflang="ko-KR" lang="ko-KR">한국어<\/a>/u,
+    /<a class="locale-option" href="retry\.ko\.html" hreflang="ko-KR" lang="ko-KR">한국어<\/a>/u,
   );
+  assert.match(localizedHeader, /class="pull-request-link"[\s\S]*?<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu">[\s\S]*?<button class="theme-button"/u);
   await assert.rejects(
     renderReview(review, {
       alternateLocale: { href: "..\/outside.html", locale: "ko-KR" },
     }),
     /alternateLocale must name a supported locale and sibling HTML file/u,
   );
-  const synopsisHead = html.match(
-    /<header class="synopsis-head">[\s\S]*?<\/header>/u,
+  const documentTitleHtml = html.match(
+    /<header class="document-title">[\s\S]*?<\/header>/u,
   )?.[0] ?? "";
-  assert.doesNotMatch(synopsisHead, /example\/hope · PR #142/u);
-  assert.doesNotMatch(synopsisHead, /<a /u);
+  assert.doesNotMatch(documentTitleHtml, /example\/hope · PR #142/u);
+  assert.doesNotMatch(documentTitleHtml, /<a /u);
   assert.match(
-    synopsisHead,
+    documentTitleHtml,
     /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><\/h1>/u,
   );
-  assert.doesNotMatch(synopsisHead, /&lt;script/u);
-  assert.match(synopsisHead, /<div class="goal-label">Goal<\/div>/u);
-  assert.match(synopsisHead, /Return the final error after all retries fail\./u);
-  assert.doesNotMatch(synopsisHead, /<dl>|<dt>|Captured|Commit/u);
+  assert.doesNotMatch(documentTitleHtml, /&lt;script|Goal|<dl>|<dt>|Captured|Commit/u);
+  const synopsisHtml = html.match(
+    /<section class="synopsis" id="synopsis"[\s\S]*?<\/section>/u,
+  )?.[0] ?? "";
+  assert.match(
+    synopsisHtml,
+    /<div class="synopsis-row synopsis-purpose">\s*<h3>Goal<\/h3>\s*<div class="synopsis-value">/u,
+  );
+  assert.doesNotMatch(synopsisHtml, /class="goal(?:-label)?"/u);
+  assert.match(synopsisHtml, /Return the final error after all retries fail\./u);
   assert.match(
     html,
-    /<h2 class="sr-only" id="synopsis-title">Summary<\/h2>/u,
+    /<h2 id="synopsis-title"><span class="section-number">01<\/span><span>Summary<\/span><\/h2>/u,
   );
   assert.doesNotMatch(html, /class="pr-freshness"/u);
   assert.doesNotMatch(
@@ -181,7 +201,20 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<h3 id="synopsis-before-title">AS-IS<\/h3>/u);
   assert.match(html, /<h3 id="synopsis-now-title">TO-BE<\/h3>/u);
   assert.doesNotMatch(html, /shift-arrow/u);
-  assert.match(html, /class="toc-synopsis"><a href="#synopsis"/u);
+  assert.match(
+    html,
+    /<a class="toc-link" href="#synopsis"><span class="toc-number">01<\/span><span>Summary<\/span><\/a>/u,
+  );
+  const main = html.match(/<main class="main"[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
+  assert.deepEqual(
+    [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
+    ["01", "02", "03", "04"],
+  );
+  const toc = html.match(/<nav class="toc-desktop"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
+  assert.deepEqual(
+    [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
+    ["01", "02", "03", "04"],
+  );
   assert.doesNotMatch(html, /<a href="#follow-code">/u);
   assert.match(
     html,
@@ -215,7 +248,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /class="review-count/u);
   assert.doesNotMatch(html, /class="review-kind-counts/u);
   assert.match(html, /<ul class="review-items review-items-compact" role="list"><li><article/u);
-  assert.match(html, /<ul class="review-items review-items-full" role="list"><li><article/u);
+  assert.match(
+    html,
+    /<details class="review-section review-section-collapsible" id="judge">[\s\S]*?<ul class="review-items review-items-full" role="list"><li><article/u,
+  );
   assert.match(html, /id="summary-review-item-1"/u);
   assert.match(html, /id="summary-review-item-1"[\s\S]*?<h4><a href="#review-item-1">/u);
   const compactItem = html.match(
@@ -367,7 +403,7 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(html, /<html lang="ko-KR" data-theme="dark">/u);
   assert.match(html, /핵심 변경/u);
   assert.equal((html.match(/>요약</gu) ?? []).length, 3);
-  assert.match(html, /<h2 class="sr-only" id="synopsis-title">요약<\/h2>/u);
+  assert.match(html, /<h2 id="synopsis-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u);
   assert.match(html, />목표</u);
   assert.match(html, />AS-IS</u);
   assert.match(html, />TO-BE</u);
@@ -377,7 +413,14 @@ test("Korean and dark theme are reflected without a header language badge", asyn
     html,
     /<span class="commit-status" title="검토 커밋 b{40}"><code>bbbbbbbb<\/code><\/span>/u,
   );
-  assert.match(html, /<div class="goal-label">목표<\/div>/u);
+  assert.match(
+    html,
+    /<div class="synopsis-row synopsis-purpose">\s*<h3>목표<\/h3>\s*<div class="synopsis-value">/u,
+  );
+  assert.match(
+    html,
+    /<h3><span class="summary-label-stacked"><span>검토<\/span> <span>결과<\/span><\/span><\/h3>/u,
+  );
   assert.match(html, /<dt>커밋<\/dt><dd><code>b{40}<\/code><\/dd>/u);
   assert.match(html, /<dt>수집 시각<\/dt><dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u);
   assert.doesNotMatch(html, /class="review-result/u);
@@ -466,7 +509,7 @@ test("the artifact shows every teaching-aid decision when all aids are omitted",
   );
   assert.doesNotMatch(section, /<script src=https:\/\/evil/u);
   assert.doesNotMatch(html, /<a href="#teaching-aids">/u);
-  assert.match(html, /<a href="#explore">Behavior change<\/a>/u);
+  assert.match(html, /<a class="toc-link" href="#explore"><span class="toc-number">02<\/span><span>Behavior change<\/span><\/a>/u);
 });
 
 test("the artifact preserves mixed and all-included teaching-aid states", async () => {
@@ -709,7 +752,7 @@ test("a review with no items states the result once", async () => {
   assert.doesNotMatch(synopsis, /review-items-compact/u);
 });
 
-test("only two to four brief behavior steps use the responsive flow", async () => {
+test("behavior steps keep one vertical numbered flow regardless of count or length", async () => {
   const snapshot = makeSnapshot();
   const shortAnalysis = makeAnalysis(snapshot, runId);
   shortAnalysis.behavior = {
@@ -721,7 +764,18 @@ test("only two to four brief behavior steps use the responsive flow", async () =
   };
   const shortReview = validateAnalysis(shortAnalysis, snapshot, { runId });
   const shortHtml = (await renderReview(shortReview)).bytes.toString("utf8");
-  assert.match(shortHtml, /<ol class="flow flow-short">/u);
+  assert.match(
+    shortHtml,
+    /<section class="review-subsection" id="behavior-flow">\s*<div class="subsection-heading">\s*<h3>Conditions and flow<\/h3>\s*<\/div>\s*<div class="behavior-model">/u,
+  );
+  assert.match(
+    shortHtml,
+    /<section class="review-subsection" id="core-change">[\s\S]*?<\/section>\s*<section class="review-subsection" id="behavior-flow">/u,
+  );
+  assert.match(shortHtml, /<ol class="flow">/u);
+  assert.doesNotMatch(shortHtml, /flow-short/u);
+  assert.match(shortHtml, /counter\(behavior-step, decimal-leading-zero\)/u);
+  assert.match(shortHtml, /grid-template-columns: 28px minmax\(0, 1fr\)/u);
   assert.match(shortHtml, /overflow-wrap: anywhere/u);
 
   const numerousAnalysis = makeAnalysis(snapshot, runId);
@@ -735,7 +789,7 @@ test("only two to four brief behavior steps use the responsive flow", async () =
   const numerousReview = validateAnalysis(numerousAnalysis, snapshot, { runId });
   const numerousHtml = (await renderReview(numerousReview)).bytes.toString("utf8");
   assert.match(numerousHtml, /<ol class="flow">/u);
-  assert.doesNotMatch(numerousHtml, /<ol class="flow flow-short">/u);
+  assert.doesNotMatch(numerousHtml, /flow-short/u);
 
   const longAnalysis = makeAnalysis(snapshot, runId);
   longAnalysis.behavior = {
@@ -748,7 +802,7 @@ test("only two to four brief behavior steps use the responsive flow", async () =
   const longReview = validateAnalysis(longAnalysis, snapshot, { runId });
   const longHtml = (await renderReview(longReview)).bytes.toString("utf8");
   assert.match(longHtml, /<ol class="flow">/u);
-  assert.doesNotMatch(longHtml, /<ol class="flow flow-short">/u);
+  assert.doesNotMatch(longHtml, /flow-short/u);
 });
 
 test("behavior renders a grounded visual and a separate fixed microworld safely", async () => {
@@ -769,6 +823,8 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.match(html, />Case<\/th>/u);
   assert.match(html, /class="microworld" data-microworld/u);
   assert.match(html, /class="microworld-eyebrow">Try it<\/p>/u);
+  assert.match(html, /<details class="microworld-disclosure">\s*<summary>Change the model<\/summary>/u);
+  assert.doesNotMatch(html, /<details class="microworld-disclosure" open>/u);
   assert.match(
     html,
     /Explanation model only\. It does not run repository code or report a test result\./u,
@@ -843,7 +899,8 @@ test("all visual kinds use typed, fixed renderer structures", async () => {
       new RegExp(`class="behavior-visual visual-${kind}"`, "u"),
     );
     assert.match(html, marker);
-    assert.match(html, /<ol class="flow flow-short">/u);
+    assert.match(html, /<ol class="flow">/u);
+    assert.doesNotMatch(html, /flow-short/u);
     if (kind === "sequence") {
       assert.match(
         html,

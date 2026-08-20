@@ -101,9 +101,22 @@ test("Align presents one compact current agreement with secondary history", asyn
   await page.goto(artifactUrl);
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("실패한 업로드 복구");
-  await expect(page.locator(".goal-label")).toHaveText("목표");
-  await expect(page.locator(".goal")).toContainText("중단된 업로드를 감지해");
-  await expect(page.locator(".synopsis dt").filter({ hasText: "완료 기준" })).toHaveCount(1);
+  await expect(page.locator("#overview-title")).toHaveText("01요약");
+  const goalRow = page.locator(".overview .synopsis > div").first();
+  await expect(goalRow.locator("dt")).toHaveText("목표");
+  await expect(goalRow.locator("dd")).toContainText("중단된 업로드를 감지해");
+  await expect(page.locator(".overview .synopsis > div")).toHaveCount(4);
+  await expect(page.locator(".goal, .goal-label")).toHaveCount(0);
+  const completionLabel = page.locator(".synopsis dt").filter({ hasText: "완료 기준" });
+  await expect(completionLabel).toHaveCount(1);
+  await expect(completionLabel.locator(".summary-label-stacked > span")).toHaveText([
+    "완료",
+    "기준",
+  ]);
+  const completionLabelTops = await completionLabel.locator(
+    ".summary-label-stacked > span",
+  ).evaluateAll((lines) => lines.map((line) => line.getBoundingClientRect().top));
+  expect(completionLabelTops[1]).toBeGreaterThan(completionLabelTops[0]);
   await expect(page.locator(".overview .check-list > li")).toHaveCount(3);
   await expect(page.locator(".overview .check-list")).toHaveCSS(
     "list-style-type",
@@ -111,16 +124,34 @@ test("Align presents one compact current agreement with secondary history", asyn
   );
   expect(await page.locator(".overview .check-list").evaluate((list) => list.tagName)).toBe("OL");
   await expect(page.locator(".overview .check-condition").first()).toHaveCSS("font-weight", "300");
-  await expect(page.locator(".overview .check-by")).toHaveText([
+  await expect(page.locator(".overview .check-verification > summary")).toHaveText([
     "AI 에이전트 확인",
     "AI 에이전트 확인",
     "사용자 확인",
   ]);
+  await expect(page.locator(".overview .check-verification > summary").first()).toHaveCSS(
+    "font-weight",
+    "300",
+  );
+  expect(await page.locator(".overview .check-verification > summary").first().evaluate(
+    (summary) => summary.getBoundingClientRect().height,
+  )).toBe(24);
+  await expect(page.locator(".overview .check-verification").first()).not.toHaveAttribute("open", "");
+  await expect(page.locator(".overview .check-verification-content").first()).not.toBeVisible();
   await expect(page.locator(".overview .check-list")).toContainText("재개 요청의 시작 위치");
   await expect(page.locator(".overview .check-list")).toContainText("취소 전후의 관련 없는 데이터 스냅샷");
   await expect(page.locator(".brand-icon")).toBeVisible();
   await expect(page.locator(".status")).toHaveText("v2 · 현재 합의");
   await expect(page.locator(".rail")).toBeVisible();
+  await expect(page.locator(".rail .toc-progress")).toHaveText("1 / 6");
+  const currentOverviewLink = page.locator('.rail .toc-link[href="#overview"]');
+  await expect(currentOverviewLink).toHaveAttribute("aria-current", "location");
+  const currentOverviewStyle = await currentOverviewLink.evaluate((element) => ({
+    backgroundColor: getComputedStyle(element).backgroundColor,
+    borderLeftWidth: getComputedStyle(element).borderLeftWidth,
+  }));
+  expect(currentOverviewStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(currentOverviewStyle.borderLeftWidth).toBe("4px");
   await expect(page.locator(".rail .rail-history h2")).toHaveText("버전 이력");
   await expect(page.locator(".rail .rail-history .current .revision-head strong"))
     .toHaveText(/^v2 · 현재 합의/u);
@@ -130,19 +161,27 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#agreement")).toContainText("자동 감지 기반 복구 우선");
   await expect(page.locator("#agreement")).toContainText("사용자 개입 없이");
-  await expect(page.locator("#agreement-title")).toHaveText("결정 사항");
+  await expect(page.locator("#agreement-title > span:last-child")).toHaveText("결정 사항");
   await expect(page.locator("#agreement .subheading")).toHaveText([
     "확정 사항",
     "구현 시 결정 사항",
   ]);
-  await expect(page.locator("#design-directions-title")).toHaveText("디자인 시안");
+  await expect(page.locator("#agreement .decision-disclosure").first()).not.toHaveAttribute("open", "");
+  await expect(page.locator("#agreement .decision-reason").first()).not.toBeVisible();
+  await expect(page.locator("#evidence")).not.toHaveAttribute("open", "");
+  await expect(page.locator("#evidence .section-disclosure-content")).not.toBeVisible();
+  await expect(page.locator("#design-directions-title > span:last-child")).toHaveText("디자인 시안");
   const currentDirections = page.locator("#design-directions");
   await expect(currentDirections.locator(".design-direction")).toHaveCount(2);
   await expect(currentDirections.locator(".direction-image img")).toHaveCount(2);
   await expect(currentDirections.locator(".direction-status.recommended")).toHaveText("추천");
   await expect(currentDirections.locator(".direction-status.selected")).toHaveText("선택");
-  await expect(currentDirections.locator(".direction-decisions")).toContainText("사용자가 AI에 선택을 위임함");
-  await expect(currentDirections).toContainText("반영한 점");
+  await expect(currentDirections.locator(".direction-rationales")).toContainText("사용자가 AI에 선택을 위임함");
+  await expect(currentDirections.locator(":scope > .direction-rationales")).toHaveCount(0);
+  const directionReferences = currentDirections.locator(".direction-references");
+  await expect(directionReferences).toHaveCount(1);
+  await expect(directionReferences).not.toHaveAttribute("open", "");
+  await expect(directionReferences.locator(".direction-reference-content")).not.toBeVisible();
   const decodedDirections = await currentDirections.locator(".direction-image img").evaluateAll(
     (images) => images.map((image) => ({ height: image.naturalHeight, width: image.naturalWidth })),
   );
@@ -155,11 +194,97 @@ test("Align presents one compact current agreement with secondary history", asyn
   const scopeTops = await page.locator(".scope-column").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
-  expect(scopeTops[0]).toBe(scopeTops[1]);
+  expect(scopeTops[1]).toBe(scopeTops[0]);
   const directionTops = await currentDirections.locator(".design-direction").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
-  expect(directionTops[0]).toBe(directionTops[1]);
+  expect(directionTops[1]).toBe(directionTops[0]);
+  const directionTitleRows = await currentDirections.locator(".direction-title-line").evaluateAll(
+    (items) => items.map((item) => {
+      const title = item.querySelector("h3").getBoundingClientRect();
+      const status = item.querySelector(".direction-status")?.getBoundingClientRect();
+      return { statusTop: status?.top, titleTop: title.top };
+    }),
+  );
+  expect(directionTitleRows[0].statusTop).toBeLessThan(
+    directionTitleRows[0].titleTop + 24,
+  );
+  await expect(currentDirections.locator(".design-direction .direction-details")).toHaveCount(2);
+  const directionDetailTops = await currentDirections.locator(
+    ".design-direction .direction-details",
+  ).evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top));
+  expect(Math.max(...directionDetailTops) - Math.min(...directionDetailTops)).toBeLessThanOrEqual(1);
+  await expect(currentDirections.locator(".design-direction").first()).toContainText(
+    "핵심 선택을 빠르게 찾을 수 있다.",
+  );
+  await expect(currentDirections.locator(".design-direction").nth(1)).toContainText(
+    "현재 단계가 분명하다.",
+  );
+  const referencePlacement = await currentDirections.locator(
+    ".design-direction",
+  ).first().evaluate((item) => {
+    const card = item.getBoundingClientRect();
+    const details = item.querySelector(".direction-details").getBoundingClientRect();
+    const rationale = item.querySelector(".direction-rationales").getBoundingClientRect();
+    const reference = item.querySelector(".direction-references").getBoundingClientRect();
+    return {
+      cardBottom: card.bottom,
+      cardLeft: card.left,
+      cardRight: card.right,
+      detailsBottom: details.bottom,
+      rationaleBottom: rationale.bottom,
+      rationaleTop: rationale.top,
+      referenceBottom: reference.bottom,
+      referenceLeft: reference.left,
+      referenceRight: reference.right,
+      referenceTop: reference.top,
+    };
+  });
+  expect(referencePlacement.rationaleTop).toBeGreaterThanOrEqual(referencePlacement.detailsBottom);
+  expect(referencePlacement.referenceTop).toBeGreaterThanOrEqual(referencePlacement.rationaleBottom);
+  expect(referencePlacement.referenceLeft).toBeGreaterThanOrEqual(referencePlacement.cardLeft);
+  expect(referencePlacement.referenceRight).toBeLessThanOrEqual(referencePlacement.cardRight);
+  expect(referencePlacement.referenceBottom).toBeLessThanOrEqual(referencePlacement.cardBottom);
+  const rationaleBoundaryWidths = await currentDirections.locator(
+    ".design-direction",
+  ).first().evaluate((item) => {
+    const rows = [...item.querySelectorAll(".direction-rationales > div")];
+    return {
+      referenceTop: getComputedStyle(item.querySelector(".direction-references")).borderTopWidth,
+      rowBottoms: rows.map((row) => getComputedStyle(row).borderBottomWidth),
+      rowTops: rows.map((row) => getComputedStyle(row).borderTopWidth),
+    };
+  });
+  expect(rationaleBoundaryWidths).toEqual({
+    referenceTop: "1px",
+    rowBottoms: ["0px", "0px"],
+    rowTops: ["0px", "1px"],
+  });
+  await directionReferences.locator(":scope > summary").click();
+  await expect(directionReferences.locator(".direction-reference-content")).toBeVisible();
+  await expect(directionReferences).toContainText("반영한 점");
+  const directionRationalePlacement = await currentDirections.locator(
+    ".direction-rationales",
+  ).evaluateAll((items) => items.map((item) => ({
+    optionId: item.closest(".design-direction")?.id,
+    parentClass: item.parentElement?.className,
+  })));
+  expect(directionRationalePlacement.every((item) => (
+    item.optionId?.startsWith("design-direction-")
+      && item.parentClass.includes("design-direction")
+  ))).toBe(true);
+  const sectionBoundaryWidths = await page.evaluate(() => ({
+    agreementContentTop: getComputedStyle(document.querySelector(".agreement-groups")).borderTopWidth,
+    agreementTitleBottom: getComputedStyle(document.querySelector("#agreement-title")).borderBottomWidth,
+    directionContentTop: getComputedStyle(document.querySelector(".design-direction-list")).borderTopWidth,
+    directionTitleBottom: getComputedStyle(document.querySelector("#design-directions-title")).borderBottomWidth,
+  }));
+  expect(sectionBoundaryWidths).toEqual({
+    agreementContentTop: "0px",
+    agreementTitleBottom: "2px",
+    directionContentTop: "0px",
+    directionTitleBottom: "2px",
+  });
   const behaviorTops = await page.locator(".behavior-steps > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
@@ -168,13 +293,38 @@ test("Align presents one compact current agreement with secondary history", asyn
   const outcomeTops = await page.locator(".behavior-outcomes > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
-  expect(outcomeTops[0]).toBe(outcomeTops[1]);
+  expect(outcomeTops[1]).toBeGreaterThan(outcomeTops[0]);
+  const agreementTops = await page.locator(".agreement-groups > div").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(agreementTops[1]).toBeGreaterThan(agreementTops[0]);
+  const firstDecision = page.locator(".decision-list > li").first();
+  await firstDecision.locator(".decision-disclosure > summary").click();
+  const proseOrder = await firstDecision.evaluate((item) => {
+    const title = item.querySelector("h3").getBoundingClientRect();
+    const reason = item.querySelector("p").getBoundingClientRect();
+    return {
+      reasonLeft: reason.left,
+      reasonTop: reason.top,
+      titleBottom: title.bottom,
+      titleLeft: title.left,
+    };
+  });
+  expect(proseOrder.reasonLeft).toBe(proseOrder.titleLeft);
+  expect(proseOrder.reasonTop).toBeGreaterThanOrEqual(proseOrder.titleBottom);
   const geometry = await page.evaluate(() => ({
     brandRepositoryGap: document.querySelector(".repository").getBoundingClientRect().left
       - document.querySelector(".brand").getBoundingClientRect().right,
+    firstSectionBorder: getComputedStyle(document.querySelector("#overview")).borderTopWidth,
+    firstSectionMargin: getComputedStyle(document.querySelector("#overview")).marginTop,
+    firstSectionPadding: getComputedStyle(document.querySelector("#overview")).paddingTop,
     railLeft: document.querySelector(".rail").getBoundingClientRect().left,
     repositoryStatusGap: document.querySelector(".status").getBoundingClientRect().left
       - document.querySelector(".repository").getBoundingClientRect().right,
+    summaryLabelFontSize: getComputedStyle(document.querySelector("#overview-title > span:last-child")).fontSize,
+    summaryLabelLeft: document.querySelector("#overview-title > span:last-child").getBoundingClientRect().left,
+    summaryNumberFontSize: getComputedStyle(document.querySelector("#overview-title > .section-number")).fontSize,
+    summaryNumberLeft: document.querySelector("#overview-title > .section-number").getBoundingClientRect().left,
     titleLeft: document.querySelector("h1").getBoundingClientRect().left,
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
@@ -182,9 +332,19 @@ test("Align presents one compact current agreement with secondary history", asyn
   expect(geometry.repositoryStatusGap).toBe(24);
   expect(geometry.railLeft).toBe(932);
   expect(geometry.titleLeft).toBe(40);
+  expect(geometry.summaryNumberLeft).toBe(40);
+  expect(geometry.summaryLabelLeft).toBe(76);
+  expect(geometry.summaryNumberFontSize).toBe(geometry.summaryLabelFontSize);
+  expect(geometry.firstSectionBorder).toBe("0px");
+  expect(geometry.firstSectionMargin).toBe("24px");
+  expect(geometry.firstSectionPadding).toBe("16px");
   expect(geometry.topbarHeight).toBe(58);
   await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
   await expect(page.locator(".decision-number")).toHaveText(["01", "02"]);
+  await page.locator(".overview .check-verification").first().locator(":scope > summary").click();
+  await expect(page.locator(".overview .check-verification-content").first()).toBeVisible();
+  await page.locator("#evidence > summary").click();
+  await expect(page.locator("#evidence .section-disclosure-content")).toBeVisible();
   await page.locator("#revision-1 > summary").click();
   await expect(page.locator("#revision-1 .check-list > li")).toHaveCount(3);
   await expect(page.locator("#revision-1 .check-by")).toHaveCount(0);
@@ -194,6 +354,12 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("#revision-1 .design-direction")).toHaveCount(2);
   await expect(page.locator("#revision-1 .direction-image img")).toHaveCount(2);
   await expect(page.locator("#revision-1")).toContainText("복구 선택을 첫 화면의 주 행동으로 배치했다");
+  await page.locator('.rail .toc-link[href="#scope"]').click();
+  await expect(page.locator(".rail .toc-progress")).toHaveText("2 / 6");
+  await expect(page.locator('.rail .toc-link[href="#scope"]')).toHaveAttribute(
+    "aria-current",
+    "location",
+  );
   await expectNoOverflow(page);
 });
 
@@ -204,8 +370,10 @@ test("Align theme action is keyboard reachable and updates its label", async ({ 
 
   await expect(theme).toHaveAttribute("aria-label", "다크 모드로 전환");
   const box = await theme.boundingBox();
-  expect(box.height).toBe(44);
-  expect(box.width).toBe(44);
+  expect(box.height).toBe(42);
+  expect(box.width).toBe(42);
+  const displayBox = await page.locator(".display-controls").boundingBox();
+  expect(displayBox.height).toBe(44);
   await theme.focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -256,6 +424,12 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(directionTops[1]).toBeGreaterThan(directionTops[0]);
+  await expect(page.locator("#design-directions .direction-rationales")).toHaveCount(1);
+  await expect(page.locator("#design-directions > .direction-rationales")).toHaveCount(0);
+  const disclosureHeights = await page.locator(".main").locator(
+    ".check-verification > summary, .direction-references > summary, .decision-disclosure > summary",
+  ).evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
+  expect(disclosureHeights.every((height) => height >= 44)).toBe(true);
   await expectNoOverflow(page);
 });
 
@@ -269,6 +443,15 @@ test("Align remains useful without JavaScript", async ({ browser }) => {
   await expect(page.locator("#design-directions")).toBeVisible();
   await expect(page.locator("#design-directions .direction-image img")).toHaveCount(2);
   await expect(page.locator("#revision-1 > summary")).toBeVisible();
+  const reference = page.locator("#design-directions .direction-references");
+  await reference.locator(":scope > summary").click();
+  await expect(reference.locator(".direction-reference-content")).toBeVisible();
+  const verification = page.locator(".overview .check-verification").first();
+  await verification.locator(":scope > summary").click();
+  await expect(verification.locator(".check-verification-content")).toBeVisible();
+  const decision = page.locator("#agreement .decision-disclosure").first();
+  await decision.locator(":scope > summary").click();
+  await expect(decision.locator(".decision-reason")).toBeVisible();
   await context.close();
 });
 
@@ -283,4 +466,8 @@ test("Align print uses the light surface and omits navigation", async ({ page })
   expect(styles.background).toBe("rgb(251, 250, 247)");
   expect(styles.rail).toBe("none");
   expect(styles.topbar).toBe("none");
+  await expect(page.locator(".overview .check-verification-content").first()).toBeVisible();
+  await expect(page.locator("#design-directions .direction-reference-content").first()).toBeVisible();
+  await expect(page.locator("#agreement .decision-reason").first()).toBeVisible();
+  await expect(page.locator("#evidence .section-disclosure-content")).toBeVisible();
 });

@@ -97,7 +97,7 @@ test("generated README HTML links each locale to its sibling", async () => {
       new RegExp(`href="${koreanSibling.replaceAll(".", "\\.")}" hreflang="en-US" lang="en-US">English</a>`, "u"),
     );
 
-    const englishWithoutLocaleLink = english.replace(/<a class="locale-link"[^>]*>한국어<\/a>/u, "");
+    const englishWithoutLocaleLink = english.replace(/<a class="locale-option"[^>]*>한국어<\/a>/u, "");
     assert.doesNotMatch(englishWithoutLocaleLink, /[가-힣]/u);
     assert.match(korean, /[가-힣]/u);
     assert.doesNotMatch(english, /^[\t ]+$/mu);

@@ -54,12 +54,28 @@ function htmlAttribute(value) {
     .replaceAll("\t", "&#9;");
 }
 
+function summaryLabelElement(value) {
+  const text = String(value);
+  const balanced = /^(\p{Script=Hangul}{2}) (\p{Script=Hangul}{2})$/u.exec(text);
+  if (!balanced) return `<h3>${html(text)}</h3>`;
+  return `<h3><span class="summary-label-stacked"><span>${html(
+    balanced[1],
+  )}</span> <span>${html(balanced[2])}</span></span></h3>`;
+}
+
 function hashSource(value) {
   return createHash("sha256").update(value).digest("base64");
 }
 
 function userText(value, className = "") {
-  return `<bdi dir="auto"${className ? ` class="${className}"` : ""}>${html(value)}</bdi>`;
+  const text = String(value).split(/\r?\n/u).map(html).join("<br>");
+  return `<bdi dir="auto"${className ? ` class="${className}"` : ""}>${text}</bdi>`;
+}
+
+function userParagraphs(value) {
+  return String(value).split(/\r?\n+/u).map(
+    (paragraph) => `<p>${userText(paragraph.trim())}</p>`,
+  ).join("");
 }
 
 function basisKey(basis) {
@@ -172,7 +188,7 @@ function claimBlock(
   showBasis = true,
 ) {
   return `<div class="claim ${html(className)}">
-    <p>${userText(claim.text)}</p>
+    ${userParagraphs(claim.text)}
     <div class="claim-meta">
       ${showBasis
         ? `<div class="claim-basis">${html(label(dictionary, basisKey(claim.basis)))}</div>`
@@ -241,7 +257,7 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
     content = `<ol class="visual-flow">${visual.items.map((item) => (
       `<li>
         <strong>${userText(item.label)}</strong>
-        <p>${userText(item.detail)}</p>
+        ${userParagraphs(item.detail)}
       </li>`
     )).join("")}</ol>`;
   } else if (visual.kind === "decision-table") {
@@ -276,7 +292,7 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
     content = `<div class="visual-components">${visual.components.map((component) => (
       `<article>
         <h4>${userText(component.label)}</h4>
-        <p>${userText(component.detail)}</p>
+        ${userParagraphs(component.detail)}
       </article>`
     )).join("")}</div>
       <div class="visual-connections">
@@ -294,7 +310,7 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
   return `<article class="behavior-visual visual-${html(visual.kind)}">
     <header>
       <h3>${userText(visual.title)}</h3>
-      <p>${userText(visual.caption)}</p>
+      ${userParagraphs(visual.caption)}
     </header>
     ${content}
     ${aidEvidence(visual, dictionary, review, codeRenderer)}
@@ -305,10 +321,10 @@ function microworldTrace(trace, title, dictionary) {
   return `<section class="microworld-trace">
     <h5>${html(title)}</h5>
     <ol>${trace.steps.map((step) => `<li>${userText(step)}</li>`).join("")}</ol>
-    <p class="microworld-outcome">
+    <div class="microworld-outcome">
       <strong>${html(label(dictionary, "microworld.outcome"))}:</strong>
-      ${userText(trace.outcome)}
-    </p>
+      ${userParagraphs(trace.outcome)}
+    </div>
   </section>`;
 }
 
@@ -328,12 +344,15 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
     <header>
       <p class="microworld-eyebrow">${html(label(dictionary, "microworld.tryIt"))}</p>
       <h3 id="microworld-title">${userText(world.title)}</h3>
-      <p>${userText(world.instructions)}</p>
+      ${userParagraphs(world.instructions)}
       <p class="microworld-notice">${html(label(dictionary, "microworld.notice"))}</p>
     </header>
-    <div class="microworld-controls" role="group" aria-labelledby="microworld-controls-title">
-      <p class="microworld-controls-title" id="microworld-controls-title">${html(label(dictionary, "microworld.controls"))}</p>
-      <div>${world.controls.map((control) => `<fieldset
+    <details class="microworld-disclosure">
+      <summary>${html(label(dictionary, "microworld.controls"))}</summary>
+      <div class="microworld-content">
+        <div class="microworld-controls" role="group" aria-labelledby="microworld-controls-title">
+          <p class="sr-only" id="microworld-controls-title">${html(label(dictionary, "microworld.controls"))}</p>
+          <div>${world.controls.map((control) => `<fieldset
         class="microworld-control-group"
         data-control-id="${html(control.id)}"
         data-control-kind="${html(control.kind)}"
@@ -358,13 +377,13 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
           }).join("")}
         </div>
       </fieldset>`).join("")}</div>
-    </div>
-    <noscript><p class="microworld-noscript">${html(label(dictionary, "microworld.noScript"))}</p></noscript>
-    <p class="sr-only" role="status" aria-live="polite" data-microworld-status>${html(
-      scenarioStatus(defaultScenario),
-    )}</p>
-    <div class="microworld-scenarios" role="region" aria-label="${html(label(dictionary, "microworld.selection"))}">
-      ${world.scenarios.map((scenario) => `<article
+        </div>
+        <noscript><p class="microworld-noscript">${html(label(dictionary, "microworld.noScript"))}</p></noscript>
+        <p class="sr-only" role="status" aria-live="polite" data-microworld-status>${html(
+          scenarioStatus(defaultScenario),
+        )}</p>
+        <div class="microworld-scenarios" role="region" aria-label="${html(label(dictionary, "microworld.selection"))}">
+          ${world.scenarios.map((scenario) => `<article
         class="microworld-scenario"
         data-selection-key="${html(scenario.selectionKey)}"
         data-status="${html(scenarioStatus(scenario))}"
@@ -382,23 +401,25 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
             dictionary,
           )}
         </div>
-        <p class="microworld-lesson">
+        <div class="microworld-lesson">
           <strong>${html(label(dictionary, "microworld.lesson"))}:</strong>
-          ${userText(scenario.lesson)}
-        </p>
+          ${userParagraphs(scenario.lesson)}
+        </div>
       </article>`).join("")}
-    </div>
-    <dl class="microworld-boundary">
-      <div>
-        <dt>${html(label(dictionary, "microworld.simplifies"))}</dt>
-        <dd>${userText(world.simplifies)}</dd>
+        </div>
+        <dl class="microworld-boundary">
+          <div>
+            <dt>${html(label(dictionary, "microworld.simplifies"))}</dt>
+            <dd>${userParagraphs(world.simplifies)}</dd>
+          </div>
+          <div>
+            <dt>${html(label(dictionary, "microworld.omits"))}</dt>
+            <dd>${userParagraphs(world.omits)}</dd>
+          </div>
+        </dl>
+        ${aidEvidence(world, dictionary, review, codeRenderer)}
       </div>
-      <div>
-        <dt>${html(label(dictionary, "microworld.omits"))}</dt>
-        <dd>${userText(world.omits)}</dd>
-      </div>
-    </dl>
-    ${aidEvidence(world, dictionary, review, codeRenderer)}
+    </details>
   </aside>`;
 }
 
@@ -438,7 +459,7 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
       ? `<h4><a href="#${html(item.id)}">${userText(item.title)}</a></h4>`
       : `<h3>${userText(item.title)}</h3>`}
     ${compact ? "" : `
-      <p>${userText(item.explanation)}</p>
+      ${userParagraphs(item.explanation)}
       ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
         <span>${html(label(dictionary, "item.relatedLimits"))}</span>
         ${relatedLimits.map((limit) => {
@@ -447,9 +468,9 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
         }).join(" · ")}
       </p>`}
       <dl class="item-actions">
-        <div class="item-effect"><dt>${html(label(dictionary, "item.effect"))}</dt><dd>${userText(item.effect)}</dd></div>
-        <div class="item-next"><dt>${html(label(dictionary, "item.nextStep"))}</dt><dd>${userText(item.nextStep)}</dd></div>
-        <div class="item-done"><dt>${html(label(dictionary, "item.doneWhen"))}</dt><dd>${userText(item.doneWhen)}</dd></div>
+        <div class="item-effect"><dt>${html(label(dictionary, "item.effect"))}</dt><dd>${userParagraphs(item.effect)}</dd></div>
+        <div class="item-next"><dt>${html(label(dictionary, "item.nextStep"))}</dt><dd>${userParagraphs(item.nextStep)}</dd></div>
+        <div class="item-done"><dt>${html(label(dictionary, "item.doneWhen"))}</dt><dd>${userParagraphs(item.doneWhen)}</dd></div>
       </dl>
       ${evidenceBlock(item.evidence, dictionary, review, codeRenderer, {
         context: item.title,
@@ -458,10 +479,29 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
   </article>`;
 }
 
-function section({ id, title, content }) {
+function sectionOrdinal(number) {
+  return String(number).padStart(2, "0");
+}
+
+function tocHeading(dictionary, count) {
+  return `<h2 class="toc-heading"><span>${html(label(dictionary, "common.menu"))}</span><span class="toc-progress"><span data-toc-current>1</span> / ${count}</span></h2>`;
+}
+
+function sectionHeading(title, number, id = "") {
+  const idAttribute = id === "" ? "" : ` id="${html(id)}"`;
+  return `<h2${idAttribute}><span class="section-number">${sectionOrdinal(number)}</span><span>${html(title)}</span></h2>`;
+}
+
+function documentTitle(title) {
+  return `<header class="document-title">
+    <h1 id="review-title">${userText(title)}</h1>
+  </header>`;
+}
+
+function section({ id, title, content, number }) {
   return `<section class="review-section" id="${html(id)}">
     <div class="section-heading">
-      <h2>${html(title)}</h2>
+      ${sectionHeading(title, number)}
     </div>
     ${content}
   </section>`;
@@ -485,10 +525,10 @@ function collapsibleSubsection({ id, title, content }) {
   </details>`;
 }
 
-function collapsibleSection({ id, title, content, initiallyOpen = false }) {
+function collapsibleSection({ id, title, content, number, initiallyOpen = false }) {
   return `<details class="review-section review-section-collapsible" id="${html(id)}"${initiallyOpen ? " open" : ""}>
     <summary class="section-heading">
-      <h2>${html(title)}</h2>
+      ${sectionHeading(title, number)}
     </summary>
     <div class="section-content">${content}</div>
   </details>`;
@@ -531,11 +571,11 @@ function teachingAidChoices(review, dictionary) {
         <dl>
           <div>
             <dt>${html(label(dictionary, "teachingAid.reason"))}</dt>
-            <dd>${userText(choice.reason)}</dd>
+            <dd>${userParagraphs(choice.reason)}</dd>
           </div>
           ${teachingJob === undefined ? "" : `<div>
             <dt>${html(label(dictionary, "teachingAid.teachingJob"))}</dt>
-            <dd>${userText(teachingJob)}</dd>
+            <dd>${userParagraphs(teachingJob)}</dd>
           </div>`}
         </dl>
       </article>
@@ -595,7 +635,7 @@ function contextCheck(
       <span class="context-status context-${html(check.status)}">${html(label(dictionary, `context.${check.status === "not-applicable" ? "notApplicable" : check.status}`))}</span>
     </summary>
     <div class="disclosure-content">
-      <p>${userText(check.explanation)}</p>
+      ${userParagraphs(check.explanation)}
       ${check.evidence.length === 0 ? "" : `<p class="claim-basis">${html(
         label(dictionary, basisKey(check.basis)),
       )}</p>`}
@@ -612,7 +652,7 @@ function contextCheck(
   </details>`;
 }
 
-function synopsis(review, dictionary, codeRenderer, { title }) {
+function synopsis(review, dictionary, codeRenderer, { number }) {
   const visibleItems = review.reviewItems.slice(0, 3);
   const hiddenItems = review.reviewItems.length - visibleItems.length;
   const materialLimits = review.limits.filter((limit) => limit.material);
@@ -637,21 +677,22 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
       </div>
     </section>`;
   return `<section class="synopsis" id="synopsis" aria-labelledby="synopsis-title">
-    <header class="synopsis-head">
-      <h1 id="review-title">${userText(title)}</h1>
-      <div class="goal-label">${html(label(dictionary, "synopsis.purpose"))}</div>
-      <div class="goal">${claimBlock(
-        review.purpose,
-        dictionary,
-        review,
-        codeRenderer,
-        "",
-        review.purpose.text,
-        false,
-      )}</div>
-    </header>
-    <h2 class="sr-only" id="synopsis-title">${html(label(dictionary, "section.synopsis"))}</h2>
+    <div class="section-heading">
+      ${sectionHeading(label(dictionary, "section.synopsis"), number, "synopsis-title")}
+    </div>
     <div class="synopsis-grid">
+      <div class="synopsis-row synopsis-purpose">
+        ${summaryLabelElement(label(dictionary, "synopsis.purpose"))}
+        <div class="synopsis-value">${claimBlock(
+          review.purpose,
+          dictionary,
+          review,
+          codeRenderer,
+          "",
+          review.purpose.text,
+          false,
+        )}</div>
+      </div>
       ${background}
       <div class="before-after change-shift" role="group" aria-labelledby="synopsis-before-title synopsis-now-title">
         <div class="synopsis-row shift-card shift-before">
@@ -680,7 +721,7 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
         </div>
       </div>
       <div class="synopsis-row synopsis-impact">
-        <h3>${html(label(dictionary, "synopsis.why"))}</h3>
+        ${summaryLabelElement(label(dictionary, "synopsis.why"))}
         <div class="synopsis-value">${claimBlock(
           review.coreChange.why,
           dictionary,
@@ -692,7 +733,7 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
         )}</div>
       </div>
       <div class="synopsis-row synopsis-review">
-        <h3>${html(label(dictionary, "synopsis.items"))}</h3>
+        ${summaryLabelElement(label(dictionary, "synopsis.items"))}
         <div class="synopsis-value synopsis-review-value">
           ${review.reviewItems.length === 0
             ? `<p class="review-empty">${html(label(dictionary, "review.noItems"))}</p>`
@@ -711,7 +752,7 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
         </div>
       </div>
       ${materialLimits.length === 0 ? "" : `<div class="synopsis-row">
-        <h3>${html(label(dictionary, "synopsis.scope"))}</h3>
+        ${summaryLabelElement(label(dictionary, "synopsis.scope"))}
         <div class="synopsis-value">
           <ul class="scope-impact-list">${visibleLimits.map(
             (limit) => `<li><a href="#scope-${html(limit.id)}">${userText(limit.impact)}</a></li>`,
@@ -725,7 +766,7 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
   </section>`;
 }
 
-function evidenceSection(review, dictionary, codeRenderer) {
+function evidenceSection(review, dictionary, codeRenderer, number) {
   const knownFileIds = new Set(review.files.map((file) => file.id));
   const implementationDetails = review.codeSteps.length === 0
     ? ""
@@ -832,7 +873,7 @@ function evidenceSection(review, dictionary, codeRenderer) {
       : `<div class="scope-context-notes">${checks.map((check) => (
         `<section class="scope-context-note">
           <h4>${userText(check.subject)}</h4>
-          <p>${userText(check.explanation)}</p>
+          ${userParagraphs(check.explanation)}
           ${evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
             context: check.subject,
           })}
@@ -849,8 +890,8 @@ function evidenceSection(review, dictionary, codeRenderer) {
     </summary>
     <div class="disclosure-content">
       <dl>
-        <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userText(displayed.reason)}</dd></div>
-        <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userText(limit.impact)}</dd></div>
+        <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userParagraphs(displayed.reason)}</dd></div>
+        <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userParagraphs(limit.impact)}</dd></div>
       </dl>
       ${renderContextNotes(checks)}
     </div>
@@ -867,7 +908,7 @@ function evidenceSection(review, dictionary, codeRenderer) {
       </summary>
       <div class="disclosure-content">
         <dl class="scope-shared-reason">
-          <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userText(group.entries[0].displayed.reason)}</dd></div>
+          <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userParagraphs(group.entries[0].displayed.reason)}</dd></div>
         </dl>
         ${renderContextNotes(group.checks)}
         <div class="scope-group-items">${group.entries.map(({ displayed, limit }) => (
@@ -875,7 +916,7 @@ function evidenceSection(review, dictionary, codeRenderer) {
             <summary><h4>${userText(displayed.subject)}</h4></summary>
             <div class="scope-limit-item-content">
               <dl>
-                <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userText(limit.impact)}</dd></div>
+                <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userParagraphs(limit.impact)}</dd></div>
               </dl>
             </div>
           </details>`
@@ -979,6 +1020,7 @@ function evidenceSection(review, dictionary, codeRenderer) {
       </details>`,
     id: "evidence-and-scope",
     initiallyOpen: true,
+    number,
     title: label(dictionary, "section.evidence"),
   });
 }
@@ -1001,38 +1043,40 @@ function buildSections(review, dictionary, codeRenderer) {
   });
   let behavior = "";
   if (review.behavior) {
-    const shortFlow = review.behavior.steps.length <= 4
-      && review.behavior.steps.every((step) => step.text.length <= 80);
-    behavior = `<div class="behavior-model"><div class="behavior-summary">${claimBlock(
-      review.behavior.summary,
-      dictionary,
-      review,
-      codeRenderer,
-    )}</div>
-      ${review.behavior.visual
-        ? visualBlock(
-          review.behavior.visual,
-          dictionary,
-          review,
-          codeRenderer,
-        )
-        : ""}
-      <ol class="flow${shortFlow ? " flow-short" : ""}">${review.behavior.steps.map(
-        (step) => `<li>${claimBlock(
-          step,
-          dictionary,
-          review,
-          codeRenderer,
-        )}</li>`,
-      ).join("")}</ol>
-      ${review.behavior.microworld
-        ? microworldBlock(
-          review.behavior.microworld,
-          dictionary,
-          review,
-          codeRenderer,
-        )
-        : ""}</div>`;
+    behavior = subsection({
+      content: `<div class="behavior-model"><div class="behavior-summary">${claimBlock(
+        review.behavior.summary,
+        dictionary,
+        review,
+        codeRenderer,
+      )}</div>
+        ${review.behavior.visual
+          ? visualBlock(
+            review.behavior.visual,
+            dictionary,
+            review,
+            codeRenderer,
+          )
+          : ""}
+        <ol class="flow">${review.behavior.steps.map(
+          (step) => `<li>${claimBlock(
+            step,
+            dictionary,
+            review,
+            codeRenderer,
+          )}</li>`,
+        ).join("")}</ol>
+        ${review.behavior.microworld
+          ? microworldBlock(
+            review.behavior.microworld,
+            dictionary,
+            review,
+            codeRenderer,
+          )
+          : ""}</div>`,
+      id: "behavior-flow",
+      title: label(dictionary, "section.behavior"),
+    });
   }
   const quiz = review.quiz.length === 0
     ? ""
@@ -1052,7 +1096,7 @@ function buildSections(review, dictionary, codeRenderer) {
               label(dictionary, "quiz.showAnswer"),
             ))}">${html(label(dictionary, "quiz.showAnswer"))}</summary>
             <div class="quiz-answer-content">
-              <p>${userText(item.answer)}</p>
+              ${userParagraphs(item.answer)}
               ${evidenceBlock(item.evidence, dictionary, review, codeRenderer, {
                 collapsible: false,
                 context: item.question,
@@ -1064,6 +1108,7 @@ function buildSections(review, dictionary, codeRenderer) {
       id: "quiz",
       title: label(dictionary, "section.quiz"),
     });
+  let number = 2;
   sections.push({
     html: section({
       content: `${coreChange}${behavior}${quiz}${teachingAidChoices(
@@ -1071,15 +1116,18 @@ function buildSections(review, dictionary, codeRenderer) {
         dictionary,
       )}`,
       id: "explore",
+      number,
       title: label(dictionary, "section.explore"),
     }),
     id: "explore",
+    number,
     title: label(dictionary, "section.explore"),
   });
+  number += 1;
   if (review.reviewItems.length > 0) {
     sections.push({
-      html: section({
-          content: `<ul class="review-items review-items-full" role="list">${review.reviewItems.map(
+      html: collapsibleSection({
+        content: `<ul class="review-items review-items-full" role="list">${review.reviewItems.map(
           (item) => `<li>${reviewItem(
             item,
             dictionary,
@@ -1088,15 +1136,19 @@ function buildSections(review, dictionary, codeRenderer) {
           )}</li>`,
         ).join("")}</ul>`,
         id: "judge",
+        number,
         title: label(dictionary, "section.judge"),
       }),
       id: "judge",
+      number,
       title: label(dictionary, "section.judge"),
     });
+    number += 1;
   }
   sections.push({
-    html: evidenceSection(review, dictionary, codeRenderer),
+    html: evidenceSection(review, dictionary, codeRenderer, number),
     id: "evidence-and-scope",
+    number,
     title: label(dictionary, "section.evidence"),
   });
   return sections;
@@ -1259,6 +1311,14 @@ select { color: inherit; }
   border: 0;
 }
 bdi[dir="auto"] { overflow-wrap: anywhere; }
+.claim > p + p,
+.behavior-visual header > p + p,
+.microworld header > p + p,
+.review-item > p + p,
+.teaching-aid-choice dd > p + p,
+.item-actions dd > p + p,
+.scope-limit dd > p + p,
+.quiz-answer-content > p + p { margin-top: ${space2}px; }
 
 .topbar {
   position: sticky;
@@ -1340,38 +1400,92 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .pull-request-link:hover,
 .pull-request-link:focus-visible { color: var(--text); }
-.locale-link {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.locale-link:hover,
-.locale-link:focus-visible { color: var(--text); }
 .external-link-icon {
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
   stroke: currentColor;
 }
-.theme-button {
-  border: 1px solid transparent;
+.display-controls {
+  display: flex;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid var(--border);
   border-radius: 6px;
+  background: var(--bg);
+}
+.locale-menu { position: relative; }
+.locale-menu > summary {
+  display: flex;
+  height: 42px;
+  min-width: 80px;
+  padding: 0 ${space2}px 0 ${space3}px;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${space2}px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 500;
+  list-style: none;
+}
+.locale-menu > summary::-webkit-details-marker { display: none; }
+.locale-chevron {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  transition: transform 120ms ease;
+}
+.locale-menu[open] .locale-chevron { transform: rotate(180deg); }
+.locale-options {
+  position: absolute;
+  z-index: 32;
+  top: calc(100% + ${space1}px);
+  right: 0;
+  display: grid;
+  min-width: 124px;
+  margin: 0;
+  padding: ${space1}px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--text) 14%, transparent);
+  list-style: none;
+}
+.locale-option,
+.locale-current {
+  display: flex;
+  min-height: 44px;
+  padding: ${space2}px ${space3}px;
+  align-items: center;
+  border-radius: 4px;
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.locale-current { color: var(--muted); }
+.locale-option,
+.locale-option:visited { color: var(--text); }
+.locale-option:hover,
+.locale-option:focus-visible { background: var(--bg); }
+.theme-button {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  padding: ${space1}px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
   background: transparent;
   cursor: pointer;
 }
-.theme-button {
-  display: inline-grid;
-  width: 44px;
-  height: 44px;
-  padding: ${space1}px;
-  place-items: center;
+.display-controls.has-locale-menu .theme-button {
+  border-left: 1px solid var(--border);
+  border-radius: 0 5px 5px 0;
 }
-.theme-button:hover {
-  border-color: var(--border);
-  background: var(--panel);
-}
+.theme-button:hover { background: var(--panel); }
 .theme-icon {
   width: 20px;
   height: 20px;
@@ -1412,47 +1526,76 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   border-left: 1px solid var(--border);
 }
 .toc-desktop h2,
-.toc-mobile summary {
+.toc-mobile-panel h2 {
+  margin: 0 0 ${space4}px;
   font-size: ${TYPE.menu.fontSize}px;
   line-height: ${TYPE.menu.lineHeight};
   font-weight: 700;
 }
-.toc-synopsis {
-  margin-top: ${space3}px;
+.toc-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: ${space2}px;
 }
-.toc-desktop ol {
-  margin: ${space2}px 0 0;
+.toc-progress {
+  color: var(--muted);
+  font-size: ${TYPE.micro.fontSize}px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.toc-list {
+  display: grid;
+  margin: 0;
   padding: 0;
+  gap: 2px;
   list-style: none;
 }
-.toc-desktop li {
-  position: relative;
-  margin: 0;
-}
-.toc-desktop li + li { margin-top: 2px; }
-.toc-desktop li > a {
-  display: flex;
-  min-height: 30px;
+.toc-link {
+  display: grid;
+  min-height: 36px;
+  grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
-}
-.toc-desktop .toc-synopsis a,
-.toc-desktop a {
+  gap: ${space2}px;
+  padding: ${space1}px ${space2}px;
+  border-left: 4px solid transparent;
   color: var(--muted);
-  text-decoration: none;
+  font-size: ${TYPE.body.wide.fontSize}px;
   font-weight: 500;
+  text-decoration: none;
 }
-.toc-desktop a[aria-current="location"] {
+.toc-link:visited { color: var(--muted); }
+.toc-number {
+  color: var(--muted);
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+.toc-link[aria-current="location"],
+.toc-link[aria-current="location"]:visited {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent);
+  font-weight: 700;
 }
-.toc-desktop .toc-synopsis a:hover,
-.toc-desktop .toc-synopsis a:focus,
-.toc-desktop a:hover,
-.toc-desktop a:focus { color: var(--text); }
+.toc-link[aria-current="location"] .toc-number { color: var(--accent); }
+.toc-link:hover,
+.toc-link:focus { background: var(--panel); color: var(--text); }
 .toc-mobile { display: none; }
 
+.document-title { max-width: ${LAYOUT.proseWidth}; }
+.document-title + .synopsis { margin-top: ${space5}px; padding-top: ${space4}px; }
 .synopsis { margin: 0; }
-.synopsis-head { max-width: ${LAYOUT.proseWidth}; }
-.synopsis-head h1 {
+.section-number {
+  color: var(--accent);
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+.document-title h1 {
   min-width: 0;
   margin: 0;
   font-size: ${widePageTitle.fontSize}px;
@@ -1460,18 +1603,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   letter-spacing: -.04em;
   overflow-wrap: anywhere;
 }
-.goal-label {
-  margin-top: ${space3}px;
-  color: var(--accent);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 700;
-}
-.goal {
-  margin-top: ${space1}px;
-  font-size: ${TYPE.goal.wide.fontSize}px;
-  line-height: ${TYPE.goal.wide.lineHeight};
-}
-.goal .claim-meta { margin-top: ${space1}px; }
 .synopsis-grid > div > h3,
 .synopsis-background > h3,
 .synopsis-review-head > h3,
@@ -1505,8 +1636,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .status.kind-verify { color: var(--verify); }
 .synopsis-grid {
   display: grid;
-  margin-top: ${space5}px;
-  border-top: 1px solid var(--border);
 }
 .before-after {
   display: grid;
@@ -1547,6 +1676,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .synopsis-background-content { min-width: 0; }
 .synopsis-row > h3 { padding-top: 2px; }
+.summary-label-stacked { display: inline-flex; flex-direction: column; align-items: flex-start; }
 .synopsis-value {
   min-width: 0;
 }
@@ -1595,7 +1725,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .claim-meta > .evidence { margin-top: 0; }
 .evidence > summary {
   display: flex;
-  min-height: 32px;
   align-items: center;
   color: var(--muted);
   cursor: pointer;
@@ -1691,9 +1820,8 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   border: 0;
 }
 .synopsis + .review-section,
-.review-section + .review-section { margin-top: ${space9}px; }
+.review-section + .review-section { margin-top: ${space6}px; padding-top: ${space4}px; }
 .review-section-collapsible:not([open]) {
-  padding-top: 0;
   padding-bottom: 0;
 }
 .review-section-collapsible > .section-heading {
@@ -1754,12 +1882,19 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   display: flex;
   position: relative;
   margin-bottom: ${space4}px;
+  padding-bottom: ${space3}px;
+  border-bottom: 2px solid var(--component-border);
   align-items: center;
   gap: ${space2}px;
 }
 .section-heading h2 {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: baseline;
+  gap: ${space2}px;
   margin: 0;
-  color: var(--accent);
+  color: var(--text);
   font-size: ${wideSection.fontSize}px;
   line-height: ${wideSection.lineHeight};
 }
@@ -1806,11 +1941,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .subsection-content {
   padding-top: ${space2}px;
-}
-.review-subsection + .behavior-model {
-  margin-top: ${space5}px;
-  padding-top: ${space5}px;
-  border-top: 1px solid var(--border);
 }
 .explanation-step + .explanation-step { margin-top: ${space4}px; }
 .core-details { margin: 0; }
@@ -1898,66 +2028,42 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   line-height: ${wideSubsection.lineHeight};
 }
 .evidence-group-content { padding: 0 0 ${space3}px ${space4}px; }
-.flow { padding-left: ${space5}px; }
-.flow > li {
-  margin: ${space3}px 0;
-  padding-left: ${space2}px;
-}
-.flow:not(.flow-short) {
+.flow {
+  display: grid;
+  margin: ${space3}px 0 0;
   padding: 0;
   list-style: none;
   counter-reset: behavior-step;
 }
-.flow:not(.flow-short) > li {
+.flow > li {
+  position: relative;
   display: grid;
+  min-width: 0;
+  min-height: 56px;
+  margin: 0;
+  padding: 0 0 ${space4}px;
   grid-template-columns: 28px minmax(0, 1fr);
-  padding: 0;
-  gap: ${space2}px;
+  gap: ${space3}px;
   counter-increment: behavior-step;
 }
-.flow:not(.flow-short) > li::before {
-  color: var(--muted);
-  content: counter(behavior-step, decimal-leading-zero);
-  font: 400 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Code", ui-monospace, monospace;
-}
-.flow-short {
-  display: flex;
-  margin: ${space3}px 0 0;
-  padding: 0;
-  gap: 28px;
-  list-style: none;
-  overflow-x: auto;
-  counter-reset: behavior-short-step;
-}
-.flow-short > li {
+.flow > li::before {
   position: relative;
-  min-width: 150px;
-  margin: 0;
-  padding: ${space3}px 0;
-  flex: 1 0 0;
-  counter-increment: behavior-short-step;
-  overflow-wrap: anywhere;
+  z-index: 1;
+  width: 28px;
+  background: var(--bg);
+  color: var(--accent);
+  content: counter(behavior-step, decimal-leading-zero);
+  font: 700 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Sans", sans-serif;
+  font-variant-numeric: tabular-nums;
 }
-.flow-short > li::before {
-  display: grid;
-  width: 26px;
-  height: 26px;
-  margin-bottom: ${space2}px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--panel);
-  content: counter(behavior-short-step);
-  font: 500 ${TYPE.supporting.wide.fontSize}px/1 "Hope Sans", sans-serif;
-}
-.flow-short > li:not(:last-child)::after {
+.flow > li:not(:last-child)::after {
   position: absolute;
-  top: 50%;
-  right: -22px;
-  color: var(--muted);
-  content: "→";
-  font: 400 18px/1 "Hope Code", ui-monospace, monospace;
-  transform: translateY(-50%);
+  top: 22px;
+  bottom: ${space1}px;
+  left: 13px;
+  width: 1px;
+  background: var(--border);
+  content: "";
 }
 
 .behavior-visual,
@@ -2153,15 +2259,29 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   font-size: ${TYPE.supporting.wide.fontSize}px;
   font-weight: 500;
 }
+.microworld-disclosure { margin-top: ${space3}px; }
+.microworld-disclosure > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+.microworld-disclosure > summary::-webkit-details-marker { display: none; }
+.microworld-disclosure > summary::after {
+  margin-left: ${space2}px;
+  content: "›";
+  transition: transform 120ms ease;
+}
+.microworld-disclosure[open] > summary::after { transform: rotate(90deg); }
+.microworld-content { padding-bottom: ${space2}px; }
 .microworld-controls {
   min-width: 0;
-  margin: ${space4}px 0 0;
+  margin: ${space2}px 0 0;
   padding: 0;
   border: 0;
-}
-.microworld-controls-title {
-  margin: 0 0 ${space2}px;
-  font-weight: 700;
 }
 .microworld-control-group {
   min-width: 0;
@@ -2240,6 +2360,10 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .microworld-lesson {
   margin: ${space2}px 0 0;
 }
+.microworld-outcome > p,
+.microworld-lesson > p { margin-top: ${space1}px; }
+.microworld-outcome > p + p,
+.microworld-lesson > p + p { margin-top: ${space2}px; }
 .microworld-boundary {
   display: grid;
   margin: ${space4}px 0 0;
@@ -2327,7 +2451,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .item-actions {
   display: grid;
   margin: ${space3}px 0;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${space2}px;
 }
 .item-actions > div {
@@ -2338,8 +2461,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   border-top: 1px solid var(--border);
 }
 .item-actions > .item-next {
-  padding-left: ${space3}px;
-  padding-right: ${space3}px;
   border-top-color: var(--accent);
 }
 .scope-limit dl > div,
@@ -2489,7 +2610,7 @@ td:first-child {
   font-weight: 500;
   list-style: none;
 }
-.evidence > summary { min-height: 32px; }
+.evidence > summary { min-height: ${space5}px; }
 .evidence > summary::-webkit-details-marker,
 .evidence-group > summary::-webkit-details-marker,
 .context-check > summary::-webkit-details-marker,
@@ -2629,35 +2750,12 @@ td:first-child {
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
   }
-  .toc-mobile-panel .toc-synopsis {
-    margin: 0 0 ${space2}px;
-  }
-  .toc-mobile-panel ol {
-    display: grid;
-    margin: 0;
-    padding: ${space3}px 0 0;
-    grid-template-columns: 1fr;
-    gap: 2px;
-    border-top: 1px solid var(--border);
-    list-style: none;
-  }
-  .toc-mobile a {
-    display: flex;
+  .toc-mobile-panel .toc-link {
     min-height: 44px;
     padding: ${space2}px ${space3}px;
-    align-items: center;
-    border-left: 2px solid transparent;
-    color: var(--muted);
-    font-weight: 500;
-    text-decoration: none;
   }
-  .toc-mobile a[aria-current="location"] {
-    border-left-color: var(--accent);
-    color: var(--text);
-    font-weight: 700;
-  }
-  .toc-mobile a:hover,
-  .toc-mobile a:focus-visible { color: var(--text); }
+  .toc-mobile .toc-link:hover,
+  .toc-mobile .toc-link:focus-visible { color: var(--text); }
 }
 
 @media (max-width: ${LAYOUT.narrowBreakpoint - 1}px) {
@@ -2682,18 +2780,14 @@ td:first-child {
   .pull-request-link {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
   }
-  .synopsis-head h1 {
+  .document-title h1 {
     font-size: ${narrowPageTitle.fontSize}px;
     line-height: ${narrowPageTitle.lineHeight};
   }
   .main { padding: ${space8}px ${space4}px ${space9}px; }
+  .document-title + .synopsis,
   .synopsis + .review-section,
-  .review-section + .review-section { margin-top: ${space8}px; }
-  .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
-  .goal {
-    font-size: ${TYPE.goal.narrow.fontSize}px;
-    line-height: ${TYPE.goal.narrow.lineHeight};
-  }
+  .review-section + .review-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .synopsis-grid > div > h3,
   .synopsis-background > h3,
   .before-after > div > h3,
@@ -2724,23 +2818,18 @@ td:first-child {
     line-height: ${TYPE.supporting.narrow.lineHeight};
   }
   .code-step-list > li::before,
-  .flow:not(.flow-short) > li::before {
+  .flow > li::before {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
   }
   .evidence pre {
     font-size: ${narrowCode.fontSize}px;
     line-height: ${narrowCode.lineHeight};
   }
-  .item-actions > div,
-  .scope-limit dl > div,
-  .artifact-details dl > div {
-    grid-template-columns: 1fr;
-    gap: ${space1}px;
-  }
-  .item-actions {
-    grid-template-columns: 1fr;
-  }
-  .change-shift {
+  .change-shift,
+  .visual-components,
+  .teaching-aid-choices,
+  .microworld-comparison,
+  .microworld-boundary {
     grid-template-columns: 1fr;
   }
   .change-shift > .shift-card + .shift-card {
@@ -2748,29 +2837,16 @@ td:first-child {
     border-top: 1px solid var(--border);
     border-left: 0;
   }
-  .flow-short {
-    display: grid;
-    gap: 28px;
-    overflow: visible;
-  }
-  .flow-short > li { min-width: 0; }
-  .flow-short > li:not(:last-child)::after {
-    top: auto;
-    right: 50%;
-    bottom: -23px;
-    content: "↓";
-    transform: translateX(50%);
-  }
-  .visual-components,
-  .teaching-aid-choices,
-  .microworld-comparison,
-  .microworld-boundary {
-    grid-template-columns: 1fr;
-  }
   .teaching-aid-choice { padding: ${space3}px 0; }
   .teaching-aid-choices > li + li {
     border-top: 1px solid var(--border);
     border-left: 0;
+  }
+  .item-actions > div,
+  .scope-limit dl > div,
+  .artifact-details dl > div {
+    grid-template-columns: 1fr;
+    gap: ${space1}px;
   }
   .toc-mobile-panel ol {
     grid-template-columns: 1fr;
@@ -2820,6 +2896,7 @@ td:first-child {
   .topbar-actions { gap: ${space1}px; }
   .commit-status { padding: 2px ${space1}px; }
   .pull-request-link { padding-inline: 0; }
+  .pull-request-link .external-link-icon { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2833,6 +2910,8 @@ td:first-child {
 @media (forced-colors: active) {
   .status,
   .commit-status,
+  .display-controls,
+  .locale-options,
   .locale-warning,
   .behavior-visual,
   .microworld,
@@ -2879,6 +2958,7 @@ td:first-child {
   .quiz-question { break-inside: avoid; }
   .review-section-collapsible > .section-content,
   .review-subsection-collapsible > .subsection-content,
+  .microworld-disclosure > .microworld-content,
   .beginner-primer > .beginner-primer-content,
   .evidence-group > .evidence-group-content,
   .context-check > .disclosure-content,
@@ -2889,6 +2969,8 @@ td:first-child {
   .beginner-primer::details-content {
     content-visibility: visible;
   }
+  .review-section-collapsible::details-content,
+  .microworld-disclosure::details-content,
   .review-subsection-collapsible::details-content {
     content-visibility: visible;
   }
@@ -2926,12 +3008,13 @@ const theme=document.getElementById("theme-toggle");
 const toc=document.querySelector(".toc-mobile");
 const navLinks=[...document.querySelectorAll('nav a[href^="#"]')];
 const sections=[...document.querySelectorAll(".main > [id]")];
+const progress=[...document.querySelectorAll("[data-toc-current]")];
 let currentFrame=0;
 const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
 const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
 const revealTarget=target=>{if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;};
 const focusTarget=target=>{const hadTabindex=target.hasAttribute("tabindex");if(!hadTabindex)target.setAttribute("tabindex","-1");target.focus({preventScroll:true});if(!hadTabindex)target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});};
-const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}for(const link of navLinks){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
+const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}const index=sections.indexOf(current);for(const item of progress)item.textContent=String(index+1);for(const link of navLinks){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
 syncTheme();
 theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
 toc?.addEventListener("click",event=>{const link=event.target.closest("a");if(!link)return;toc.open=false;const target=document.getElementById(link.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({behavior:"instant",block:"start"});});});
@@ -2947,7 +3030,7 @@ syncCurrent();
 })();`;
 }
 
-function alternateLocaleLink(value) {
+function localeMenu(value, currentLocale, dictionary) {
   if (value === undefined) return "";
   if (
     value === null
@@ -2958,13 +3041,17 @@ function alternateLocaleLink(value) {
   ) {
     throw new TypeError("alternateLocale must name a supported locale and sibling HTML file");
   }
-  const text = value.locale === "ko-KR" ? "한국어" : "English";
-  return `<a class="locale-link" href="${html(value.href)}" hreflang="${html(value.locale)}" lang="${html(value.locale)}">${text}</a>`;
+  const currentText = currentLocale === "ko-KR" ? "한국어" : "English";
+  const alternateText = value.locale === "ko-KR" ? "한국어" : "English";
+  return `<details class="locale-menu">
+    <summary aria-label="${html(label(dictionary, "common.language"))}" title="${html(label(dictionary, "common.language"))}"><span lang="${html(currentLocale)}">${currentText}</span><svg class="locale-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 10 4 4 4-4"></path></svg></summary>
+    <ul class="locale-options"><li><span class="locale-current" aria-current="page" lang="${html(currentLocale)}">${currentText}</span></li><li><a class="locale-option" href="${html(value.href)}" hreflang="${html(value.locale)}" lang="${html(value.locale)}">${alternateText}</a></li></ul>
+  </details>`;
 }
 
 export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const dictionary = await loadLocale(review.snapshot.settings.locale);
-  const localeLink = alternateLocaleLink(alternateLocale);
+  const locale = localeMenu(alternateLocale, review.snapshot.settings.locale, dictionary);
   const fontBytes = fonts ?? Object.fromEntries(await Promise.all(
     Object.entries(fontUrls).map(async ([name, url]) => [name, await readFile(url)]),
   ));
@@ -2977,7 +3064,8 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const script = clientScript(dictionary);
   const title = review.title.text;
   const sections = buildSections(review, dictionary, codeRenderer);
-  const synopsisHtml = synopsis(review, dictionary, codeRenderer, { title });
+  const documentTitleHtml = documentTitle(title);
+  const synopsisHtml = synopsis(review, dictionary, codeRenderer, { number: 1 });
   const styles = css(Object.fromEntries(Object.entries(fontBytes).map(
     ([name, bytes]) => [name, bytes.toString("base64")],
   )));
@@ -2993,9 +3081,13 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
     : "";
   const theme = review.snapshot.settings.theme;
   const themeAttribute = theme === "system" ? "" : ` data-theme="${html(theme)}"`;
-  const toc = `<div class="toc-synopsis"><a href="#synopsis">${html(label(dictionary, "section.synopsis"))}</a></div>
-  <ol>${sections.map(
-    (item) => `<li><a href="#${html(item.id)}">${html(item.title)}</a></li>`,
+  const tocItems = [{
+    id: "synopsis",
+    number: 1,
+    title: label(dictionary, "section.synopsis"),
+  }, ...sections];
+  const toc = `<ol class="toc-list">${tocItems.map(
+    (item) => `<li><a class="toc-link" href="#${html(item.id)}"><span class="toc-number">${sectionOrdinal(item.number)}</span><span>${html(item.title)}</span></a></li>`,
   ).join("")}</ol>`;
   const document = `<!doctype html>
 <html lang="${html(review.snapshot.settings.locale)}"${themeAttribute}>
@@ -3010,7 +3102,7 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
 <body>
   <a class="skip" href="#review">${html(label(dictionary, "common.skip"))}</a>
   <header class="topbar">
-    <div class="topbar-inner${localeLink === "" ? "" : " has-locale-switch"}">
+    <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
       <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· DIFF</span></div>
       <div class="top-context">
         <svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -3021,7 +3113,7 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
       </div>
       <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(review.snapshot.snapshot.head)}"><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></span>
       <div class="topbar-actions">
-${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-request-link" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
+        <a class="pull-request-link" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
           <span>PR #${review.snapshot.pullRequest.number}</span>
           <svg class="external-link-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M14 5h5v5"></path>
@@ -3029,7 +3121,8 @@ ${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-requ
             <path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>
           </svg>
         </a>
-        <button class="theme-button" id="theme-toggle" type="button" aria-label="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}" title="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}">
+        <div class="display-controls${locale === "" ? "" : " has-locale-menu"}">
+${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-button" id="theme-toggle" type="button" aria-label="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}" title="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}">
           <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${theme === "dark" ? " hidden" : ""}>
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path>
           </svg>
@@ -3037,7 +3130,8 @@ ${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-requ
             <circle cx="12" cy="12" r="4"></circle>
             <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path>
           </svg>
-        </button>
+          </button>
+        </div>
         <details class="toc-mobile">
           <summary>
             <svg class="toc-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
@@ -3046,6 +3140,7 @@ ${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-requ
             <span class="sr-only">${html(label(dictionary, "common.menu"))}</span>
           </summary>
           <nav class="toc-mobile-panel" aria-label="${html(label(dictionary, "common.menu"))}">
+            ${tocHeading(dictionary, tocItems.length)}
             ${toc}
           </nav>
         </details>
@@ -3055,11 +3150,12 @@ ${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-requ
   <div class="layout">
     <main class="main" id="review">
       ${localeWarning}
+      ${documentTitleHtml}
       ${synopsisHtml}
       ${sections.map((item) => item.html).join("")}
     </main>
     <nav class="toc-desktop" aria-label="${html(label(dictionary, "common.menu"))}">
-      <h2>${html(label(dictionary, "common.menu"))}</h2>
+      ${tocHeading(dictionary, tocItems.length)}
       ${toc}
     </nav>
   </div>
