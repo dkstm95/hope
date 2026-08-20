@@ -1,6 +1,6 @@
 ---
 name: sweep
-description: Use to inventory a project for broad maintenance and return an evidence-linked, whole-project plan without changing files.
+description: Use to inventory a project for broad maintenance and return an evidence-linked, decision-ready whole-project plan without changing files.
 ---
 
 # Hope Sweep
@@ -43,6 +43,11 @@ and disclose that independent batch inspection was unavailable.
 
 Merge their evidence and report missing or overlapping coverage.
 
+Reconcile reported counts and coverage claims against the source inventory.
+
+Every project-owned entry must be inspected, excluded with a reason, or named
+as a coverage gap.
+
 Do not claim whole-project coverage when inspection was partial.
 
 ## Inspect maintenance risks
@@ -71,6 +76,11 @@ authoritative external sources.
 
 Separate confirmed facts from inferences and open questions.
 
+Name the affected behavior or contract precisely.
+
+Do not collapse distinct input versions, stored artifacts, compatibility paths,
+or product promises into one label such as "legacy" or "history."
+
 Check consumers, generated copies, public contracts, and history before calling
 something unused.
 
@@ -79,20 +89,71 @@ Do not treat a passing test as proof that a file or abstraction is necessary.
 Do not treat a missing reference search as proof that removal is safe when an
 external contract may exist.
 
+Try to disprove every material finding before reporting it.
+
+Check the strongest plausible alternative explanation and contradictory
+evidence.
+
+Remove the finding or lower its certainty when it does not survive that check.
+
+For a visual or interactive finding, reproduce the relevant viewport and state
+in the intended viewer.
+
+Treat thumbnails, composite previews, and screenshots from another state as
+leads, not confirmation.
+
+## Make decisions easy
+
+Classify every actionable finding as one of:
+
+- `Recommend`: evidence supports a specific change and no material product
+  choice remains;
+- `Decide`: the person owns a product, compatibility, retention, or other
+  material trade-off; or
+- `Defer`: evidence or authority is insufficient for a recommendation.
+
+Give each item a stable ID and include:
+
+- the exact behavior, promise, or files in scope;
+- evidence and whether it is fact, inference, or an open question;
+- user or maintenance impact; and
+- the verification needed after implementation.
+
+When dependencies, recommended order, compatibility, or release effects are
+material, include them. Mark any that evidence does not establish as `unknown`.
+
+For each `Decide` item, ask one concrete question, recommend a default with a
+reason, and state the consequence of each viable option.
+
+Turn a broad concern into the behavior the choice would preserve or remove.
+
+Do not put a `Defer` item in the recommended implementation order.
+
+Group compatible `Recommend` items and already accepted `Decide` items into
+proposed, bounded implementation batches with their file scope and checks.
+
+For each unresolved `Decide` item, show which proposed batch its recommended
+default would join if accepted.
+
+Finalize and run selected batches only in a separate implementation task after
+the person accepts any included defaults.
+
 ## Return the plan
 
 Lead with the most important conclusion.
 
-Include:
+Report:
 
-- what was inspected;
-- what was excluded or could not be checked;
-- confirmed findings and their impact;
-- removal or simplification candidates;
-- dependencies between candidates;
-- recommended order;
-- verification needed for each change; and
-- items that need a product decision.
+- coverage, exclusions, and gaps;
+- `Recommend`, `Decide`, and `Defer` items;
+- proposed implementation batches and their order; and
+- the smallest response needed from the person.
+
+Keep the final request to answers for unresolved `Decide` items and selection
+of proposed batches for a separate implementation task. Offer one reply that
+accepts every recommended default and selects all recommended batches.
+
+If no product decision remains, say so directly.
 
 A no-change or findings-only result is valid.
 
