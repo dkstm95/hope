@@ -105,6 +105,7 @@
   "scope.verification.reason": "이번 리뷰에서는 CI, 테스트, 빌드, 린트 결과를 수집하거나 실행하지 않았습니다.",
   "scope.verification.subject": "실행과 CI 결과",
   "section.background": "배경",
+  "section.behavior": "적용 조건과 흐름",
   "section.core": "핵심 변경",
   "section.evidence": "근거와 범위",
   "section.explore": "동작 변화",

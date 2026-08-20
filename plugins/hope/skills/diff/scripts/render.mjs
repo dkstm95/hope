@@ -1010,36 +1010,40 @@ function buildSections(review, dictionary, codeRenderer) {
   if (review.behavior) {
     const shortFlow = review.behavior.steps.length <= 4
       && review.behavior.steps.every((step) => step.text.length <= 80);
-    behavior = `<div class="behavior-model"><div class="behavior-summary">${claimBlock(
-      review.behavior.summary,
-      dictionary,
-      review,
-      codeRenderer,
-    )}</div>
-      ${review.behavior.visual
-        ? visualBlock(
-          review.behavior.visual,
-          dictionary,
-          review,
-          codeRenderer,
-        )
-        : ""}
-      <ol class="flow${shortFlow ? " flow-short" : ""}">${review.behavior.steps.map(
-        (step) => `<li>${claimBlock(
-          step,
-          dictionary,
-          review,
-          codeRenderer,
-        )}</li>`,
-      ).join("")}</ol>
-      ${review.behavior.microworld
-        ? microworldBlock(
-          review.behavior.microworld,
-          dictionary,
-          review,
-          codeRenderer,
-        )
-        : ""}</div>`;
+    behavior = subsection({
+      content: `<div class="behavior-model"><div class="behavior-summary">${claimBlock(
+        review.behavior.summary,
+        dictionary,
+        review,
+        codeRenderer,
+      )}</div>
+        ${review.behavior.visual
+          ? visualBlock(
+            review.behavior.visual,
+            dictionary,
+            review,
+            codeRenderer,
+          )
+          : ""}
+        <ol class="flow${shortFlow ? " flow-short" : ""}">${review.behavior.steps.map(
+          (step) => `<li>${claimBlock(
+            step,
+            dictionary,
+            review,
+            codeRenderer,
+          )}</li>`,
+        ).join("")}</ol>
+        ${review.behavior.microworld
+          ? microworldBlock(
+            review.behavior.microworld,
+            dictionary,
+            review,
+            codeRenderer,
+          )
+          : ""}</div>`,
+      id: "behavior-flow",
+      title: label(dictionary, "section.behavior"),
+    });
   }
   const quiz = review.quiz.length === 0
     ? ""
@@ -1821,11 +1825,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .subsection-content {
   padding-top: ${space2}px;
-}
-.review-subsection + .behavior-model {
-  margin-top: ${space5}px;
-  padding-top: ${space5}px;
-  border-top: 1px solid var(--border);
 }
 .explanation-step + .explanation-step { margin-top: ${space4}px; }
 .core-details { margin: 0; }

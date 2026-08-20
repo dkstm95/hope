@@ -511,6 +511,27 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#core-change")).not.toContainText(
     "Return the final error after all retries fail.",
   );
+  await expect(page.locator("#behavior-flow > .subsection-heading > h3")).toHaveText(
+    "적용 조건과 흐름",
+  );
+  await expect(page.locator("#behavior-flow")).toContainText(
+    "네 단계로 이어지는 변경 동작입니다.",
+  );
+  await expect(page.locator("#core-change")).not.toContainText(
+    "네 단계로 이어지는 변경 동작입니다.",
+  );
+  const behaviorSectionOrder = await page.locator("#explore").evaluate((section) => ({
+    behaviorTop: section.querySelector("#behavior-flow").getBoundingClientRect().top,
+    coreBottom: section.querySelector("#core-change").getBoundingClientRect().bottom,
+    headingTop: section.querySelector("#behavior-flow h3").getBoundingClientRect().top,
+    summaryTop: section.querySelector("#behavior-flow .behavior-summary").getBoundingClientRect().top,
+  }));
+  expect(behaviorSectionOrder.behaviorTop).toBeGreaterThanOrEqual(
+    behaviorSectionOrder.coreBottom,
+  );
+  expect(behaviorSectionOrder.summaryTop).toBeGreaterThan(
+    behaviorSectionOrder.headingTop,
+  );
   await expect(page.locator("#synopsis .synopsis-state")).toHaveCount(0);
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
   await expect(page.locator("#explore .flow")).toHaveCount(1);

@@ -101,8 +101,10 @@ value:
 
 Keep background in Summary. In Behavior change, show the core change first,
 then any behavior model, the understanding check, and teaching aid choices.
-Teaching aid choices and understanding checks are supporting details, not
-parallel top-level destinations.
+Give each behavior model a visible subheading so its application conditions
+and flow cannot look like another core-change claim. Teaching aid choices and
+understanding checks are supporting details, not parallel top-level
+destinations.
 
 Let the reading path answer these questions in order:
 

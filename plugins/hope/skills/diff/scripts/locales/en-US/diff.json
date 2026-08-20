@@ -105,6 +105,7 @@
   "scope.verification.reason": "This review did not collect or run CI, tests, builds, or lint.",
   "scope.verification.subject": "Execution and CI results",
   "section.background": "Background",
+  "section.behavior": "Conditions and flow",
   "section.core": "Core change",
   "section.evidence": "Evidence and scope",
   "section.explore": "Behavior change",

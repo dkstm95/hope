@@ -89,7 +89,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 9);
+  assert.equal(first.rendererVersion, 10);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -726,6 +726,14 @@ test("only two to four brief behavior steps use the connected short flow", async
   };
   const shortReview = validateAnalysis(shortAnalysis, snapshot, { runId });
   const shortHtml = (await renderReview(shortReview)).bytes.toString("utf8");
+  assert.match(
+    shortHtml,
+    /<section class="review-subsection" id="behavior-flow">\s*<div class="subsection-heading">\s*<h3>Conditions and flow<\/h3>\s*<\/div>\s*<div class="behavior-model">/u,
+  );
+  assert.match(
+    shortHtml,
+    /<section class="review-subsection" id="core-change">[\s\S]*?<\/section>\s*<section class="review-subsection" id="behavior-flow">/u,
+  );
   assert.match(shortHtml, /<ol class="flow flow-short">/u);
   assert.match(shortHtml, /overflow-wrap: anywhere/u);
 
