@@ -107,7 +107,16 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(goalRow.locator("dd")).toContainText("중단된 업로드를 감지해");
   await expect(page.locator(".overview .synopsis > div")).toHaveCount(4);
   await expect(page.locator(".goal, .goal-label")).toHaveCount(0);
-  await expect(page.locator(".synopsis dt").filter({ hasText: "완료 기준" })).toHaveCount(1);
+  const completionLabel = page.locator(".synopsis dt").filter({ hasText: "완료 기준" });
+  await expect(completionLabel).toHaveCount(1);
+  await expect(completionLabel.locator(".summary-label-stacked > span")).toHaveText([
+    "완료",
+    "기준",
+  ]);
+  const completionLabelTops = await completionLabel.locator(
+    ".summary-label-stacked > span",
+  ).evaluateAll((lines) => lines.map((line) => line.getBoundingClientRect().top));
+  expect(completionLabelTops[1]).toBeGreaterThan(completionLabelTops[0]);
   await expect(page.locator(".overview .check-list > li")).toHaveCount(3);
   await expect(page.locator(".overview .check-list")).toHaveCSS(
     "list-style-type",
@@ -201,6 +210,10 @@ test("Align presents one compact current agreement with secondary history", asyn
     directionTitleRows[0].titleTop + 24,
   );
   await expect(currentDirections.locator(".design-direction .direction-details")).toHaveCount(2);
+  const directionDetailTops = await currentDirections.locator(
+    ".design-direction .direction-details",
+  ).evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top));
+  expect(Math.max(...directionDetailTops) - Math.min(...directionDetailTops)).toBeLessThanOrEqual(1);
   await expect(currentDirections.locator(".design-direction").first()).toContainText(
     "핵심 선택을 빠르게 찾을 수 있다.",
   );
@@ -212,22 +225,41 @@ test("Align presents one compact current agreement with secondary history", asyn
   ).first().evaluate((item) => {
     const card = item.getBoundingClientRect();
     const details = item.querySelector(".direction-details").getBoundingClientRect();
+    const rationale = item.querySelector(".direction-rationales").getBoundingClientRect();
     const reference = item.querySelector(".direction-references").getBoundingClientRect();
     return {
       cardBottom: card.bottom,
       cardLeft: card.left,
       cardRight: card.right,
       detailsBottom: details.bottom,
+      rationaleBottom: rationale.bottom,
+      rationaleTop: rationale.top,
       referenceBottom: reference.bottom,
       referenceLeft: reference.left,
       referenceRight: reference.right,
       referenceTop: reference.top,
     };
   });
-  expect(referencePlacement.referenceTop).toBeGreaterThanOrEqual(referencePlacement.detailsBottom);
+  expect(referencePlacement.rationaleTop).toBeGreaterThanOrEqual(referencePlacement.detailsBottom);
+  expect(referencePlacement.referenceTop).toBeGreaterThanOrEqual(referencePlacement.rationaleBottom);
   expect(referencePlacement.referenceLeft).toBeGreaterThanOrEqual(referencePlacement.cardLeft);
   expect(referencePlacement.referenceRight).toBeLessThanOrEqual(referencePlacement.cardRight);
   expect(referencePlacement.referenceBottom).toBeLessThanOrEqual(referencePlacement.cardBottom);
+  const rationaleBoundaryWidths = await currentDirections.locator(
+    ".design-direction",
+  ).first().evaluate((item) => {
+    const rows = [...item.querySelectorAll(".direction-rationales > div")];
+    return {
+      referenceTop: getComputedStyle(item.querySelector(".direction-references")).borderTopWidth,
+      rowBottoms: rows.map((row) => getComputedStyle(row).borderBottomWidth),
+      rowTops: rows.map((row) => getComputedStyle(row).borderTopWidth),
+    };
+  });
+  expect(rationaleBoundaryWidths).toEqual({
+    referenceTop: "1px",
+    rowBottoms: ["0px", "0px"],
+    rowTops: ["0px", "1px"],
+  });
   await directionReferences.locator(":scope > summary").click();
   await expect(directionReferences.locator(".direction-reference-content")).toBeVisible();
   await expect(directionReferences).toContainText("반영한 점");

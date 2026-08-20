@@ -54,6 +54,15 @@ function htmlAttribute(value) {
     .replaceAll("\t", "&#9;");
 }
 
+function summaryLabelElement(value) {
+  const text = String(value);
+  const balanced = /^(\p{Script=Hangul}{2}) (\p{Script=Hangul}{2})$/u.exec(text);
+  if (!balanced) return `<h3>${html(text)}</h3>`;
+  return `<h3><span class="summary-label-stacked"><span>${html(
+    balanced[1],
+  )}</span> <span>${html(balanced[2])}</span></span></h3>`;
+}
+
 function hashSource(value) {
   return createHash("sha256").update(value).digest("base64");
 }
@@ -673,7 +682,7 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
     </div>
     <div class="synopsis-grid">
       <div class="synopsis-row synopsis-purpose">
-        <h3>${html(label(dictionary, "synopsis.purpose"))}</h3>
+        ${summaryLabelElement(label(dictionary, "synopsis.purpose"))}
         <div class="synopsis-value">${claimBlock(
           review.purpose,
           dictionary,
@@ -712,7 +721,7 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
         </div>
       </div>
       <div class="synopsis-row synopsis-impact">
-        <h3>${html(label(dictionary, "synopsis.why"))}</h3>
+        ${summaryLabelElement(label(dictionary, "synopsis.why"))}
         <div class="synopsis-value">${claimBlock(
           review.coreChange.why,
           dictionary,
@@ -724,7 +733,7 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
         )}</div>
       </div>
       <div class="synopsis-row synopsis-review">
-        <h3>${html(label(dictionary, "synopsis.items"))}</h3>
+        ${summaryLabelElement(label(dictionary, "synopsis.items"))}
         <div class="synopsis-value synopsis-review-value">
           ${review.reviewItems.length === 0
             ? `<p class="review-empty">${html(label(dictionary, "review.noItems"))}</p>`
@@ -743,7 +752,7 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
         </div>
       </div>
       ${materialLimits.length === 0 ? "" : `<div class="synopsis-row">
-        <h3>${html(label(dictionary, "synopsis.scope"))}</h3>
+        ${summaryLabelElement(label(dictionary, "synopsis.scope"))}
         <div class="synopsis-value">
           <ul class="scope-impact-list">${visibleLimits.map(
             (limit) => `<li><a href="#scope-${html(limit.id)}">${userText(limit.impact)}</a></li>`,
@@ -1667,6 +1676,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .synopsis-background-content { min-width: 0; }
 .synopsis-row > h3 { padding-top: 2px; }
+.summary-label-stacked { display: inline-flex; flex-direction: column; align-items: flex-start; }
 .synopsis-value {
   min-width: 0;
 }

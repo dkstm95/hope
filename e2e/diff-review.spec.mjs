@@ -349,6 +349,16 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   const synopsisPurpose = page.locator("#synopsis .synopsis-purpose");
   await expect(synopsisPurpose.locator(":scope > h3")).toHaveText("목표");
   await expect(synopsisPurpose).toContainText("Return the final error after all retries fail.");
+  const stackedSummaryLabels = page.locator("#synopsis .summary-label-stacked");
+  await expect(stackedSummaryLabels).toHaveText(["검토 결과", "검토 제한"]);
+  const stackedSummaryLabelTops = await stackedSummaryLabels.evaluateAll(
+    (labels) => labels.map((summaryLabel) => [...summaryLabel.children].map(
+      (line) => line.getBoundingClientRect().top,
+    )),
+  );
+  expect(stackedSummaryLabelTops.every(
+    ([firstLine, secondLine]) => secondLine > firstLine,
+  )).toBe(true);
   await expect(page.locator("#synopsis > .goal-label, #synopsis > .goal")).toHaveCount(0);
   await expect(page.locator("#synopsis > dt")).toHaveCount(0);
   await expect(page.locator("#synopsis")).not.toContainText(

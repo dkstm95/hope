@@ -90,7 +90,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
   ]);
   assert.equal(first.rendererVersion, 14);
-  assert.equal(first.designVersion, 9);
+  assert.equal(first.designVersion, 10);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -416,6 +416,10 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(
     html,
     /<div class="synopsis-row synopsis-purpose">\s*<h3>목표<\/h3>\s*<div class="synopsis-value">/u,
+  );
+  assert.match(
+    html,
+    /<h3><span class="summary-label-stacked"><span>검토<\/span> <span>결과<\/span><\/span><\/h3>/u,
   );
   assert.match(html, /<dt>커밋<\/dt><dd><code>b{40}<\/code><\/dd>/u);
   assert.match(html, /<dt>수집 시각<\/dt><dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u);

@@ -141,6 +141,15 @@ function label(dictionary, key) {
   return dictionary[key];
 }
 
+function summaryLabelElement(tag, value) {
+  const text = String(value);
+  const balanced = /^(\p{Script=Hangul}{2}) (\p{Script=Hangul}{2})$/u.exec(text);
+  if (!balanced) return `<${tag}>${escapeHtml(text)}</${tag}>`;
+  return `<${tag}><span class="summary-label-stacked"><span>${escapeHtml(
+    balanced[1],
+  )}</span> <span>${escapeHtml(balanced[2])}</span></span></${tag}>`;
+}
+
 function textList(items, { empty, className = "plain-list" } = {}) {
   if (items.length === 0) return `<p class="empty">${escapeHtml(empty)}</p>`;
   return `<ul class="${className}">${items.map(
@@ -188,10 +197,10 @@ function overview(content, dictionary, number) {
   return `<section class="overview document-section" id="overview" aria-labelledby="overview-title">
     ${sectionTitle("overview-title", label(dictionary, "overview"), number)}
     <dl class="synopsis">
-      <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd>${authoredParagraphs(goalValue(content))}</dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredParagraphs(content.problem)}</dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredParagraphs(content.boundary)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "goal"))}<dd>${authoredParagraphs(goalValue(content))}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "problem"))}<dd>${authoredParagraphs(content.problem)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "checks"))}<dd>${checkList(content, dictionary)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "boundary"))}<dd>${authoredParagraphs(content.boundary)}</dd></div>
     </dl>
   </section>`;
 }
@@ -249,11 +258,11 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
     <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><div class="direction-title-line"><h3 id="${escapeHtml(optionId)}-title">${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></div></header>
     <div class="direction-image"><img src="data:${option.image.mimeType};base64,${option.image.data}" alt="${escapeHtml(option.alt)}" width="${option.image.width}" height="${option.image.height}"></div>
     <div class="direction-summary">${authoredParagraphs(option.summary)}</div>
-${rationaleHtml === "" ? "" : `    ${rationaleHtml}\n`}    <div class="direction-details">
+    <div class="direction-details">
       <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
       <div><h4>${escapeHtml(label(dictionary, "tradeoffs"))}</h4>${textList(option.tradeoffs)}</div>
     </div>
-    ${directionReferences(option.references, dictionary)}
+${rationaleHtml === "" ? "" : `    ${rationaleHtml}\n`}    ${directionReferences(option.references, dictionary)}
   </li>`;
   }).join("");
   return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>`;
@@ -559,6 +568,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .synopsis dd p + p { margin-top: ${space2}px; }
 .synopsis > div { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: ${space5}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
 .synopsis dt { font-weight: 700; }
+.summary-label-stacked { display: inline-flex; flex-direction: column; align-items: flex-start; }
 .synopsis dd { margin: 0; }
 .check-list { list-style: decimal-leading-zero; padding-left: ${space6}px; display: grid; gap: ${space3}px; }
 .check-list li { padding-left: ${space1}px; }
@@ -606,11 +616,21 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .direction-reference-content { min-width: 0; padding-top: ${space2}px; }
 .direction-references li p { margin: ${space1}px 0 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-rationales { margin: ${space4}px 0 0; border-top: 1px solid var(--border); }
-.direction-rationales > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: ${space3}px; padding: ${space3}px 0; border-bottom: 1px solid var(--border); }
+.direction-rationales > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: ${space3}px; padding: ${space3}px 0; }
+.direction-rationales > div + div { border-top: 1px solid var(--border); }
 .direction-rationales dt { color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .direction-rationales dd { margin: 0; }
 .direction-rationales p + p { margin-top: ${space2}px; }
 .selection-source { display: block; margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 500; }
+@supports (grid-template-rows: subgrid) {
+  .design-direction { display: grid; grid-row: span 6; grid-template-rows: subgrid; }
+  .direction-head { grid-row: 1; }
+  .direction-image { grid-row: 2; }
+  .direction-summary { grid-row: 3; }
+  .direction-details { grid-row: 4; }
+  .direction-rationales { grid-row: 5; }
+  .direction-references { grid-row: 6; }
+}
 .behavior-steps { list-style: none; padding: 0; display: grid; }
 .behavior-steps li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: ${space3}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
 .behavior-steps li:not(:last-child)::after { content: ""; position: absolute; top: 22px; bottom: ${space1}px; left: 13px; width: 1px; background: var(--border); }
@@ -683,7 +703,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .scope { grid-template-columns: 1fr; }
   .scope-column + .scope-column { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
   .design-direction-list, .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
-  .design-direction { padding-inline: ${space2}px; }
+  .design-direction { display: block; grid-row: auto; padding-inline: ${space2}px; }
   .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
   .direction-rationales > div { grid-template-columns: 1fr; gap: ${space1}px; }
   .revision-content > div, .evidence-list > div { grid-template-columns: 1fr; gap: ${space1}px; }

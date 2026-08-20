@@ -216,11 +216,17 @@ test("design direction images are validated, embedded, and kept off the network"
   assert.match(html, /복구 선택을 첫 화면의 주 행동으로 배치했다/u);
   const firstDirection = html.indexOf('id="design-direction-direction-1"');
   const secondDirection = html.indexOf('id="design-direction-direction-2"');
+  const firstStrength = html.indexOf("핵심 선택을 빠르게 찾을 수 있다.");
+  const firstRecommendation = html.indexOf(">AI 추천<", firstDirection);
   const firstReference = html.indexOf("복구 요구 참고");
-  assert.ok(firstDirection < html.indexOf("핵심 선택을 빠르게 찾을 수 있다."));
-  assert.ok(html.indexOf("핵심 선택을 빠르게 찾을 수 있다.") < firstReference);
+  assert.ok(firstDirection < firstStrength);
+  assert.ok(firstStrength < firstRecommendation);
+  assert.ok(firstRecommendation < firstReference);
   assert.ok(firstReference < secondDirection);
-  assert.ok(secondDirection < html.indexOf("현재 단계가 분명하다."));
+  const secondStrength = html.indexOf("현재 단계가 분명하다.");
+  const secondSelection = html.indexOf(">선택 결과<", secondDirection);
+  assert.ok(secondDirection < secondStrength);
+  assert.ok(secondStrength < secondSelection);
   assert.match(html, /<details class="direction-references">[\s\S]*?<summary>참고 자료 · 1<\/summary>/u);
   assert.doesNotMatch(html, /direction-reference-list|class="direction-reference"/u);
   assert.doesNotMatch(html, /design-direction-detail-list/u);
@@ -423,7 +429,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="14"/u);
+  assert.match(first, /name="hope-align-design-version" content="15"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
@@ -450,7 +456,10 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
     /<header class="document-head">\s*<h1 id="artifact-title">[\s\S]*?<\/h1>\s*<\/header><section class="overview document-section" id="overview" aria-labelledby="overview-title">\s*<h2 class="section-title" id="overview-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u,
   );
   assert.doesNotMatch(first, /artifact-title-line/u);
-  assert.match(first, />완료 기준</u);
+  assert.match(
+    first,
+    /<dt><span class="summary-label-stacked"><span>완료<\/span> <span>기준<\/span><\/span><\/dt>/u,
+  );
   assert.match(first, />확정 사항</u);
   assert.match(first, />구현 시 결정 사항</u);
   assert.match(first, />AI 에이전트 확인</u);

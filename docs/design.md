@@ -57,6 +57,10 @@ Use the same small set of semantic section patterns across Align and Diff:
 Keep these visual roles consistent without making either renderer import the
 other feature.
 
+Keep summary labels compact without changing their wording. In Korean, when a
+summary label consists of two two-syllable words, stack one word per line in
+the label gutter while preserving the space in its text and accessible name.
+
 ## Diff artifact direction
 
 The Diff artifact should feel:
@@ -510,13 +514,14 @@ Show two or three design directions together in one comparison section. Keep
 the same option order. Keep recommendation and selection labels beside the
 option title so they do not create a separate comparison row. On a wide screen,
 compare each option's title, image,
-brief summary, strengths, and trade-offs in parallel; stack each complete
-option on a narrow screen. Keep an option's references inside that option and
-fold them by default. Keep the recommendation and selection reasons inside the
-option they explain. Do not repeat these details in a full-width group below
-the comparison. Put only context shared by all options below the comparison in
-one reading column. Pair every image with useful alt text, and mark
-recommendation and selection with words rather than color alone.
+brief summary, strengths, and trade-offs in parallel; align those shared rows
+across the options and stack each complete option on a narrow screen. Inside
+each option, put strengths and trade-offs before recommendation and selection
+reasons, then put folded references last. Keep the reasons and references
+inside the option they explain. Do not repeat these details in a full-width
+group below the comparison. Put only context shared by all options below the
+comparison in one reading column. Pair every image with useful alt text, and
+mark recommendation and selection with words rather than color alone.
 
 Align embeds Hope Sans so it uses the same Hope type family as Diff across
 supported hosts. Its palette, spacing, type sizes, and layout values still come
@@ -646,6 +651,10 @@ Use two border roles:
 - a quiet divider for document structure; and
 - a stronger component border for controls, code, and separate task or state
   regions.
+
+Give an adjacent vertical boundary to the later block's top edge. Within a
+repeated group, put the divider on each item after the first. Do not combine a
+previous block's bottom border with the next block's top border.
 
 Do not draw a strong rule between every sentence or row.
 
