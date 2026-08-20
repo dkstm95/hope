@@ -115,7 +115,13 @@ function escapeHtml(value) {
 }
 
 function authoredText(value) {
-  return `<bdi dir="auto">${escapeHtml(value)}</bdi>`;
+  return `<bdi dir="auto">${String(value).split(/\r?\n/u).map(escapeHtml).join("<br>")}</bdi>`;
+}
+
+function authoredParagraphs(value) {
+  return String(value).split(/\r?\n+/u).map(
+    (paragraph) => `<p>${authoredText(paragraph.trim())}</p>`,
+  ).join("");
 }
 
 function embeddedJson(value) {
@@ -160,12 +166,12 @@ function overview(content, dictionary) {
     <header class="document-head">
       <h1 id="artifact-title">${authoredText(content.title)}</h1>
       <p class="goal-label">${escapeHtml(label(dictionary, "goal"))}</p>
-      <p class="goal">${authoredText(goalValue(content))}</p>
+      <div class="goal">${authoredParagraphs(goalValue(content))}</div>
     </header>
     <dl class="synopsis">
-      <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd><p>${authoredText(content.problem)}</p></dd></div>
+      <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredParagraphs(content.problem)}</dd></div>
       <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd><p>${authoredText(content.boundary)}</p></dd></div>
+      <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredParagraphs(content.boundary)}</dd></div>
     </dl>
   </section>`;
 }
@@ -201,25 +207,36 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
       ? `<span class="direction-status selected">${escapeHtml(label(dictionary, "selected"))}</span>`
       : "",
   ].join("");
-  const optionList = directions.options.map((option, index) => `<li class="design-direction" id="${escapeHtml(idPrefix)}design-direction-${escapeHtml(option.id)}">
-    <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><h3>${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></header>
+  const optionList = directions.options.map((option, index) => {
+    const optionId = `${idPrefix}design-direction-${option.id}`;
+    return `<li class="design-direction" id="${escapeHtml(optionId)}">
+    <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><h3 id="${escapeHtml(optionId)}-title">${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></header>
     <div class="direction-image"><img src="data:${option.image.mimeType};base64,${option.image.data}" alt="${escapeHtml(option.alt)}" width="${option.image.width}" height="${option.image.height}"></div>
-    <p class="direction-summary">${authoredText(option.summary)}</p>
-    <div class="direction-details">
+    <div class="direction-summary">${authoredParagraphs(option.summary)}</div>
+  </li>`;
+  }).join("");
+  const optionDetails = directions.options.map((option, index) => {
+    const optionId = `${idPrefix}design-direction-${option.id}`;
+    return `<li class="design-direction-detail" aria-labelledby="${escapeHtml(optionId)}-title">
+    <span class="direction-detail-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
+    <div class="direction-detail-content"><div class="direction-details">
       <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
       <div><h4>${escapeHtml(label(dictionary, "tradeoffs"))}</h4>${textList(option.tradeoffs)}</div>
     </div>
     ${directionReferences(option.references, dictionary)}
-  </li>`).join("");
+    </div>
+  </li>`;
+  }).join("");
   const recommendation = optionById.get(directions.recommendation.optionId);
   const selection = optionById.get(directions.selection.optionId);
   const decidedBy = directions.selection.decidedBy === "delegated"
     ? label(dictionary, "decidedByDelegated")
     : label(dictionary, "decidedByUser");
   return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>
+    <ol class="design-direction-detail-list">${optionDetails}</ol>
     <dl class="direction-decisions">
-      <div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd><strong>${authoredText(recommendation.title)}</strong><p>${authoredText(directions.recommendation.reason)}</p></dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "selection"))}</dt><dd><strong>${authoredText(selection.title)}</strong><span class="selection-source">${escapeHtml(decidedBy)}</span><p>${authoredText(directions.selection.reason)}</p></dd></div>
+      <div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd><strong>${authoredText(recommendation.title)}</strong>${authoredParagraphs(directions.recommendation.reason)}</dd></div>
+      <div><dt>${escapeHtml(label(dictionary, "selection"))}</dt><dd><strong>${authoredText(selection.title)}</strong><span class="selection-source">${escapeHtml(decidedBy)}</span>${authoredParagraphs(directions.selection.reason)}</dd></div>
     </dl>`;
 }
 
@@ -233,14 +250,13 @@ function designDirectionsSection(content, dictionary) {
 
 function behaviorSection(content, dictionary) {
   if (!content.behavior) return undefined;
-  const outcomeCount = content.behavior.outcomes.length;
-  const outcomes = outcomeCount === 0 ? "" : `<div class="behavior-outcomes-block">
+  const outcomes = content.behavior.outcomes.length === 0 ? "" : `<div class="behavior-outcomes-block">
     <h3 class="behavior-outcomes-title">${escapeHtml(label(dictionary, "outcomes"))}</h3>
-    <ul class="behavior-outcomes behavior-outcome-count-${Math.min(outcomeCount, 3)}">${
+    <ul class="behavior-outcomes">${
     content.behavior.outcomes.map((outcome) => `<li class="${outcome.kind === "cancel" ? "cancel" : "complete"}">
       <span class="outcome-mark" aria-hidden="true">${outcome.kind === "cancel" ? "×" : "✓"}</span>
       <div><strong>${authoredText(outcome.title)}</strong>${outcome.detail
-        ? `<p>${authoredText(outcome.detail)}</p>`
+        ? authoredParagraphs(outcome.detail)
         : ""}</div>
     </li>`).join("")
   }</ul></div>`;
@@ -249,7 +265,7 @@ function behaviorSection(content, dictionary) {
     <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
       <span class="step-number" aria-hidden="true">${index + 1}</span>
       <strong>${authoredText(step.title)}</strong>${step.detail
-        ? `<p>${authoredText(step.detail)}</p>`
+        ? authoredParagraphs(step.detail)
         : ""}
     </li>`).join("")}</ol>
     ${outcomes}
@@ -263,17 +279,16 @@ function agreementSection(content, dictionary) {
     <ol class="decision-list">${content.decisions.map((decision, index) => `<li>
       <span class="decision-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
       <h3>${authoredText(decision.decision)}</h3>
-      <p>${authoredText(decision.reason)}</p>
+      ${authoredParagraphs(decision.reason)}
     </li>`).join("")}</ol>
   </div>`;
   const choiceColumn = content.openChoices.length === 0 ? "" : `<div>
     <h3 class="subheading">${escapeHtml(label(dictionary, "openChoices"))}</h3>
     ${textList(content.openChoices)}
   </div>`;
-  const singleColumn = content.decisions.length === 0 || content.openChoices.length === 0;
   return `<section class="body-section document-section" id="agreement" aria-labelledby="agreement-title">
     <h2 id="agreement-title">${escapeHtml(label(dictionary, "agreement"))}</h2>
-    <div class="agreement-grid${singleColumn ? " agreement-grid-single" : ""}">${decisionColumn}${choiceColumn}</div>
+    <div class="agreement-groups">${decisionColumn}${choiceColumn}</div>
   </section>`;
 }
 
@@ -490,15 +505,17 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .revision-disclosure > summary, .older-history > summary { min-height: 32px; display: flex; align-items: center; color: var(--text); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; }
 .revision-disclosure > summary::marker, .older-history > summary::marker { color: var(--muted); }
 .revision-popup { position: absolute; z-index: 12; top: 100%; right: 0; width: min(560px, calc(100vw - ${LAYOUT.tableOfContentsWidth + 80}px)); max-height: min(70vh, 680px); overflow: auto; padding: ${space4}px; border: 1px solid var(--border); background: var(--panel); box-shadow: 0 12px 32px color-mix(in srgb, var(--text) 14%, transparent); }
-.revision-popup .design-direction-list, .revision-popup .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
+.revision-popup .design-direction-list, .revision-popup .direction-decisions { grid-template-columns: 1fr; }
 .revision-popup .design-direction { padding-inline: ${space2}px; }
 .revision-popup .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
+.revision-popup .direction-decisions > div + div { border-top: 1px solid var(--border); border-left: 0; }
 .older-history > ol { list-style: none; padding: ${space3}px 0 0; }
 .document-section + .document-section { margin-top: ${space9}px; }
 .document-head { max-width: 78ch; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
 .goal-label { margin-top: ${space3}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .goal { margin-top: ${space1}px; font-size: ${TYPE.goal.wide.fontSize}px; line-height: ${TYPE.goal.wide.lineHeight}; }
+.goal p + p, .synopsis dd p + p { margin-top: ${space2}px; }
 .synopsis { margin-top: ${space5}px; border-top: 1px solid var(--border); }
 .synopsis > div { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: ${space5}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
 .synopsis dt { font-weight: 700; }
@@ -510,9 +527,9 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .check-verification { margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .check-by { margin-right: ${space2}px; color: var(--accent); font-weight: 700; }
 .overview + .scope { margin-top: ${space7}px; }
-.scope { display: grid; grid-template-columns: minmax(0,.45fr) minmax(0,.55fr); }
+.scope { display: grid; }
 .scope-column { padding: ${space4}px ${space2}px ${space5}px; }
-.scope-column + .scope-column { padding-left: ${space6}px; border-left: 1px solid var(--border); }
+.scope-column + .scope-column { border-top: 1px solid var(--border); }
 .scope h3, .body-section > h2 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
@@ -529,43 +546,51 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .direction-image { margin-top: ${space3}px; display: grid; min-height: 180px; place-items: center; overflow: hidden; border: 1px solid var(--component-border); background: var(--panel); }
 .direction-image img { display: block; width: 100%; height: auto; max-height: 440px; object-fit: contain; }
 .direction-summary { margin-top: ${space4}px; }
-.direction-details { margin-top: ${space4}px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: ${space4}px; }
+.direction-summary p + p { margin-top: ${space2}px; }
+.design-direction-detail-list { list-style: none; padding: 0; border-top: 1px solid var(--border); }
+.design-direction-detail { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space4}px; padding: ${space4}px ${space2}px ${space5}px; }
+.design-direction-detail + .design-direction-detail { border-top: 1px solid var(--border); }
+.direction-detail-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
+.direction-detail-content { min-width: 0; }
+.direction-details { display: grid; gap: ${space4}px; }
 .direction-details h4, .direction-references h4 { margin: 0 0 ${space2}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-details .plain-list, .direction-references ul { padding-left: ${space4}px; display: grid; gap: ${space1}px; }
 .direction-references { margin-top: ${space4}px; padding-top: ${space3}px; border-top: 1px solid var(--border); }
 .direction-references li p { margin: ${space1}px 0 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.direction-decisions { border-top: 1px solid var(--border); }
-.direction-decisions > div { display: grid; grid-template-columns: minmax(140px, .28fr) minmax(0, 1fr); gap: ${space4}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
+.direction-decisions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
+.direction-decisions > div { display: grid; gap: ${space1}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
+.direction-decisions > div + div { padding-left: ${space4}px; border-left: 1px solid var(--border); }
 .direction-decisions dt { font-weight: 700; }
 .direction-decisions dd { margin: 0; }
 .direction-decisions p { margin-top: ${space1}px; color: var(--muted); }
 .selection-source { display: inline-block; margin-left: ${space2}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .behavior-steps { list-style: none; padding: 0; display: grid; }
-.behavior-steps li { position: relative; display: grid; grid-template-columns: 32px minmax(160px, 220px) minmax(0, 1fr); column-gap: ${space4}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
+.behavior-steps li { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: ${space4}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
 .behavior-steps li:not(:last-child)::after { content: ""; position: absolute; top: 28px; bottom: ${space1}px; left: 13px; width: 1px; background: var(--border); }
 .step-number { position: relative; z-index: 1; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
 .behavior-steps strong, .behavior-outcomes strong { display: block; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
+.behavior-steps p { grid-column: 2; margin-top: ${space1}px; }
 .behavior-steps p, .behavior-outcomes p { color: var(--muted); }
+.behavior-steps p + p, .behavior-outcomes p + p, .decision-list p + p { margin-top: ${space2}px; }
 .behavior-outcomes-block { margin-top: ${space2}px; padding-top: ${space4}px; }
 .behavior-outcomes-title { display: flex; align-items: center; gap: ${space3}px; margin: 0 0 ${space4}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .behavior-outcomes-title::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--border); }
-.behavior-outcomes { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: ${space5}px; }
-.behavior-outcomes.behavior-outcome-count-1 { grid-template-columns: minmax(0, 1fr); }
-.behavior-outcomes.behavior-outcome-count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.behavior-outcomes { list-style: none; padding: 0; display: grid; }
 .behavior-outcomes li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space3}px; align-items: start; min-width: 0; }
+.behavior-outcomes li + li { margin-top: ${space4}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
 .outcome-mark { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--accent); border-radius: 50%; color: var(--accent); font-weight: 700; }
 .behavior-outcomes .cancel .outcome-mark { border-color: var(--component-border); color: var(--muted); }
-.agreement-grid { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(220px, .8fr); border-top: 1px solid var(--border); }
-.agreement-grid-single { grid-template-columns: 1fr; }
-.agreement-grid > div { padding: ${space4}px ${space2}px 0; }
-.agreement-grid > div + div { padding-left: ${space6}px; border-left: 1px solid var(--border); }
+.agreement-groups { border-top: 1px solid var(--border); }
+.agreement-groups > div { padding: ${space4}px ${space2}px 0; }
+.agreement-groups > div + div { margin-top: ${space5}px; padding-top: ${space5}px; border-top: 1px solid var(--border); }
 .subheading { margin: 0 0 ${space3}px; color: var(--accent); font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .decision-list { list-style: none; padding: 0; }
-.decision-list li { display: grid; grid-template-columns: 28px minmax(180px, .44fr) minmax(0,1fr); gap: ${space4}px; padding: ${space3}px 0; border-top: 1px solid var(--border); }
+.decision-list li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space1}px ${space4}px; padding: ${space3}px 0; border-top: 1px solid var(--border); }
 .decision-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .decision-list li:first-child { border-top: 0; }
-.decision-list h3 { margin: 0; font-size: inherit; }
-.decision-list p { color: var(--muted); }
+.decision-list h3 { grid-column: 2; margin: 0; font-size: inherit; }
+.decision-list p { grid-column: 2; color: var(--muted); }
+.decision-number { grid-row: 1 / span 2; }
 .evidence-list > div { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(0,1fr); gap: ${space4}px; padding: ${space3}px ${space2}px; border-top: 1px solid var(--border); }
 .evidence-list dt { font-weight: 700; }
 .evidence-list dd { margin: 0; overflow-wrap: anywhere; }
@@ -597,23 +622,11 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
   .goal { font-size: ${TYPE.goal.narrow.fontSize}px; line-height: ${TYPE.goal.narrow.lineHeight}; }
   .check-verification { font-size: ${TYPE.supporting.narrow.fontSize}px; }
-  .scope { grid-template-columns: 1fr; }
-  .scope-column + .scope-column { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
-  .design-direction-list, .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
+  .design-direction-list, .design-direction-list.design-direction-count-3, .direction-decisions { grid-template-columns: 1fr; }
   .design-direction { padding-inline: ${space2}px; }
   .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
-  .direction-details { grid-template-columns: 1fr; }
-  .direction-decisions > div { grid-template-columns: 1fr; gap: ${space1}px; }
+  .direction-decisions > div + div { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
   .selection-source { display: block; margin: ${space1}px 0 0; }
-  .behavior-steps li { grid-template-columns: 32px minmax(130px, 180px) minmax(0, 1fr); column-gap: ${space3}px; }
-  .behavior-outcomes { grid-template-columns: 1fr; gap: 0; }
-  .behavior-outcomes.behavior-outcome-count-2 { grid-template-columns: 1fr; }
-  .behavior-outcomes li + li { margin-top: ${space4}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
-  .agreement-grid { grid-template-columns: 1fr; }
-  .agreement-grid > div + div { padding: ${space5}px ${space2}px 0; border-top: 1px solid var(--border); border-left: 0; }
-  .decision-list li { grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px ${space3}px; }
-  .decision-number { grid-row: 1 / span 2; }
-  .decision-list p { grid-column: 2; }
   .revision-content > div, .evidence-list > div { grid-template-columns: 1fr; gap: ${space1}px; }
 }
 @media (max-width: ${LAYOUT.compactBreakpoint}px) {
@@ -626,8 +639,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .topbar-inner.has-locale-switch .status { display: none; }
   .status { max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   .synopsis > div { grid-template-columns: 1fr; gap: ${space1}px; padding-inline: 0; }
-  .behavior-steps li { grid-template-columns: 32px minmax(0, 1fr); min-height: 0; padding-bottom: ${space5}px; }
-  .behavior-steps p { grid-column: 2; margin-top: ${space1}px; }
+  .behavior-steps li { min-height: 0; padding-bottom: ${space5}px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media (forced-colors: active) {

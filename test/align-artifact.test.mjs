@@ -386,7 +386,7 @@ test("two image-rich revisions remain complete within the artifact boundary", as
 test("renderer is deterministic, self-contained, and keeps authored text inert", () => {
   const input = validateAlignInput(makeAlignInput({
     title: '</title><script src="https://evil.example/x.js"></script>',
-    goal: "Keep <img src=x onerror=alert(1)> as text.",
+    goal: "Keep <img src=x onerror=alert(1)> as text.\nKeep the second idea distinct.",
   }));
   const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
   const data = {
@@ -412,7 +412,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="6"/u);
+  assert.match(first, /name="hope-align-design-version" content="7"/u);
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
@@ -441,6 +441,10 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /default-src &#39;none&#39;|default-src 'none'/u);
   assert.match(first, /&lt;script src=/u);
   assert.match(first, /&lt;img src=x onerror=alert\(1\)&gt;/u);
+  assert.match(
+    first,
+    /<div class="goal"><p><bdi dir="auto">Keep &lt;img src=x onerror=alert\(1\)&gt; as text\.<\/bdi><\/p><p><bdi dir="auto">Keep the second idea distinct\.<\/bdi><\/p><\/div>/u,
+  );
   assert.doesNotMatch(first, /<script src="https:\/\/evil/u);
   assert.doesNotMatch(first, /localStorage/u);
   assert.doesNotMatch(first, /현재 구현 기준|구현 계약/u);
@@ -514,7 +518,8 @@ test("renderer omits empty optional sections instead of filling the screen", () 
       content: decisionContent,
     }],
   }, { digest: "0".repeat(64) });
-  assert.match(decisionHtml, /agreement-grid agreement-grid-single/u);
+  assert.match(decisionHtml, /class="agreement-groups"/u);
+  assert.doesNotMatch(decisionHtml, /agreement-grid/u);
   assert.doesNotMatch(decisionHtml, />구현 시 결정 사항</u);
 });
 

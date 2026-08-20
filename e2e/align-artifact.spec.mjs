@@ -155,11 +155,23 @@ test("Align presents one compact current agreement with secondary history", asyn
   const scopeTops = await page.locator(".scope-column").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
-  expect(scopeTops[0]).toBe(scopeTops[1]);
+  expect(scopeTops[1]).toBeGreaterThan(scopeTops[0]);
   const directionTops = await currentDirections.locator(".design-direction").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
-  expect(directionTops[0]).toBe(directionTops[1]);
+  expect(directionTops[1]).toBe(directionTops[0]);
+  const directionDetailTops = await currentDirections.locator(
+    ".design-direction-detail",
+  ).evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(directionDetailTops[1]).toBeGreaterThan(directionDetailTops[0]);
+  const directionDecisionTops = await currentDirections.locator(
+    ".direction-decisions > div",
+  ).evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(directionDecisionTops[1]).toBe(directionDecisionTops[0]);
   const behaviorTops = await page.locator(".behavior-steps > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
@@ -168,7 +180,23 @@ test("Align presents one compact current agreement with secondary history", asyn
   const outcomeTops = await page.locator(".behavior-outcomes > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
-  expect(outcomeTops[0]).toBe(outcomeTops[1]);
+  expect(outcomeTops[1]).toBeGreaterThan(outcomeTops[0]);
+  const agreementTops = await page.locator(".agreement-groups > div").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(agreementTops[1]).toBeGreaterThan(agreementTops[0]);
+  const proseOrder = await page.locator(".decision-list > li").first().evaluate((item) => {
+    const title = item.querySelector("h3").getBoundingClientRect();
+    const reason = item.querySelector("p").getBoundingClientRect();
+    return {
+      reasonLeft: reason.left,
+      reasonTop: reason.top,
+      titleBottom: title.bottom,
+      titleLeft: title.left,
+    };
+  });
+  expect(proseOrder.reasonLeft).toBe(proseOrder.titleLeft);
+  expect(proseOrder.reasonTop).toBeGreaterThanOrEqual(proseOrder.titleBottom);
   const geometry = await page.evaluate(() => ({
     brandRepositoryGap: document.querySelector(".repository").getBoundingClientRect().left
       - document.querySelector(".brand").getBoundingClientRect().right,
@@ -256,6 +284,12 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(directionTops[1]).toBeGreaterThan(directionTops[0]);
+  const directionDecisionTops = await page.locator(
+    "#design-directions .direction-decisions > div",
+  ).evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(directionDecisionTops[1]).toBeGreaterThan(directionDecisionTops[0]);
   await expectNoOverflow(page);
 });
 

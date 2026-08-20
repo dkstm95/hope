@@ -59,7 +59,14 @@ function hashSource(value) {
 }
 
 function userText(value, className = "") {
-  return `<bdi dir="auto"${className ? ` class="${className}"` : ""}>${html(value)}</bdi>`;
+  const text = String(value).split(/\r?\n/u).map(html).join("<br>");
+  return `<bdi dir="auto"${className ? ` class="${className}"` : ""}>${text}</bdi>`;
+}
+
+function userParagraphs(value) {
+  return String(value).split(/\r?\n+/u).map(
+    (paragraph) => `<p>${userText(paragraph.trim())}</p>`,
+  ).join("");
 }
 
 function basisKey(basis) {
@@ -172,7 +179,7 @@ function claimBlock(
   showBasis = true,
 ) {
   return `<div class="claim ${html(className)}">
-    <p>${userText(claim.text)}</p>
+    ${userParagraphs(claim.text)}
     <div class="claim-meta">
       ${showBasis
         ? `<div class="claim-basis">${html(label(dictionary, basisKey(claim.basis)))}</div>`
@@ -241,7 +248,7 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
     content = `<ol class="visual-flow">${visual.items.map((item) => (
       `<li>
         <strong>${userText(item.label)}</strong>
-        <p>${userText(item.detail)}</p>
+        ${userParagraphs(item.detail)}
       </li>`
     )).join("")}</ol>`;
   } else if (visual.kind === "decision-table") {
@@ -276,7 +283,7 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
     content = `<div class="visual-components">${visual.components.map((component) => (
       `<article>
         <h4>${userText(component.label)}</h4>
-        <p>${userText(component.detail)}</p>
+        ${userParagraphs(component.detail)}
       </article>`
     )).join("")}</div>
       <div class="visual-connections">
@@ -294,7 +301,7 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
   return `<article class="behavior-visual visual-${html(visual.kind)}">
     <header>
       <h3>${userText(visual.title)}</h3>
-      <p>${userText(visual.caption)}</p>
+      ${userParagraphs(visual.caption)}
     </header>
     ${content}
     ${aidEvidence(visual, dictionary, review, codeRenderer)}
@@ -305,10 +312,10 @@ function microworldTrace(trace, title, dictionary) {
   return `<section class="microworld-trace">
     <h5>${html(title)}</h5>
     <ol>${trace.steps.map((step) => `<li>${userText(step)}</li>`).join("")}</ol>
-    <p class="microworld-outcome">
+    <div class="microworld-outcome">
       <strong>${html(label(dictionary, "microworld.outcome"))}:</strong>
-      ${userText(trace.outcome)}
-    </p>
+      ${userParagraphs(trace.outcome)}
+    </div>
   </section>`;
 }
 
@@ -328,7 +335,7 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
     <header>
       <p class="microworld-eyebrow">${html(label(dictionary, "microworld.tryIt"))}</p>
       <h3 id="microworld-title">${userText(world.title)}</h3>
-      <p>${userText(world.instructions)}</p>
+      ${userParagraphs(world.instructions)}
       <p class="microworld-notice">${html(label(dictionary, "microworld.notice"))}</p>
     </header>
     <div class="microworld-controls" role="group" aria-labelledby="microworld-controls-title">
@@ -382,20 +389,20 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
             dictionary,
           )}
         </div>
-        <p class="microworld-lesson">
+        <div class="microworld-lesson">
           <strong>${html(label(dictionary, "microworld.lesson"))}:</strong>
-          ${userText(scenario.lesson)}
-        </p>
+          ${userParagraphs(scenario.lesson)}
+        </div>
       </article>`).join("")}
     </div>
     <dl class="microworld-boundary">
       <div>
         <dt>${html(label(dictionary, "microworld.simplifies"))}</dt>
-        <dd>${userText(world.simplifies)}</dd>
+        <dd>${userParagraphs(world.simplifies)}</dd>
       </div>
       <div>
         <dt>${html(label(dictionary, "microworld.omits"))}</dt>
-        <dd>${userText(world.omits)}</dd>
+        <dd>${userParagraphs(world.omits)}</dd>
       </div>
     </dl>
     ${aidEvidence(world, dictionary, review, codeRenderer)}
@@ -438,7 +445,7 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
       ? `<h4><a href="#${html(item.id)}">${userText(item.title)}</a></h4>`
       : `<h3>${userText(item.title)}</h3>`}
     ${compact ? "" : `
-      <p>${userText(item.explanation)}</p>
+      ${userParagraphs(item.explanation)}
       ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
         <span>${html(label(dictionary, "item.relatedLimits"))}</span>
         ${relatedLimits.map((limit) => {
@@ -447,9 +454,9 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
         }).join(" · ")}
       </p>`}
       <dl class="item-actions">
-        <div class="item-effect"><dt>${html(label(dictionary, "item.effect"))}</dt><dd>${userText(item.effect)}</dd></div>
-        <div class="item-next"><dt>${html(label(dictionary, "item.nextStep"))}</dt><dd>${userText(item.nextStep)}</dd></div>
-        <div class="item-done"><dt>${html(label(dictionary, "item.doneWhen"))}</dt><dd>${userText(item.doneWhen)}</dd></div>
+        <div class="item-effect"><dt>${html(label(dictionary, "item.effect"))}</dt><dd>${userParagraphs(item.effect)}</dd></div>
+        <div class="item-next"><dt>${html(label(dictionary, "item.nextStep"))}</dt><dd>${userParagraphs(item.nextStep)}</dd></div>
+        <div class="item-done"><dt>${html(label(dictionary, "item.doneWhen"))}</dt><dd>${userParagraphs(item.doneWhen)}</dd></div>
       </dl>
       ${evidenceBlock(item.evidence, dictionary, review, codeRenderer, {
         context: item.title,
@@ -531,11 +538,11 @@ function teachingAidChoices(review, dictionary) {
         <dl>
           <div>
             <dt>${html(label(dictionary, "teachingAid.reason"))}</dt>
-            <dd>${userText(choice.reason)}</dd>
+            <dd>${userParagraphs(choice.reason)}</dd>
           </div>
           ${teachingJob === undefined ? "" : `<div>
             <dt>${html(label(dictionary, "teachingAid.teachingJob"))}</dt>
-            <dd>${userText(teachingJob)}</dd>
+            <dd>${userParagraphs(teachingJob)}</dd>
           </div>`}
         </dl>
       </article>
@@ -595,7 +602,7 @@ function contextCheck(
       <span class="context-status context-${html(check.status)}">${html(label(dictionary, `context.${check.status === "not-applicable" ? "notApplicable" : check.status}`))}</span>
     </summary>
     <div class="disclosure-content">
-      <p>${userText(check.explanation)}</p>
+      ${userParagraphs(check.explanation)}
       ${check.evidence.length === 0 ? "" : `<p class="claim-basis">${html(
         label(dictionary, basisKey(check.basis)),
       )}</p>`}
@@ -832,7 +839,7 @@ function evidenceSection(review, dictionary, codeRenderer) {
       : `<div class="scope-context-notes">${checks.map((check) => (
         `<section class="scope-context-note">
           <h4>${userText(check.subject)}</h4>
-          <p>${userText(check.explanation)}</p>
+          ${userParagraphs(check.explanation)}
           ${evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
             context: check.subject,
           })}
@@ -849,8 +856,8 @@ function evidenceSection(review, dictionary, codeRenderer) {
     </summary>
     <div class="disclosure-content">
       <dl>
-        <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userText(displayed.reason)}</dd></div>
-        <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userText(limit.impact)}</dd></div>
+        <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userParagraphs(displayed.reason)}</dd></div>
+        <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userParagraphs(limit.impact)}</dd></div>
       </dl>
       ${renderContextNotes(checks)}
     </div>
@@ -867,7 +874,7 @@ function evidenceSection(review, dictionary, codeRenderer) {
       </summary>
       <div class="disclosure-content">
         <dl class="scope-shared-reason">
-          <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userText(group.entries[0].displayed.reason)}</dd></div>
+          <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userParagraphs(group.entries[0].displayed.reason)}</dd></div>
         </dl>
         ${renderContextNotes(group.checks)}
         <div class="scope-group-items">${group.entries.map(({ displayed, limit }) => (
@@ -875,7 +882,7 @@ function evidenceSection(review, dictionary, codeRenderer) {
             <summary><h4>${userText(displayed.subject)}</h4></summary>
             <div class="scope-limit-item-content">
               <dl>
-                <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userText(limit.impact)}</dd></div>
+                <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userParagraphs(limit.impact)}</dd></div>
               </dl>
             </div>
           </details>`
@@ -1052,7 +1059,7 @@ function buildSections(review, dictionary, codeRenderer) {
               label(dictionary, "quiz.showAnswer"),
             ))}">${html(label(dictionary, "quiz.showAnswer"))}</summary>
             <div class="quiz-answer-content">
-              <p>${userText(item.answer)}</p>
+              ${userParagraphs(item.answer)}
               ${evidenceBlock(item.evidence, dictionary, review, codeRenderer, {
                 collapsible: false,
                 context: item.question,
@@ -1259,6 +1266,14 @@ select { color: inherit; }
   border: 0;
 }
 bdi[dir="auto"] { overflow-wrap: anywhere; }
+.claim > p + p,
+.behavior-visual header > p + p,
+.microworld header > p + p,
+.review-item > p + p,
+.teaching-aid-choice dd > p + p,
+.item-actions dd > p + p,
+.scope-limit dd > p + p,
+.quiz-answer-content > p + p { margin-top: ${space2}px; }
 
 .topbar {
   position: sticky;
@@ -2240,6 +2255,10 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .microworld-lesson {
   margin: ${space2}px 0 0;
 }
+.microworld-outcome > p,
+.microworld-lesson > p { margin-top: ${space1}px; }
+.microworld-outcome > p + p,
+.microworld-lesson > p + p { margin-top: ${space2}px; }
 .microworld-boundary {
   display: grid;
   margin: ${space4}px 0 0;
@@ -2327,7 +2346,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .item-actions {
   display: grid;
   margin: ${space3}px 0;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: ${space2}px;
 }
 .item-actions > div {
@@ -2338,8 +2356,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   border-top: 1px solid var(--border);
 }
 .item-actions > .item-next {
-  padding-left: ${space3}px;
-  padding-right: ${space3}px;
   border-top-color: var(--accent);
 }
 .scope-limit dl > div,
@@ -2731,16 +2747,11 @@ td:first-child {
     font-size: ${narrowCode.fontSize}px;
     line-height: ${narrowCode.lineHeight};
   }
-  .item-actions > div,
-  .scope-limit dl > div,
-  .artifact-details dl > div {
-    grid-template-columns: 1fr;
-    gap: ${space1}px;
-  }
-  .item-actions {
-    grid-template-columns: 1fr;
-  }
-  .change-shift {
+  .change-shift,
+  .visual-components,
+  .teaching-aid-choices,
+  .microworld-comparison,
+  .microworld-boundary {
     grid-template-columns: 1fr;
   }
   .change-shift > .shift-card + .shift-card {
@@ -2761,16 +2772,16 @@ td:first-child {
     content: "↓";
     transform: translateX(50%);
   }
-  .visual-components,
-  .teaching-aid-choices,
-  .microworld-comparison,
-  .microworld-boundary {
-    grid-template-columns: 1fr;
-  }
   .teaching-aid-choice { padding: ${space3}px 0; }
   .teaching-aid-choices > li + li {
     border-top: 1px solid var(--border);
     border-left: 0;
+  }
+  .item-actions > div,
+  .scope-limit dl > div,
+  .artifact-details dl > div {
+    grid-template-columns: 1fr;
+    gap: ${space1}px;
   }
   .toc-mobile-panel ol {
     grid-template-columns: 1fr;

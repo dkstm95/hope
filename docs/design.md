@@ -34,6 +34,18 @@ independent hand-tuned coordinates.
 When space becomes too narrow, move needed information and actions into a
 compact form that preserves access. Do not merely hide or squeeze them.
 
+Keep body prose in one reading column. On a wide screen, use parallel columns
+only for a short comparison summary whose options are easier to scan together.
+Limit each comparison cell to a title, visual when useful, and brief summary;
+put its detailed explanation below in the single reading flow. Stack comparison
+cells when the viewport is narrow. Navigation, labels, tables, diagrams, and
+controls are structural UI rather than prose columns and follow the structure
+they need.
+
+Preserve an authored semantic paragraph as a separate HTML paragraph. Do not
+collapse distinct paragraphs into one run of text or use layout columns to
+create paragraph boundaries.
+
 ## Diff artifact direction
 
 The Diff artifact should feel:
@@ -68,6 +80,11 @@ items or a clear empty result, and material review limits. Keep the provider's
 pull-request title in the collapsed review information instead of using it as
 the document title. Let the title name one decisive result; keep secondary
 mechanics in the summary when they make the title harder to scan.
+
+Compare the brief previous and new behavior summaries side by side on a wide
+screen and stack them in that order on a narrow screen. Keep the practical
+impact and every longer explanation in the single reading flow below the
+comparison.
 
 Keep internal source IDs, model details, token counts, processing state, and
 capture time out of the first screen.
@@ -412,16 +429,15 @@ contents only when it improves navigation. Keep the current version and at
 most one prior version summary visible. Open earlier version detail from that
 history instead of repeating it in the document.
 
-On a narrow screen, use one column. Put one 44-pixel navigation control to the
+Put one 44-pixel navigation control to the
 right of the theme control and open the table of contents and version history in
-a bounded right-side panel. Stack included scope before excluded scope.
+a bounded right-side panel when the navigation rail does not fit. Stack included
+scope before excluded scope at every viewport.
 
 Render agreed behavior as one ordered vertical sequence at every viewport.
-Keep each step's number, title, and detail on one readable row when space
-allows, then move the detail below the title on a compact screen. Place outcomes
-after the sequence in a responsive grid and stack them in their original order
-when the screen is narrow. Do not invent phase groups or branches that the
-artifact data does not contain.
+Keep each step's number beside its title and place the detail below the title.
+Stack outcomes after the sequence in their original order. Do not invent phase
+groups or branches that the artifact data does not contain.
 
 In the product bar, use one gap between the brand, repository, version, and
 action group. Use the next smaller gap only between controls inside the action
@@ -435,10 +451,13 @@ type compact and readable. Omit an optional section instead of rendering an
 empty box.
 
 Show two or three design directions together in one comparison section. Keep
-the same option order on every viewport. Use parallel columns on a wide screen
-and stack complete options on a narrow screen. Pair every image with useful alt
-text, and mark recommendation and selection with words rather than color alone.
-Keep strengths, trade-offs, and references beside the option they describe.
+the same option order. On a wide screen, compare each option's title, image,
+and brief summary in parallel; stack those previews on a narrow screen. Put
+strengths, trade-offs, and references below the previews in one reading column,
+still grouped and numbered by option. Pair every image with useful alt text,
+and mark recommendation and selection with words rather than color alone.
+Recommendation and selection may share one compact comparison row on a wide
+screen and must stack when narrow.
 
 Align embeds Hope Sans so it uses the same Hope type family as Diff across
 supported hosts. Its palette, spacing, type sizes, and layout values still come
@@ -617,10 +636,10 @@ centerline.
 
 Keep kind and importance as outlined markers and basis as quieter plain text.
 
-When a change has two to four brief behavior steps, show them as connected
-cards: horizontal on a wide screen and vertical on a narrow screen.
-
-Use the same text and order in both layouts.
+When a change has two to four brief behavior steps, show them as one connected
+left-to-right flow on a wide screen and one vertical connected flow on a narrow
+screen. This is a sequence diagram, not parallel prose. Preserve the same text
+and order at every viewport.
 
 Use a normal numbered list for five or more steps or when any step is longer
 than 80 characters.

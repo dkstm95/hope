@@ -68,6 +68,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     title: '</title><script src="https://evil.example/x.js"></script>',
   });
   const analysis = makeAnalysis(snapshot, runId);
+  analysis.coreChange.why.text = "The caller sees the original failure.\nThe fallback no longer hides it.";
   analysis.coreChange.details[0].text = "<img src=x onerror=alert(1)>";
   analysis.coreChange.details.push({
     ...analysis.coreChange.details[0],
@@ -93,6 +94,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
   assert.match(html, /&lt;script src=/u);
+  assert.match(
+    html,
+    /<p><bdi dir="auto">The caller sees the original failure\.<\/bdi><\/p><p><bdi dir="auto">The fallback no longer hides it\.<\/bdi><\/p>/u,
+  );
   assert.match(html, /Content-Security-Policy/u);
   assert.match(html, /default-src &#39;none&#39;|default-src 'none'/u);
   assert.match(
@@ -709,7 +714,7 @@ test("a review with no items states the result once", async () => {
   assert.doesNotMatch(synopsis, /review-items-compact/u);
 });
 
-test("only two to four brief behavior steps use the responsive flow", async () => {
+test("only two to four brief behavior steps use the connected short flow", async () => {
   const snapshot = makeSnapshot();
   const shortAnalysis = makeAnalysis(snapshot, runId);
   shortAnalysis.behavior = {

@@ -426,6 +426,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
         afterTitleBottom: afterTitle.bottom,
         afterTitleLeft: afterTitle.left,
         afterValueTop: afterValue.top,
+        beforeBottom: before.bottom,
         beforeContentLeft: beforeValue.left,
         beforeTop: before.top,
         beforeTitleBottom: beforeTitle.bottom,
@@ -442,7 +443,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   );
   expect(changeShift.display).toBe("grid");
   expect(changeShift.columns.split(" ")).toHaveLength(2);
-  expect(Math.abs(changeShift.beforeTop - changeShift.afterTop)).toBeLessThanOrEqual(1);
+  expect(changeShift.afterTop).toBe(changeShift.beforeTop);
   expect(changeShift.beforeTitleLeft).toBe(changeShift.beforeContentLeft);
   expect(changeShift.afterTitleLeft).toBe(changeShift.afterContentLeft);
   expect(changeShift.beforeValueTop).toBeGreaterThan(changeShift.beforeTitleBottom);
@@ -494,7 +495,14 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   const itemActionColumns = await page.locator(
     ".review-items-full .item-actions",
   ).first().evaluate((element) => getComputedStyle(element).gridTemplateColumns);
-  expect(itemActionColumns.split(" ")).toHaveLength(3);
+  expect(itemActionColumns.split(" ")).toHaveLength(1);
+  const itemActionTops = await page.locator(
+    ".review-items-full .item-actions",
+  ).first().locator(":scope > div").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(itemActionTops[1]).toBeGreaterThan(itemActionTops[0]);
+  expect(itemActionTops[2]).toBeGreaterThan(itemActionTops[1]);
   await expect(page.locator("#core-change .core-narrative")).toHaveCount(0);
   await expect(page.locator("#core-change .core-detail")).toHaveCount(1);
   await expect(page.locator("#core-change")).toContainText(
@@ -550,6 +558,11 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   expect(wideFlow.display).toBe("flex");
   expect(wideFlow.scrollWidth).toBeLessThanOrEqual(wideFlow.clientWidth);
   expect(wideFlow.contentOverflow).toBe(false);
+  const flowTops = await page.locator("#explore .flow-short > li").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(flowTops[1]).toBe(flowTops[0]);
+  expect(flowTops[2]).toBe(flowTops[1]);
 
   await page.setViewportSize(viewports.mobile);
   await expect(page.locator("#review-title")).toHaveCSS("font-size", "28px");
@@ -686,11 +699,23 @@ test("the microworld switches fixed scenarios with accessible native controls", 
     items.map((item) => item.getBoundingClientRect().height)
   ));
   expect(controlHeights.every((height) => height >= 44)).toBe(true);
+  const controlGroupTops = await groups.evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(controlGroupTops[1]).toBe(controlGroupTops[0]);
 
   const visibleScenario = world.locator(".microworld-scenario:not([hidden])");
   await expect(visibleScenario).toHaveCount(1);
   await expect(visibleScenario).toContainText("실패했고 저장된 오류가 있음");
   await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
+  const traceTops = await visibleScenario.locator(".microworld-trace").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(traceTops[1]).toBe(traceTops[0]);
+  const boundaryTops = await world.locator(".microworld-boundary > div").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(boundaryTops[1]).toBe(boundaryTops[0]);
 
   await failed.focus();
   await expect(failed).toBeFocused();
@@ -709,12 +734,22 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
 
   await page.setViewportSize(viewports.mobile);
+  const narrowControlTops = await groups.evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(narrowControlTops[1]).toBeGreaterThan(narrowControlTops[0]);
+  const narrowTraceTops = await visibleScenario.locator(
+    ".microworld-trace",
+  ).evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(narrowTraceTops[1]).toBeGreaterThan(narrowTraceTops[0]);
   await expectNoPageOverflow(page);
   expect(remoteRequests).toEqual([]);
 });
 
 test("the artifact explains every teaching-aid omission", async ({ page }) => {
-  await page.setViewportSize(viewports.mobile);
+  await page.setViewportSize(viewports.desktop);
   await page.goto(omittedArtifactUrl);
 
   const section = page.locator("#teaching-aids");
@@ -742,6 +777,11 @@ test("the artifact explains every teaching-aid omission", async ({ page }) => {
     "글만으로도 이 변경을 쉽게 이해할 수 있습니다.",
     "글만으로도 이 변경을 쉽게 이해할 수 있습니다.",
   ]);
+  const choiceTops = await section.locator(".teaching-aid-choice").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(choiceTops[1]).toBe(choiceTops[0]);
+  expect(choiceTops[2]).toBe(choiceTops[1]);
   await expectNoPageOverflow(page);
 });
 
@@ -769,12 +809,18 @@ test("the artifact distinguishes mixed teaching-aid decisions", async ({ page })
   );
   await expect(cards.nth(1).getByText("Teaching job", { exact: true })).toHaveCount(0);
   await expect(cards.nth(2).getByText("Teaching job", { exact: true })).toHaveCount(0);
+  const cardTops = await cards.evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(cardTops[1]).toBeGreaterThan(cardTops[0]);
+  expect(cardTops[2]).toBeGreaterThan(cardTops[1]);
   await expectNoPageOverflow(page);
 });
 
 test("visual routes expose endpoints and direction to the accessibility tree", async ({
   page,
 }) => {
+  await page.setViewportSize(viewports.desktop);
   await page.goto(visualArtifactUrls.sequence);
   const sequenceRoute = await page.locator(
     ".visual-sequence > li",
@@ -786,6 +832,17 @@ test("visual routes expose endpoints and direction to the accessibility tree", a
     ".visual-connections li",
   ).first().ariaSnapshot();
   expect(componentRoute).toContain("Retry branch to Caller");
+  const componentTops = await page.locator(".visual-components > article").evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(componentTops[1]).toBe(componentTops[0]);
+  await page.setViewportSize(viewports.mobile);
+  const narrowComponentTops = await page.locator(
+    ".visual-components > article",
+  ).evaluateAll(
+    (items) => items.map((item) => item.getBoundingClientRect().top),
+  );
+  expect(narrowComponentTops[1]).toBeGreaterThan(narrowComponentTops[0]);
 });
 
 test("theme and contents controls share one visual control family", async ({ page }) => {

@@ -172,6 +172,10 @@ When an artifact is required, preserve the agreement as follows.
 Read `references/artifact.md` and the complete
 `scripts/align-input-v2.schema.json` before creating structured input.
 
+Read `../write/references/writing-standard.md` before drafting artifact
+language. Align depends on that shared standard; Write does not depend on or
+describe Align, its schema, or its renderer.
+
 If visual directions were used, re-read `references/design-directions.md` at
 this point and follow its **Preserve the selection** section before writing the
 input.
@@ -180,6 +184,12 @@ Apply the shared Write standard to the artifact language. Put each fact in one
 section only. Omit optional behavior, decisions, implementation choices, and
 evidence when they add no information. Add a behavior flow only when sequence
 or branching is clearer than prose.
+
+Keep each prose value to one semantic paragraph. Put a distinct idea in the
+existing field or list item that owns it. When one field genuinely needs a
+second paragraph, separate the paragraphs with a newline so the renderer keeps
+the boundary. Keep the title to one decisive result, the goal to one direct
+statement, and each decision reason to the main practical cause or effect.
 
 Inspect the project's existing documentation conventions. Use its established
 location for durable design or specification documents when one is clear.
