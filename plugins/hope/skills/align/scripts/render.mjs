@@ -216,7 +216,7 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
   const optionList = directions.options.map((option, index) => {
     const optionId = `${idPrefix}design-direction-${option.id}`;
     return `<li class="design-direction" id="${escapeHtml(optionId)}">
-    <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><h3 id="${escapeHtml(optionId)}-title">${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></header>
+    <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><div class="direction-title-line"><h3 id="${escapeHtml(optionId)}-title">${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></div></header>
     <div class="direction-image"><img src="data:${option.image.mimeType};base64,${option.image.data}" alt="${escapeHtml(option.alt)}" width="${option.image.width}" height="${option.image.height}"></div>
     <div class="direction-summary">${authoredParagraphs(option.summary)}</div>
     <div class="direction-details">
@@ -510,7 +510,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .revision-popup .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
 .revision-popup .direction-decisions > div + div { border-top: 1px solid var(--border); border-left: 0; }
 .older-history > ol { list-style: none; padding: ${space3}px 0 0; }
-.document-section + .document-section { margin-top: ${space9}px; }
+.document-section + .document-section { margin-top: ${space8}px; }
 .document-head { max-width: 78ch; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
 .goal-label { margin-top: ${space3}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
@@ -525,16 +525,17 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .check-list li::marker { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .check-condition { display: block; }
 .check-verification { margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.check-verification > summary { min-height: 32px; display: flex; align-items: center; color: var(--accent); cursor: pointer; font-weight: 700; list-style: none; }
+.check-verification > summary { min-height: ${space5}px; display: flex; align-items: center; color: var(--muted); cursor: pointer; font-weight: 300; list-style: none; }
 .check-verification > summary::-webkit-details-marker { display: none; }
 .check-verification > summary::after { margin-left: ${space2}px; content: "›"; transition: transform 120ms ease; }
 .check-verification[open] > summary::after { transform: rotate(90deg); }
 .check-verification-content { padding: 0 0 ${space1}px; }
 .check-verification-content p + p { margin-top: ${space1}px; }
 .overview + .scope { margin-top: ${space7}px; }
-.scope { display: grid; }
+.scope { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .scope-column { padding: ${space4}px ${space2}px ${space5}px; }
-.scope-column + .scope-column { border-top: 1px solid var(--border); }
+.scope-column { min-width: 0; }
+.scope-column + .scope-column { padding-left: ${space5}px; border-left: 1px solid var(--border); }
 .scope h3, .body-section > h2, .section-disclosure-summary h2 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
@@ -542,10 +543,11 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .design-direction-list.design-direction-count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .design-direction { min-width: 0; padding: ${space4}px ${space4}px ${space5}px; }
 .design-direction + .design-direction { border-left: 1px solid var(--border); }
-.direction-head { min-height: 46px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space2}px; align-items: start; }
+.direction-head { min-height: ${space6}px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space2}px; align-items: start; }
 .direction-head h3 { margin: 0; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .direction-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
-.direction-statuses { grid-column: 2; display: flex; flex-wrap: wrap; gap: ${space1}px; }
+.direction-title-line { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: ${space1}px ${space2}px; }
+.direction-statuses { display: flex; flex-wrap: wrap; gap: ${space1}px; }
 .direction-status { padding: 2px ${space2}px; border: 1px solid var(--component-border); border-radius: 999px; font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
 .direction-status.selected { border-color: var(--accent); color: var(--accent); }
 .direction-image { margin-top: ${space3}px; display: grid; min-height: 180px; place-items: center; overflow: hidden; border: 1px solid var(--component-border); background: var(--panel); }
@@ -634,12 +636,14 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .brand { font-size: ${TYPE.brand.narrow.fontSize}px; line-height: ${TYPE.brand.narrow.lineHeight}; }
   .repository { max-width: 30vw; }
   .main { padding: ${space8}px ${space4}px ${space9}px; }
-  .document-section + .document-section { margin-top: 48px; }
+  .document-section + .document-section { margin-top: ${space7}px; }
   .document-head h1 { font-size: ${TYPE.pageTitle.narrow.fontSize}px; line-height: ${TYPE.pageTitle.narrow.lineHeight}; }
   .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
   .goal { font-size: ${TYPE.goal.narrow.fontSize}px; line-height: ${TYPE.goal.narrow.lineHeight}; }
   .check-verification { font-size: ${TYPE.supporting.narrow.fontSize}px; }
   .check-verification > summary, .direction-references > summary, .decision-disclosure > summary { min-height: 44px; }
+  .scope { grid-template-columns: 1fr; }
+  .scope-column + .scope-column { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
   .design-direction-list, .design-direction-list.design-direction-count-3, .direction-decisions { grid-template-columns: 1fr; }
   .design-direction { padding-inline: ${space2}px; }
   .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }

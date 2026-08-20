@@ -133,8 +133,10 @@ full diff.
 
 Keep important evidence beside the claim it supports.
 
-Keep inline evidence controls quiet and collapsed until requested. Use thin
-dividers, whitespace, and type hierarchy before introducing a contained box.
+Keep inline evidence controls quiet and collapsed until requested. Use a
+24-pixel summary on a wide screen and a 44-pixel touch target on a narrow
+screen. Use thin dividers, whitespace, and type hierarchy before introducing a
+contained box.
 
 Use Evidence and scope as the complete index of the captured snapshot, checked
 files, supporting sources, exclusions, and limits.
@@ -206,11 +208,13 @@ Show each completion criterion as one visible passing condition. Keep its
 verification method and the agent-or-person decision source in a native
 disclosure directly below it. Keep completion criteria in the summary near the
 goal. Do not turn them into progress controls or store their execution results
-in the artifact.
+in the artifact. Use a compact 24-pixel summary on a wide screen and a 44-pixel
+touch target on a narrow screen.
 
 Number every completion criterion in reading order with `01`, `02`, `03`, even
-when the list is short. Use body prose weight for each passing condition and
-reserve stronger emphasis for the number and verification source label.
+when the list is short. Use body prose weight for each passing condition,
+reserve stronger emphasis for the number, and keep the verification source
+label quiet and secondary.
 
 Do not show implementation progress, completion controls, work owners, comments,
 changed files, test status, or model and interview metrics.
@@ -439,6 +443,10 @@ in Hope's language.
 Use one linear document. Give the current agreement most of the page and keep
 version history secondary.
 
+Separate top-level areas by 48 pixels on a wide screen and 40 pixels on a
+narrow screen. Use the smaller internal spacing steps for related content
+inside one area.
+
 On a wide screen, place a narrow rail beside the document. Show a table of
 contents only when it improves navigation. Keep the current version and at
 most one prior version summary visible. Open earlier version detail from that
@@ -446,8 +454,10 @@ history instead of repeating it in the document.
 
 Put one 44-pixel navigation control to the
 right of the theme control and open the table of contents and version history in
-a bounded right-side panel when the navigation rail does not fit. Stack included
-scope before excluded scope at every viewport.
+a bounded right-side panel when the navigation rail does not fit. Treat included
+and excluded scope as one parallel classification: compare them in two columns
+on a wide screen, then stack included scope before excluded scope on a narrow
+screen. Do not choose the layout from item length or count.
 
 Render agreed behavior as one ordered vertical sequence at every viewport.
 Keep each step's number beside its title and place the detail below the title.
@@ -466,7 +476,9 @@ type compact and readable. Omit an optional section instead of rendering an
 empty box.
 
 Show two or three design directions together in one comparison section. Keep
-the same option order. On a wide screen, compare each option's title, image,
+the same option order. Keep recommendation and selection labels beside the
+option title so they do not create a separate comparison row. On a wide screen,
+compare each option's title, image,
 brief summary, strengths, and trade-offs in parallel; stack each complete
 option on a narrow screen. Keep an option's references inside that option and
 fold them by default. Do not repeat them in a full-width group below the
@@ -587,7 +599,7 @@ Do not invent a new gap for each component.
 Give each top-level section a clear start.
 
 Use a blue heading, thin neutral dividers where structure needs them, and
-measured space. Match Align's 64-pixel wide-screen and 48-pixel narrow-screen
+measured space. Match Align's 48-pixel wide-screen and 40-pixel narrow-screen
 separation between top-level areas.
 
 Number conditional sections in their rendered order so the document and its

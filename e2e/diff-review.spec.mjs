@@ -1183,6 +1183,10 @@ test("closed disclosures stay compact", async ({
 }) => {
   await openArtifact(page, viewports.desktop);
 
+  expect(await page.locator(".evidence > summary").first().evaluate(
+    (summary) => summary.getBoundingClientRect().height,
+  )).toBe(24);
+
   for (const selector of [
     "#judge",
     ".microworld-disclosure",

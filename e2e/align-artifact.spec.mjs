@@ -116,6 +116,13 @@ test("Align presents one compact current agreement with secondary history", asyn
     "AI 에이전트 확인",
     "사용자 확인",
   ]);
+  await expect(page.locator(".overview .check-verification > summary").first()).toHaveCSS(
+    "font-weight",
+    "300",
+  );
+  expect(await page.locator(".overview .check-verification > summary").first().evaluate(
+    (summary) => summary.getBoundingClientRect().height,
+  )).toBe(24);
   await expect(page.locator(".overview .check-verification").first()).not.toHaveAttribute("open", "");
   await expect(page.locator(".overview .check-verification-content").first()).not.toBeVisible();
   await expect(page.locator(".overview .check-list")).toContainText("재개 요청의 시작 위치");
@@ -164,11 +171,21 @@ test("Align presents one compact current agreement with secondary history", asyn
   const scopeTops = await page.locator(".scope-column").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
-  expect(scopeTops[1]).toBeGreaterThan(scopeTops[0]);
+  expect(scopeTops[1]).toBe(scopeTops[0]);
   const directionTops = await currentDirections.locator(".design-direction").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(directionTops[1]).toBe(directionTops[0]);
+  const directionTitleRows = await currentDirections.locator(".direction-title-line").evaluateAll(
+    (items) => items.map((item) => {
+      const title = item.querySelector("h3").getBoundingClientRect();
+      const status = item.querySelector(".direction-status")?.getBoundingClientRect();
+      return { statusTop: status?.top, titleTop: title.top };
+    }),
+  );
+  expect(directionTitleRows[0].statusTop).toBeLessThan(
+    directionTitleRows[0].titleTop + 24,
+  );
   await expect(currentDirections.locator(".design-direction .direction-details")).toHaveCount(2);
   await expect(currentDirections.locator(".design-direction").first()).toContainText(
     "핵심 선택을 빠르게 찾을 수 있다.",
