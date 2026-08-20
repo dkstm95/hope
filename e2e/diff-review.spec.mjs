@@ -325,7 +325,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     position: "absolute",
     width: "1px",
   });
-  await expect(page.locator("#synopsis > .synopsis-head > h1")).toBeVisible();
+  await expect(page.locator("#synopsis > .synopsis-head > .artifact-title-line > h1")).toBeVisible();
   await expect(page.locator(".synopsis-row > h3").first()).toHaveCSS(
     "padding-top",
     "2px",
@@ -467,6 +467,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     railLeft: document.querySelector(".toc-desktop").getBoundingClientRect().left,
     repositoryCommitGap: document.querySelector(".commit-status").getBoundingClientRect().left
       - document.querySelector(".top-context").getBoundingClientRect().right,
+    titleNumberLeft: document.querySelector(".artifact-title-line > .section-number").getBoundingClientRect().left,
     titleLeft: document.querySelector("#review-title").getBoundingClientRect().left,
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
@@ -474,7 +475,8 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     brandRepositoryGap: 24,
     railLeft: 1204,
     repositoryCommitGap: 24,
-    titleLeft: 40,
+    titleLeft: 76,
+    titleNumberLeft: 40,
     topbarHeight: 58,
   });
   await expect(
@@ -880,23 +882,27 @@ test("visual routes expose endpoints and direction to the accessibility tree", a
   expect(narrowComponentTops[1]).toBeGreaterThan(narrowComponentTops[0]);
 });
 
-test("theme and contents controls share one visual control family", async ({ page }) => {
+test("display and contents controls share one visual control family", async ({ page }) => {
   await openArtifact(page, viewports.breakpoint);
   const theme = page.locator("#theme-toggle");
+  const display = page.locator(".display-controls");
   const contents = page.locator(".toc-mobile > summary");
-  const [themeBox, contentsBox] = await Promise.all([
+  const [themeBox, displayBox, contentsBox] = await Promise.all([
     theme.boundingBox(),
+    display.boundingBox(),
     contents.boundingBox(),
   ]);
 
   expect(themeBox).not.toBeNull();
+  expect(displayBox).not.toBeNull();
   expect(contentsBox).not.toBeNull();
-  expect(themeBox.height).toBe(44);
+  expect(themeBox.height).toBe(42);
+  expect(displayBox.height).toBe(44);
   expect(contentsBox.height).toBe(44);
-  expect(contentsBox.x - (themeBox.x + themeBox.width)).toBe(8);
+  expect(contentsBox.x - (displayBox.x + displayBox.width)).toBe(8);
 
   const styles = await page.evaluate(() => {
-    const themeControl = document.querySelector("#theme-toggle");
+    const displayControl = document.querySelector(".display-controls");
     const contentsControl = document.querySelector(".toc-mobile > summary");
     const topbar = document.querySelector(".topbar-inner");
     return {
@@ -905,15 +911,15 @@ test("theme and contents controls share one visual control family", async ({ pag
         borderStyle: getComputedStyle(contentsControl).borderStyle,
         borderWidth: getComputedStyle(contentsControl).borderWidth,
       },
-      theme: {
-        borderRadius: getComputedStyle(themeControl).borderRadius,
-        borderStyle: getComputedStyle(themeControl).borderStyle,
-        borderWidth: getComputedStyle(themeControl).borderWidth,
+      display: {
+        borderRadius: getComputedStyle(displayControl).borderRadius,
+        borderStyle: getComputedStyle(displayControl).borderStyle,
+        borderWidth: getComputedStyle(displayControl).borderWidth,
       },
       topbarGap: getComputedStyle(topbar).columnGap,
     };
   });
-  expect(styles.theme).toEqual(styles.contents);
+  expect(styles.display).toEqual(styles.contents);
   expect(styles.topbarGap).toBe("24px");
 });
 

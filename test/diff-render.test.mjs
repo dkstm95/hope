@@ -89,7 +89,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 12);
+  assert.equal(first.rendererVersion, 13);
+  assert.equal(first.designVersion, 6);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -127,6 +128,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(header, /class="toc-mobile-panel"/u);
   assert.match(header, /class="toc-icon"/u);
   assert.match(header, /<span>example\/hope<\/span>/u);
+  assert.match(header, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path>[\s\n]*<path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(
     header,
     /<a class="pull-request-link" href="https:\/\/github\.com\/example\/hope\/pull\/142" aria-label="Open PR #142" title="Open PR #142">/u,
@@ -136,7 +138,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     header,
     /<span class="commit-status" title="Reviewed commit b{40}"><code>bbbbbbbb<\/code><\/span>/u,
   );
-  assert.doesNotMatch(header, /class="locale-link"/u);
+  assert.doesNotMatch(header, /class="locale-menu"/u);
+  assert.match(header, /<div class="display-controls">[\s\S]*?<button class="theme-button"/u);
   const localizedHeader = (await renderReview(review, {
     alternateLocale: { href: "retry.ko.html", locale: "ko-KR" },
   })).bytes.toString("utf8").match(
@@ -144,8 +147,9 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   )?.[0] ?? "";
   assert.match(
     localizedHeader,
-    /<a class="locale-link" href="retry\.ko\.html" hreflang="ko-KR" lang="ko-KR">한국어<\/a>/u,
+    /<a class="locale-option" href="retry\.ko\.html" hreflang="ko-KR" lang="ko-KR">한국어<\/a>/u,
   );
+  assert.match(localizedHeader, /class="pull-request-link"[\s\S]*?<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu">[\s\S]*?<button class="theme-button"/u);
   await assert.rejects(
     renderReview(review, {
       alternateLocale: { href: "..\/outside.html", locale: "ko-KR" },
@@ -186,7 +190,20 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<h3 id="synopsis-before-title">AS-IS<\/h3>/u);
   assert.match(html, /<h3 id="synopsis-now-title">TO-BE<\/h3>/u);
   assert.doesNotMatch(html, /shift-arrow/u);
-  assert.match(html, /class="toc-synopsis"><a href="#synopsis"/u);
+  assert.match(
+    html,
+    /<a class="toc-link" href="#synopsis"><span class="toc-number">01<\/span><span>Summary<\/span><\/a>/u,
+  );
+  const main = html.match(/<main class="main"[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
+  assert.deepEqual(
+    [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
+    ["01", "02", "03", "04"],
+  );
+  const toc = html.match(/<nav class="toc-desktop"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
+  assert.deepEqual(
+    [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
+    ["01", "02", "03", "04"],
+  );
   assert.doesNotMatch(html, /<a href="#follow-code">/u);
   assert.match(
     html,
@@ -474,7 +491,7 @@ test("the artifact shows every teaching-aid decision when all aids are omitted",
   );
   assert.doesNotMatch(section, /<script src=https:\/\/evil/u);
   assert.doesNotMatch(html, /<a href="#teaching-aids">/u);
-  assert.match(html, /<a href="#explore">Behavior change<\/a>/u);
+  assert.match(html, /<a class="toc-link" href="#explore"><span class="toc-number">02<\/span><span>Behavior change<\/span><\/a>/u);
 });
 
 test("the artifact preserves mixed and all-included teaching-aid states", async () => {

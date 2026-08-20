@@ -38,6 +38,7 @@ const dictionaries = Object.freeze({
     goal: "Goal",
     influence: "Influence",
     included: "In scope",
+    language: "Language",
     menu: "Contents",
     navigation: "Contents and version history",
     noExcluded: "No explicit exclusion was needed.",
@@ -81,6 +82,7 @@ const dictionaries = Object.freeze({
     goal: "목표",
     influence: "반영한 점",
     included: "포함 범위",
+    language: "언어",
     menu: "목차",
     navigation: "목차와 버전 이력",
     noExcluded: "명시적으로 제외한 범위가 없습니다.",
@@ -150,6 +152,14 @@ function goalValue(content) {
   return content.goal ?? content.intent;
 }
 
+function sectionOrdinal(number) {
+  return String(number).padStart(2, "0");
+}
+
+function sectionTitle(id, title, number, suffix = "") {
+  return `<h2 class="section-title" id="${escapeHtml(id)}"><span class="section-number">${sectionOrdinal(number)}</span><span>${escapeHtml(title)}${suffix}</span></h2>`;
+}
+
 function checkList(content, dictionary) {
   const checks = content.checks ?? content.success.map((condition) => ({ condition }));
   return `<ol class="check-list">${checks.map((check) => {
@@ -164,10 +174,10 @@ function checkList(content, dictionary) {
   }).join("")}</ol>`;
 }
 
-function overview(content, dictionary) {
+function overview(content, dictionary, number) {
   return `<section class="overview document-section" id="overview" aria-labelledby="artifact-title">
     <header class="document-head">
-      <h1 id="artifact-title">${authoredText(content.title)}</h1>
+      <div class="artifact-title-line"><span class="section-number">${sectionOrdinal(number)}</span><h1 id="artifact-title">${authoredText(content.title)}</h1></div>
       <p class="goal-label">${escapeHtml(label(dictionary, "goal"))}</p>
       <div class="goal">${authoredParagraphs(goalValue(content))}</div>
     </header>
@@ -179,9 +189,9 @@ function overview(content, dictionary) {
   </section>`;
 }
 
-function scopeSection(content, dictionary) {
+function scopeSection(content, dictionary, number) {
   return `<section class="scope document-section" id="scope" aria-labelledby="scope-title">
-    <h2 class="sr-only" id="scope-title">${escapeHtml(label(dictionary, "scope"))}</h2>
+    ${sectionTitle("scope-title", label(dictionary, "scope"), number)}
     <div class="scope-column">
       <h3>${escapeHtml(label(dictionary, "included"))}</h3>
       ${textList(content.scope.included, { empty: label(dictionary, "noIncluded") })}
@@ -238,15 +248,15 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
     </dl>`;
 }
 
-function designDirectionsSection(content, dictionary) {
+function designDirectionsSection(content, dictionary, number) {
   if (!content.designDirections) return undefined;
   return `<section class="body-section document-section" id="design-directions" aria-labelledby="design-directions-title">
-    <h2 id="design-directions-title">${escapeHtml(label(dictionary, "designDirections"))}</h2>
+    ${sectionTitle("design-directions-title", label(dictionary, "designDirections"), number)}
     ${designDirectionsComparison(content.designDirections, dictionary)}
   </section>`;
 }
 
-function behaviorSection(content, dictionary) {
+function behaviorSection(content, dictionary, number) {
   if (!content.behavior) return undefined;
   const outcomes = content.behavior.outcomes.length === 0 ? "" : `<div class="behavior-outcomes-block">
     <h3 class="behavior-outcomes-title">${escapeHtml(label(dictionary, "outcomes"))}</h3>
@@ -259,7 +269,7 @@ function behaviorSection(content, dictionary) {
     </li>`).join("")
   }</ul></div>`;
   return `<section class="body-section document-section" id="behavior" aria-labelledby="behavior-title">
-    <h2 id="behavior-title">${escapeHtml(label(dictionary, "behavior"))}</h2>
+    ${sectionTitle("behavior-title", label(dictionary, "behavior"), number)}
     <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
       <span class="step-number" aria-hidden="true">${index + 1}</span>
       <strong>${authoredText(step.title)}</strong>${step.detail
@@ -270,7 +280,7 @@ function behaviorSection(content, dictionary) {
   </section>`;
 }
 
-function agreementSection(content, dictionary) {
+function agreementSection(content, dictionary, number) {
   if (content.decisions.length === 0 && content.openChoices.length === 0) return undefined;
   const decisionColumn = content.decisions.length === 0 ? "" : `<div>
     <h3 class="subheading">${escapeHtml(label(dictionary, "agreedDecisions"))}</h3>
@@ -287,7 +297,7 @@ function agreementSection(content, dictionary) {
     ${textList(content.openChoices)}
   </div>`;
   return `<section class="body-section document-section" id="agreement" aria-labelledby="agreement-title">
-    <h2 id="agreement-title">${escapeHtml(label(dictionary, "agreement"))}</h2>
+    ${sectionTitle("agreement-title", label(dictionary, "agreement"), number)}
     <div class="agreement-groups">${decisionColumn}${choiceColumn}</div>
   </section>`;
 }
@@ -299,10 +309,10 @@ function evidenceLocation(item) {
   return `<code>${authoredText(item.location)}</code>`;
 }
 
-function evidenceSection(content, dictionary) {
+function evidenceSection(content, dictionary, number) {
   if (content.evidence.length === 0) return undefined;
   return `<details class="body-section document-section section-disclosure" id="evidence">
-    <summary class="section-disclosure-summary"><h2 id="evidence-title">${escapeHtml(label(dictionary, "evidence"))} · ${content.evidence.length}</h2></summary>
+    <summary class="section-disclosure-summary">${sectionTitle("evidence-title", label(dictionary, "evidence"), number, ` · ${content.evidence.length}`)}</summary>
     <div class="section-disclosure-content"><dl class="evidence-list">${content.evidence.map((item) => `<div>
       <dt>${authoredText(item.label)}</dt>
       <dd>${evidenceLocation(item)}</dd>
@@ -391,7 +401,7 @@ function railHistory(data, dictionary, idSuffix = "") {
 }
 
 function repositoryMark(repository, className) {
-  return `<span class="${className}"><svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>${authoredText(repository)}</span></span>`;
+  return `<span class="${className}"><svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 9.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"></path></svg><span>${authoredText(repository)}</span></span>`;
 }
 
 function themeVariables(colors) {
@@ -468,16 +478,29 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .topbar-inner { max-width: ${LAYOUT.documentWidth}px; height: ${LAYOUT.topbarInnerHeight}px; margin: 0 auto; padding: 0 ${LAYOUT.topbarWideGutter}px; display: flex; align-items: center; gap: ${space5}px; }
 .brand { flex: none; display: flex; align-items: center; gap: ${space2}px; font-size: ${TYPE.brand.wide.fontSize}px; line-height: ${TYPE.brand.wide.lineHeight}; font-weight: 700; letter-spacing: -.025em; white-space: nowrap; }
 .brand-icon { flex: none; width: 24px; height: 24px; border-radius: 6px; }
-.repository, .mobile-repository { min-width: 0; display: flex; align-items: center; gap: ${space2}px; color: var(--text); }
+.repository, .mobile-repository { min-width: 0; display: flex; align-items: center; gap: ${space2}px; color: var(--text); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; }
 .repository > span, .mobile-repository > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repository-icon { flex: none; width: 16px; height: 16px; stroke: var(--muted); }
 .status { flex: none; padding: ${space1}px ${space2}px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)); border-radius: 4px; background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
 .top-actions { margin-left: auto; display: flex; align-items: center; gap: ${space2}px; }
+.display-controls { flex: none; display: flex; align-items: center; height: 44px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.locale-menu { position: relative; }
+.locale-menu > summary { height: 42px; min-width: 80px; display: flex; align-items: center; justify-content: space-between; gap: ${space2}px; padding: 0 ${space2}px 0 ${space3}px; color: var(--text); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; list-style: none; }
+.locale-menu > summary::-webkit-details-marker { display: none; }
+.locale-chevron { width: 14px; height: 14px; stroke: currentColor; transition: transform 120ms ease; }
+.locale-menu[open] .locale-chevron { transform: rotate(180deg); }
+.locale-options { position: absolute; z-index: 13; top: calc(100% + ${space1}px); right: 0; min-width: 124px; display: grid; gap: 2px; margin: 0; padding: ${space1}px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); box-shadow: 0 10px 28px color-mix(in srgb, var(--text) 14%, transparent); list-style: none; }
+.locale-option, .locale-current { min-height: 44px; display: flex; align-items: center; padding: ${space2}px ${space3}px; border-radius: 4px; font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; text-decoration: none; }
+.locale-current { color: var(--muted); }
+.locale-option { color: var(--text); }
+.locale-option:visited { color: var(--text); }
+.locale-option:hover, .locale-option:focus-visible { background: var(--bg); }
 .theme-button, .mobile-navigation > summary { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; }
-.theme-button:hover, .mobile-navigation > summary:hover { border-color: var(--border); background: var(--panel); }
+.display-controls .theme-button { width: 42px; height: 42px; border: 0; border-radius: 5px; }
+.display-controls.has-locale-menu .theme-button { border-left: 1px solid var(--border); border-radius: 0 5px 5px 0; }
+.theme-button:hover, .mobile-navigation > summary:hover { background: var(--panel); }
+.mobile-navigation > summary:hover { border-color: var(--border); }
 .theme-button:focus-visible, .mobile-navigation > summary:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.locale-link { color: var(--muted); font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.locale-link:hover, .locale-link:focus-visible { color: var(--text); }
 .theme-icon, .navigation-icon { width: 20px; height: 20px; stroke: currentColor; }
 .theme-icon[hidden] { display: none; }
 .mobile-navigation { display: none; }
@@ -489,9 +512,13 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .rail { border-left: 1px solid var(--border); padding: ${space7}px ${space5}px; }
 .rail-inner { position: sticky; top: ${LAYOUT.topbarHeight + 40}px; display: grid; gap: ${space6}px; }
 .toc h2, .rail-history h2 { margin: 0 0 ${space4}px; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
-.toc ol, .rail-history ol { list-style: none; padding: 0; }
-.toc a { display: block; padding: ${space2}px 0; color: var(--text); text-decoration: none; }
-.toc a[aria-current="location"] { color: var(--accent); font-weight: 700; }
+.toc-list, .rail-history ol { list-style: none; padding: 0; }
+.toc-list { display: grid; gap: 2px; }
+.toc-link { min-height: 32px; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: center; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; text-decoration: none; }
+.toc-link:visited { color: var(--muted); }
+.toc-number { color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.toc-link[aria-current="location"], .toc-link[aria-current="location"]:visited { color: var(--accent); font-weight: 700; }
+.toc-link[aria-current="location"] .toc-number { color: var(--accent); }
 .rail-history { padding-top: ${space5}px; border-top: 1px solid var(--border); }
 .rail-history > ol > li, .older-history > ol > li { position: relative; padding: 0 0 ${space5}px ${space4}px; border-left: 1px solid var(--border); }
 .rail-history > ol > li:last-child, .older-history > ol > li:last-child { padding-bottom: ${space3}px; }
@@ -512,6 +539,8 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .older-history > ol { list-style: none; padding: ${space3}px 0 0; }
 .document-section + .document-section { margin-top: ${space8}px; }
 .document-head { max-width: 78ch; }
+.artifact-title-line, .section-title { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: baseline; }
+.section-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
 .goal-label { margin-top: ${space3}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .goal { margin-top: ${space1}px; font-size: ${TYPE.goal.wide.fontSize}px; line-height: ${TYPE.goal.wide.lineHeight}; }
@@ -533,10 +562,12 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .check-verification-content p + p { margin-top: ${space1}px; }
 .overview + .scope { margin-top: ${space7}px; }
 .scope { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.scope > .section-title { grid-column: 1 / -1; }
 .scope-column { padding: ${space4}px ${space2}px ${space5}px; }
 .scope-column { min-width: 0; }
 .scope-column + .scope-column { padding-left: ${space5}px; border-left: 1px solid var(--border); }
-.scope h3, .body-section > h2, .section-disclosure-summary h2 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
+.scope h3 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
+.section-title { width: 100%; margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
 .design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
@@ -606,10 +637,10 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .section-disclosure { border: 0; }
 .section-disclosure-summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; list-style: none; }
 .section-disclosure-summary::-webkit-details-marker { display: none; }
-.section-disclosure-summary h2 { display: flex; width: 100%; align-items: center; gap: ${space2}px; }
-.section-disclosure-summary h2::after { margin-left: auto; color: var(--text); content: "›"; transition: transform 120ms ease; }
-.section-disclosure[open] > .section-disclosure-summary h2::after { transform: rotate(90deg); }
-.section-disclosure:not([open]) > .section-disclosure-summary h2 { margin-bottom: 0; }
+.section-disclosure-summary .section-title { flex: 1 1 auto; }
+.section-disclosure-summary::after { margin-left: ${space2}px; color: var(--text); content: "›"; transition: transform 120ms ease; }
+.section-disclosure[open] > .section-disclosure-summary::after { transform: rotate(90deg); }
+.section-disclosure:not([open]) > .section-disclosure-summary .section-title { margin-bottom: 0; }
 .evidence-list > div { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(0,1fr); gap: ${space4}px; padding: ${space3}px ${space2}px; border-top: 1px solid var(--border); }
 .evidence-list dt { font-weight: 700; }
 .evidence-list dd { margin: 0; overflow-wrap: anywhere; }
@@ -625,8 +656,9 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .mobile-navigation-panel { position: fixed; z-index: 11; top: ${LAYOUT.topbarHeight}px; right: 0; width: min(360px, 100vw); max-height: calc(100dvh - ${LAYOUT.topbarHeight}px); overflow: auto; padding: ${space5}px; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); background: var(--panel); box-shadow: -12px 16px 32px color-mix(in srgb, var(--text) 14%, transparent); }
   .mobile-navigation-panel .toc { padding-bottom: ${space5}px; }
   .mobile-navigation-panel .mobile-repository { margin-bottom: ${space5}px; padding-bottom: ${space4}px; border-bottom: 1px solid var(--border); }
-  .mobile-navigation-panel .toc ol { display: grid; gap: ${space1}px; }
-  .mobile-navigation-panel .toc a { padding-block: ${space1}px; }
+  .mobile-navigation-panel .toc-list { display: grid; gap: ${space1}px; }
+  .mobile-navigation-panel .toc-link { min-height: 44px; padding: ${space1}px ${space2}px; border-left: 2px solid transparent; }
+  .mobile-navigation-panel .toc-link[aria-current="location"] { border-left-color: var(--accent); }
   .mobile-navigation-panel .rail-history { padding-top: ${space5}px; }
   .mobile-navigation-panel .revision-popup { position: static; width: auto; max-height: none; margin-top: ${space2}px; padding: ${space3}px; box-shadow: none; }
 }
@@ -665,7 +697,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media (forced-colors: active) {
-  .status, .theme-button, .mobile-navigation > summary, .outcome-mark, .direction-status, .direction-image { border: 1px solid ButtonText; }
+  .status, .display-controls, .mobile-navigation > summary, .locale-options, .outcome-mark, .direction-status, .direction-image { border: 1px solid ButtonText; }
   .step-number { border: 1px solid ButtonText; background: Canvas; color: CanvasText; }
   .revision-dot, .rail-history .current .revision-dot { border-color: CanvasText; background: Canvas; }
 }
@@ -719,7 +751,7 @@ openTarget();syncCurrent();
 })();`;
 }
 
-function alternateLocaleLink(value) {
+function localeMenu(value, currentLocale, dictionary) {
   if (value === undefined) return "";
   if (
     value === null
@@ -730,26 +762,34 @@ function alternateLocaleLink(value) {
   ) {
     throw new TypeError("alternateLocale must name a supported locale and sibling HTML file");
   }
-  const text = value.locale === "ko-KR" ? "한국어" : "English";
-  return `<a class="locale-link" href="${escapeHtml(value.href)}" hreflang="${escapeHtml(value.locale)}" lang="${escapeHtml(value.locale)}">${text}</a>`;
+  const currentText = currentLocale === "ko-KR" ? "한국어" : "English";
+  const alternateText = value.locale === "ko-KR" ? "한국어" : "English";
+  return `<details class="locale-menu">
+    <summary aria-label="${escapeHtml(label(dictionary, "language"))}" title="${escapeHtml(label(dictionary, "language"))}"><span lang="${escapeHtml(currentLocale)}">${currentText}</span><svg class="locale-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 10 4 4 4-4"></path></svg></summary>
+    <ul class="locale-options"><li><span class="locale-current" aria-current="page" lang="${escapeHtml(currentLocale)}">${currentText}</span></li><li><a class="locale-option" href="${escapeHtml(value.href)}" hreflang="${escapeHtml(value.locale)}" lang="${escapeHtml(value.locale)}">${alternateText}</a></li></ul>
+  </details>`;
 }
 
 export function renderAlignArtifact(data, { alternateLocale, digest }) {
   const dictionary = dictionaries[data.locale];
-  const localeLink = alternateLocaleLink(alternateLocale);
+  const locale = localeMenu(alternateLocale, data.locale, dictionary);
   const current = data.revisions.at(-1);
   const content = current.content;
   const sections = [
-    { id: "overview", title: label(dictionary, "overview"), html: overview(content, dictionary) },
-    { id: "scope", title: label(dictionary, "scope"), html: scopeSection(content, dictionary) },
-    { id: "design-directions", title: label(dictionary, "designDirections"), html: designDirectionsSection(content, dictionary) },
-    { id: "behavior", title: label(dictionary, "behavior"), html: behaviorSection(content, dictionary) },
-    { id: "agreement", title: label(dictionary, "agreement"), html: agreementSection(content, dictionary) },
-    { id: "evidence", title: label(dictionary, "evidence"), html: evidenceSection(content, dictionary) },
-  ].filter((section) => section.html !== undefined);
+    { id: "overview", title: label(dictionary, "overview"), include: true, render: (number) => overview(content, dictionary, number) },
+    { id: "scope", title: label(dictionary, "scope"), include: true, render: (number) => scopeSection(content, dictionary, number) },
+    { id: "design-directions", title: label(dictionary, "designDirections"), include: content.designDirections !== undefined, render: (number) => designDirectionsSection(content, dictionary, number) },
+    { id: "behavior", title: label(dictionary, "behavior"), include: content.behavior !== undefined, render: (number) => behaviorSection(content, dictionary, number) },
+    { id: "agreement", title: label(dictionary, "agreement"), include: content.decisions.length > 0 || content.openChoices.length > 0, render: (number) => agreementSection(content, dictionary, number) },
+    { id: "evidence", title: label(dictionary, "evidence"), include: content.evidence.length > 0, render: (number) => evidenceSection(content, dictionary, number) },
+  ].filter((section) => section.include).map((section, index) => ({
+    ...section,
+    number: index + 1,
+    html: section.render(index + 1),
+  }));
   const showToc = sections.length >= 3;
-  const toc = showToc ? `<ol>${sections.map(
-    (section) => `<li><a href="#${section.id}">${escapeHtml(section.title)}</a></li>`,
+  const toc = showToc ? `<ol class="toc-list">${sections.map(
+    (section) => `<li><a class="toc-link" href="#${section.id}"><span class="toc-number">${sectionOrdinal(section.number)}</span><span>${escapeHtml(section.title)}</span></a></li>`,
   ).join("")}</ol>` : "";
   const mobileNavigation = `<details class="mobile-navigation">
     <summary aria-label="${escapeHtml(label(dictionary, "navigation"))}" title="${escapeHtml(label(dictionary, "navigation"))}"><svg class="navigation-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h10"></path><circle cx="18" cy="18" r="2.5"></circle></svg></summary>
@@ -783,15 +823,17 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
 <body>
   <a class="skip" href="#overview">${escapeHtml(label(dictionary, "skip"))}</a>
   <header class="topbar">
-    <div class="topbar-inner${localeLink === "" ? "" : " has-locale-switch"}">
+    <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
       <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· ALIGN</span></div>
       ${repositoryMark(data.repository, "repository")}
       <span class="status">v${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))}</span>
       <div class="top-actions">
-${localeLink === "" ? "" : `        ${localeLink}\n`}        <button class="theme-button" id="theme-toggle" type="button" aria-label="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}" title="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}">
+        <div class="display-controls${locale === "" ? "" : " has-locale-menu"}">
+${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-button" id="theme-toggle" type="button" aria-label="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}" title="${escapeHtml(data.theme === "dark" ? label(dictionary, "useLightTheme") : label(dictionary, "useDarkTheme"))}">
           <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${data.theme === "dark" ? " hidden" : ""}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path></svg>
           <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${data.theme === "dark" ? "" : " hidden"}><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path></svg>
-        </button>
+          </button>
+        </div>
         ${mobileNavigation}
       </div>
     </div>

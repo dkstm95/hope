@@ -139,7 +139,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#agreement")).toContainText("자동 감지 기반 복구 우선");
   await expect(page.locator("#agreement")).toContainText("사용자 개입 없이");
-  await expect(page.locator("#agreement-title")).toHaveText("결정 사항");
+  await expect(page.locator("#agreement-title > span:last-child")).toHaveText("결정 사항");
   await expect(page.locator("#agreement .subheading")).toHaveText([
     "확정 사항",
     "구현 시 결정 사항",
@@ -148,7 +148,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("#agreement .decision-reason").first()).not.toBeVisible();
   await expect(page.locator("#evidence")).not.toHaveAttribute("open", "");
   await expect(page.locator("#evidence .section-disclosure-content")).not.toBeVisible();
-  await expect(page.locator("#design-directions-title")).toHaveText("디자인 시안");
+  await expect(page.locator("#design-directions-title > span:last-child")).toHaveText("디자인 시안");
   const currentDirections = page.locator("#design-directions");
   await expect(currentDirections.locator(".design-direction")).toHaveCount(2);
   await expect(currentDirections.locator(".direction-image img")).toHaveCount(2);
@@ -256,13 +256,15 @@ test("Align presents one compact current agreement with secondary history", asyn
     railLeft: document.querySelector(".rail").getBoundingClientRect().left,
     repositoryStatusGap: document.querySelector(".status").getBoundingClientRect().left
       - document.querySelector(".repository").getBoundingClientRect().right,
+    titleNumberLeft: document.querySelector(".artifact-title-line > .section-number").getBoundingClientRect().left,
     titleLeft: document.querySelector("h1").getBoundingClientRect().left,
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
   expect(geometry.brandRepositoryGap).toBe(24);
   expect(geometry.repositoryStatusGap).toBe(24);
   expect(geometry.railLeft).toBe(932);
-  expect(geometry.titleLeft).toBe(40);
+  expect(geometry.titleLeft).toBe(76);
+  expect(geometry.titleNumberLeft).toBe(40);
   expect(geometry.topbarHeight).toBe(58);
   await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
   await expect(page.locator(".decision-number")).toHaveText(["01", "02"]);
@@ -289,8 +291,10 @@ test("Align theme action is keyboard reachable and updates its label", async ({ 
 
   await expect(theme).toHaveAttribute("aria-label", "다크 모드로 전환");
   const box = await theme.boundingBox();
-  expect(box.height).toBe(44);
-  expect(box.width).toBe(44);
+  expect(box.height).toBe(42);
+  expect(box.width).toBe(42);
+  const displayBox = await page.locator(".display-controls").boundingBox();
+  expect(displayBox.height).toBe(44);
   await theme.focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

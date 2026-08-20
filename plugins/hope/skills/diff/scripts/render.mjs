@@ -470,10 +470,18 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
   </article>`;
 }
 
-function section({ id, title, content }) {
+function sectionOrdinal(number) {
+  return String(number).padStart(2, "0");
+}
+
+function sectionHeading(title, number) {
+  return `<h2><span class="section-number">${sectionOrdinal(number)}</span><span>${html(title)}</span></h2>`;
+}
+
+function section({ id, title, content, number }) {
   return `<section class="review-section" id="${html(id)}">
     <div class="section-heading">
-      <h2>${html(title)}</h2>
+      ${sectionHeading(title, number)}
     </div>
     ${content}
   </section>`;
@@ -497,10 +505,10 @@ function collapsibleSubsection({ id, title, content }) {
   </details>`;
 }
 
-function collapsibleSection({ id, title, content, initiallyOpen = false }) {
+function collapsibleSection({ id, title, content, number, initiallyOpen = false }) {
   return `<details class="review-section review-section-collapsible" id="${html(id)}"${initiallyOpen ? " open" : ""}>
     <summary class="section-heading">
-      <h2>${html(title)}</h2>
+      ${sectionHeading(title, number)}
     </summary>
     <div class="section-content">${content}</div>
   </details>`;
@@ -624,7 +632,7 @@ function contextCheck(
   </details>`;
 }
 
-function synopsis(review, dictionary, codeRenderer, { title }) {
+function synopsis(review, dictionary, codeRenderer, { number, title }) {
   const visibleItems = review.reviewItems.slice(0, 3);
   const hiddenItems = review.reviewItems.length - visibleItems.length;
   const materialLimits = review.limits.filter((limit) => limit.material);
@@ -650,7 +658,7 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
     </section>`;
   return `<section class="synopsis" id="synopsis" aria-labelledby="synopsis-title">
     <header class="synopsis-head">
-      <h1 id="review-title">${userText(title)}</h1>
+      <div class="artifact-title-line"><span class="section-number">${sectionOrdinal(number)}</span><h1 id="review-title">${userText(title)}</h1></div>
       <div class="goal-label">${html(label(dictionary, "synopsis.purpose"))}</div>
       <div class="goal">${claimBlock(
         review.purpose,
@@ -737,7 +745,7 @@ function synopsis(review, dictionary, codeRenderer, { title }) {
   </section>`;
 }
 
-function evidenceSection(review, dictionary, codeRenderer) {
+function evidenceSection(review, dictionary, codeRenderer, number) {
   const knownFileIds = new Set(review.files.map((file) => file.id));
   const implementationDetails = review.codeSteps.length === 0
     ? ""
@@ -991,6 +999,7 @@ function evidenceSection(review, dictionary, codeRenderer) {
       </details>`,
     id: "evidence-and-scope",
     initiallyOpen: true,
+    number,
     title: label(dictionary, "section.evidence"),
   });
 }
@@ -1080,6 +1089,7 @@ function buildSections(review, dictionary, codeRenderer) {
       id: "quiz",
       title: label(dictionary, "section.quiz"),
     });
+  let number = 2;
   sections.push({
     html: section({
       content: `${coreChange}${behavior}${quiz}${teachingAidChoices(
@@ -1087,11 +1097,14 @@ function buildSections(review, dictionary, codeRenderer) {
         dictionary,
       )}`,
       id: "explore",
+      number,
       title: label(dictionary, "section.explore"),
     }),
     id: "explore",
+    number,
     title: label(dictionary, "section.explore"),
   });
+  number += 1;
   if (review.reviewItems.length > 0) {
     sections.push({
       html: collapsibleSection({
@@ -1104,15 +1117,19 @@ function buildSections(review, dictionary, codeRenderer) {
           )}</li>`,
         ).join("")}</ul>`,
         id: "judge",
+        number,
         title: label(dictionary, "section.judge"),
       }),
       id: "judge",
+      number,
       title: label(dictionary, "section.judge"),
     });
+    number += 1;
   }
   sections.push({
-    html: evidenceSection(review, dictionary, codeRenderer),
+    html: evidenceSection(review, dictionary, codeRenderer, number),
     id: "evidence-and-scope",
+    number,
     title: label(dictionary, "section.evidence"),
   });
   return sections;
@@ -1364,38 +1381,92 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .pull-request-link:hover,
 .pull-request-link:focus-visible { color: var(--text); }
-.locale-link {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.locale-link:hover,
-.locale-link:focus-visible { color: var(--text); }
 .external-link-icon {
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
   stroke: currentColor;
 }
-.theme-button {
-  border: 1px solid transparent;
+.display-controls {
+  display: flex;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid var(--border);
   border-radius: 6px;
+  background: var(--bg);
+}
+.locale-menu { position: relative; }
+.locale-menu > summary {
+  display: flex;
+  height: 42px;
+  min-width: 80px;
+  padding: 0 ${space2}px 0 ${space3}px;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${space2}px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 500;
+  list-style: none;
+}
+.locale-menu > summary::-webkit-details-marker { display: none; }
+.locale-chevron {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  transition: transform 120ms ease;
+}
+.locale-menu[open] .locale-chevron { transform: rotate(180deg); }
+.locale-options {
+  position: absolute;
+  z-index: 32;
+  top: calc(100% + ${space1}px);
+  right: 0;
+  display: grid;
+  min-width: 124px;
+  margin: 0;
+  padding: ${space1}px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--text) 14%, transparent);
+  list-style: none;
+}
+.locale-option,
+.locale-current {
+  display: flex;
+  min-height: 44px;
+  padding: ${space2}px ${space3}px;
+  align-items: center;
+  border-radius: 4px;
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.locale-current { color: var(--muted); }
+.locale-option,
+.locale-option:visited { color: var(--text); }
+.locale-option:hover,
+.locale-option:focus-visible { background: var(--bg); }
+.theme-button {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  padding: ${space1}px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
   background: transparent;
   cursor: pointer;
 }
-.theme-button {
-  display: inline-grid;
-  width: 44px;
-  height: 44px;
-  padding: ${space1}px;
-  place-items: center;
+.display-controls.has-locale-menu .theme-button {
+  border-left: 1px solid var(--border);
+  border-radius: 0 5px 5px 0;
 }
-.theme-button:hover {
-  border-color: var(--border);
-  background: var(--panel);
-}
+.theme-button:hover { background: var(--panel); }
 .theme-icon {
   width: 20px;
   height: 20px;
@@ -1436,46 +1507,63 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   border-left: 1px solid var(--border);
 }
 .toc-desktop h2,
-.toc-mobile summary {
+.toc-mobile-panel h2 {
+  margin: 0 0 ${space4}px;
   font-size: ${TYPE.menu.fontSize}px;
   line-height: ${TYPE.menu.lineHeight};
   font-weight: 700;
 }
-.toc-synopsis {
-  margin-top: ${space3}px;
-}
-.toc-desktop ol {
-  margin: ${space2}px 0 0;
+.toc-list {
+  display: grid;
+  margin: 0;
   padding: 0;
+  gap: 2px;
   list-style: none;
 }
-.toc-desktop li {
-  position: relative;
-  margin: 0;
-}
-.toc-desktop li + li { margin-top: 2px; }
-.toc-desktop li > a {
-  display: flex;
-  min-height: 30px;
+.toc-link {
+  display: grid;
+  min-height: 32px;
+  grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
-}
-.toc-desktop .toc-synopsis a,
-.toc-desktop a {
+  gap: ${space2}px;
   color: var(--muted);
-  text-decoration: none;
+  font-size: ${TYPE.supporting.wide.fontSize}px;
   font-weight: 500;
+  text-decoration: none;
 }
-.toc-desktop a[aria-current="location"] {
+.toc-link:visited { color: var(--muted); }
+.toc-number {
+  color: var(--muted);
+  font-size: ${TYPE.micro.fontSize}px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+.toc-link[aria-current="location"],
+.toc-link[aria-current="location"]:visited {
   color: var(--accent);
+  font-weight: 700;
 }
-.toc-desktop .toc-synopsis a:hover,
-.toc-desktop .toc-synopsis a:focus,
-.toc-desktop a:hover,
-.toc-desktop a:focus { color: var(--text); }
+.toc-link[aria-current="location"] .toc-number { color: var(--accent); }
+.toc-link:hover,
+.toc-link:focus { color: var(--text); }
 .toc-mobile { display: none; }
 
 .synopsis { margin: 0; }
 .synopsis-head { max-width: ${LAYOUT.proseWidth}; }
+.artifact-title-line {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: baseline;
+  gap: ${space2}px;
+}
+.section-number {
+  color: var(--accent);
+  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
 .synopsis-head h1 {
   min-width: 0;
   margin: 0;
@@ -1781,6 +1869,11 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   gap: ${space2}px;
 }
 .section-heading h2 {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: baseline;
+  gap: ${space2}px;
   margin: 0;
   color: var(--accent);
   font-size: ${wideSection.fontSize}px;
@@ -2662,35 +2755,16 @@ td:first-child {
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
   }
-  .toc-mobile-panel .toc-synopsis {
-    margin: 0 0 ${space2}px;
-  }
-  .toc-mobile-panel ol {
-    display: grid;
-    margin: 0;
-    padding: ${space3}px 0 0;
-    grid-template-columns: 1fr;
-    gap: 2px;
-    border-top: 1px solid var(--border);
-    list-style: none;
-  }
-  .toc-mobile a {
-    display: flex;
+  .toc-mobile-panel .toc-link {
     min-height: 44px;
     padding: ${space2}px ${space3}px;
-    align-items: center;
     border-left: 2px solid transparent;
-    color: var(--muted);
-    font-weight: 500;
-    text-decoration: none;
   }
-  .toc-mobile a[aria-current="location"] {
+  .toc-mobile .toc-link[aria-current="location"] {
     border-left-color: var(--accent);
-    color: var(--text);
-    font-weight: 700;
   }
-  .toc-mobile a:hover,
-  .toc-mobile a:focus-visible { color: var(--text); }
+  .toc-mobile .toc-link:hover,
+  .toc-mobile .toc-link:focus-visible { color: var(--text); }
 }
 
 @media (max-width: ${LAYOUT.narrowBreakpoint - 1}px) {
@@ -2848,6 +2922,7 @@ td:first-child {
   .topbar-actions { gap: ${space1}px; }
   .commit-status { padding: 2px ${space1}px; }
   .pull-request-link { padding-inline: 0; }
+  .pull-request-link .external-link-icon { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2861,6 +2936,8 @@ td:first-child {
 @media (forced-colors: active) {
   .status,
   .commit-status,
+  .display-controls,
+  .locale-options,
   .locale-warning,
   .behavior-visual,
   .microworld,
@@ -2978,7 +3055,7 @@ syncCurrent();
 })();`;
 }
 
-function alternateLocaleLink(value) {
+function localeMenu(value, currentLocale, dictionary) {
   if (value === undefined) return "";
   if (
     value === null
@@ -2989,13 +3066,17 @@ function alternateLocaleLink(value) {
   ) {
     throw new TypeError("alternateLocale must name a supported locale and sibling HTML file");
   }
-  const text = value.locale === "ko-KR" ? "한국어" : "English";
-  return `<a class="locale-link" href="${html(value.href)}" hreflang="${html(value.locale)}" lang="${html(value.locale)}">${text}</a>`;
+  const currentText = currentLocale === "ko-KR" ? "한국어" : "English";
+  const alternateText = value.locale === "ko-KR" ? "한국어" : "English";
+  return `<details class="locale-menu">
+    <summary aria-label="${html(label(dictionary, "common.language"))}" title="${html(label(dictionary, "common.language"))}"><span lang="${html(currentLocale)}">${currentText}</span><svg class="locale-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 10 4 4 4-4"></path></svg></summary>
+    <ul class="locale-options"><li><span class="locale-current" aria-current="page" lang="${html(currentLocale)}">${currentText}</span></li><li><a class="locale-option" href="${html(value.href)}" hreflang="${html(value.locale)}" lang="${html(value.locale)}">${alternateText}</a></li></ul>
+  </details>`;
 }
 
 export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const dictionary = await loadLocale(review.snapshot.settings.locale);
-  const localeLink = alternateLocaleLink(alternateLocale);
+  const locale = localeMenu(alternateLocale, review.snapshot.settings.locale, dictionary);
   const fontBytes = fonts ?? Object.fromEntries(await Promise.all(
     Object.entries(fontUrls).map(async ([name, url]) => [name, await readFile(url)]),
   ));
@@ -3008,7 +3089,7 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const script = clientScript(dictionary);
   const title = review.title.text;
   const sections = buildSections(review, dictionary, codeRenderer);
-  const synopsisHtml = synopsis(review, dictionary, codeRenderer, { title });
+  const synopsisHtml = synopsis(review, dictionary, codeRenderer, { number: 1, title });
   const styles = css(Object.fromEntries(Object.entries(fontBytes).map(
     ([name, bytes]) => [name, bytes.toString("base64")],
   )));
@@ -3024,9 +3105,13 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
     : "";
   const theme = review.snapshot.settings.theme;
   const themeAttribute = theme === "system" ? "" : ` data-theme="${html(theme)}"`;
-  const toc = `<div class="toc-synopsis"><a href="#synopsis">${html(label(dictionary, "section.synopsis"))}</a></div>
-  <ol>${sections.map(
-    (item) => `<li><a href="#${html(item.id)}">${html(item.title)}</a></li>`,
+  const tocItems = [{
+    id: "synopsis",
+    number: 1,
+    title: label(dictionary, "section.synopsis"),
+  }, ...sections];
+  const toc = `<ol class="toc-list">${tocItems.map(
+    (item) => `<li><a class="toc-link" href="#${html(item.id)}"><span class="toc-number">${sectionOrdinal(item.number)}</span><span>${html(item.title)}</span></a></li>`,
   ).join("")}</ol>`;
   const document = `<!doctype html>
 <html lang="${html(review.snapshot.settings.locale)}"${themeAttribute}>
@@ -3041,7 +3126,7 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
 <body>
   <a class="skip" href="#review">${html(label(dictionary, "common.skip"))}</a>
   <header class="topbar">
-    <div class="topbar-inner${localeLink === "" ? "" : " has-locale-switch"}">
+    <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
       <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· DIFF</span></div>
       <div class="top-context">
         <svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -3052,7 +3137,7 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
       </div>
       <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(review.snapshot.snapshot.head)}"><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></span>
       <div class="topbar-actions">
-${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-request-link" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
+        <a class="pull-request-link" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
           <span>PR #${review.snapshot.pullRequest.number}</span>
           <svg class="external-link-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M14 5h5v5"></path>
@@ -3060,7 +3145,8 @@ ${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-requ
             <path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>
           </svg>
         </a>
-        <button class="theme-button" id="theme-toggle" type="button" aria-label="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}" title="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}">
+        <div class="display-controls${locale === "" ? "" : " has-locale-menu"}">
+${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-button" id="theme-toggle" type="button" aria-label="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}" title="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}">
           <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${theme === "dark" ? " hidden" : ""}>
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path>
           </svg>
@@ -3068,7 +3154,8 @@ ${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-requ
             <circle cx="12" cy="12" r="4"></circle>
             <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path>
           </svg>
-        </button>
+          </button>
+        </div>
         <details class="toc-mobile">
           <summary>
             <svg class="toc-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
@@ -3077,6 +3164,7 @@ ${localeLink === "" ? "" : `        ${localeLink}\n`}        <a class="pull-requ
             <span class="sr-only">${html(label(dictionary, "common.menu"))}</span>
           </summary>
           <nav class="toc-mobile-panel" aria-label="${html(label(dictionary, "common.menu"))}">
+            <h2>${html(label(dictionary, "common.menu"))}</h2>
             ${toc}
           </nav>
         </details>

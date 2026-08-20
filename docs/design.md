@@ -99,6 +99,10 @@ value:
 3. Review items
 4. Evidence and scope
 
+Number every rendered top-level area continuously from `01`. Use the same
+number beside the area title and beside its table-of-contents link. When a
+conditional area is omitted, do not leave a gap.
+
 Summary previews the most important review items. Keep the complete **Review
 items** section in a native disclosure that starts closed; a fragment link to a
 specific item opens it. This keeps the first reading path focused without
@@ -157,11 +161,14 @@ find than equivalent prose
 ([Larkin and Simon, 1987](https://doi.org/10.1111/j.1551-6708.1987.tb00863.x)).
 
 Keep repository identity, the reviewed commit, a visible pull-request link, and
-artifact controls in one compact product bar. Present the reviewed commit with
-the same quiet status treatment that Align uses for its current version.
-Preserve the pull-request link when repository text is hidden at narrow widths.
-Replace the desktop contents rail with an icon beside the theme control and open
-the contents in a bounded right-side panel.
+artifact controls in one compact product bar. Use the same folder mark,
+repository type treatment, display-control group, and contents treatment as
+Align. Present the reviewed commit with the same quiet status treatment that
+Align uses for its current version. Keep the pull-request link outside the
+display-control group and preserve it when repository text is hidden at narrow
+widths. Group the language dropdown and bordered theme button as one control.
+Use a numbered desktop contents rail when it fits; otherwise use an icon beside
+the display-control group and open the contents in a bounded right-side panel.
 
 ## Align artifact direction
 
@@ -443,6 +450,10 @@ in Hope's language.
 Use one linear document. Give the current agreement most of the page and keep
 version history secondary.
 
+Number every rendered top-level area continuously from `01`. Use the same
+number beside the area title and beside its table-of-contents link. Omitted
+optional areas do not leave gaps.
+
 Separate top-level areas by 48 pixels on a wide screen and 40 pixels on a
 narrow screen. Use the smaller internal spacing steps for related content
 inside one area.
@@ -464,9 +475,11 @@ Keep each step's number beside its title and place the detail below the title.
 Stack outcomes after the sequence in their original order. Do not invent phase
 groups or branches that the artifact data does not contain.
 
-In the product bar, use one gap between the brand, repository, version, and
-action group. Use the next smaller gap only between controls inside the action
-group. Do not add one-off margins to an individual product-bar item.
+In the product bar, use the same folder mark and repository type treatment as
+Diff. Group the language dropdown and bordered theme button as one display
+control, separate from navigation. Use one gap between the brand, repository,
+version, and action group. Use the next smaller gap only between controls inside
+the action group. Do not add one-off margins to an individual product-bar item.
 
 Number agreed decisions in reading order.
 
@@ -525,8 +538,10 @@ On a narrow screen:
 - close the open panel with Escape and return focus to its control; and
 - use larger body text and touch targets.
 
-When the theme and contents controls appear together, give both a 44-pixel
-control height, the same border role, and the same corner radius.
+Group the language dropdown and theme control as one 44-pixel display control.
+Give the theme segment a visible boundary. Keep the pull-request link outside
+that group. When the display and contents controls appear together, give both a
+44-pixel height, the same border role, and the same corner radius.
 
 An icon-only control may be narrower, but it must not look like a smaller
 control family.

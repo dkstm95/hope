@@ -420,9 +420,10 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.equal(first, second);
   assert.match(first, /<img class="brand-icon" src="data:image\/png;base64,/u);
   assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
+  assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="10"/u);
+  assert.match(first, /name="hope-align-design-version" content="11"/u);
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
@@ -464,7 +465,18 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.doesNotMatch(first, /현재 구현 기준|구현 계약/u);
   assert.match(first, /<script id="hope-align-data" type="application\/json">/u);
   assert.doesNotMatch(first, /target="_blank"/u);
-  assert.doesNotMatch(first, /class="locale-link"/u);
+  assert.doesNotMatch(first, /class="locale-menu"/u);
+  assert.match(first, /<div class="display-controls">[\s\S]*?<button class="theme-button"/u);
+  const main = first.match(/<main class="main"[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
+  assert.deepEqual(
+    [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
+    ["01", "02", "03", "04", "05"],
+  );
+  const toc = first.match(/<nav class="toc"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
+  assert.deepEqual(
+    [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
+    ["01", "02", "03", "04", "05"],
+  );
 
   const withAlternateLocale = renderAlignArtifact(data, {
     alternateLocale: { href: "upload-recovery.en.html", locale: "en-US" },
@@ -472,8 +484,9 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   });
   assert.match(
     withAlternateLocale,
-    /<a class="locale-link" href="upload-recovery\.en\.html" hreflang="en-US" lang="en-US">English<\/a>/u,
+    /<a class="locale-option" href="upload-recovery\.en\.html" hreflang="en-US" lang="en-US">English<\/a>/u,
   );
+  assert.match(withAlternateLocale, /<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu">[\s\S]*?<button class="theme-button"/u);
   assert.throws(
     () => renderAlignArtifact(data, {
       alternateLocale: { href: "..\/outside.html", locale: "en-US" },
