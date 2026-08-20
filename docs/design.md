@@ -48,7 +48,7 @@ create paragraph boundaries.
 
 Use the same small set of semantic section patterns across Align and Diff:
 
-- a lead conclusion followed by structured label-and-value rows for summaries;
+- structured label-and-value rows for summaries, with the goal first;
 - parallel cells only for brief comparisons that must be scanned together;
 - one ordered vertical sequence for behavior or process; and
 - visible conclusions with native disclosures for reasons, verification, and
@@ -199,7 +199,7 @@ The artifact is the current implementation agreement, not a progress tracker.
 
 Show each fact once, in this order:
 
-1. title and one-sentence goal;
+1. title, then a summary whose first row is the one-sentence goal;
 2. problem, completion criteria, and governing boundary;
 3. included and excluded scope;
 4. compared design directions and the selected option, only when material UI
@@ -682,9 +682,10 @@ Separate preview items with spacing, not rules.
 Use semantic `ul` and `ol` elements for content that is a list.
 
 Put the unnumbered change-based artifact title first. Start the self-contained
-synopsis below it with a visible `01 Summary`, followed by the goal and
-label-and-value rows. Keep the provider's pull-request title and capture time in
-collapsed review information.
+synopsis below it with a visible `01 Summary`. Render the goal as the first
+label-and-value row, using the same label type, spacing, and divider rhythm as
+the other summary rows. Keep the provider's pull-request title and capture time
+in collapsed review information.
 
 Use the same section-title divider rhythm as Align. Keep each section number
 the same type size and line height as its title.

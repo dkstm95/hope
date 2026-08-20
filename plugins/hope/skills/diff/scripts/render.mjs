@@ -671,17 +671,19 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
     <div class="section-heading">
       ${sectionHeading(label(dictionary, "section.synopsis"), number, "synopsis-title")}
     </div>
-    <div class="goal-label">${html(label(dictionary, "synopsis.purpose"))}</div>
-    <div class="goal">${claimBlock(
-      review.purpose,
-      dictionary,
-      review,
-      codeRenderer,
-      "",
-      review.purpose.text,
-      false,
-    )}</div>
     <div class="synopsis-grid">
+      <div class="synopsis-row synopsis-purpose">
+        <h3>${html(label(dictionary, "synopsis.purpose"))}</h3>
+        <div class="synopsis-value">${claimBlock(
+          review.purpose,
+          dictionary,
+          review,
+          codeRenderer,
+          "",
+          review.purpose.text,
+          false,
+        )}</div>
+      </div>
       ${background}
       <div class="before-after change-shift" role="group" aria-labelledby="synopsis-before-title synopsis-now-title">
         <div class="synopsis-row shift-card shift-before">
@@ -1592,18 +1594,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   letter-spacing: -.04em;
   overflow-wrap: anywhere;
 }
-.goal-label {
-  margin-top: ${space3}px;
-  color: var(--accent);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 700;
-}
-.goal {
-  margin-top: ${space1}px;
-  font-size: ${TYPE.goal.wide.fontSize}px;
-  line-height: ${TYPE.goal.wide.lineHeight};
-}
-.goal .claim-meta { margin-top: ${space1}px; }
 .synopsis-grid > div > h3,
 .synopsis-background > h3,
 .synopsis-review-head > h3,
@@ -1637,8 +1627,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .status.kind-verify { color: var(--verify); }
 .synopsis-grid {
   display: grid;
-  margin-top: ${space5}px;
-  border-top: 1px solid var(--border);
 }
 .before-after {
   display: grid;
@@ -2790,11 +2778,6 @@ td:first-child {
   .document-title + .synopsis,
   .synopsis + .review-section,
   .review-section + .review-section { margin-top: ${space5}px; padding-top: ${space4}px; }
-  .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
-  .goal {
-    font-size: ${TYPE.goal.narrow.fontSize}px;
-    line-height: ${TYPE.goal.narrow.lineHeight};
-  }
   .synopsis-grid > div > h3,
   .synopsis-background > h3,
   .before-after > div > h3,

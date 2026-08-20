@@ -1,4 +1,4 @@
-export const DESIGN_VERSION = 8;
+export const DESIGN_VERSION = 9;
 
 export const COLORS = Object.freeze({
   dark: Object.freeze({
@@ -63,10 +63,6 @@ export const TYPE = Object.freeze({
   code: Object.freeze({
     narrow: Object.freeze({ fontSize: 14, lineHeight: 1.35 }),
     wide: Object.freeze({ fontSize: 13, lineHeight: 1.35 }),
-  }),
-  goal: Object.freeze({
-    narrow: Object.freeze({ fontSize: 14, lineHeight: 1.65 }),
-    wide: Object.freeze({ fontSize: 16, lineHeight: 1.6 }),
   }),
   menu: Object.freeze({ fontSize: 14, lineHeight: 1.5 }),
   micro: Object.freeze({

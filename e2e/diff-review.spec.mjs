@@ -346,9 +346,10 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     "title",
     `검토 커밋 ${"b".repeat(40)}`,
   );
-  await expect(page.locator("#synopsis > .goal-label")).toHaveText(
-    "목표",
-  );
+  const synopsisPurpose = page.locator("#synopsis .synopsis-purpose");
+  await expect(synopsisPurpose.locator(":scope > h3")).toHaveText("목표");
+  await expect(synopsisPurpose).toContainText("Return the final error after all retries fail.");
+  await expect(page.locator("#synopsis > .goal-label, #synopsis > .goal")).toHaveCount(0);
   await expect(page.locator("#synopsis > dt")).toHaveCount(0);
   await expect(page.locator("#synopsis")).not.toContainText(
     "이 오프라인 파일은 이후 PR 변경을 자동으로 반영하지 않습니다.",
@@ -380,13 +381,18 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   ).toHaveCSS("text-decoration-line", "underline");
   await expect(page.locator('a[target="_blank"]')).toHaveCount(0);
   const synopsisLayouts = await page.evaluate(() => {
-    const purpose = document.querySelector(".synopsis-impact");
+    const purpose = document.querySelector(".synopsis-purpose");
+    const impact = document.querySelector(".synopsis-impact");
     const review = document.querySelector(".synopsis-review");
     const items = [...document.querySelectorAll(".review-item-compact")];
     return {
       purpose: {
         display: getComputedStyle(purpose).display,
         columns: getComputedStyle(purpose).gridTemplateColumns,
+      },
+      impact: {
+        display: getComputedStyle(impact).display,
+        columns: getComputedStyle(impact).gridTemplateColumns,
       },
       review: {
         display: getComputedStyle(review).display,
@@ -401,6 +407,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
       ).getBoundingClientRect().top,
     };
   });
+  expect(synopsisLayouts.purpose).toEqual(synopsisLayouts.impact);
   expect(synopsisLayouts.review).toEqual(synopsisLayouts.purpose);
   expect(Math.abs(synopsisLayouts.labelTop - synopsisLayouts.firstItemTop)).toBeLessThanOrEqual(
     1,
@@ -454,7 +461,12 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator(".topbar")).toHaveCSS("position", "sticky");
   await expect(page.locator("body")).toHaveCSS("font-size", "14px");
   await expect(page.locator("#review-title")).toHaveCSS("font-size", "32px");
-  await expect(page.locator(".goal")).toHaveCSS("font-size", "16px");
+  await expect(page.locator(".synopsis-purpose > h3")).toHaveCSS(
+    "font-size",
+    await page.locator(".synopsis-impact > h3").evaluate(
+      (element) => getComputedStyle(element).fontSize,
+    ),
+  );
   await expect(page.locator(".section-heading h2").first()).toHaveCSS(
     "font-size",
     "18px",
@@ -604,7 +616,12 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
 
   await page.setViewportSize(viewports.mobile);
   await expect(page.locator("#review-title")).toHaveCSS("font-size", "28px");
-  await expect(page.locator(".goal")).toHaveCSS("font-size", "14px");
+  await expect(page.locator(".synopsis-purpose > h3")).toHaveCSS(
+    "font-size",
+    await page.locator(".synopsis-impact > h3").evaluate(
+      (element) => getComputedStyle(element).fontSize,
+    ),
+  );
   await expect(page.locator(".section-heading h2").first()).toHaveCSS(
     "font-size",
     "16px",
@@ -658,7 +675,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await page.locator(".behavior-visual > header > p").evaluate((element) => {
     element.textContent = "LongUnbrokenTeachingAidCaption".repeat(80);
   });
-  await page.locator(".goal .claim p bdi").evaluate((element) => {
+  await page.locator(".synopsis-purpose .claim p bdi").evaluate((element) => {
     element.textContent = "LongUnbrokenGoal".repeat(120);
   });
   await page.locator(".shift-before .claim p bdi").evaluate((element) => {

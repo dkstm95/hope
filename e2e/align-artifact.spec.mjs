@@ -102,8 +102,11 @@ test("Align presents one compact current agreement with secondary history", asyn
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("실패한 업로드 복구");
   await expect(page.locator("#overview-title")).toHaveText("01요약");
-  await expect(page.locator(".goal-label")).toHaveText("목표");
-  await expect(page.locator(".goal")).toContainText("중단된 업로드를 감지해");
+  const goalRow = page.locator(".overview .synopsis > div").first();
+  await expect(goalRow.locator("dt")).toHaveText("목표");
+  await expect(goalRow.locator("dd")).toContainText("중단된 업로드를 감지해");
+  await expect(page.locator(".overview .synopsis > div")).toHaveCount(4);
+  await expect(page.locator(".goal, .goal-label")).toHaveCount(0);
   await expect(page.locator(".synopsis dt").filter({ hasText: "완료 기준" })).toHaveCount(1);
   await expect(page.locator(".overview .check-list > li")).toHaveCount(3);
   await expect(page.locator(".overview .check-list")).toHaveCSS(
@@ -238,6 +241,18 @@ test("Align presents one compact current agreement with secondary history", asyn
     item.optionId?.startsWith("design-direction-")
       && item.parentClass.includes("design-direction")
   ))).toBe(true);
+  const sectionBoundaryWidths = await page.evaluate(() => ({
+    agreementContentTop: getComputedStyle(document.querySelector(".agreement-groups")).borderTopWidth,
+    agreementTitleBottom: getComputedStyle(document.querySelector("#agreement-title")).borderBottomWidth,
+    directionContentTop: getComputedStyle(document.querySelector(".design-direction-list")).borderTopWidth,
+    directionTitleBottom: getComputedStyle(document.querySelector("#design-directions-title")).borderBottomWidth,
+  }));
+  expect(sectionBoundaryWidths).toEqual({
+    agreementContentTop: "0px",
+    agreementTitleBottom: "2px",
+    directionContentTop: "0px",
+    directionTitleBottom: "2px",
+  });
   const behaviorTops = await page.locator(".behavior-steps > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );

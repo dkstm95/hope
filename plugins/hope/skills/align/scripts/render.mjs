@@ -187,9 +187,8 @@ function checkList(content, dictionary) {
 function overview(content, dictionary, number) {
   return `<section class="overview document-section" id="overview" aria-labelledby="overview-title">
     ${sectionTitle("overview-title", label(dictionary, "overview"), number)}
-    <p class="goal-label">${escapeHtml(label(dictionary, "goal"))}</p>
-    <div class="goal">${authoredParagraphs(goalValue(content))}</div>
     <dl class="synopsis">
+      <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd>${authoredParagraphs(goalValue(content))}</dd></div>
       <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredParagraphs(content.problem)}</dd></div>
       <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
       <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredParagraphs(content.boundary)}</dd></div>
@@ -557,10 +556,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .section-title { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: baseline; }
 .section-number { color: var(--accent); font-size: inherit; line-height: inherit; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
-.goal-label { margin-top: ${space3}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
-.goal { margin-top: ${space1}px; font-size: ${TYPE.goal.wide.fontSize}px; line-height: ${TYPE.goal.wide.lineHeight}; }
-.goal p + p, .synopsis dd p + p { margin-top: ${space2}px; }
-.synopsis { margin-top: ${space5}px; border-top: 1px solid var(--border); }
+.synopsis dd p + p { margin-top: ${space2}px; }
 .synopsis > div { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: ${space5}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
 .synopsis dt { font-weight: 700; }
 .synopsis dd { margin: 0; }
@@ -584,7 +580,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .section-title { width: 100%; margin: 0 0 ${space4}px; padding-bottom: ${space3}px; border-bottom: 2px solid var(--component-border); color: var(--text); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
-.design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
+.design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .design-direction-list.design-direction-count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .design-direction { min-width: 0; padding: ${space4}px ${space4}px ${space5}px; }
 .design-direction + .design-direction { border-left: 1px solid var(--border); }
@@ -631,7 +627,6 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .behavior-outcomes li + li { margin-top: ${space4}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
 .outcome-mark { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--accent); border-radius: 50%; color: var(--accent); font-weight: 700; }
 .behavior-outcomes .cancel .outcome-mark { border-color: var(--component-border); color: var(--muted); }
-.agreement-groups { border-top: 1px solid var(--border); }
 .agreement-groups > div { padding: ${space4}px ${space2}px 0; }
 .agreement-groups > div + div { margin-top: ${space5}px; padding-top: ${space5}px; border-top: 1px solid var(--border); }
 .subheading { margin: 0 0 ${space3}px; color: var(--accent); font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
@@ -683,8 +678,6 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .document-head + .document-section,
   .document-section + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .document-head h1 { font-size: ${TYPE.pageTitle.narrow.fontSize}px; line-height: ${TYPE.pageTitle.narrow.lineHeight}; }
-  .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
-  .goal { font-size: ${TYPE.goal.narrow.fontSize}px; line-height: ${TYPE.goal.narrow.lineHeight}; }
   .check-verification { font-size: ${TYPE.supporting.narrow.fontSize}px; }
   .check-verification > summary, .direction-references > summary, .decision-disclosure > summary { min-height: 44px; }
   .scope { grid-template-columns: 1fr; }
