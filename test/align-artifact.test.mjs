@@ -423,7 +423,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="11"/u);
+  assert.match(first, /name="hope-align-design-version" content="12"/u);
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
@@ -436,6 +436,11 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.doesNotMatch(first, /id="intent-history"/u);
   assert.doesNotMatch(first, /id="goal-history"/u);
   assert.match(first, />목표</u);
+  assert.match(
+    first,
+    /<header class="document-head">\s*<h1 id="artifact-title">[\s\S]*?<\/h1>\s*<\/header><section class="overview document-section" id="overview" aria-labelledby="overview-title">\s*<h2 class="section-title" id="overview-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u,
+  );
+  assert.doesNotMatch(first, /artifact-title-line/u);
   assert.match(first, />완료 기준</u);
   assert.match(first, />확정 사항</u);
   assert.match(first, />구현 시 결정 사항</u);

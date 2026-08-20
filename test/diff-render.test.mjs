@@ -89,8 +89,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 13);
-  assert.equal(first.designVersion, 6);
+  assert.equal(first.rendererVersion, 14);
+  assert.equal(first.designVersion, 7);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -120,8 +120,9 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /class="pr-hero"/u);
   assert.match(
     html,
-    /<section class="synopsis" id="synopsis"[\s\S]*?<header class="synopsis-head">[\s\S]*?<h1 id="review-title">/u,
+    /<header class="document-title">[\s\S]*?<h1 id="review-title">[\s\S]*?<\/h1>[\s\S]*?<\/header>[\s\S]*?<section class="synopsis" id="synopsis"[\s\S]*?<h2 id="synopsis-title"><span class="section-number">01<\/span><span>Summary<\/span><\/h2>/u,
   );
+  assert.doesNotMatch(html, /artifact-title-line|synopsis-head/u);
   assert.doesNotMatch(html, /target="_blank"/u);
   assert.doesNotMatch(header, /<h1>/u);
   assert.match(header, /<details class="toc-mobile">/u);
@@ -156,22 +157,24 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     }),
     /alternateLocale must name a supported locale and sibling HTML file/u,
   );
-  const synopsisHead = html.match(
-    /<header class="synopsis-head">[\s\S]*?<\/header>/u,
+  const documentTitleHtml = html.match(
+    /<header class="document-title">[\s\S]*?<\/header>/u,
   )?.[0] ?? "";
-  assert.doesNotMatch(synopsisHead, /example\/hope · PR #142/u);
-  assert.doesNotMatch(synopsisHead, /<a /u);
+  assert.doesNotMatch(documentTitleHtml, /example\/hope · PR #142/u);
+  assert.doesNotMatch(documentTitleHtml, /<a /u);
   assert.match(
-    synopsisHead,
+    documentTitleHtml,
     /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><\/h1>/u,
   );
-  assert.doesNotMatch(synopsisHead, /&lt;script/u);
-  assert.match(synopsisHead, /<div class="goal-label">Goal<\/div>/u);
-  assert.match(synopsisHead, /Return the final error after all retries fail\./u);
-  assert.doesNotMatch(synopsisHead, /<dl>|<dt>|Captured|Commit/u);
+  assert.doesNotMatch(documentTitleHtml, /&lt;script|Goal|<dl>|<dt>|Captured|Commit/u);
+  const synopsisHtml = html.match(
+    /<section class="synopsis" id="synopsis"[\s\S]*?<\/section>/u,
+  )?.[0] ?? "";
+  assert.match(synopsisHtml, /<div class="goal-label">Goal<\/div>/u);
+  assert.match(synopsisHtml, /Return the final error after all retries fail\./u);
   assert.match(
     html,
-    /<h2 class="sr-only" id="synopsis-title">Summary<\/h2>/u,
+    /<h2 id="synopsis-title"><span class="section-number">01<\/span><span>Summary<\/span><\/h2>/u,
   );
   assert.doesNotMatch(html, /class="pr-freshness"/u);
   assert.doesNotMatch(
@@ -392,7 +395,7 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(html, /<html lang="ko-KR" data-theme="dark">/u);
   assert.match(html, /핵심 변경/u);
   assert.equal((html.match(/>요약</gu) ?? []).length, 3);
-  assert.match(html, /<h2 class="sr-only" id="synopsis-title">요약<\/h2>/u);
+  assert.match(html, /<h2 id="synopsis-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u);
   assert.match(html, />목표</u);
   assert.match(html, />AS-IS</u);
   assert.match(html, />TO-BE</u);

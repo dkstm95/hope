@@ -160,6 +160,12 @@ function sectionTitle(id, title, number, suffix = "") {
   return `<h2 class="section-title" id="${escapeHtml(id)}"><span class="section-number">${sectionOrdinal(number)}</span><span>${escapeHtml(title)}${suffix}</span></h2>`;
 }
 
+function documentTitle(content) {
+  return `<header class="document-head">
+    <h1 id="artifact-title">${authoredText(content.title)}</h1>
+  </header>`;
+}
+
 function checkList(content, dictionary) {
   const checks = content.checks ?? content.success.map((condition) => ({ condition }));
   return `<ol class="check-list">${checks.map((check) => {
@@ -175,12 +181,10 @@ function checkList(content, dictionary) {
 }
 
 function overview(content, dictionary, number) {
-  return `<section class="overview document-section" id="overview" aria-labelledby="artifact-title">
-    <header class="document-head">
-      <div class="artifact-title-line"><span class="section-number">${sectionOrdinal(number)}</span><h1 id="artifact-title">${authoredText(content.title)}</h1></div>
-      <p class="goal-label">${escapeHtml(label(dictionary, "goal"))}</p>
-      <div class="goal">${authoredParagraphs(goalValue(content))}</div>
-    </header>
+  return `<section class="overview document-section" id="overview" aria-labelledby="overview-title">
+    ${sectionTitle("overview-title", label(dictionary, "overview"), number)}
+    <p class="goal-label">${escapeHtml(label(dictionary, "goal"))}</p>
+    <div class="goal">${authoredParagraphs(goalValue(content))}</div>
     <dl class="synopsis">
       <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredParagraphs(content.problem)}</dd></div>
       <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
@@ -537,10 +541,11 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .revision-popup .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
 .revision-popup .direction-decisions > div + div { border-top: 1px solid var(--border); border-left: 0; }
 .older-history > ol { list-style: none; padding: ${space3}px 0 0; }
-.document-section + .document-section { margin-top: ${space8}px; }
 .document-head { max-width: 78ch; }
-.artifact-title-line, .section-title { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: baseline; }
-.section-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.document-head + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
+.document-section + .document-section { margin-top: ${space6}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
+.section-title { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: baseline; }
+.section-number { color: var(--accent); font-size: inherit; line-height: inherit; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
 .goal-label { margin-top: ${space3}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .goal { margin-top: ${space1}px; font-size: ${TYPE.goal.wide.fontSize}px; line-height: ${TYPE.goal.wide.lineHeight}; }
@@ -560,7 +565,6 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .check-verification[open] > summary::after { transform: rotate(90deg); }
 .check-verification-content { padding: 0 0 ${space1}px; }
 .check-verification-content p + p { margin-top: ${space1}px; }
-.overview + .scope { margin-top: ${space7}px; }
 .scope { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .scope > .section-title { grid-column: 1 / -1; }
 .scope-column { padding: ${space4}px ${space2}px ${space5}px; }
@@ -668,7 +672,8 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .brand { font-size: ${TYPE.brand.narrow.fontSize}px; line-height: ${TYPE.brand.narrow.lineHeight}; }
   .repository { max-width: 30vw; }
   .main { padding: ${space8}px ${space4}px ${space9}px; }
-  .document-section + .document-section { margin-top: ${space7}px; }
+  .document-head + .document-section,
+  .document-section + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .document-head h1 { font-size: ${TYPE.pageTitle.narrow.fontSize}px; line-height: ${TYPE.pageTitle.narrow.lineHeight}; }
   .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
   .goal { font-size: ${TYPE.goal.narrow.fontSize}px; line-height: ${TYPE.goal.narrow.lineHeight}; }
@@ -839,7 +844,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
     </div>
   </header>
   <div class="layout">
-    <main class="main" id="agreement-document">${sections.map((section) => section.html).join("")}</main>
+    <main class="main" id="agreement-document">${documentTitle(content)}${sections.map((section) => section.html).join("")}</main>
     <aside class="rail"><div class="rail-inner">
       ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}"><h2>${escapeHtml(label(dictionary, "toc"))}</h2>${toc}</nav>` : ""}
       ${railHistory(data, dictionary)}

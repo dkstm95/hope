@@ -99,9 +99,10 @@ value:
 3. Review items
 4. Evidence and scope
 
-Number every rendered top-level area continuously from `01`. Use the same
-number beside the area title and beside its table-of-contents link. When a
-conditional area is omitted, do not leave a gap.
+Place the unnumbered document title first. Start the numbered reading areas
+below it with a visible `01 Summary`. Use the same number beside each area
+title and beside its table-of-contents link. When a conditional area is
+omitted, do not leave a gap.
 
 Summary previews the most important review items. Keep the complete **Review
 items** section in a native disclosure that starts closed; a fragment link to a
@@ -450,13 +451,17 @@ in Hope's language.
 Use one linear document. Give the current agreement most of the page and keep
 version history secondary.
 
-Number every rendered top-level area continuously from `01`. Use the same
-number beside the area title and beside its table-of-contents link. Omitted
-optional areas do not leave gaps.
+Place the unnumbered document title first. Start the numbered reading areas
+below it with a visible `01 Summary`. Use the same number beside each area
+title and beside its table-of-contents link. Omitted optional areas do not
+leave gaps. Keep each section number the same type size and line height as its
+title.
 
-Separate top-level areas by 48 pixels on a wide screen and 40 pixels on a
-narrow screen. Use the smaller internal spacing steps for related content
-inside one area.
+Use one thin divider between the title and Summary and between later top-level
+areas. Combine margin and padding into 40 pixels between the title and Summary.
+Between later areas, use 48 pixels on a wide screen and 40 pixels on a narrow
+screen. Use the smaller internal spacing steps for related content inside one
+area.
 
 On a wide screen, place a narrow rail beside the document. Show a table of
 contents only when it improves navigation. Keep the current version and at
@@ -548,8 +553,9 @@ control family.
 
 The product bar owns repository and pull request identity.
 
-The synopsis owns the change-based artifact title and goal. The product bar owns
-the compact reviewed commit, and collapsed review information owns capture time.
+The document owns the change-based artifact title. Summary owns the goal. The
+product bar owns the compact reviewed commit, and collapsed review information
+owns capture time.
 
 Do not repeat repository identity.
 
@@ -663,17 +669,14 @@ Separate preview items with spacing, not rules.
 
 Use semantic `ul` and `ol` elements for content that is a list.
 
-Make the first-screen synopsis one self-contained reading area with the same
-title, goal, label-and-value rows, and thin-divider rhythm as Align.
+Put the unnumbered change-based artifact title first. Start the self-contained
+synopsis below it with a visible `01 Summary`, followed by the goal and
+label-and-value rows. Keep the provider's pull-request title and capture time in
+collapsed review information.
 
-Put the change-based artifact title and goal in its header. Keep the provider's
-pull-request title and capture time in collapsed review information.
-
-Do not place a second title block above it or show a generic **Summary** title
-inside it.
-
-Keep **Summary** as a quiet navigation and screen-reader heading so the document
-heading order remains intact.
+Use the same thin-divider rhythm as Align: one divider between the document
+title and Summary and between later top-level areas. Keep each section number
+the same type size and line height as its title.
 
 In each full review item, align kind, importance, and basis on one visual
 centerline.

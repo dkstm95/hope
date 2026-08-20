@@ -474,8 +474,15 @@ function sectionOrdinal(number) {
   return String(number).padStart(2, "0");
 }
 
-function sectionHeading(title, number) {
-  return `<h2><span class="section-number">${sectionOrdinal(number)}</span><span>${html(title)}</span></h2>`;
+function sectionHeading(title, number, id = "") {
+  const idAttribute = id === "" ? "" : ` id="${html(id)}"`;
+  return `<h2${idAttribute}><span class="section-number">${sectionOrdinal(number)}</span><span>${html(title)}</span></h2>`;
+}
+
+function documentTitle(title) {
+  return `<header class="document-title">
+    <h1 id="review-title">${userText(title)}</h1>
+  </header>`;
 }
 
 function section({ id, title, content, number }) {
@@ -632,7 +639,7 @@ function contextCheck(
   </details>`;
 }
 
-function synopsis(review, dictionary, codeRenderer, { number, title }) {
+function synopsis(review, dictionary, codeRenderer, { number }) {
   const visibleItems = review.reviewItems.slice(0, 3);
   const hiddenItems = review.reviewItems.length - visibleItems.length;
   const materialLimits = review.limits.filter((limit) => limit.material);
@@ -657,20 +664,19 @@ function synopsis(review, dictionary, codeRenderer, { number, title }) {
       </div>
     </section>`;
   return `<section class="synopsis" id="synopsis" aria-labelledby="synopsis-title">
-    <header class="synopsis-head">
-      <div class="artifact-title-line"><span class="section-number">${sectionOrdinal(number)}</span><h1 id="review-title">${userText(title)}</h1></div>
-      <div class="goal-label">${html(label(dictionary, "synopsis.purpose"))}</div>
-      <div class="goal">${claimBlock(
-        review.purpose,
-        dictionary,
-        review,
-        codeRenderer,
-        "",
-        review.purpose.text,
-        false,
-      )}</div>
-    </header>
-    <h2 class="sr-only" id="synopsis-title">${html(label(dictionary, "section.synopsis"))}</h2>
+    <div class="section-heading">
+      ${sectionHeading(label(dictionary, "section.synopsis"), number, "synopsis-title")}
+    </div>
+    <div class="goal-label">${html(label(dictionary, "synopsis.purpose"))}</div>
+    <div class="goal">${claimBlock(
+      review.purpose,
+      dictionary,
+      review,
+      codeRenderer,
+      "",
+      review.purpose.text,
+      false,
+    )}</div>
     <div class="synopsis-grid">
       ${background}
       <div class="before-after change-shift" role="group" aria-labelledby="synopsis-before-title synopsis-now-title">
@@ -1549,22 +1555,18 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .toc-link:focus { color: var(--text); }
 .toc-mobile { display: none; }
 
+.document-title { max-width: ${LAYOUT.proseWidth}; }
+.document-title + .synopsis { margin-top: ${space5}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
 .synopsis { margin: 0; }
-.synopsis-head { max-width: ${LAYOUT.proseWidth}; }
-.artifact-title-line {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: baseline;
-  gap: ${space2}px;
-}
 .section-number {
   color: var(--accent);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-size: inherit;
+  line-height: inherit;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: .02em;
 }
-.synopsis-head h1 {
+.document-title h1 {
   min-width: 0;
   margin: 0;
   font-size: ${widePageTitle.fontSize}px;
@@ -1802,9 +1804,8 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   border: 0;
 }
 .synopsis + .review-section,
-.review-section + .review-section { margin-top: ${space8}px; }
+.review-section + .review-section { margin-top: ${space6}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
 .review-section-collapsible:not([open]) {
-  padding-top: 0;
   padding-bottom: 0;
 }
 .review-section-collapsible > .section-heading {
@@ -2789,13 +2790,14 @@ td:first-child {
   .pull-request-link {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
   }
-  .synopsis-head h1 {
+  .document-title h1 {
     font-size: ${narrowPageTitle.fontSize}px;
     line-height: ${narrowPageTitle.lineHeight};
   }
   .main { padding: ${space8}px ${space4}px ${space9}px; }
+  .document-title + .synopsis,
   .synopsis + .review-section,
-  .review-section + .review-section { margin-top: ${space7}px; }
+  .review-section + .review-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .goal-label { font-size: ${TYPE.supporting.narrow.fontSize}px; }
   .goal {
     font-size: ${TYPE.goal.narrow.fontSize}px;
@@ -3089,7 +3091,8 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const script = clientScript(dictionary);
   const title = review.title.text;
   const sections = buildSections(review, dictionary, codeRenderer);
-  const synopsisHtml = synopsis(review, dictionary, codeRenderer, { number: 1, title });
+  const documentTitleHtml = documentTitle(title);
+  const synopsisHtml = synopsis(review, dictionary, codeRenderer, { number: 1 });
   const styles = css(Object.fromEntries(Object.entries(fontBytes).map(
     ([name, bytes]) => [name, bytes.toString("base64")],
   )));
@@ -3174,6 +3177,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
   <div class="layout">
     <main class="main" id="review">
       ${localeWarning}
+      ${documentTitleHtml}
       ${synopsisHtml}
       ${sections.map((item) => item.html).join("")}
     </main>

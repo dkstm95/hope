@@ -312,20 +312,18 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
   });
   await openArtifact(page, viewports.desktop);
-  await expect(page.locator("#synopsis > h2")).toHaveText("요약");
-  const synopsisLabelStyle = await page.locator("#synopsis > h2").evaluate(
+  await expect(page.locator("#synopsis-title")).toHaveText("01요약");
+  const synopsisLabelStyle = await page.locator("#synopsis-title").evaluate(
     (element) => ({
-      clip: getComputedStyle(element).clip,
+      display: getComputedStyle(element).display,
       position: getComputedStyle(element).position,
       width: getComputedStyle(element).width,
     }),
   );
-  expect(synopsisLabelStyle).toEqual({
-    clip: "rect(0px, 0px, 0px, 0px)",
-    position: "absolute",
-    width: "1px",
-  });
-  await expect(page.locator("#synopsis > .synopsis-head > .artifact-title-line > h1")).toBeVisible();
+  expect(synopsisLabelStyle.display).toBe("grid");
+  expect(synopsisLabelStyle.position).toBe("static");
+  expect(Number.parseFloat(synopsisLabelStyle.width)).toBeGreaterThan(100);
+  await expect(page.locator(".document-title > h1")).toBeVisible();
   await expect(page.locator(".synopsis-row > h3").first()).toHaveCSS(
     "padding-top",
     "2px",
@@ -340,7 +338,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   );
   await expect(pullRequestLink).toHaveAttribute("aria-label", "PR #142 열기");
   await expect(page.locator(".pr-hero")).toHaveCount(0);
-  await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
+  await expect(page.locator(".document-title")).not.toContainText(
     "example/hope · PR #142",
   );
   await expect(page.locator("header .commit-status")).toHaveText("bbbbbbbb");
@@ -348,11 +346,11 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     "title",
     `검토 커밋 ${"b".repeat(40)}`,
   );
-  await expect(page.locator("#synopsis > .synopsis-head .goal-label")).toHaveText(
+  await expect(page.locator("#synopsis > .goal-label")).toHaveText(
     "목표",
   );
-  await expect(page.locator("#synopsis > .synopsis-head dt")).toHaveCount(0);
-  await expect(page.locator("#synopsis > .synopsis-head")).not.toContainText(
+  await expect(page.locator("#synopsis > dt")).toHaveCount(0);
+  await expect(page.locator("#synopsis")).not.toContainText(
     "이 오프라인 파일은 이후 PR 변경을 자동으로 반영하지 않습니다.",
   );
   await expect(page.locator("#synopsis .review-result")).toHaveCount(0);
@@ -464,19 +462,31 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   const baselineGeometry = await page.evaluate(() => ({
     brandRepositoryGap: document.querySelector(".top-context").getBoundingClientRect().left
       - document.querySelector(".brand").getBoundingClientRect().right,
+    firstSectionBorder: getComputedStyle(document.querySelector("#synopsis")).borderTopWidth,
+    firstSectionMargin: getComputedStyle(document.querySelector("#synopsis")).marginTop,
+    firstSectionPadding: getComputedStyle(document.querySelector("#synopsis")).paddingTop,
     railLeft: document.querySelector(".toc-desktop").getBoundingClientRect().left,
     repositoryCommitGap: document.querySelector(".commit-status").getBoundingClientRect().left
       - document.querySelector(".top-context").getBoundingClientRect().right,
-    titleNumberLeft: document.querySelector(".artifact-title-line > .section-number").getBoundingClientRect().left,
+    summaryLabelFontSize: getComputedStyle(document.querySelector("#synopsis-title > span:last-child")).fontSize,
+    summaryLabelLeft: document.querySelector("#synopsis-title > span:last-child").getBoundingClientRect().left,
+    summaryNumberFontSize: getComputedStyle(document.querySelector("#synopsis-title > .section-number")).fontSize,
+    summaryNumberLeft: document.querySelector("#synopsis-title > .section-number").getBoundingClientRect().left,
     titleLeft: document.querySelector("#review-title").getBoundingClientRect().left,
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
   expect(baselineGeometry).toEqual({
     brandRepositoryGap: 24,
+    firstSectionBorder: "1px",
+    firstSectionMargin: "24px",
+    firstSectionPadding: "16px",
     railLeft: 1204,
     repositoryCommitGap: 24,
-    titleLeft: 76,
-    titleNumberLeft: 40,
+    summaryLabelFontSize: "18px",
+    summaryLabelLeft: 76,
+    summaryNumberFontSize: "18px",
+    summaryNumberLeft: 40,
+    titleLeft: 40,
     topbarHeight: 58,
   });
   await expect(
@@ -984,16 +994,20 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   const mobileToc = page.locator(".toc-mobile");
   const mobileTocSummary = mobileToc.locator(":scope > summary");
   await expect(mobileToc.locator("xpath=ancestor::header[1]")).toHaveCount(1);
-  const { contentTop, synopsisTop } = await page.evaluate(() => {
+  const { contentTop, synopsisTop, titleBottom, titleTop } = await page.evaluate(() => {
     const main = document.querySelector("main");
     const synopsis = document.querySelector("#synopsis");
+    const title = document.querySelector(".document-title").getBoundingClientRect();
     const mainBox = main.getBoundingClientRect();
     return {
       contentTop: mainBox.top + Number.parseFloat(getComputedStyle(main).paddingTop),
       synopsisTop: synopsis.getBoundingClientRect().top,
+      titleBottom: title.bottom,
+      titleTop: title.top,
     };
   });
-  expect(Math.abs(synopsisTop - contentTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(titleTop - contentTop)).toBeLessThanOrEqual(1);
+  expect(synopsisTop).toBeGreaterThan(titleBottom);
   const synopsis = await page.locator("#synopsis").boundingBox();
   expect(synopsis).not.toBeNull();
   const synopsisTopBeforeOpen = synopsis.y;
@@ -1202,11 +1216,21 @@ test("closed disclosures stay compact", async ({
   ]) {
     const disclosure = page.locator(selector);
     await expect(disclosure).not.toHaveAttribute("open", "");
-    const dimensions = await disclosure.evaluate((element) => ({
-      disclosure: element.getBoundingClientRect().height,
-      summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
-    }));
-    expect(dimensions.disclosure - dimensions.summary).toBeLessThanOrEqual(2);
+    const dimensions = await disclosure.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        chrome: [
+          style.borderTopWidth,
+          style.borderBottomWidth,
+          style.paddingTop,
+          style.paddingBottom,
+        ].reduce((total, value) => total + Number.parseFloat(value), 0),
+        disclosure: element.getBoundingClientRect().height,
+        summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
+      };
+    });
+    expect(Math.abs(dimensions.disclosure - dimensions.summary - dimensions.chrome))
+      .toBeLessThanOrEqual(1);
   }
 
   const artifactDetails = page.locator(".artifact-details");
@@ -1221,11 +1245,22 @@ test("closed disclosures stay compact", async ({
 
   const evidence = page.locator("#evidence-and-scope");
   await evidence.locator(":scope > summary").click();
-  const collapsedDimensions = await evidence.evaluate((element) => ({
-    disclosure: element.getBoundingClientRect().height,
-    summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
-  }));
-  expect(collapsedDimensions.disclosure - collapsedDimensions.summary).toBeLessThanOrEqual(2);
+  const collapsedDimensions = await evidence.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      chrome: [
+        style.borderTopWidth,
+        style.borderBottomWidth,
+        style.paddingTop,
+        style.paddingBottom,
+      ].reduce((total, value) => total + Number.parseFloat(value), 0),
+      disclosure: element.getBoundingClientRect().height,
+      summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
+    };
+  });
+  expect(Math.abs(
+    collapsedDimensions.disclosure - collapsedDimensions.summary - collapsedDimensions.chrome,
+  )).toBeLessThanOrEqual(1);
 });
 
 test("the evidence appendix starts open while its groups and code evidence stay closed", async ({

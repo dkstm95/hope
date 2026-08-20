@@ -108,25 +108,61 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
     const tocEntries = await page.locator(`${tocSelector} .toc-link`).evaluateAll((links) => links.map((link) => ({
       id: link.getAttribute("href")?.slice(1),
       number: link.querySelector(".toc-number")?.textContent,
+      title: link.querySelector("span:last-child")?.textContent,
     })));
     const bodyEntries = await page.locator(".main > [id]").evaluateAll((sections) => sections.flatMap((section) => {
-      const number = section.querySelector(":scope > .document-head .section-number, :scope > .section-title .section-number, :scope > .section-heading .section-number, :scope > .synopsis-head .section-number, :scope > summary .section-number");
-      return number ? [{ id: section.id, number: number.textContent }] : [];
+      const heading = section.querySelector(":scope > .section-title, :scope > .section-heading > h2, :scope > summary > h2");
+      const number = heading?.querySelector(".section-number");
+      const title = heading?.querySelector("span:last-child");
+      return number ? [{
+        id: section.id,
+        number: number.textContent,
+        title: title?.textContent?.split(" · ")[0].trim(),
+      }] : [];
     }));
     expect(tocEntries).toEqual(bodyEntries);
     expect(tocEntries.map((entry) => entry.number)).toEqual(
       tocEntries.map((_, index) => String(index + 1).padStart(2, "0")),
     );
+    expect(tocEntries[0].title).toBe("Summary");
+    const titleSelector = example.name === "Align" ? ".document-head > h1" : ".document-title > h1";
+    const firstSectionSelector = example.name === "Align" ? "#overview" : "#synopsis";
+    const firstHeadingSelector = example.name === "Align" ? "#overview-title" : "#synopsis-title";
+    await expect(page.locator(titleSelector)).toBeVisible();
+    await expect(page.locator(`${titleSelector} .section-number`)).toHaveCount(0);
+    const readingRhythm = await page.evaluate(({ firstHeadingSelector, firstSectionSelector, titleSelector }) => {
+      const firstSection = document.querySelector(firstSectionSelector);
+      const heading = document.querySelector(firstHeadingSelector);
+      const number = heading.querySelector(".section-number");
+      const label = heading.querySelector("span:last-child");
+      return {
+        border: getComputedStyle(firstSection).borderTopWidth,
+        labelFontSize: getComputedStyle(label).fontSize,
+        margin: getComputedStyle(firstSection).marginTop,
+        numberFontSize: getComputedStyle(number).fontSize,
+        padding: getComputedStyle(firstSection).paddingTop,
+        titleLeft: document.querySelector(titleSelector).getBoundingClientRect().left,
+      };
+    }, { firstHeadingSelector, firstSectionSelector, titleSelector });
+    expect(readingRhythm).toMatchObject({
+      border: "1px",
+      labelFontSize: "18px",
+      margin: "24px",
+      numberFontSize: "18px",
+      padding: "16px",
+      titleLeft: 40,
+    });
     await expect(page.locator(".display-controls > .locale-menu")).toHaveCount(1);
     await expect(page.locator(".display-controls > .theme-button")).toHaveCount(1);
     if (example.name === "Diff") {
       await expect(page.locator(".display-controls .pull-request-link")).toHaveCount(0);
       await expect(page.locator(".topbar-actions > .pull-request-link")).toHaveCount(1);
     }
-    metrics.push({ controls, product, toc });
+    metrics.push({ controls, product, readingRhythm, toc });
   }
   expect(metrics[0].product).toEqual(metrics[1].product);
   expect(metrics[0].controls).toEqual(metrics[1].controls);
+  expect(metrics[0].readingRhythm).toEqual(metrics[1].readingRhythm);
   expect(metrics[0].toc).toEqual(metrics[1].toc);
   expect(metrics[0].controls).toMatchObject({
     borderRadius: "6px",

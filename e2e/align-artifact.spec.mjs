@@ -101,6 +101,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   await page.goto(artifactUrl);
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("실패한 업로드 복구");
+  await expect(page.locator("#overview-title")).toHaveText("01요약");
   await expect(page.locator(".goal-label")).toHaveText("목표");
   await expect(page.locator(".goal")).toContainText("중단된 업로드를 감지해");
   await expect(page.locator(".synopsis dt").filter({ hasText: "완료 기준" })).toHaveCount(1);
@@ -253,18 +254,29 @@ test("Align presents one compact current agreement with secondary history", asyn
   const geometry = await page.evaluate(() => ({
     brandRepositoryGap: document.querySelector(".repository").getBoundingClientRect().left
       - document.querySelector(".brand").getBoundingClientRect().right,
+    firstSectionBorder: getComputedStyle(document.querySelector("#overview")).borderTopWidth,
+    firstSectionMargin: getComputedStyle(document.querySelector("#overview")).marginTop,
+    firstSectionPadding: getComputedStyle(document.querySelector("#overview")).paddingTop,
     railLeft: document.querySelector(".rail").getBoundingClientRect().left,
     repositoryStatusGap: document.querySelector(".status").getBoundingClientRect().left
       - document.querySelector(".repository").getBoundingClientRect().right,
-    titleNumberLeft: document.querySelector(".artifact-title-line > .section-number").getBoundingClientRect().left,
+    summaryLabelFontSize: getComputedStyle(document.querySelector("#overview-title > span:last-child")).fontSize,
+    summaryLabelLeft: document.querySelector("#overview-title > span:last-child").getBoundingClientRect().left,
+    summaryNumberFontSize: getComputedStyle(document.querySelector("#overview-title > .section-number")).fontSize,
+    summaryNumberLeft: document.querySelector("#overview-title > .section-number").getBoundingClientRect().left,
     titleLeft: document.querySelector("h1").getBoundingClientRect().left,
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
   expect(geometry.brandRepositoryGap).toBe(24);
   expect(geometry.repositoryStatusGap).toBe(24);
   expect(geometry.railLeft).toBe(932);
-  expect(geometry.titleLeft).toBe(76);
-  expect(geometry.titleNumberLeft).toBe(40);
+  expect(geometry.titleLeft).toBe(40);
+  expect(geometry.summaryNumberLeft).toBe(40);
+  expect(geometry.summaryLabelLeft).toBe(76);
+  expect(geometry.summaryNumberFontSize).toBe(geometry.summaryLabelFontSize);
+  expect(geometry.firstSectionBorder).toBe("1px");
+  expect(geometry.firstSectionMargin).toBe("24px");
+  expect(geometry.firstSectionPadding).toBe("16px");
   expect(geometry.topbarHeight).toBe(58);
   await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
   await expect(page.locator(".decision-number")).toHaveText(["01", "02"]);
