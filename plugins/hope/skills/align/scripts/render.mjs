@@ -156,6 +156,10 @@ function sectionOrdinal(number) {
   return String(number).padStart(2, "0");
 }
 
+function tocHeading(dictionary, count) {
+  return `<h2 class="toc-heading"><span>${escapeHtml(label(dictionary, "toc"))}</span><span class="toc-progress"><span data-toc-current>1</span> / ${count}</span></h2>`;
+}
+
 function sectionTitle(id, title, number, suffix = "") {
   return `<h2 class="section-title" id="${escapeHtml(id)}"><span class="section-number">${sectionOrdinal(number)}</span><span>${escapeHtml(title)}${suffix}</span></h2>`;
 }
@@ -218,7 +222,6 @@ function directionReferences(references, dictionary) {
 }
 
 function designDirectionsComparison(directions, dictionary, idPrefix = "") {
-  const optionById = new Map(directions.options.map((option) => [option.id, option]));
   const status = (option) => [
     option.id === directions.recommendation.optionId
       ? `<span class="direction-status recommended">${escapeHtml(label(dictionary, "recommended"))}</span>`
@@ -227,29 +230,34 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
       ? `<span class="direction-status selected">${escapeHtml(label(dictionary, "selected"))}</span>`
       : "",
   ].join("");
+  const rationale = (option) => {
+    const rows = [];
+    if (option.id === directions.recommendation.optionId) {
+      rows.push(`<div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd>${authoredParagraphs(directions.recommendation.reason)}</dd></div>`);
+    }
+    if (option.id === directions.selection.optionId) {
+      const decidedBy = directions.selection.decidedBy === "delegated"
+        ? label(dictionary, "decidedByDelegated")
+        : label(dictionary, "decidedByUser");
+      rows.push(`<div><dt>${escapeHtml(label(dictionary, "selection"))}<span class="selection-source">${escapeHtml(decidedBy)}</span></dt><dd>${authoredParagraphs(directions.selection.reason)}</dd></div>`);
+    }
+    return rows.length === 0 ? "" : `<dl class="direction-rationales">${rows.join("")}</dl>`;
+  };
   const optionList = directions.options.map((option, index) => {
     const optionId = `${idPrefix}design-direction-${option.id}`;
+    const rationaleHtml = rationale(option);
     return `<li class="design-direction" id="${escapeHtml(optionId)}">
     <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><div class="direction-title-line"><h3 id="${escapeHtml(optionId)}-title">${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></div></header>
     <div class="direction-image"><img src="data:${option.image.mimeType};base64,${option.image.data}" alt="${escapeHtml(option.alt)}" width="${option.image.width}" height="${option.image.height}"></div>
     <div class="direction-summary">${authoredParagraphs(option.summary)}</div>
-    <div class="direction-details">
+${rationaleHtml === "" ? "" : `    ${rationaleHtml}\n`}    <div class="direction-details">
       <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
       <div><h4>${escapeHtml(label(dictionary, "tradeoffs"))}</h4>${textList(option.tradeoffs)}</div>
     </div>
     ${directionReferences(option.references, dictionary)}
   </li>`;
   }).join("");
-  const recommendation = optionById.get(directions.recommendation.optionId);
-  const selection = optionById.get(directions.selection.optionId);
-  const decidedBy = directions.selection.decidedBy === "delegated"
-    ? label(dictionary, "decidedByDelegated")
-    : label(dictionary, "decidedByUser");
-  return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>
-    <dl class="direction-decisions">
-      <div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd><strong>${authoredText(recommendation.title)}</strong>${authoredParagraphs(directions.recommendation.reason)}</dd></div>
-      <div><dt>${escapeHtml(label(dictionary, "selection"))}</dt><dd><strong>${authoredText(selection.title)}</strong><span class="selection-source">${escapeHtml(decidedBy)}</span>${authoredParagraphs(directions.selection.reason)}</dd></div>
-    </dl>`;
+  return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>`;
 }
 
 function designDirectionsSection(content, dictionary, number) {
@@ -275,7 +283,7 @@ function behaviorSection(content, dictionary, number) {
   return `<section class="body-section document-section" id="behavior" aria-labelledby="behavior-title">
     ${sectionTitle("behavior-title", label(dictionary, "behavior"), number)}
     <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
-      <span class="step-number" aria-hidden="true">${index + 1}</span>
+      <span class="step-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
       <strong>${authoredText(step.title)}</strong>${step.detail
         ? authoredParagraphs(step.detail)
         : ""}
@@ -516,13 +524,16 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .rail { border-left: 1px solid var(--border); padding: ${space7}px ${space5}px; }
 .rail-inner { position: sticky; top: ${LAYOUT.topbarHeight + 40}px; display: grid; gap: ${space6}px; }
 .toc h2, .rail-history h2 { margin: 0 0 ${space4}px; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
+.toc-heading { display: flex; align-items: baseline; justify-content: space-between; gap: ${space2}px; }
+.toc-progress { color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .toc-list, .rail-history ol { list-style: none; padding: 0; }
 .toc-list { display: grid; gap: 2px; }
-.toc-link { min-height: 32px; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: center; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; text-decoration: none; }
+.toc-link { min-height: 36px; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: center; padding: ${space1}px ${space2}px; border-left: 4px solid transparent; color: var(--muted); font-size: ${TYPE.body.wide.fontSize}px; font-weight: 500; text-decoration: none; }
 .toc-link:visited { color: var(--muted); }
-.toc-number { color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
-.toc-link[aria-current="location"], .toc-link[aria-current="location"]:visited { color: var(--accent); font-weight: 700; }
+.toc-number { color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.toc-link[aria-current="location"], .toc-link[aria-current="location"]:visited { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); font-weight: 700; }
 .toc-link[aria-current="location"] .toc-number { color: var(--accent); }
+.toc-link:hover, .toc-link:focus-visible { background: var(--panel); color: var(--text); }
 .rail-history { padding-top: ${space5}px; border-top: 1px solid var(--border); }
 .rail-history > ol > li, .older-history > ol > li { position: relative; padding: 0 0 ${space5}px ${space4}px; border-left: 1px solid var(--border); }
 .rail-history > ol > li:last-child, .older-history > ol > li:last-child { padding-bottom: ${space3}px; }
@@ -536,14 +547,13 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .revision-disclosure > summary, .older-history > summary { min-height: 32px; display: flex; align-items: center; color: var(--text); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; }
 .revision-disclosure > summary::marker, .older-history > summary::marker { color: var(--muted); }
 .revision-popup { position: absolute; z-index: 12; top: 100%; right: 0; width: min(560px, calc(100vw - ${LAYOUT.tableOfContentsWidth + 80}px)); max-height: min(70vh, 680px); overflow: auto; padding: ${space4}px; border: 1px solid var(--border); background: var(--panel); box-shadow: 0 12px 32px color-mix(in srgb, var(--text) 14%, transparent); }
-.revision-popup .design-direction-list, .revision-popup .direction-decisions { grid-template-columns: 1fr; }
+.revision-popup .design-direction-list { grid-template-columns: 1fr; }
 .revision-popup .design-direction { padding-inline: ${space2}px; }
 .revision-popup .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
-.revision-popup .direction-decisions > div + div { border-top: 1px solid var(--border); border-left: 0; }
 .older-history > ol { list-style: none; padding: ${space3}px 0 0; }
 .document-head { max-width: 78ch; }
-.document-head + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
-.document-section + .document-section { margin-top: ${space6}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
+.document-head + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
+.document-section + .document-section { margin-top: ${space6}px; padding-top: ${space4}px; }
 .section-title { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: baseline; }
 .section-number { color: var(--accent); font-size: inherit; line-height: inherit; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
@@ -571,7 +581,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .scope-column { min-width: 0; }
 .scope-column + .scope-column { padding-left: ${space5}px; border-left: 1px solid var(--border); }
 .scope h3 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
-.section-title { width: 100%; margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
+.section-title { width: 100%; margin: 0 0 ${space4}px; padding-bottom: ${space3}px; border-bottom: 2px solid var(--component-border); color: var(--text); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
 .design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
@@ -599,17 +609,16 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .direction-references[open] > summary::after { transform: rotate(90deg); }
 .direction-reference-content { min-width: 0; padding-top: ${space2}px; }
 .direction-references li p { margin: ${space1}px 0 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.direction-decisions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
-.direction-decisions > div { display: grid; gap: ${space1}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
-.direction-decisions > div + div { padding-left: ${space4}px; border-left: 1px solid var(--border); }
-.direction-decisions dt { font-weight: 700; }
-.direction-decisions dd { margin: 0; }
-.direction-decisions p { margin-top: ${space1}px; color: var(--muted); }
-.selection-source { display: inline-block; margin-left: ${space2}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.direction-rationales { margin: ${space4}px 0 0; border-top: 1px solid var(--border); }
+.direction-rationales > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: ${space3}px; padding: ${space3}px 0; border-bottom: 1px solid var(--border); }
+.direction-rationales dt { color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
+.direction-rationales dd { margin: 0; }
+.direction-rationales p + p { margin-top: ${space2}px; }
+.selection-source { display: block; margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 500; }
 .behavior-steps { list-style: none; padding: 0; display: grid; }
-.behavior-steps li { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: ${space4}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
-.behavior-steps li:not(:last-child)::after { content: ""; position: absolute; top: 28px; bottom: ${space1}px; left: 13px; width: 1px; background: var(--border); }
-.step-number { position: relative; z-index: 1; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
+.behavior-steps li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: ${space3}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
+.behavior-steps li:not(:last-child)::after { content: ""; position: absolute; top: 22px; bottom: ${space1}px; left: 13px; width: 1px; background: var(--border); }
+.step-number { position: relative; z-index: 1; display: block; width: 28px; background: var(--bg); color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .behavior-steps strong, .behavior-outcomes strong { display: block; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .behavior-steps p { grid-column: 2; margin-top: ${space1}px; }
 .behavior-steps p, .behavior-outcomes p { color: var(--muted); }
@@ -661,8 +670,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .mobile-navigation-panel .toc { padding-bottom: ${space5}px; }
   .mobile-navigation-panel .mobile-repository { margin-bottom: ${space5}px; padding-bottom: ${space4}px; border-bottom: 1px solid var(--border); }
   .mobile-navigation-panel .toc-list { display: grid; gap: ${space1}px; }
-  .mobile-navigation-panel .toc-link { min-height: 44px; padding: ${space1}px ${space2}px; border-left: 2px solid transparent; }
-  .mobile-navigation-panel .toc-link[aria-current="location"] { border-left-color: var(--accent); }
+  .mobile-navigation-panel .toc-link { min-height: 44px; }
   .mobile-navigation-panel .rail-history { padding-top: ${space5}px; }
   .mobile-navigation-panel .revision-popup { position: static; width: auto; max-height: none; margin-top: ${space2}px; padding: ${space3}px; box-shadow: none; }
 }
@@ -681,11 +689,10 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .check-verification > summary, .direction-references > summary, .decision-disclosure > summary { min-height: 44px; }
   .scope { grid-template-columns: 1fr; }
   .scope-column + .scope-column { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
-  .design-direction-list, .design-direction-list.design-direction-count-3, .direction-decisions { grid-template-columns: 1fr; }
+  .design-direction-list, .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
   .design-direction { padding-inline: ${space2}px; }
   .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
-  .direction-decisions > div + div { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
-  .selection-source { display: block; margin: ${space1}px 0 0; }
+  .direction-rationales > div { grid-template-columns: 1fr; gap: ${space1}px; }
   .revision-content > div, .evidence-list > div { grid-template-columns: 1fr; gap: ${space1}px; }
 }
 @media (max-width: ${LAYOUT.compactBreakpoint}px) {
@@ -703,7 +710,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 @media (forced-colors: active) {
   .status, .display-controls, .mobile-navigation > summary, .locale-options, .outcome-mark, .direction-status, .direction-image { border: 1px solid ButtonText; }
-  .step-number { border: 1px solid ButtonText; background: Canvas; color: CanvasText; }
+  .step-number { background: Canvas; color: CanvasText; }
   .revision-dot, .rail-history .current .revision-dot { border-color: CanvasText; background: Canvas; }
 }
 @media print {
@@ -737,13 +744,14 @@ const theme=document.getElementById("theme-toggle");
 const navigation=document.querySelector(".mobile-navigation");
 const links=[...document.querySelectorAll('nav a[href^="#"]')];
 const sections=[...document.querySelectorAll(".document-section[id]")];
+const progress=[...document.querySelectorAll("[data-toc-current]")];
 let frame=0;
 const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
 const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
 const focusTarget=target=>{const had=target.hasAttribute("tabindex");if(!had)target.setAttribute("tabindex","-1");target.focus({preventScroll:true});if(!had)target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});};
 const reveal=target=>{for(let item=target;item;item=item.parentElement)if(item.tagName==="DETAILS")item.open=true;};
 const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;reveal(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({block:"start"});});};
-const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}for(const link of links){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
+const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}const index=sections.indexOf(current);for(const item of progress)item.textContent=String(index+1);for(const link of links){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
 syncTheme();
 theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
 navigation?.addEventListener("click",event=>{if(event.target.closest?.('a[href^="#"]'))navigation.open=false;});
@@ -800,7 +808,7 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
     <summary aria-label="${escapeHtml(label(dictionary, "navigation"))}" title="${escapeHtml(label(dictionary, "navigation"))}"><svg class="navigation-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h10"></path><circle cx="18" cy="18" r="2.5"></circle></svg></summary>
     <div class="mobile-navigation-panel">
       ${repositoryMark(data.repository, "mobile-repository")}
-      ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}"><h2>${escapeHtml(label(dictionary, "toc"))}</h2>${toc}</nav>` : ""}
+      ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}">${tocHeading(dictionary, sections.length)}${toc}</nav>` : ""}
       ${railHistory(data, dictionary, "-mobile")}
     </div>
   </details>`;
@@ -846,7 +854,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
   <div class="layout">
     <main class="main" id="agreement-document">${documentTitle(content)}${sections.map((section) => section.html).join("")}</main>
     <aside class="rail"><div class="rail-inner">
-      ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}"><h2>${escapeHtml(label(dictionary, "toc"))}</h2>${toc}</nav>` : ""}
+      ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}">${tocHeading(dictionary, sections.length)}${toc}</nav>` : ""}
       ${railHistory(data, dictionary)}
     </div></aside>
   </div>

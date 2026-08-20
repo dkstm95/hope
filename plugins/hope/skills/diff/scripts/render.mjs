@@ -474,6 +474,10 @@ function sectionOrdinal(number) {
   return String(number).padStart(2, "0");
 }
 
+function tocHeading(dictionary, count) {
+  return `<h2 class="toc-heading"><span>${html(label(dictionary, "common.menu"))}</span><span class="toc-progress"><span data-toc-current>1</span> / ${count}</span></h2>`;
+}
+
 function sectionHeading(title, number, id = "") {
   const idAttribute = id === "" ? "" : ` id="${html(id)}"`;
   return `<h2${idAttribute}><span class="section-number">${sectionOrdinal(number)}</span><span>${html(title)}</span></h2>`;
@@ -1028,8 +1032,6 @@ function buildSections(review, dictionary, codeRenderer) {
   });
   let behavior = "";
   if (review.behavior) {
-    const shortFlow = review.behavior.steps.length <= 4
-      && review.behavior.steps.every((step) => step.text.length <= 80);
     behavior = subsection({
       content: `<div class="behavior-model"><div class="behavior-summary">${claimBlock(
         review.behavior.summary,
@@ -1045,7 +1047,7 @@ function buildSections(review, dictionary, codeRenderer) {
             codeRenderer,
           )
           : ""}
-        <ol class="flow${shortFlow ? " flow-short" : ""}">${review.behavior.steps.map(
+        <ol class="flow">${review.behavior.steps.map(
           (step) => `<li>${claimBlock(
             step,
             dictionary,
@@ -1519,6 +1521,18 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   line-height: ${TYPE.menu.lineHeight};
   font-weight: 700;
 }
+.toc-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: ${space2}px;
+}
+.toc-progress {
+  color: var(--muted);
+  font-size: ${TYPE.micro.fontSize}px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
 .toc-list {
   display: grid;
   margin: 0;
@@ -1528,35 +1542,39 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .toc-link {
   display: grid;
-  min-height: 32px;
+  min-height: 36px;
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   gap: ${space2}px;
+  padding: ${space1}px ${space2}px;
+  border-left: 4px solid transparent;
   color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
+  font-size: ${TYPE.body.wide.fontSize}px;
   font-weight: 500;
   text-decoration: none;
 }
 .toc-link:visited { color: var(--muted); }
 .toc-number {
   color: var(--muted);
-  font-size: ${TYPE.micro.fontSize}px;
+  font-size: ${TYPE.supporting.wide.fontSize}px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: .02em;
 }
 .toc-link[aria-current="location"],
 .toc-link[aria-current="location"]:visited {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent);
   font-weight: 700;
 }
 .toc-link[aria-current="location"] .toc-number { color: var(--accent); }
 .toc-link:hover,
-.toc-link:focus { color: var(--text); }
+.toc-link:focus { background: var(--panel); color: var(--text); }
 .toc-mobile { display: none; }
 
 .document-title { max-width: ${LAYOUT.proseWidth}; }
-.document-title + .synopsis { margin-top: ${space5}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
+.document-title + .synopsis { margin-top: ${space5}px; padding-top: ${space4}px; }
 .synopsis { margin: 0; }
 .section-number {
   color: var(--accent);
@@ -1804,7 +1822,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   border: 0;
 }
 .synopsis + .review-section,
-.review-section + .review-section { margin-top: ${space6}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
+.review-section + .review-section { margin-top: ${space6}px; padding-top: ${space4}px; }
 .review-section-collapsible:not([open]) {
   padding-bottom: 0;
 }
@@ -1866,6 +1884,8 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   display: flex;
   position: relative;
   margin-bottom: ${space4}px;
+  padding-bottom: ${space3}px;
+  border-bottom: 2px solid var(--component-border);
   align-items: center;
   gap: ${space2}px;
 }
@@ -1876,7 +1896,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   align-items: baseline;
   gap: ${space2}px;
   margin: 0;
-  color: var(--accent);
+  color: var(--text);
   font-size: ${wideSection.fontSize}px;
   line-height: ${wideSection.lineHeight};
 }
@@ -2010,66 +2030,42 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   line-height: ${wideSubsection.lineHeight};
 }
 .evidence-group-content { padding: 0 0 ${space3}px ${space4}px; }
-.flow { padding-left: ${space5}px; }
-.flow > li {
-  margin: ${space3}px 0;
-  padding-left: ${space2}px;
-}
-.flow:not(.flow-short) {
+.flow {
+  display: grid;
+  margin: ${space3}px 0 0;
   padding: 0;
   list-style: none;
   counter-reset: behavior-step;
 }
-.flow:not(.flow-short) > li {
+.flow > li {
+  position: relative;
   display: grid;
+  min-width: 0;
+  min-height: 56px;
+  margin: 0;
+  padding: 0 0 ${space4}px;
   grid-template-columns: 28px minmax(0, 1fr);
-  padding: 0;
-  gap: ${space2}px;
+  gap: ${space3}px;
   counter-increment: behavior-step;
 }
-.flow:not(.flow-short) > li::before {
-  color: var(--muted);
-  content: counter(behavior-step, decimal-leading-zero);
-  font: 400 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Code", ui-monospace, monospace;
-}
-.flow-short {
-  display: flex;
-  margin: ${space3}px 0 0;
-  padding: 0;
-  gap: 28px;
-  list-style: none;
-  overflow-x: auto;
-  counter-reset: behavior-short-step;
-}
-.flow-short > li {
+.flow > li::before {
   position: relative;
-  min-width: 150px;
-  margin: 0;
-  padding: ${space3}px 0;
-  flex: 1 0 0;
-  counter-increment: behavior-short-step;
-  overflow-wrap: anywhere;
+  z-index: 1;
+  width: 28px;
+  background: var(--bg);
+  color: var(--accent);
+  content: counter(behavior-step, decimal-leading-zero);
+  font: 700 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Sans", sans-serif;
+  font-variant-numeric: tabular-nums;
 }
-.flow-short > li::before {
-  display: grid;
-  width: 26px;
-  height: 26px;
-  margin-bottom: ${space2}px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--panel);
-  content: counter(behavior-short-step);
-  font: 500 ${TYPE.supporting.wide.fontSize}px/1 "Hope Sans", sans-serif;
-}
-.flow-short > li:not(:last-child)::after {
+.flow > li:not(:last-child)::after {
   position: absolute;
-  top: 50%;
-  right: -22px;
-  color: var(--muted);
-  content: "→";
-  font: 400 18px/1 "Hope Code", ui-monospace, monospace;
-  transform: translateY(-50%);
+  top: 22px;
+  bottom: ${space1}px;
+  left: 13px;
+  width: 1px;
+  background: var(--border);
+  content: "";
 }
 
 .behavior-visual,
@@ -2759,10 +2755,6 @@ td:first-child {
   .toc-mobile-panel .toc-link {
     min-height: 44px;
     padding: ${space2}px ${space3}px;
-    border-left: 2px solid transparent;
-  }
-  .toc-mobile .toc-link[aria-current="location"] {
-    border-left-color: var(--accent);
   }
   .toc-mobile .toc-link:hover,
   .toc-mobile .toc-link:focus-visible { color: var(--text); }
@@ -2833,7 +2825,7 @@ td:first-child {
     line-height: ${TYPE.supporting.narrow.lineHeight};
   }
   .code-step-list > li::before,
-  .flow:not(.flow-short) > li::before {
+  .flow > li::before {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
   }
   .evidence pre {
@@ -2851,19 +2843,6 @@ td:first-child {
     padding-left: ${space2}px;
     border-top: 1px solid var(--border);
     border-left: 0;
-  }
-  .flow-short {
-    display: grid;
-    gap: 28px;
-    overflow: visible;
-  }
-  .flow-short > li { min-width: 0; }
-  .flow-short > li:not(:last-child)::after {
-    top: auto;
-    right: 50%;
-    bottom: -23px;
-    content: "↓";
-    transform: translateX(50%);
   }
   .teaching-aid-choice { padding: ${space3}px 0; }
   .teaching-aid-choices > li + li {
@@ -3036,12 +3015,13 @@ const theme=document.getElementById("theme-toggle");
 const toc=document.querySelector(".toc-mobile");
 const navLinks=[...document.querySelectorAll('nav a[href^="#"]')];
 const sections=[...document.querySelectorAll(".main > [id]")];
+const progress=[...document.querySelectorAll("[data-toc-current]")];
 let currentFrame=0;
 const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
 const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
 const revealTarget=target=>{if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;};
 const focusTarget=target=>{const hadTabindex=target.hasAttribute("tabindex");if(!hadTabindex)target.setAttribute("tabindex","-1");target.focus({preventScroll:true});if(!hadTabindex)target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});};
-const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}for(const link of navLinks){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
+const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}const index=sections.indexOf(current);for(const item of progress)item.textContent=String(index+1);for(const link of navLinks){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
 syncTheme();
 theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
 toc?.addEventListener("click",event=>{const link=event.target.closest("a");if(!link)return;toc.open=false;const target=document.getElementById(link.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({behavior:"instant",block:"start"});});});
@@ -3167,7 +3147,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
             <span class="sr-only">${html(label(dictionary, "common.menu"))}</span>
           </summary>
           <nav class="toc-mobile-panel" aria-label="${html(label(dictionary, "common.menu"))}">
-            <h2>${html(label(dictionary, "common.menu"))}</h2>
+            ${tocHeading(dictionary, tocItems.length)}
             ${toc}
           </nav>
         </details>
@@ -3182,7 +3162,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
       ${sections.map((item) => item.html).join("")}
     </main>
     <nav class="toc-desktop" aria-label="${html(label(dictionary, "common.menu"))}">
-      <h2>${html(label(dictionary, "common.menu"))}</h2>
+      ${tocHeading(dictionary, tocItems.length)}
       ${toc}
     </nav>
   </div>

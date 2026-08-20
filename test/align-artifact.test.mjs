@@ -423,7 +423,11 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="12"/u);
+  assert.match(first, /name="hope-align-design-version" content="13"/u);
+  assert.match(
+    first,
+    /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
+  );
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);

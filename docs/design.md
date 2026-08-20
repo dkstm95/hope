@@ -46,6 +46,17 @@ Preserve an authored semantic paragraph as a separate HTML paragraph. Do not
 collapse distinct paragraphs into one run of text or use layout columns to
 create paragraph boundaries.
 
+Use the same small set of semantic section patterns across Align and Diff:
+
+- a lead conclusion followed by structured label-and-value rows for summaries;
+- parallel cells only for brief comparisons that must be scanned together;
+- one ordered vertical sequence for behavior or process; and
+- visible conclusions with native disclosures for reasons, verification, and
+  supporting evidence.
+
+Keep these visual roles consistent without making either renderer import the
+other feature.
+
 ## Diff artifact direction
 
 The Diff artifact should feel:
@@ -168,8 +179,10 @@ Align. Present the reviewed commit with the same quiet status treatment that
 Align uses for its current version. Keep the pull-request link outside the
 display-control group and preserve it when repository text is hidden at narrow
 widths. Group the language dropdown and bordered theme button as one control.
-Use a numbered desktop contents rail when it fits; otherwise use an icon beside
-the display-control group and open the contents in a bounded right-side panel.
+Use a numbered desktop contents rail when it fits. Show the current section
+with an accent bar, a quiet tinted background, and its position in the reading
+order. Otherwise use an icon beside the display-control group and open the
+same contents treatment in a bounded right-side panel.
 
 ## Align artifact direction
 
@@ -457,11 +470,11 @@ title and beside its table-of-contents link. Omitted optional areas do not
 leave gaps. Keep each section number the same type size and line height as its
 title.
 
-Use one thin divider between the title and Summary and between later top-level
-areas. Combine margin and padding into 40 pixels between the title and Summary.
-Between later areas, use 48 pixels on a wide screen and 40 pixels on a narrow
-screen. Use the smaller internal spacing steps for related content inside one
-area.
+Give every numbered area one clear divider directly below its title. Do not add
+a second rule above the area. Combine margin and padding into 40 pixels between
+the document title and Summary. Between later areas, use 48 pixels on a wide
+screen and 40 pixels on a narrow screen. Use the smaller internal spacing steps
+for related content inside one area.
 
 On a wide screen, place a narrow rail beside the document. Show a table of
 contents only when it improves navigation. Keep the current version and at
@@ -499,12 +512,11 @@ option title so they do not create a separate comparison row. On a wide screen,
 compare each option's title, image,
 brief summary, strengths, and trade-offs in parallel; stack each complete
 option on a narrow screen. Keep an option's references inside that option and
-fold them by default. Do not repeat them in a full-width group below the
-comparison. Put only context shared by all options below the comparison in one
-reading column. Pair every image with useful alt text, and mark recommendation
-and selection with words rather than color alone. Recommendation and selection
-may share one compact comparison row on a wide screen and must stack when
-narrow.
+fold them by default. Keep the recommendation and selection reasons inside the
+option they explain. Do not repeat these details in a full-width group below
+the comparison. Put only context shared by all options below the comparison in
+one reading column. Pair every image with useful alt text, and mark
+recommendation and selection with words rather than color alone.
 
 Align embeds Hope Sans so it uses the same Hope type family as Diff across
 supported hosts. Its palette, spacing, type sizes, and layout values still come
@@ -619,15 +631,15 @@ Do not invent a new gap for each component.
 
 Give each top-level section a clear start.
 
-Use a blue heading, thin neutral dividers where structure needs them, and
+Use a blue section number, a text-colored title, a clear title divider, and
 measured space. Match Align's 48-pixel wide-screen and 40-pixel narrow-screen
 separation between top-level areas.
 
 Number conditional sections in their rendered order so the document and its
 table of contents agree.
 
-Use one quiet divider at a section boundary instead of extending the cyan line
-through the whole section.
+Use one clear divider directly below each top-level section title instead of a
+second rule above the section or a line extending through its body.
 
 Use two border roles:
 
@@ -674,8 +686,7 @@ synopsis below it with a visible `01 Summary`, followed by the goal and
 label-and-value rows. Keep the provider's pull-request title and capture time in
 collapsed review information.
 
-Use the same thin-divider rhythm as Align: one divider between the document
-title and Summary and between later top-level areas. Keep each section number
+Use the same section-title divider rhythm as Align. Keep each section number
 the same type size and line height as its title.
 
 In each full review item, align kind, importance, and basis on one visual
@@ -683,13 +694,10 @@ centerline.
 
 Keep kind and importance as outlined markers and basis as quieter plain text.
 
-When a change has two to four brief behavior steps, show them as one connected
-left-to-right flow on a wide screen and one vertical connected flow on a narrow
-screen. This is a sequence diagram, not parallel prose. Preserve the same text
-and order at every viewport.
-
-Use a normal numbered list for five or more steps or when any step is longer
-than 80 characters.
+Render behavior steps as one connected vertical sequence at every viewport.
+Keep the same two-digit number gutter, text, and order in Align and Diff. This
+keeps the reading path stable when a step contains longer prose and reserves
+horizontal columns for direct comparison.
 
 ## Align artifact color and themes
 

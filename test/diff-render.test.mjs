@@ -90,7 +90,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
   ]);
   assert.equal(first.rendererVersion, 14);
-  assert.equal(first.designVersion, 7);
+  assert.equal(first.designVersion, 8);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -107,6 +107,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   );
   assert.match(html, /<img class="brand-icon" src="data:image\/png;base64,iVBOR/u);
   assert.match(html, /<span>HOPE<\/span><span class="brand-product">· DIFF<\/span>/u);
+  assert.match(
+    html,
+    /<h2 class="toc-heading"><span>Contents<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
+  );
   assert.match(html, /data:font\/woff2;base64/u);
   assert.match(html, /font-family: "Hope Sans"/u);
   assert.match(html, /font-family: "Hope Code"/u);
@@ -737,7 +741,7 @@ test("a review with no items states the result once", async () => {
   assert.doesNotMatch(synopsis, /review-items-compact/u);
 });
 
-test("only two to four brief behavior steps use the connected short flow", async () => {
+test("behavior steps keep one vertical numbered flow regardless of count or length", async () => {
   const snapshot = makeSnapshot();
   const shortAnalysis = makeAnalysis(snapshot, runId);
   shortAnalysis.behavior = {
@@ -757,7 +761,10 @@ test("only two to four brief behavior steps use the connected short flow", async
     shortHtml,
     /<section class="review-subsection" id="core-change">[\s\S]*?<\/section>\s*<section class="review-subsection" id="behavior-flow">/u,
   );
-  assert.match(shortHtml, /<ol class="flow flow-short">/u);
+  assert.match(shortHtml, /<ol class="flow">/u);
+  assert.doesNotMatch(shortHtml, /flow-short/u);
+  assert.match(shortHtml, /counter\(behavior-step, decimal-leading-zero\)/u);
+  assert.match(shortHtml, /grid-template-columns: 28px minmax\(0, 1fr\)/u);
   assert.match(shortHtml, /overflow-wrap: anywhere/u);
 
   const numerousAnalysis = makeAnalysis(snapshot, runId);
@@ -771,7 +778,7 @@ test("only two to four brief behavior steps use the connected short flow", async
   const numerousReview = validateAnalysis(numerousAnalysis, snapshot, { runId });
   const numerousHtml = (await renderReview(numerousReview)).bytes.toString("utf8");
   assert.match(numerousHtml, /<ol class="flow">/u);
-  assert.doesNotMatch(numerousHtml, /<ol class="flow flow-short">/u);
+  assert.doesNotMatch(numerousHtml, /flow-short/u);
 
   const longAnalysis = makeAnalysis(snapshot, runId);
   longAnalysis.behavior = {
@@ -784,7 +791,7 @@ test("only two to four brief behavior steps use the connected short flow", async
   const longReview = validateAnalysis(longAnalysis, snapshot, { runId });
   const longHtml = (await renderReview(longReview)).bytes.toString("utf8");
   assert.match(longHtml, /<ol class="flow">/u);
-  assert.doesNotMatch(longHtml, /<ol class="flow flow-short">/u);
+  assert.doesNotMatch(longHtml, /flow-short/u);
 });
 
 test("behavior renders a grounded visual and a separate fixed microworld safely", async () => {
@@ -881,7 +888,8 @@ test("all visual kinds use typed, fixed renderer structures", async () => {
       new RegExp(`class="behavior-visual visual-${kind}"`, "u"),
     );
     assert.match(html, marker);
-    assert.match(html, /<ol class="flow flow-short">/u);
+    assert.match(html, /<ol class="flow">/u);
+    assert.doesNotMatch(html, /flow-short/u);
     if (kind === "sequence") {
       assert.match(
         html,

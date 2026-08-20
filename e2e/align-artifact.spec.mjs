@@ -131,6 +131,15 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator(".brand-icon")).toBeVisible();
   await expect(page.locator(".status")).toHaveText("v2 · 현재 합의");
   await expect(page.locator(".rail")).toBeVisible();
+  await expect(page.locator(".rail .toc-progress")).toHaveText("1 / 6");
+  const currentOverviewLink = page.locator('.rail .toc-link[href="#overview"]');
+  await expect(currentOverviewLink).toHaveAttribute("aria-current", "location");
+  const currentOverviewStyle = await currentOverviewLink.evaluate((element) => ({
+    backgroundColor: getComputedStyle(element).backgroundColor,
+    borderLeftWidth: getComputedStyle(element).borderLeftWidth,
+  }));
+  expect(currentOverviewStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(currentOverviewStyle.borderLeftWidth).toBe("4px");
   await expect(page.locator(".rail .rail-history h2")).toHaveText("버전 이력");
   await expect(page.locator(".rail .rail-history .current .revision-head strong"))
     .toHaveText(/^v2 · 현재 합의/u);
@@ -155,7 +164,8 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(currentDirections.locator(".direction-image img")).toHaveCount(2);
   await expect(currentDirections.locator(".direction-status.recommended")).toHaveText("추천");
   await expect(currentDirections.locator(".direction-status.selected")).toHaveText("선택");
-  await expect(currentDirections.locator(".direction-decisions")).toContainText("사용자가 AI에 선택을 위임함");
+  await expect(currentDirections.locator(".direction-rationales")).toContainText("사용자가 AI에 선택을 위임함");
+  await expect(currentDirections.locator(":scope > .direction-rationales")).toHaveCount(0);
   const directionReferences = currentDirections.locator(".direction-references");
   await expect(directionReferences).toHaveCount(1);
   await expect(directionReferences).not.toHaveAttribute("open", "");
@@ -218,12 +228,16 @@ test("Align presents one compact current agreement with secondary history", asyn
   await directionReferences.locator(":scope > summary").click();
   await expect(directionReferences.locator(".direction-reference-content")).toBeVisible();
   await expect(directionReferences).toContainText("반영한 점");
-  const directionDecisionTops = await currentDirections.locator(
-    ".direction-decisions > div",
-  ).evaluateAll(
-    (items) => items.map((item) => item.getBoundingClientRect().top),
-  );
-  expect(directionDecisionTops[1]).toBe(directionDecisionTops[0]);
+  const directionRationalePlacement = await currentDirections.locator(
+    ".direction-rationales",
+  ).evaluateAll((items) => items.map((item) => ({
+    optionId: item.closest(".design-direction")?.id,
+    parentClass: item.parentElement?.className,
+  })));
+  expect(directionRationalePlacement.every((item) => (
+    item.optionId?.startsWith("design-direction-")
+      && item.parentClass.includes("design-direction")
+  ))).toBe(true);
   const behaviorTops = await page.locator(".behavior-steps > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
@@ -274,7 +288,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   expect(geometry.summaryNumberLeft).toBe(40);
   expect(geometry.summaryLabelLeft).toBe(76);
   expect(geometry.summaryNumberFontSize).toBe(geometry.summaryLabelFontSize);
-  expect(geometry.firstSectionBorder).toBe("1px");
+  expect(geometry.firstSectionBorder).toBe("0px");
   expect(geometry.firstSectionMargin).toBe("24px");
   expect(geometry.firstSectionPadding).toBe("16px");
   expect(geometry.topbarHeight).toBe(58);
@@ -293,6 +307,12 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("#revision-1 .design-direction")).toHaveCount(2);
   await expect(page.locator("#revision-1 .direction-image img")).toHaveCount(2);
   await expect(page.locator("#revision-1")).toContainText("복구 선택을 첫 화면의 주 행동으로 배치했다");
+  await page.locator('.rail .toc-link[href="#scope"]').click();
+  await expect(page.locator(".rail .toc-progress")).toHaveText("2 / 6");
+  await expect(page.locator('.rail .toc-link[href="#scope"]')).toHaveAttribute(
+    "aria-current",
+    "location",
+  );
   await expectNoOverflow(page);
 });
 
@@ -357,12 +377,8 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(directionTops[1]).toBeGreaterThan(directionTops[0]);
-  const directionDecisionTops = await page.locator(
-    "#design-directions .direction-decisions > div",
-  ).evaluateAll(
-    (items) => items.map((item) => item.getBoundingClientRect().top),
-  );
-  expect(directionDecisionTops[1]).toBeGreaterThan(directionDecisionTops[0]);
+  await expect(page.locator("#design-directions .direction-rationales")).toHaveCount(1);
+  await expect(page.locator("#design-directions > .direction-rationales")).toHaveCount(0);
   const disclosureHeights = await page.locator(".main").locator(
     ".check-verification > summary, .direction-references > summary, .decision-disclosure > summary",
   ).evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));

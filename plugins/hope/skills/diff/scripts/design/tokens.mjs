@@ -1,4 +1,4 @@
-export const DESIGN_VERSION = 7;
+export const DESIGN_VERSION = 8;
 
 export const COLORS = Object.freeze({
   dark: Object.freeze({

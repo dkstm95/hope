@@ -145,7 +145,7 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
       };
     }, { firstHeadingSelector, firstSectionSelector, titleSelector });
     expect(readingRhythm).toMatchObject({
-      border: "1px",
+      border: "0px",
       labelFontSize: "18px",
       margin: "24px",
       numberFontSize: "18px",

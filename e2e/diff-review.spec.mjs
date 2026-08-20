@@ -477,7 +477,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   }));
   expect(baselineGeometry).toEqual({
     brandRepositoryGap: 24,
-    firstSectionBorder: "1px",
+    firstSectionBorder: "0px",
     firstSectionMargin: "24px",
     firstSectionPadding: "16px",
     railLeft: 1204,
@@ -552,7 +552,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#synopsis .synopsis-state")).toHaveCount(0);
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
   await expect(page.locator("#explore .flow")).toHaveCount(1);
-  await expect(page.locator("#explore .flow-short")).toHaveCount(1);
+  await expect(page.locator("#explore .flow-short")).toHaveCount(0);
   const primer = page.locator("#beginner-primer");
   await expect(primer).toHaveCount(1);
   await expect(primer).not.toHaveAttribute("open", "");
@@ -585,7 +585,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expectNoPageOverflow(page);
 
   await page.setViewportSize(viewports.breakpoint);
-  const wideFlow = await page.locator("#explore .flow-short").evaluate((flow) => ({
+  const wideFlow = await page.locator("#explore .flow").evaluate((flow) => ({
     contentOverflow: [...flow.querySelectorAll(".claim p")].some(
       (content) => content.scrollWidth > content.clientWidth,
     ),
@@ -593,14 +593,14 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     display: getComputedStyle(flow).display,
     scrollWidth: flow.scrollWidth,
   }));
-  expect(wideFlow.display).toBe("flex");
+  expect(wideFlow.display).toBe("grid");
   expect(wideFlow.scrollWidth).toBeLessThanOrEqual(wideFlow.clientWidth);
   expect(wideFlow.contentOverflow).toBe(false);
-  const flowTops = await page.locator("#explore .flow-short > li").evaluateAll(
+  const flowTops = await page.locator("#explore .flow > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
-  expect(flowTops[1]).toBe(flowTops[0]);
-  expect(flowTops[2]).toBe(flowTops[1]);
+  expect(flowTops[1]).toBeGreaterThan(flowTops[0]);
+  expect(flowTops[2]).toBeGreaterThan(flowTops[1]);
 
   await page.setViewportSize(viewports.mobile);
   await expect(page.locator("#review-title")).toHaveCSS("font-size", "28px");
@@ -630,7 +630,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     ".review-items-full .item-actions",
   ).first().evaluate((element) => getComputedStyle(element).gridTemplateColumns);
   expect(narrowActionColumns.split(" ")).toHaveLength(1);
-  const narrowFlow = await page.locator("#explore .flow-short").evaluate((flow) => ({
+  const narrowFlow = await page.locator("#explore .flow").evaluate((flow) => ({
     clientWidth: flow.clientWidth,
     display: getComputedStyle(flow).display,
     scrollWidth: flow.scrollWidth,
@@ -687,6 +687,7 @@ test("contents tracks the current section and keeps sticky navigation clear", as
 }) => {
   await openArtifact(page, viewports.desktop);
   const judge = page.locator("#judge");
+  await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("1 / 4");
   await expect(judge).not.toHaveAttribute("open", "");
   await page.locator('.toc-desktop a[href="#judge"]').click();
   await expect(judge).toBeFocused();
@@ -695,6 +696,13 @@ test("contents tracks the current section and keeps sticky navigation clear", as
   const currentLinks = page.locator('.toc-desktop a[aria-current="location"]');
   await expect(currentLinks).toHaveCount(1);
   await expect(currentLinks).toHaveAttribute("href", "#judge");
+  await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("3 / 4");
+  const currentStyle = await currentLinks.evaluate((element) => ({
+    backgroundColor: getComputedStyle(element).backgroundColor,
+    borderLeftWidth: getComputedStyle(element).borderLeftWidth,
+  }));
+  expect(currentStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(currentStyle.borderLeftWidth).toBe("4px");
   const clearance = await page.evaluate(() => ({
     headerBottom: document.querySelector(".topbar").getBoundingClientRect().bottom,
     targetTop: document.querySelector("#judge").getBoundingClientRect().top,
@@ -1076,7 +1084,7 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
     borderLeftWidth: getComputedStyle(element).borderLeftWidth,
     fontWeight: getComputedStyle(element).fontWeight,
   }));
-  expect(currentStyle.borderLeftWidth).toBe("2px");
+  expect(currentStyle.borderLeftWidth).toBe("4px");
   expect(Number(currentStyle.fontWeight)).toBeGreaterThanOrEqual(700);
 
   await page.keyboard.press("Escape");
