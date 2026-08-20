@@ -21,7 +21,6 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/align/agents/openai.yaml",
   "plugins/hope/skills/align/references/artifact.md",
   "plugins/hope/skills/align/references/design-directions.md",
-  "plugins/hope/skills/align/scripts/align-input-v1.schema.json",
   "plugins/hope/skills/align/scripts/align-input-v2.schema.json",
   "plugins/hope/skills/align/scripts/artifact.mjs",
   "plugins/hope/skills/align/scripts/cli.mjs",

@@ -229,8 +229,10 @@ revise --input <draft.json> --artifact <artifact.html> --expect <digest> --root 
 When visual directions were used, run `inspect` on the created or revised
 artifact before reporting alignment complete.
 
-Treat the artifact as project documentation for the related work. Include it in
-later version-control operations for that work unless the person excludes it.
+Treat the artifact as project documentation for the related work. Keep it in
+the project by default, including after implementation. Do not delete a
+completed artifact merely because the related work finished; remove it only
+when the person decides to do so.
 
 ## Continue into implementation
 

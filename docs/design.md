@@ -49,14 +49,7 @@ Use familiar words, short sentences, and one clear reading path.
 Prefer useful content over decoration.
 
 Use the current Align artifact as the primary reference for common visual
-roles. The source repository also keeps earlier Diff reference images under
-`docs/design/baseline-v1/`.
-
-The images provide historical Diff-specific comparison material.
-
-They are comparison material, not pixel-perfect specifications.
-
-They are design sources and do not ship with the current runtime.
+roles.
 
 The Diff feature's `scripts/design/tokens.mjs` is the code source of truth for
 its values. Common roles match the corresponding Align values without importing

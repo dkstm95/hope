@@ -306,14 +306,14 @@ function designDirections(value, path, { imageField, validateImage }) {
 
 export function validateAlignInput(value, defaults = {}) {
   if (!isRecord(value)) throw new TypeError("Align input must be an object");
-  if (![1, 2].includes(value.schemaVersion)) {
-    throw new TypeError("$.schemaVersion must be 1 or 2");
+  if (value.schemaVersion !== 2) {
+    throw new TypeError("$.schemaVersion must be 2");
   }
   const allowed = [
     "schemaVersion",
     "locale",
     "theme",
-    ...contentKeysBySchema[value.schemaVersion],
+    ...contentKeysBySchema[2],
     "revisionSummary",
   ];
   assertKeys(value, allowed, "$");
@@ -342,26 +342,15 @@ export function validateAlignInput(value, defaults = {}) {
 
   const decisions = decisionItems(value.decisions, "$.decisions");
   const evidence = evidenceItems(value.evidence, "$.evidence");
-
-  const legacySuccess = value.schemaVersion === 1
-    ? textList(value.success, "$.success", 12)
-    : undefined;
-  if (legacySuccess?.length === 0) throw new TypeError("$.success must not be empty");
-  const checks = value.schemaVersion === 2
-    ? checkItems(value.checks, "$.checks")
-    : undefined;
+  const checks = checkItems(value.checks, "$.checks");
   return Object.freeze({
-    schemaVersion: value.schemaVersion,
+    schemaVersion: 2,
     locale,
     theme,
     title: text(value.title, "$.title", 160),
-    ...(value.schemaVersion === 1
-      ? { intent: text(value.intent, "$.intent") }
-      : { goal: text(value.goal, "$.goal") }),
+    goal: text(value.goal, "$.goal"),
     problem: text(value.problem, "$.problem"),
-    ...(value.schemaVersion === 1
-      ? { success: Object.freeze(legacySuccess) }
-      : { checks: Object.freeze(checks) }),
+    checks: Object.freeze(checks),
     boundary: text(value.boundary, "$.boundary"),
     scope,
     ...(validatedDesignDirections === undefined
