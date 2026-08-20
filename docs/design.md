@@ -36,11 +36,11 @@ compact form that preserves access. Do not merely hide or squeeze them.
 
 Keep body prose in one reading column. On a wide screen, use parallel columns
 only for a short comparison summary whose options are easier to scan together.
-Limit each comparison cell to a title, visual when useful, and brief summary;
-put its detailed explanation below in the single reading flow. Stack comparison
-cells when the viewport is narrow. Navigation, labels, tables, diagrams, and
-controls are structural UI rather than prose columns and follow the structure
-they need.
+Limit each comparison cell to a title, visual when useful, brief summary, and
+brief points on the same comparison axes; put longer supporting explanation
+below in the single reading flow. Stack comparison cells when the viewport is
+narrow. Navigation, labels, tables, diagrams, and controls are structural UI
+rather than prose columns and follow the structure they need.
 
 Preserve an authored semantic paragraph as a separate HTML paragraph. Do not
 collapse distinct paragraphs into one run of text or use layout columns to
@@ -454,12 +454,12 @@ empty box.
 
 Show two or three design directions together in one comparison section. Keep
 the same option order. On a wide screen, compare each option's title, image,
-and brief summary in parallel; stack those previews on a narrow screen. Put
-strengths, trade-offs, and references below the previews in one reading column,
-still grouped and numbered by option. Pair every image with useful alt text,
-and mark recommendation and selection with words rather than color alone.
-Recommendation and selection may share one compact comparison row on a wide
-screen and must stack when narrow.
+brief summary, strengths, and trade-offs in parallel; stack each complete
+option on a narrow screen. Put longer supporting context and references below
+the comparison in one reading column, still grouped and numbered by option.
+Pair every image with useful alt text, and mark recommendation and selection
+with words rather than color alone. Recommendation and selection may share one
+compact comparison row on a wide screen and must stack when narrow.
 
 Align embeds Hope Sans so it uses the same Hope type family as Diff across
 supported hosts. Its palette, spacing, type sizes, and layout values still come

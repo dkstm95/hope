@@ -214,6 +214,15 @@ test("design direction images are validated, embedded, and kept off the network"
   assert.match(html, />사용자가 선택함</u);
   assert.match(html, /href="https:\/\/example\.com\/recovery-reference"/u);
   assert.match(html, /복구 선택을 첫 화면의 주 행동으로 배치했다/u);
+  const firstDirection = html.indexOf('id="design-direction-direction-1"');
+  const secondDirection = html.indexOf('id="design-direction-direction-2"');
+  const referenceList = html.indexOf('class="direction-reference-list"');
+  assert.ok(firstDirection < html.indexOf("핵심 선택을 빠르게 찾을 수 있다."));
+  assert.ok(html.indexOf("핵심 선택을 빠르게 찾을 수 있다.") < secondDirection);
+  assert.ok(secondDirection < html.indexOf("현재 단계가 분명하다."));
+  assert.ok(html.indexOf("현재 단계가 분명하다.") < referenceList);
+  assert.ok(referenceList < html.indexOf("복구 요구 참고"));
+  assert.doesNotMatch(html, /design-direction-detail-list/u);
   assert.doesNotMatch(html, new RegExp(firstImage.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
   assert.doesNotMatch(html, /<img[^>]+https?:/u);
 });
@@ -412,7 +421,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="7"/u);
+  assert.match(first, /name="hope-align-design-version" content="8"/u);
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);

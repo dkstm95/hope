@@ -160,12 +160,20 @@ test("Align presents one compact current agreement with secondary history", asyn
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(directionTops[1]).toBe(directionTops[0]);
-  const directionDetailTops = await currentDirections.locator(
-    ".design-direction-detail",
-  ).evaluateAll(
-    (items) => items.map((item) => item.getBoundingClientRect().top),
+  await expect(currentDirections.locator(".design-direction .direction-details")).toHaveCount(2);
+  await expect(currentDirections.locator(".design-direction").first()).toContainText(
+    "핵심 선택을 빠르게 찾을 수 있다.",
   );
-  expect(directionDetailTops[1]).toBeGreaterThan(directionDetailTops[0]);
+  await expect(currentDirections.locator(".design-direction").nth(1)).toContainText(
+    "현재 단계가 분명하다.",
+  );
+  const directionReferenceTop = await currentDirections.locator(
+    ".direction-reference",
+  ).evaluate((item) => item.getBoundingClientRect().top);
+  const directionBottoms = await currentDirections.locator(
+    ".design-direction",
+  ).evaluateAll((items) => items.map((item) => item.getBoundingClientRect().bottom));
+  expect(directionReferenceTop).toBeGreaterThanOrEqual(Math.max(...directionBottoms));
   const directionDecisionTops = await currentDirections.locator(
     ".direction-decisions > div",
   ).evaluateAll(

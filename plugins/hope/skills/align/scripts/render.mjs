@@ -213,27 +213,33 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
     <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><h3 id="${escapeHtml(optionId)}-title">${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></header>
     <div class="direction-image"><img src="data:${option.image.mimeType};base64,${option.image.data}" alt="${escapeHtml(option.alt)}" width="${option.image.width}" height="${option.image.height}"></div>
     <div class="direction-summary">${authoredParagraphs(option.summary)}</div>
-  </li>`;
-  }).join("");
-  const optionDetails = directions.options.map((option, index) => {
-    const optionId = `${idPrefix}design-direction-${option.id}`;
-    return `<li class="design-direction-detail" aria-labelledby="${escapeHtml(optionId)}-title">
-    <span class="direction-detail-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
-    <div class="direction-detail-content"><div class="direction-details">
+    <div class="direction-details">
       <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
       <div><h4>${escapeHtml(label(dictionary, "tradeoffs"))}</h4>${textList(option.tradeoffs)}</div>
     </div>
-    ${directionReferences(option.references, dictionary)}
-    </div>
   </li>`;
   }).join("");
+  const optionReferences = directions.options.flatMap((option, index) => {
+    if (option.references.length === 0) return [];
+    const optionId = `${idPrefix}design-direction-${option.id}`;
+    return [`<li class="direction-reference" aria-labelledby="${escapeHtml(optionId)}-reference-title">
+    <span class="direction-reference-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
+    <div class="direction-reference-content">
+      <h3 id="${escapeHtml(optionId)}-reference-title">${authoredText(option.title)}</h3>
+      ${directionReferences(option.references, dictionary)}
+    </div>
+  </li>`];
+  });
+  const referenceList = optionReferences.length === 0
+    ? ""
+    : `<ol class="direction-reference-list">${optionReferences.join("")}</ol>`;
   const recommendation = optionById.get(directions.recommendation.optionId);
   const selection = optionById.get(directions.selection.optionId);
   const decidedBy = directions.selection.decidedBy === "delegated"
     ? label(dictionary, "decidedByDelegated")
     : label(dictionary, "decidedByUser");
   return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>
-    <ol class="design-direction-detail-list">${optionDetails}</ol>
+    ${referenceList}
     <dl class="direction-decisions">
       <div><dt>${escapeHtml(label(dictionary, "recommendation"))}</dt><dd><strong>${authoredText(recommendation.title)}</strong>${authoredParagraphs(directions.recommendation.reason)}</dd></div>
       <div><dt>${escapeHtml(label(dictionary, "selection"))}</dt><dd><strong>${authoredText(selection.title)}</strong><span class="selection-source">${escapeHtml(decidedBy)}</span>${authoredParagraphs(directions.selection.reason)}</dd></div>
@@ -547,15 +553,15 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .direction-image img { display: block; width: 100%; height: auto; max-height: 440px; object-fit: contain; }
 .direction-summary { margin-top: ${space4}px; }
 .direction-summary p + p { margin-top: ${space2}px; }
-.design-direction-detail-list { list-style: none; padding: 0; border-top: 1px solid var(--border); }
-.design-direction-detail { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space4}px; padding: ${space4}px ${space2}px ${space5}px; }
-.design-direction-detail + .design-direction-detail { border-top: 1px solid var(--border); }
-.direction-detail-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
-.direction-detail-content { min-width: 0; }
-.direction-details { display: grid; gap: ${space4}px; }
+.direction-details { display: grid; gap: ${space4}px; margin-top: ${space4}px; padding-top: ${space3}px; border-top: 1px solid var(--border); }
 .direction-details h4, .direction-references h4 { margin: 0 0 ${space2}px; color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-details .plain-list, .direction-references ul { padding-left: ${space4}px; display: grid; gap: ${space1}px; }
-.direction-references { margin-top: ${space4}px; padding-top: ${space3}px; border-top: 1px solid var(--border); }
+.direction-reference-list { list-style: none; padding: 0; border-top: 1px solid var(--border); }
+.direction-reference { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space4}px; padding: ${space4}px ${space2}px ${space5}px; }
+.direction-reference + .direction-reference { border-top: 1px solid var(--border); }
+.direction-reference-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
+.direction-reference-content { min-width: 0; }
+.direction-reference-content > h3 { margin: 0 0 ${space3}px; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .direction-references li p { margin: ${space1}px 0 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-decisions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border); }
 .direction-decisions > div { display: grid; gap: ${space1}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }

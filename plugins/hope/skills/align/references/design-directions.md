@@ -44,7 +44,9 @@ known goal and constraints.
 
 Keep each option summary to one brief main idea so the artifact can compare the
 previews directly. Put the supporting detail in that option's strengths,
-trade-offs, and references instead of extending the summary.
+trade-offs, and references instead of extending the summary. Keep each strength
+and trade-off to one brief point that can be compared with the same field in
+the other options. Use references for longer supporting context.
 
 Ask the person to select an option or explicitly delegate the choice. Do not
 finish alignment while that material choice remains open.
