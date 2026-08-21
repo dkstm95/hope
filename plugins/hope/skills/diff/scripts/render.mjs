@@ -22,7 +22,6 @@ import { exposeBidiControls } from "./text.mjs";
 const fontUrls = Object.freeze({
   code: new URL("../../../assets/fonts/HopeCode.woff2", import.meta.url),
   sansBold: new URL("../../../assets/fonts/HopeSansBold.woff2", import.meta.url),
-  sansLight: new URL("../../../assets/fonts/HopeSansLight.woff2", import.meta.url),
   sansMedium: new URL("../../../assets/fonts/HopeSansMedium.woff2", import.meta.url),
 });
 const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
@@ -72,9 +71,12 @@ function userText(value, className = "") {
   return `<bdi dir="auto"${className ? ` class="${className}"` : ""}>${text}</bdi>`;
 }
 
-function userParagraphs(value) {
-  return String(value).split(/\r?\n+/u).map(
-    (paragraph) => `<p>${userText(paragraph.trim())}</p>`,
+function userParagraphs(value, suffix = "") {
+  const paragraphs = String(value).split(/\r?\n+/u);
+  return paragraphs.map(
+    (paragraph, index) => `<p>${userText(paragraph.trim())}${
+      index === paragraphs.length - 1 ? suffix : ""
+    }</p>`,
   ).join("");
 }
 
@@ -117,11 +119,6 @@ function trustedCodeUrl(review, evidence) {
     + `#L${evidence.startLine}-L${evidence.endLine}`;
 }
 
-function accessibleEvidenceLabel(context, count, dictionary) {
-  const evidence = `${label(dictionary, "common.evidence")} · ${count}`;
-  return accessibleControlLabel(context, evidence);
-}
-
 function accessibleControlLabel(context, action) {
   const normalized = String(context ?? "").replace(/\s+/gu, " ").trim();
   if (!normalized) return action;
@@ -139,43 +136,62 @@ function evidenceBlock(
   dictionary,
   review,
   codeRenderer,
-  { collapsible = true, context = "" } = {},
+  { context = "" } = {},
 ) {
   if (items.length === 0) return "";
-  const content = `<div class="evidence-list">
-    ${items.map((item) => {
-      const seen = codeRenderer.evidenceTargets;
-      const target = evidenceTarget(item);
-      const url = trustedCodeUrl(review, item);
-      const title = sourceTitle(item, dictionary);
-      if (seen.has(target)) {
-        return `<article class="evidence-reference">
-          <a href="#${target}">${html(title)}</a>
-        </article>`;
-      }
-      seen.add(target);
-      const codeSource = renderedCodeSources.has(item.sourceKind);
-      return `<article class="evidence-item" id="${target}">
-        <div class="evidence-meta">
-          ${url
-            ? `<a href="${html(url)}">${html(title)}</a>`
-            : `<span>${html(title)}</span>`}
-        </div>
-        <pre class="${codeSource ? "code-evidence" : "source-text"}"><code${codeSource
-          ? ` aria-label="${htmlAttribute(item.excerpt)}"`
-          : ""}>${codeSource
-          ? codeRenderer.render(item)
-          : html(item.excerpt)}</code></pre>
-      </article>`;
-    }).join("")}
-  </div>`;
-  if (!collapsible) {
-    return `<div class="evidence evidence-inline" role="group" aria-label="${html(label(dictionary, "common.evidence"))}">${content}</div>`;
-  }
-  return `<details class="evidence">
-    <summary aria-label="${html(accessibleEvidenceLabel(context, items.length, dictionary))}">${html(label(dictionary, "common.evidence"))} · ${items.length}</summary>
-    ${content}
+  return `<sup class="evidence-markers">${items.map((item) => {
+    const target = evidenceTarget(item);
+    let record = codeRenderer.evidenceRecords.get(target);
+    if (!record) {
+      record = Object.freeze({
+        item,
+        number: codeRenderer.evidenceRecords.size + 1,
+        target,
+        title: sourceTitle(item, dictionary),
+      });
+      codeRenderer.evidenceRecords.set(target, record);
+    }
+    const accessible = accessibleControlLabel(
+      context,
+      `${label(dictionary, "common.evidence")} [${record.number}]: ${record.title}`,
+    );
+    return `<a class="evidence-marker" href="#${record.target}" data-evidence-target="${record.target}" aria-controls="evidence-popover" aria-expanded="false" aria-haspopup="dialog" aria-label="${html(accessible)}">[${record.number}]</a>`;
+  }).join("")}</sup>`;
+}
+
+function evidenceFootnotes(review, dictionary, codeRenderer) {
+  const records = [...codeRenderer.evidenceRecords.values()];
+  if (records.length === 0) return "";
+  return `<details class="evidence-group evidence-footnotes" id="evidence-references">
+    <summary><h3>${html(countedLabel(dictionary, "evidence.references", records.length))}</h3></summary>
+    <div class="evidence-group-content"><ol class="evidence-footnote-list">${records.map((record) => {
+      const url = trustedCodeUrl(review, record.item);
+      const codeSource = renderedCodeSources.has(record.item.sourceKind);
+      return `<li>
+        <span class="evidence-number" aria-hidden="true">[${record.number}]</span>
+        <article class="evidence-item" id="${record.target}" data-evidence-entry>
+          <div class="evidence-meta">
+            ${url
+              ? `<a href="${html(url)}">${html(record.title)}</a>`
+              : `<span>${html(record.title)}</span>`}
+          </div>
+          <pre class="${codeSource ? "code-evidence" : "source-text"}"><code${codeSource
+            ? ` aria-label="${htmlAttribute(record.item.excerpt)}"`
+            : ""}>${codeSource
+            ? codeRenderer.render(record.item)
+            : html(record.item.excerpt)}</code></pre>
+        </article>
+      </li>`;
+    }).join("")}</ol></div>
   </details>`;
+}
+
+function evidencePopover(dictionary) {
+  return `<aside class="evidence-popover" id="evidence-popover" popover="auto" role="dialog" aria-labelledby="evidence-popover-title">
+    <header class="evidence-popover-head"><strong id="evidence-popover-title"></strong><button class="evidence-popover-close" type="button" aria-label="${html(label(dictionary, "evidence.closePreview"))}" title="${html(label(dictionary, "evidence.closePreview"))}">×</button></header>
+    <div class="evidence-popover-body" data-evidence-popover-body></div>
+    <a class="evidence-popover-more" data-evidence-popover-more href="#evidence-references">${html(label(dictionary, "evidence.viewList"))}</a>
+  </aside>`;
 }
 
 function claimBlock(
@@ -187,19 +203,19 @@ function claimBlock(
   evidenceContext = claim.text,
   showBasis = true,
 ) {
+  const markers = evidenceBlock(
+    claim.evidence,
+    dictionary,
+    review,
+    codeRenderer,
+    { context: evidenceContext },
+  );
   return `<div class="claim ${html(className)}">
-    ${userParagraphs(claim.text)}
+    ${userParagraphs(claim.text, markers)}
     <div class="claim-meta">
       ${showBasis
         ? `<div class="claim-basis">${html(label(dictionary, basisKey(claim.basis)))}</div>`
         : ""}
-      ${evidenceBlock(
-        claim.evidence,
-        dictionary,
-        review,
-        codeRenderer,
-        { context: evidenceContext },
-      )}
     </div>
   </div>`;
 }
@@ -449,6 +465,13 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
   const relatedLimits = item.limitIds.map((limitId) => (
     review.limits.find((limit) => limit.id === limitId)
   )).filter(Boolean);
+  const markers = compact ? "" : evidenceBlock(
+    item.evidence,
+    dictionary,
+    review,
+    codeRenderer,
+    { context: item.title },
+  );
   return `<article class="${className}" id="${html(id)}">
     <div class="item-head">
       <span class="status kind-${html(item.kind)}">${html(kindLabel(item.kind, dictionary))}</span>
@@ -459,7 +482,7 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
       ? `<h4><a href="#${html(item.id)}">${userText(item.title)}</a></h4>`
       : `<h3>${userText(item.title)}</h3>`}
     ${compact ? "" : `
-      ${userParagraphs(item.explanation)}
+      ${userParagraphs(item.explanation, markers)}
       ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
         <span>${html(label(dictionary, "item.relatedLimits"))}</span>
         ${relatedLimits.map((limit) => {
@@ -472,9 +495,6 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
         <div class="item-next"><dt>${html(label(dictionary, "item.nextStep"))}</dt><dd>${userParagraphs(item.nextStep)}</dd></div>
         <div class="item-done"><dt>${html(label(dictionary, "item.doneWhen"))}</dt><dd>${userParagraphs(item.doneWhen)}</dd></div>
       </dl>
-      ${evidenceBlock(item.evidence, dictionary, review, codeRenderer, {
-        context: item.title,
-      })}
     `}
   </article>`;
 }
@@ -492,9 +512,16 @@ function sectionHeading(title, number, id = "") {
   return `<h2${idAttribute}><span class="section-number">${sectionOrdinal(number)}</span><span>${html(title)}</span></h2>`;
 }
 
-function documentTitle(title) {
+function documentTitle(claim, dictionary, review, codeRenderer) {
+  const markers = evidenceBlock(
+    claim.evidence,
+    dictionary,
+    review,
+    codeRenderer,
+    { context: claim.text },
+  );
   return `<header class="document-title">
-    <h1 id="review-title">${userText(title)}</h1>
+    <h1 id="review-title">${userText(claim.text)}${markers}</h1>
   </header>`;
 }
 
@@ -629,13 +656,16 @@ function contextCheck(
   const relatedLimits = check.limitIds.map((limitId) => (
     review.limits.find((limit) => limit.id === limitId)
   )).filter(Boolean);
+  const markers = evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
+    context: check.subject,
+  });
   return `<details class="context-check">
     <summary class="context-check-head">
       <h4>${userText(check.subject)}</h4>
       <span class="context-status context-${html(check.status)}">${html(label(dictionary, `context.${check.status === "not-applicable" ? "notApplicable" : check.status}`))}</span>
     </summary>
     <div class="disclosure-content">
-      ${userParagraphs(check.explanation)}
+      ${userParagraphs(check.explanation, markers)}
       ${check.evidence.length === 0 ? "" : `<p class="claim-basis">${html(
         label(dictionary, basisKey(check.basis)),
       )}</p>`}
@@ -645,9 +675,6 @@ function contextCheck(
           return `<a href="#scope-${html(limit.id)}">${userText(displayed.subject)}</a>`;
         }).join(" · ")}
       </p>`}
-      ${evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
-        context: check.subject,
-      })}
     </div>
   </details>`;
 }
@@ -873,10 +900,13 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
       : `<div class="scope-context-notes">${checks.map((check) => (
         `<section class="scope-context-note">
           <h4>${userText(check.subject)}</h4>
-          ${userParagraphs(check.explanation)}
-          ${evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
-            context: check.subject,
-          })}
+          ${userParagraphs(check.explanation, evidenceBlock(
+            check.evidence,
+            dictionary,
+            review,
+            codeRenderer,
+            { context: check.subject },
+          ))}
         </section>`
       )).join("")}</div>`
   );
@@ -1017,7 +1047,8 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
             <div><dt>${html(label(dictionary, "artifact.theme"))}</dt><dd>${html(label(dictionary, `theme.${snapshot.settings.theme}`))}</dd></div>
           </dl>
         </div>
-      </details>`,
+      </details>
+      ${evidenceFootnotes(review, dictionary, codeRenderer)}`,
     id: "evidence-and-scope",
     initiallyOpen: true,
     number,
@@ -1096,11 +1127,13 @@ function buildSections(review, dictionary, codeRenderer) {
               label(dictionary, "quiz.showAnswer"),
             ))}">${html(label(dictionary, "quiz.showAnswer"))}</summary>
             <div class="quiz-answer-content">
-              ${userParagraphs(item.answer)}
-              ${evidenceBlock(item.evidence, dictionary, review, codeRenderer, {
-                collapsible: false,
-                context: item.question,
-              })}
+              ${userParagraphs(item.answer, evidenceBlock(
+                item.evidence,
+                dictionary,
+                review,
+                codeRenderer,
+                { context: item.question },
+              ))}
             </div>
           </details>
         </div>
@@ -1196,13 +1229,6 @@ function css(fontBase64) {
 
   return `@font-face {
   font-family: "Hope Sans";
-  src: url(data:font/woff2;base64,${fontBase64.sansLight}) format("woff2");
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Hope Sans";
   src: url(data:font/woff2;base64,${fontBase64.sansMedium}) format("woff2");
   font-style: normal;
   font-weight: 500;
@@ -1249,7 +1275,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 300 ${wide.fontSize}px/${wide.lineHeight} "Hope Sans", sans-serif;
+  font: 500 ${wide.fontSize}px/${wide.lineHeight} "Hope Sans", sans-serif;
   text-rendering: optimizeLegibility;
 }
 h1,
@@ -1705,11 +1731,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   line-height: ${TYPE.micro.lineHeight};
   font-weight: 500;
 }
-.claim-meta > .evidence {
-  min-width: 0;
-  max-width: 100%;
-}
-.claim-meta > .evidence[open] { flex: 1 1 100%; }
 .item-basis {
   color: var(--muted);
   font-size: ${TYPE.micro.fontSize}px;
@@ -1717,54 +1738,27 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   font-weight: 500;
 }
 
-.evidence {
-  min-width: 0;
-  max-width: 100%;
-  margin-top: ${space2}px;
-}
-.claim-meta > .evidence { margin-top: 0; }
-.evidence > summary {
-  display: flex;
-  align-items: center;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-}
-.evidence-list {
-  display: grid;
-  min-width: 0;
-  max-width: 100%;
-  margin-top: ${space2}px;
-  gap: ${space2}px;
-}
+.evidence-markers { display: inline-flex; margin-left: ${space1}px; white-space: nowrap; font-size: .78em; line-height: 1; vertical-align: .4em; }
+.evidence-marker { display: inline-grid; min-width: 24px; min-height: 24px; place-items: center; margin-block: -6px; color: var(--accent); font-weight: 700; text-decoration: none; }
+.evidence-marker:visited { color: var(--accent); }
+.evidence-marker:hover { text-decoration: underline; }
+.evidence-footnote-list { margin: 0; padding: 0; list-style: none; }
+.evidence-footnote-list > li { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: ${space3}px; padding: ${space4}px 0; border-top: 1px solid var(--border); }
+.evidence-number { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
 .evidence-item {
   min-width: 0;
   max-width: 100%;
   border: 1px solid var(--component-border);
   background: var(--panel);
 }
-.evidence-reference {
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.evidence-reference a {
-  display: flex;
-  min-height: 44px;
-  padding: ${space2}px 0;
-  align-items: center;
-}
-.evidence-meta a:visited,
-.evidence-reference a:visited {
-  color: var(--visited);
-}
+.evidence-meta a:visited { color: var(--visited); }
 .evidence-meta {
   padding: ${space2}px;
   border-bottom: 1px solid var(--border);
   font: 400 ${TYPE.supporting.wide.fontSize}px/${TYPE.supporting.wide.lineHeight} "Hope Code", ui-monospace, monospace;
   overflow-wrap: anywhere;
 }
-.evidence pre {
+.evidence-item pre {
   width: 100%;
   max-width: 100%;
   margin: 0;
@@ -1774,15 +1768,26 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   overflow: auto;
   font: 400 ${wideCode.fontSize}px/${wideCode.lineHeight} "Hope Code", ui-monospace, monospace;
 }
-.evidence code {
+.evidence-item code {
   display: block;
   width: max-content;
   min-width: 100%;
 }
-.evidence pre.code-evidence {
+.evidence-item pre.code-evidence {
   background: var(--code-bg);
   color: var(--code-fg);
 }
+.evidence-popover { position: fixed; inset: auto ${space5}px ${space5}px auto; width: min(520px, calc(100vw - ${space6}px)); max-height: min(72vh, 680px); margin: 0; padding: 0; overflow: auto; border: 1px solid var(--component-border); border-radius: 8px; background: var(--panel); color: var(--text); box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 22%, transparent); }
+.evidence-popover::backdrop { background: transparent; }
+.evidence-popover-head { position: sticky; z-index: 1; top: 0; display: flex; align-items: center; justify-content: space-between; gap: ${space3}px; padding: ${space3}px ${space4}px; border-bottom: 1px solid var(--border); background: var(--panel); }
+.evidence-popover-head strong { min-width: 0; overflow-wrap: anywhere; }
+.evidence-popover-close { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; font-size: 20px; }
+.evidence-popover-close:hover { background: var(--bg); }
+.evidence-popover-body { padding: ${space4}px; }
+.evidence-popover-body .evidence-item { border: 0; }
+.evidence-popover-body .evidence-meta { padding-inline: 0; }
+.evidence-popover-body pre { max-height: 42vh; }
+.evidence-popover-more { display: flex; min-height: 44px; align-items: center; margin: 0 ${space4}px ${space4}px; font-weight: 700; }
 .code-line {
   display: inline;
 }
@@ -2594,7 +2599,6 @@ td:first-child {
   overflow-wrap: anywhere;
 }
 .artifact-details { margin-top: ${space3}px; }
-.evidence > summary,
 .evidence-group > summary,
 .context-check > summary,
 .scope-limit > summary,
@@ -2610,8 +2614,6 @@ td:first-child {
   font-weight: 500;
   list-style: none;
 }
-.evidence > summary { min-height: ${space5}px; }
-.evidence > summary::-webkit-details-marker,
 .evidence-group > summary::-webkit-details-marker,
 .context-check > summary::-webkit-details-marker,
 .scope-limit > summary::-webkit-details-marker,
@@ -2621,7 +2623,6 @@ td:first-child {
 .quiz-answer > summary::-webkit-details-marker {
   display: none;
 }
-.evidence > summary::before,
 .evidence-group > summary::before,
 .context-check > summary::before,
 .scope-limit > summary::before,
@@ -2634,7 +2635,6 @@ td:first-child {
   flex: 0 0 auto;
   transition: transform 120ms ease;
 }
-.evidence[open] > summary::before,
 .evidence-group[open] > summary::before,
 .context-check[open] > summary::before,
 .scope-limit[open] > summary::before,
@@ -2690,10 +2690,6 @@ td:first-child {
   max-width: ${LAYOUT.proseWidth};
   margin: 0 0 ${space2}px;
 }
-.quiz-answer-content > .evidence-inline {
-  margin-top: ${space2}px;
-}
-
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
@@ -2790,12 +2786,10 @@ td:first-child {
   .review-section + .review-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .synopsis-grid > div > h3,
   .synopsis-background > h3,
-  .before-after > div > h3,
-  .evidence > summary {
+  .before-after > div > h3 {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
     line-height: ${TYPE.supporting.narrow.lineHeight};
   }
-  .evidence > summary { min-height: 44px; }
   .status-row { margin-top: ${space3}px; }
   .section-heading h2 {
     font-size: ${narrowSection.fontSize}px;
@@ -2821,10 +2815,12 @@ td:first-child {
   .flow > li::before {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
   }
-  .evidence pre {
+  .evidence-item pre {
     font-size: ${narrowCode.fontSize}px;
     line-height: ${narrowCode.lineHeight};
   }
+  .evidence-footnote-list > li { grid-template-columns: 36px minmax(0,1fr); }
+  .evidence-popover { inset: auto ${space3}px ${space3}px ${space3}px; width: auto; max-height: 76vh; }
   .change-shift,
   .visual-components,
   .teaching-aid-choices,
@@ -2942,7 +2938,8 @@ td:first-child {
   .theme-button,
   .microworld-controls,
   .microworld-noscript,
-  .skip { display: none; }
+  .skip,
+  .evidence-popover { display: none !important; }
   .layout {
     display: block;
     max-width: none;
@@ -3006,10 +3003,16 @@ const labels=${labels};
 const root=document.documentElement;
 const theme=document.getElementById("theme-toggle");
 const toc=document.querySelector(".toc-mobile");
+const evidencePopover=document.getElementById("evidence-popover");
+const evidencePopoverTitle=document.getElementById("evidence-popover-title");
+const evidencePopoverBody=document.querySelector("[data-evidence-popover-body]");
+const evidencePopoverMore=document.querySelector("[data-evidence-popover-more]");
+const evidencePopoverClose=evidencePopover?.querySelector(".evidence-popover-close");
 const navLinks=[...document.querySelectorAll('nav a[href^="#"]')];
 const sections=[...document.querySelectorAll(".main > [id]")];
 const progress=[...document.querySelectorAll("[data-toc-current]")];
 let currentFrame=0;
+let activeEvidenceMarker;
 const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
 const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
 const revealTarget=target=>{if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;};
@@ -3018,6 +3021,10 @@ const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(
 syncTheme();
 theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
 toc?.addEventListener("click",event=>{const link=event.target.closest("a");if(!link)return;toc.open=false;const target=document.getElementById(link.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({behavior:"instant",block:"start"});});});
+document.addEventListener("click",event=>{const marker=event.target.closest?.(".evidence-marker");if(!marker||!evidencePopover?.showPopover)return;const target=document.getElementById(marker.dataset.evidenceTarget);if(!target)return;event.preventDefault();if(activeEvidenceMarker&&activeEvidenceMarker!==marker)activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=marker;marker.setAttribute("aria-expanded","true");evidencePopoverTitle.textContent=marker.textContent+" "+(target.querySelector(".evidence-meta")?.textContent||"");const preview=target.cloneNode(true);preview.removeAttribute("id");preview.removeAttribute("data-evidence-entry");evidencePopoverBody.replaceChildren(preview);evidencePopoverMore.href="#"+target.id;if(!evidencePopover.matches(":popover-open"))evidencePopover.showPopover();evidencePopoverClose?.focus();});
+evidencePopoverClose?.addEventListener("click",()=>{evidencePopover.hidePopover();activeEvidenceMarker?.focus();});
+evidencePopoverMore?.addEventListener("click",()=>{if(evidencePopover.matches(":popover-open"))evidencePopover.hidePopover();});
+evidencePopover?.addEventListener("toggle",event=>{if(event.newState==="closed"&&activeEvidenceMarker){activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=undefined;}});
 addEventListener("keydown",event=>{if(event.key!=="Escape"||!toc?.open)return;event.preventDefault();toc.open=false;toc.querySelector(":scope > summary")?.focus();});
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);
 for(const world of document.querySelectorAll("[data-microworld]")){const groups=[...world.querySelectorAll(".microworld-control-group")];const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const updateWorld=()=>{const selectedControls=groups.map(group=>group.querySelector(".microworld-control:checked"));if(selectedControls.some(control=>!control)){if(status)status.textContent=labels.microworldNoScenario;return;}const key=selectedControls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=selectedControls.map(control=>control.dataset.controlLabel+": "+control.dataset.optionLabel).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+active.dataset.status;};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}
@@ -3058,14 +3065,14 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const iconBytes = await readFile(iconUrl);
   const iconDataUrl = `data:image/png;base64,${iconBytes.toString("base64")}`;
   const codeRenderer = Object.freeze({
-    evidenceTargets: new Set(),
+    evidenceRecords: new Map(),
     render: renderCodeEvidence,
   });
   const script = clientScript(dictionary);
   const title = review.title.text;
-  const sections = buildSections(review, dictionary, codeRenderer);
-  const documentTitleHtml = documentTitle(title);
+  const documentTitleHtml = documentTitle(review.title, dictionary, review, codeRenderer);
   const synopsisHtml = synopsis(review, dictionary, codeRenderer, { number: 1 });
+  const sections = buildSections(review, dictionary, codeRenderer);
   const styles = css(Object.fromEntries(Object.entries(fontBytes).map(
     ([name, bytes]) => [name, bytes.toString("base64")],
   )));
@@ -3159,6 +3166,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
       ${toc}
     </nav>
   </div>
+  ${codeRenderer.evidenceRecords.size === 0 ? "" : evidencePopover(dictionary)}
   <script>${script}</script>
 </body>
 </html>

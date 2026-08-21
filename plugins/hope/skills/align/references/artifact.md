@@ -11,6 +11,13 @@ and revision judgment.
 item in `checks` binds one passing condition to its verification method and to
 the `agent` or `human` that decides whether it passes.
 
+An evidence item may declare a stable lowercase `id`. Any claim-bearing title
+or prose value accepted by `citedTitle` or `citedProse` may remain a string or
+become `{ "text": "...", "evidenceIds": ["..."] }`. Every referenced ID must
+name one unique evidence item. The renderer reuses that item's document number
+wherever it is cited; evidence without a claim link remains only in the final
+evidence list.
+
 `inspect` still validates existing artifact histories that contain the earlier
 `intent` and `success` contract. `revise` preserves those revisions while
 appending a v2 revision. The artifact's internal schema version is separate
@@ -25,8 +32,9 @@ changing the last readable artifact.
 
 The renderer escapes authored text and produces one self-contained HTML file.
 It makes no network request and keeps the current agreement readable without
-JavaScript. JavaScript adds only theme switching, current-section indication,
-and focused in-page navigation.
+JavaScript. Numbered evidence links fall back to their final list entries.
+JavaScript adds theme switching, current-section indication, focused in-page
+navigation, and a bounded evidence preview popover.
 
 An optional design-direction comparison may read two or three raster images
 from absolute local paths in the structured input. Each path must identify a

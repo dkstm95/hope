@@ -68,8 +68,26 @@ test.beforeAll(async () => {
       evidence: [{ label: "이전 근거 전용", location: "docs/previous.md" }],
     },
   });
+  const currentInput = makeAlignInput();
   const secondInput = await writeInput("second.json", makeAlignInput({
-    boundary: "복구 기간은 24시간이며 만료된 항목은 복구하지 않는다.",
+    goal: {
+      text: currentInput.goal,
+      evidenceIds: ["upload-service", "product-requirements"],
+    },
+    boundary: {
+      text: "복구 기간은 24시간이며 만료된 항목은 복구하지 않는다.",
+      evidenceIds: ["product-requirements"],
+    },
+    decisions: [
+      {
+        decision: {
+          text: currentInput.decisions[0].decision,
+          evidenceIds: ["upload-service"],
+        },
+        reason: currentInput.decisions[0].reason,
+      },
+      currentInput.decisions[1],
+    ],
     designDirections: {
       ...makeDesignDirections(directionImages),
       selection: {
@@ -78,6 +96,10 @@ test.beforeAll(async () => {
         decidedBy: "delegated",
       },
     },
+    evidence: [
+      { id: "upload-service", label: "업로드 서비스", location: "src/upload/recovery.ts" },
+      { id: "product-requirements", label: "제품 요구", location: "https://example.com/requirements" },
+    ],
     revisionSummary: "복구 기간과 경계를 명확히 함",
   }));
   await reviseAlignArtifact(
@@ -123,7 +145,7 @@ test("Align presents one compact current agreement with secondary history", asyn
     "decimal-leading-zero",
   );
   expect(await page.locator(".overview .check-list").evaluate((list) => list.tagName)).toBe("OL");
-  await expect(page.locator(".overview .check-condition").first()).toHaveCSS("font-weight", "300");
+  await expect(page.locator(".overview .check-condition").first()).toHaveCSS("font-weight", "500");
   await expect(page.locator(".overview .check-verification > summary")).toHaveText([
     "AI 에이전트 확인",
     "AI 에이전트 확인",
@@ -131,7 +153,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   ]);
   await expect(page.locator(".overview .check-verification > summary").first()).toHaveCSS(
     "font-weight",
-    "300",
+    "500",
   );
   expect(await page.locator(".overview .check-verification > summary").first().evaluate(
     (summary) => summary.getBoundingClientRect().height,
@@ -170,6 +192,19 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator("#agreement .decision-reason").first()).not.toBeVisible();
   await expect(page.locator("#evidence")).not.toHaveAttribute("open", "");
   await expect(page.locator("#evidence .section-disclosure-content")).not.toBeVisible();
+  await expect(page.locator(".evidence-marker")).toHaveCount(4);
+  const firstEvidenceMarker = page.locator('.evidence-marker[href="#evidence-upload-service"]').first();
+  await expect(firstEvidenceMarker).toHaveText("[1]");
+  await firstEvidenceMarker.click();
+  await expect(page.locator("#evidence-popover")).toBeVisible();
+  await expect(page.locator("#evidence-popover-title")).toContainText("[1] 업로드 서비스");
+  await expect(page.locator("#evidence-popover")).toContainText("src/upload/recovery.ts");
+  await expect(page.locator("[data-evidence-popover-more]")).toHaveAttribute(
+    "href",
+    "#evidence-upload-service",
+  );
+  await page.locator(".evidence-popover-close").click();
+  await expect(page.locator("#evidence-popover")).not.toBeVisible();
   await expect(page.locator("#design-directions-title > span:last-child")).toHaveText("디자인 시안");
   const currentDirections = page.locator("#design-directions");
   await expect(currentDirections.locator(".design-direction")).toHaveCount(2);
@@ -340,6 +375,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   expect(geometry.firstSectionPadding).toBe("16px");
   expect(geometry.topbarHeight).toBe(58);
   await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
+  await expect(page.locator("body")).toHaveCSS("font-weight", "500");
   await expect(page.locator(".decision-number")).toHaveText(["01", "02"]);
   await page.locator(".overview .check-verification").first().locator(":scope > summary").click();
   await expect(page.locator(".overview .check-verification-content").first()).toBeVisible();
@@ -452,6 +488,11 @@ test("Align remains useful without JavaScript", async ({ browser }) => {
   const decision = page.locator("#agreement .decision-disclosure").first();
   await decision.locator(":scope > summary").click();
   await expect(decision.locator(".decision-reason")).toBeVisible();
+  const marker = page.locator('.evidence-marker[href="#evidence-upload-service"]').first();
+  await marker.click();
+  await expect(page).toHaveURL(/#evidence-upload-service$/u);
+  await expect(page.locator("#evidence")).toHaveAttribute("open", "");
+  await expect(page.locator("#evidence-upload-service")).toBeVisible();
   await context.close();
 });
 

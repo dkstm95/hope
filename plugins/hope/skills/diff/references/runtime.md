@@ -14,6 +14,12 @@ base, changed files, patches, and bounded context.
 It gives captured sources stable identifiers and validates every analysis
 citation against those sources.
 
+The renderer assigns one document number to each distinct validated source
+interval, places that `[n]` after every claim that cites it, and keeps the full
+code or source excerpt in one folded list at the document bottom. Activating a
+marker previews the same canonical entry; its fragment link remains the
+no-JavaScript fallback.
+
 The model selects one focused source interval. The runtime validates that
 interval and splits it into bounded evidence references without dropping any
 selected line. This keeps reference-size arithmetic out of the host workflow

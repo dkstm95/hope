@@ -30,10 +30,13 @@ export function makeAlignArtifactData(locale, images) {
   });
   const content = {
     title: local("Trusted fan schedule", "신뢰할 수 있는 팬 일정"),
-    goal: local(
-      "Give fans one reliable place to check schedules, voting and application deadlines, source conflicts, and the next safe action.",
-      "팬이 일정, 투표와 신청 마감, 출처 충돌, 다음 안전한 행동을 한곳에서 신뢰할 수 있게 확인하도록 한다.",
-    ),
+    goal: {
+      text: local(
+        "Give fans one reliable place to check schedules, voting and application deadlines, source conflicts, and the next safe action.",
+        "팬이 일정, 투표와 신청 마감, 출처 충돌, 다음 안전한 행동을 한곳에서 신뢰할 수 있게 확인하도록 한다.",
+      ),
+      evidenceIds: ["rescene-go", "mnet-plus", "blip-event"],
+    },
     problem: local(
       "Broadcasts, performances, releases, votes, and applications use different dates and sources. Fans can miss a deadline or act on stale information while moving between them.",
       "방송, 공연, 발매, 투표, 신청은 날짜와 출처가 서로 다르다. 팬이 여러 곳을 오가는 동안 마감을 놓치거나 오래된 정보로 행동할 수 있다.",
@@ -51,10 +54,13 @@ export function makeAlignArtifactData(locale, images) {
         by: "agent",
       },
       {
-        condition: local(
-          "Every event shows its KST time, primary source, last checked time, and a direct action link when action is required.",
-          "각 일정은 KST 시각, 우선 출처, 마지막 확인 시각을 보여 주고 행동이 필요하면 원본 링크를 제공한다.",
-        ),
+        condition: {
+          text: local(
+            "Every event shows its KST time, primary source, last checked time, and a direct action link when action is required.",
+            "각 일정은 KST 시각, 우선 출처, 마지막 확인 시각을 보여 주고 행동이 필요하면 원본 링크를 제공한다.",
+          ),
+          evidenceIds: ["rescene-go", "mnet-plus", "blip-event"],
+        },
         verify: local(
           "Check representative event details and reject fixtures that omit a required time or source.",
           "대표 일정 상세를 확인하고 필수 시각이나 출처가 없는 입력이 거부되는지 테스트한다.",
@@ -191,16 +197,16 @@ export function makeAlignArtifactData(locale, images) {
       ],
     },
     decisions: [
-      { decision: local("Official organizers and artists have highest priority", "공식 주최사와 아티스트를 가장 높은 출처로 둔다"), reason: local("They can confirm changes and cancellations directly.", "변경과 취소를 직접 확정할 수 있다.") },
+      { decision: { text: local("Official organizers and artists have highest priority", "공식 주최사와 아티스트를 가장 높은 출처로 둔다"), evidenceIds: ["mnet-plus"] }, reason: local("They can confirm changes and cancellations directly.", "변경과 취소를 직접 확정할 수 있다.") },
       { decision: local("Do not hide or merge source conflicts", "출처 충돌을 숨기거나 합치지 않는다"), reason: local("Visible evidence is safer than presenting one uncertain value as final.", "하나의 불확실한 값을 확정 정보로 보여 주는 것보다 근거를 보이는 편이 안전하다.") },
       { decision: local("Action links require a recent check", "행동 링크에는 최근 확인이 필요하다"), reason: local("Voting and application deadlines can change within hours.", "투표와 신청 마감은 몇 시간 안에도 바뀔 수 있다.") },
-      { decision: local("Keep previous values and cancellation reasons", "이전 값과 취소 근거를 남긴다"), reason: local("Fans can understand why an action they saw earlier is no longer safe.", "팬이 이전에 본 행동이 더는 안전하지 않은 이유를 이해할 수 있다.") },
+      { decision: local("Keep previous values and cancellation reasons", "이전 값과 취소 근거를 남긴다"), reason: { text: local("Fans can understand why an action they saw earlier is no longer safe.", "팬이 이전에 본 행동이 더는 안전하지 않은 이유를 이해할 수 있다."), evidenceIds: ["rescene-go", "blip-event"] } },
     ],
     openChoices: [],
     evidence: [
-      { label: "RESCENE go", location: "https://www.rescene.org/schedule" },
-      { label: local("RESCENE official Mnet Plus", "RESCENE 공식 Mnet Plus"), location: "https://artist.mnetplus.world/main/stg/rescene-official/home" },
-      { label: local("Fan-sign event date example", "팬사인회 일정 예시"), location: "https://s.blip.kr/s/9d3b7f37" },
+      { id: "rescene-go", label: "RESCENE go", location: "https://www.rescene.org/schedule" },
+      { id: "mnet-plus", label: local("RESCENE official Mnet Plus", "RESCENE 공식 Mnet Plus"), location: "https://artist.mnetplus.world/main/stg/rescene-official/home" },
+      { id: "blip-event", label: local("Fan-sign event date example", "팬사인회 일정 예시"), location: "https://s.blip.kr/s/9d3b7f37" },
     ],
   };
 

@@ -21,22 +21,22 @@
     "locale": { "enum": ["en-US", "ko-KR"] },
     "theme": { "enum": ["system", "light", "dark"] },
     "title": { "$ref": "#/$defs/title" },
-    "goal": { "$ref": "#/$defs/prose" },
-    "problem": { "$ref": "#/$defs/prose" },
+    "goal": { "$ref": "#/$defs/citedProse" },
+    "problem": { "$ref": "#/$defs/citedProse" },
     "checks": {
       "type": "array",
       "minItems": 1,
       "maxItems": 12,
       "items": { "$ref": "#/$defs/check" }
     },
-    "boundary": { "$ref": "#/$defs/prose" },
+    "boundary": { "$ref": "#/$defs/citedProse" },
     "scope": {
       "type": "object",
       "additionalProperties": false,
       "required": ["included", "excluded"],
       "properties": {
-        "included": { "$ref": "#/$defs/proseList" },
-        "excluded": { "$ref": "#/$defs/proseList" }
+        "included": { "$ref": "#/$defs/citedProseList" },
+        "excluded": { "$ref": "#/$defs/citedProseList" }
       }
     },
     "designDirections": { "$ref": "#/$defs/designDirections" },
@@ -66,12 +66,12 @@
         "additionalProperties": false,
         "required": ["decision", "reason"],
         "properties": {
-          "decision": { "$ref": "#/$defs/title" },
-          "reason": { "$ref": "#/$defs/prose" }
+          "decision": { "$ref": "#/$defs/citedTitle" },
+          "reason": { "$ref": "#/$defs/citedProse" }
         }
       }
     },
-    "openChoices": { "$ref": "#/$defs/proseList" },
+    "openChoices": { "$ref": "#/$defs/citedProseList" },
     "evidence": {
       "type": "array",
       "maxItems": 30,
@@ -80,6 +80,7 @@
         "additionalProperties": false,
         "required": ["label", "location"],
         "properties": {
+          "id": { "$ref": "#/$defs/evidenceId" },
           "label": { "$ref": "#/$defs/title" },
           "location": { "$ref": "#/$defs/prose" }
         }
@@ -105,10 +106,43 @@
         { "maxLength": 4000 }
       ]
     },
+    "citedTitle": {
+      "oneOf": [
+        { "$ref": "#/$defs/title" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text", "evidenceIds"],
+          "properties": {
+            "text": { "$ref": "#/$defs/title" },
+            "evidenceIds": { "$ref": "#/$defs/evidenceIds" }
+          }
+        }
+      ]
+    },
+    "citedProse": {
+      "oneOf": [
+        { "$ref": "#/$defs/prose" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text", "evidenceIds"],
+          "properties": {
+            "text": { "$ref": "#/$defs/prose" },
+            "evidenceIds": { "$ref": "#/$defs/evidenceIds" }
+          }
+        }
+      ]
+    },
     "proseList": {
       "type": "array",
       "maxItems": 30,
       "items": { "$ref": "#/$defs/prose" }
+    },
+    "citedProseList": {
+      "type": "array",
+      "maxItems": 30,
+      "items": { "$ref": "#/$defs/citedProse" }
     },
     "shortProseList": {
       "type": "array",
@@ -121,7 +155,7 @@
       "additionalProperties": false,
       "required": ["condition", "verify", "by"],
       "properties": {
-        "condition": { "$ref": "#/$defs/prose" },
+        "condition": { "$ref": "#/$defs/citedProse" },
         "verify": { "$ref": "#/$defs/prose" },
         "by": { "enum": ["agent", "human"] }
       }
@@ -132,6 +166,20 @@
         { "maxLength": 48 },
         { "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$" }
       ]
+    },
+    "evidenceId": {
+      "allOf": [
+        { "$ref": "#/$defs/text" },
+        { "maxLength": 48 },
+        { "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$" }
+      ]
+    },
+    "evidenceIds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/evidenceId" }
     },
     "designDirections": {
       "type": "object",
@@ -221,8 +269,8 @@
       "additionalProperties": false,
       "required": ["title"],
       "properties": {
-        "title": { "$ref": "#/$defs/title" },
-        "detail": { "$ref": "#/$defs/prose" }
+        "title": { "$ref": "#/$defs/citedTitle" },
+        "detail": { "$ref": "#/$defs/citedProse" }
       }
     },
     "outcomeItem": {
@@ -230,8 +278,8 @@
       "additionalProperties": false,
       "required": ["title"],
       "properties": {
-        "title": { "$ref": "#/$defs/title" },
-        "detail": { "$ref": "#/$defs/prose" },
+        "title": { "$ref": "#/$defs/citedTitle" },
+        "detail": { "$ref": "#/$defs/citedProse" },
         "kind": { "enum": ["complete", "cancel"] }
       }
     }

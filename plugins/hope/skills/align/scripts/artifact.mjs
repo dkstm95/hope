@@ -91,6 +91,43 @@ function textList(value, path, maximumItems = 30) {
   return value.map((item, index) => text(item, `${path}[${index}]`));
 }
 
+function evidenceId(value, path) {
+  const id = text(value, path, 48);
+  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/u.test(id)) {
+    throw new TypeError(`${path} must use lowercase letters, numbers, and hyphens`);
+  }
+  return id;
+}
+
+function evidenceIdList(value, path) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 10) {
+    throw new TypeError(`${path} must contain between 1 and 10 evidence ids`);
+  }
+  const ids = value.map((item, index) => evidenceId(item, `${path}[${index}]`));
+  if (new Set(ids).size !== ids.length) {
+    throw new TypeError(`${path} must not repeat an evidence id`);
+  }
+  return Object.freeze(ids);
+}
+
+function citedText(value, path, maximumLength = 4_000) {
+  if (typeof value === "string") return text(value, path, maximumLength);
+  if (!isRecord(value)) throw new TypeError(`${path} must be text or cited text`);
+  assertKeys(value, ["text", "evidenceIds"], path);
+  return Object.freeze({
+    text: text(value.text, `${path}.text`, maximumLength),
+    evidenceIds: evidenceIdList(value.evidenceIds, `${path}.evidenceIds`),
+  });
+}
+
+function citedTextList(value, path, maximumItems = 30) {
+  if (!Array.isArray(value)) throw new TypeError(`${path} must be an array`);
+  if (value.length > maximumItems) {
+    throw new TypeError(`${path} exceeds ${maximumItems} items`);
+  }
+  return value.map((item, index) => citedText(item, `${path}[${index}]`));
+}
+
 function checkItems(value, path, maximumItems = 12) {
   if (!Array.isArray(value)) throw new TypeError(`${path} must be an array`);
   if (value.length === 0 || value.length > maximumItems) {
@@ -104,14 +141,18 @@ function checkItems(value, path, maximumItems = 12) {
       throw new TypeError(`${itemPath}.by must be agent or human`);
     }
     return Object.freeze({
-      condition: text(item.condition, `${itemPath}.condition`),
+      condition: citedText(item.condition, `${itemPath}.condition`),
       verify: text(item.verify, `${itemPath}.verify`),
       by: item.by,
     });
   });
 }
 
-function titledItems(value, path, { maximumItems, minimumItems = 0 } = {}) {
+function titledItems(value, path, {
+  cited = false,
+  maximumItems,
+  minimumItems = 0,
+} = {}) {
   if (!Array.isArray(value)) throw new TypeError(`${path} must be an array`);
   if (value.length < minimumItems || value.length > maximumItems) {
     throw new TypeError(
@@ -123,15 +164,21 @@ function titledItems(value, path, { maximumItems, minimumItems = 0 } = {}) {
     if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
     assertKeys(item, ["title", "detail"], itemPath);
     return Object.freeze({
-      title: text(item.title, `${itemPath}.title`, 160),
+      title: cited
+        ? citedText(item.title, `${itemPath}.title`, 160)
+        : text(item.title, `${itemPath}.title`, 160),
       ...(item.detail === undefined
         ? {}
-        : { detail: text(item.detail, `${itemPath}.detail`) }),
+        : {
+          detail: cited
+            ? citedText(item.detail, `${itemPath}.detail`)
+            : text(item.detail, `${itemPath}.detail`),
+        }),
     });
   });
 }
 
-function outcomeItems(value, path, { maximumItems } = {}) {
+function outcomeItems(value, path, { cited = false, maximumItems } = {}) {
   if (!Array.isArray(value) || value.length > maximumItems) {
     throw new TypeError(`${path} must be an array with at most ${maximumItems} items`);
   }
@@ -143,40 +190,49 @@ function outcomeItems(value, path, { maximumItems } = {}) {
       throw new TypeError(`${itemPath}.kind must be complete or cancel`);
     }
     return Object.freeze({
-      title: text(item.title, `${itemPath}.title`, 160),
+      title: cited
+        ? citedText(item.title, `${itemPath}.title`, 160)
+        : text(item.title, `${itemPath}.title`, 160),
       ...(item.detail === undefined
         ? {}
-        : { detail: text(item.detail, `${itemPath}.detail`) }),
+        : {
+          detail: cited
+            ? citedText(item.detail, `${itemPath}.detail`)
+            : text(item.detail, `${itemPath}.detail`),
+        }),
       ...(item.kind === undefined ? {} : { kind: item.kind }),
     });
   });
 }
 
-function scopeValue(value, path) {
+function scopeValue(value, path, { cited = false } = {}) {
   if (!isRecord(value)) throw new TypeError(`${path} must be an object`);
   assertKeys(value, ["included", "excluded"], path);
+  const validateList = cited ? citedTextList : textList;
   return Object.freeze({
-    included: Object.freeze(textList(value.included, `${path}.included`)),
-    excluded: Object.freeze(textList(value.excluded, `${path}.excluded`)),
+    included: Object.freeze(validateList(value.included, `${path}.included`)),
+    excluded: Object.freeze(validateList(value.excluded, `${path}.excluded`)),
   });
 }
 
-function behaviorValue(value, path) {
+function behaviorValue(value, path, { cited = false } = {}) {
   if (value === undefined) return undefined;
   if (!isRecord(value)) throw new TypeError(`${path} must be an object`);
   assertKeys(value, ["steps", "outcomes"], path);
   return Object.freeze({
     steps: titledItems(value.steps, `${path}.steps`, {
+      cited,
       maximumItems: 8,
       minimumItems: 2,
     }),
     outcomes: outcomeItems(value.outcomes, `${path}.outcomes`, {
+      cited,
       maximumItems: 6,
     }),
   });
 }
 
-function decisionItems(value, path) {
+function decisionItems(value, path, { cited = false } = {}) {
   if (!Array.isArray(value) || value.length > 20) {
     throw new TypeError(`${path} must be an array with at most 20 items`);
   }
@@ -185,8 +241,12 @@ function decisionItems(value, path) {
     if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
     assertKeys(item, ["decision", "reason"], itemPath);
     return Object.freeze({
-      decision: text(item.decision, `${itemPath}.decision`, 160),
-      reason: text(item.reason, `${itemPath}.reason`),
+      decision: cited
+        ? citedText(item.decision, `${itemPath}.decision`, 160)
+        : text(item.decision, `${itemPath}.decision`, 160),
+      reason: cited
+        ? citedText(item.reason, `${itemPath}.reason`)
+        : text(item.reason, `${itemPath}.reason`),
     });
   }));
 }
@@ -196,15 +256,43 @@ function evidenceItems(value, path) {
   if (!Array.isArray(value) || value.length > 30) {
     throw new TypeError(`${path} must be an array with at most 30 items`);
   }
-  return Object.freeze(value.map((item, index) => {
+  const items = value.map((item, index) => {
     const itemPath = `${path}[${index}]`;
     if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
-    assertKeys(item, ["label", "location"], itemPath);
+    assertKeys(item, ["id", "label", "location"], itemPath);
     return Object.freeze({
+      ...(item.id === undefined ? {} : { id: evidenceId(item.id, `${itemPath}.id`) }),
       label: text(item.label, `${itemPath}.label`, 160),
       location: text(item.location, `${itemPath}.location`),
     });
-  }));
+  });
+  for (const [index, item] of items.entries()) {
+    if (item.id !== undefined && items.findIndex((candidate) => candidate.id === item.id) !== index) {
+      throw new TypeError(`${path} must use unique evidence ids`);
+    }
+  }
+  return Object.freeze(items);
+}
+
+function assertCitations(value, evidence, path) {
+  const ids = new Set(evidence.flatMap((item) => item.id === undefined ? [] : [item.id]));
+  const visit = (item, itemPath) => {
+    if (Array.isArray(item)) {
+      item.forEach((entry, index) => visit(entry, `${itemPath}[${index}]`));
+      return;
+    }
+    if (!isRecord(item)) return;
+    if (typeof item.text === "string" && Array.isArray(item.evidenceIds)) {
+      for (const id of item.evidenceIds) {
+        if (!ids.has(id)) {
+          throw new TypeError(`${itemPath}.evidenceIds refers to unknown evidence id: ${id}`);
+        }
+      }
+      return;
+    }
+    for (const [key, entry] of Object.entries(item)) visit(entry, `${itemPath}.${key}`);
+  };
+  visit(value, path);
 }
 
 function optionId(value, path) {
@@ -326,8 +414,8 @@ export function validateAlignInput(value, defaults = {}) {
   if (!["system", "light", "dark"].includes(theme)) {
     throw new TypeError("$.theme must be system, light, or dark");
   }
-  const scope = scopeValue(value.scope, "$.scope");
-  const behavior = behaviorValue(value.behavior, "$.behavior");
+  const scope = scopeValue(value.scope, "$.scope", { cited: true });
+  const behavior = behaviorValue(value.behavior, "$.behavior", { cited: true });
 
   const validatedDesignDirections = value.designDirections === undefined
     ? undefined
@@ -340,28 +428,39 @@ export function validateAlignInput(value, defaults = {}) {
       },
     });
 
-  const decisions = decisionItems(value.decisions, "$.decisions");
+  const decisions = decisionItems(value.decisions, "$.decisions", { cited: true });
   const evidence = evidenceItems(value.evidence, "$.evidence");
   const checks = checkItems(value.checks, "$.checks");
-  return Object.freeze({
+  const content = {
     schemaVersion: 2,
     locale,
     theme,
     title: text(value.title, "$.title", 160),
-    goal: text(value.goal, "$.goal"),
-    problem: text(value.problem, "$.problem"),
+    goal: citedText(value.goal, "$.goal"),
+    problem: citedText(value.problem, "$.problem"),
     checks: Object.freeze(checks),
-    boundary: text(value.boundary, "$.boundary"),
+    boundary: citedText(value.boundary, "$.boundary"),
     scope,
     ...(validatedDesignDirections === undefined
       ? {}
       : { designDirections: validatedDesignDirections }),
     ...(behavior === undefined ? {} : { behavior }),
     decisions,
-    openChoices: Object.freeze(textList(value.openChoices, "$.openChoices")),
+    openChoices: Object.freeze(citedTextList(value.openChoices, "$.openChoices")),
     evidence,
     revisionSummary: text(value.revisionSummary, "$.revisionSummary"),
-  });
+  };
+  assertCitations({
+    goal: content.goal,
+    problem: content.problem,
+    checks: content.checks,
+    boundary: content.boundary,
+    scope: content.scope,
+    behavior: content.behavior,
+    decisions: content.decisions,
+    openChoices: content.openChoices,
+  }, evidence, "$");
+  return Object.freeze(content);
 }
 
 async function readStableFile(path, maximumBytes, label) {
@@ -690,21 +789,50 @@ function validateArtifactData(value) {
     const contentSchema = hasCurrentGoal ? 2 : 1;
     assertKeys(revision.content, contentKeysBySchema[contentSchema], contentPath);
     text(revision.content.title, `${contentPath}.title`, 160);
-    text(revision.content.problem, `${contentPath}.problem`);
+    const retainedEvidence = evidenceItems(
+      revision.content.evidence,
+      `${contentPath}.evidence`,
+    );
     if (hasCurrentGoal) {
-      text(revision.content.goal, `${contentPath}.goal`);
+      citedText(revision.content.problem, `${contentPath}.problem`);
+    } else {
+      text(revision.content.problem, `${contentPath}.problem`);
+    }
+    if (hasCurrentGoal) {
+      citedText(revision.content.goal, `${contentPath}.goal`);
       checkItems(revision.content.checks, `${contentPath}.checks`);
     } else {
       text(revision.content.intent, `${contentPath}.intent`);
       const success = textList(revision.content.success, `${contentPath}.success`, 12);
       if (success.length === 0) throw new Error("Align artifact success list is empty");
     }
-    text(revision.content.boundary, `${contentPath}.boundary`);
-    scopeValue(revision.content.scope, `${contentPath}.scope`);
-    behaviorValue(revision.content.behavior, `${contentPath}.behavior`);
-    decisionItems(revision.content.decisions, `${contentPath}.decisions`);
-    textList(revision.content.openChoices, `${contentPath}.openChoices`);
-    evidenceItems(revision.content.evidence, `${contentPath}.evidence`);
+    if (hasCurrentGoal) {
+      citedText(revision.content.boundary, `${contentPath}.boundary`);
+    } else {
+      text(revision.content.boundary, `${contentPath}.boundary`);
+    }
+    scopeValue(revision.content.scope, `${contentPath}.scope`, { cited: hasCurrentGoal });
+    behaviorValue(revision.content.behavior, `${contentPath}.behavior`, {
+      cited: hasCurrentGoal,
+    });
+    decisionItems(revision.content.decisions, `${contentPath}.decisions`, {
+      cited: hasCurrentGoal,
+    });
+    if (hasCurrentGoal) {
+      citedTextList(revision.content.openChoices, `${contentPath}.openChoices`);
+      assertCitations({
+        goal: revision.content.goal,
+        problem: revision.content.problem,
+        checks: revision.content.checks,
+        boundary: revision.content.boundary,
+        scope: revision.content.scope,
+        behavior: revision.content.behavior,
+        decisions: revision.content.decisions,
+        openChoices: revision.content.openChoices,
+      }, retainedEvidence, contentPath);
+    } else {
+      textList(revision.content.openChoices, `${contentPath}.openChoices`);
+    }
     if (revision.content.designDirections !== undefined) {
       const directions = designDirections(
         revision.content.designDirections,

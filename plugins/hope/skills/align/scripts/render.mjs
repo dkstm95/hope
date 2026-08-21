@@ -11,7 +11,6 @@ import {
 
 const fontUrls = Object.freeze({
   sansBold: new URL("../../../assets/fonts/HopeSansBold.woff2", import.meta.url),
-  sansLight: new URL("../../../assets/fonts/HopeSansLight.woff2", import.meta.url),
   sansMedium: new URL("../../../assets/fonts/HopeSansMedium.woff2", import.meta.url),
 });
 const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
@@ -33,6 +32,8 @@ const dictionaries = Object.freeze({
     designDirections: "Design directions",
     earlierRevisions: "earlier versions",
     evidence: "Basis",
+    evidenceClose: "Close evidence preview",
+    evidenceViewList: "View in the evidence list",
     excluded: "Out of scope",
     history: "Version history",
     goal: "Goal",
@@ -77,6 +78,8 @@ const dictionaries = Object.freeze({
     designDirections: "디자인 시안",
     earlierRevisions: "개의 이전 버전",
     evidence: "근거",
+    evidenceClose: "근거 미리보기 닫기",
+    evidenceViewList: "근거 목록에서 보기",
     excluded: "제외 범위",
     history: "버전 이력",
     goal: "목표",
@@ -126,6 +129,48 @@ function authoredParagraphs(value) {
   ).join("");
 }
 
+function citedValue(value) {
+  return typeof value === "string" ? value : value.text;
+}
+
+function evidenceCatalog(content) {
+  const entries = content.evidence.map((item, index) => {
+    const key = item.id ?? `item-${index + 1}`;
+    return Object.freeze({
+      item,
+      number: index + 1,
+      target: `evidence-${key}`,
+    });
+  });
+  return Object.freeze({
+    byId: new Map(entries.flatMap((entry) => (
+      entry.item.id === undefined ? [] : [[entry.item.id, entry]]
+    ))),
+    entries: Object.freeze(entries),
+  });
+}
+
+function evidenceMarkers(value, catalog, dictionary) {
+  if (typeof value === "string" || value.evidenceIds.length === 0) return "";
+  return `<sup class="evidence-markers">${value.evidenceIds.map((id) => {
+    const entry = catalog.byId.get(id);
+    if (!entry) return "";
+    const accessible = `${label(dictionary, "evidence")} [${entry.number}]: ${entry.item.label}`;
+    return `<a class="evidence-marker" href="#${entry.target}" data-evidence-target="${entry.target}" aria-controls="evidence-popover" aria-expanded="false" aria-haspopup="dialog" aria-label="${escapeHtml(accessible)}">[${entry.number}]</a>`;
+  }).join("")}</sup>`;
+}
+
+function citedInline(value, catalog, dictionary) {
+  return `${authoredText(citedValue(value))}${evidenceMarkers(value, catalog, dictionary)}`;
+}
+
+function citedParagraphs(value, catalog, dictionary) {
+  const paragraphs = String(citedValue(value)).split(/\r?\n+/u);
+  return paragraphs.map((paragraph, index) => `<p>${authoredText(paragraph.trim())}${
+    index === paragraphs.length - 1 ? evidenceMarkers(value, catalog, dictionary) : ""
+  }</p>`).join("");
+}
+
 function embeddedJson(value) {
   return JSON.stringify(value)
     .replaceAll("<", "\\u003c")
@@ -150,10 +195,17 @@ function summaryLabelElement(tag, value) {
   )}</span> <span>${escapeHtml(balanced[2])}</span></span></${tag}>`;
 }
 
-function textList(items, { empty, className = "plain-list" } = {}) {
+function textList(items, {
+  empty,
+  className = "plain-list",
+  catalog,
+  dictionary,
+} = {}) {
   if (items.length === 0) return `<p class="empty">${escapeHtml(empty)}</p>`;
   return `<ul class="${className}">${items.map(
-    (item) => `<li>${authoredText(item)}</li>`,
+    (item) => `<li>${catalog
+      ? citedInline(item, catalog, dictionary)
+      : authoredText(citedValue(item))}</li>`,
   ).join("")}</ul>`;
 }
 
@@ -179,7 +231,7 @@ function documentTitle(content) {
   </header>`;
 }
 
-function checkList(content, dictionary) {
+function checkList(content, dictionary, catalog) {
   const checks = content.checks ?? content.success.map((condition) => ({ condition }));
   return `<ol class="check-list">${checks.map((check) => {
     const verification = check.verify === undefined ? "" : `<details class="check-verification">
@@ -189,32 +241,34 @@ function checkList(content, dictionary) {
       ))}</summary>
       <div class="check-verification-content">${authoredParagraphs(check.verify)}</div>
     </details>`;
-    return `<li><span class="check-condition">${authoredText(check.condition)}</span>${verification}</li>`;
+    return `<li><span class="check-condition">${catalog
+      ? citedInline(check.condition, catalog, dictionary)
+      : authoredText(citedValue(check.condition))}</span>${verification}</li>`;
   }).join("")}</ol>`;
 }
 
-function overview(content, dictionary, number) {
+function overview(content, dictionary, number, catalog) {
   return `<section class="overview document-section" id="overview" aria-labelledby="overview-title">
     ${sectionTitle("overview-title", label(dictionary, "overview"), number)}
     <dl class="synopsis">
-      <div>${summaryLabelElement("dt", label(dictionary, "goal"))}<dd>${authoredParagraphs(goalValue(content))}</dd></div>
-      <div>${summaryLabelElement("dt", label(dictionary, "problem"))}<dd>${authoredParagraphs(content.problem)}</dd></div>
-      <div>${summaryLabelElement("dt", label(dictionary, "checks"))}<dd>${checkList(content, dictionary)}</dd></div>
-      <div>${summaryLabelElement("dt", label(dictionary, "boundary"))}<dd>${authoredParagraphs(content.boundary)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "goal"))}<dd>${citedParagraphs(goalValue(content), catalog, dictionary)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "problem"))}<dd>${citedParagraphs(content.problem, catalog, dictionary)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "checks"))}<dd>${checkList(content, dictionary, catalog)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "boundary"))}<dd>${citedParagraphs(content.boundary, catalog, dictionary)}</dd></div>
     </dl>
   </section>`;
 }
 
-function scopeSection(content, dictionary, number) {
+function scopeSection(content, dictionary, number, catalog) {
   return `<section class="scope document-section" id="scope" aria-labelledby="scope-title">
     ${sectionTitle("scope-title", label(dictionary, "scope"), number)}
     <div class="scope-column">
       <h3>${escapeHtml(label(dictionary, "included"))}</h3>
-      ${textList(content.scope.included, { empty: label(dictionary, "noIncluded") })}
+      ${textList(content.scope.included, { empty: label(dictionary, "noIncluded"), catalog, dictionary })}
     </div>
     <div class="scope-column">
       <h3>${escapeHtml(label(dictionary, "excluded"))}</h3>
-      ${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded") })}
+      ${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded"), catalog, dictionary })}
     </div>
   </section>`;
 }
@@ -276,15 +330,15 @@ function designDirectionsSection(content, dictionary, number) {
   </section>`;
 }
 
-function behaviorSection(content, dictionary, number) {
+function behaviorSection(content, dictionary, number, catalog) {
   if (!content.behavior) return undefined;
   const outcomes = content.behavior.outcomes.length === 0 ? "" : `<div class="behavior-outcomes-block">
     <h3 class="behavior-outcomes-title">${escapeHtml(label(dictionary, "outcomes"))}</h3>
     <ul class="behavior-outcomes">${
     content.behavior.outcomes.map((outcome) => `<li class="${outcome.kind === "cancel" ? "cancel" : "complete"}">
       <span class="outcome-mark" aria-hidden="true">${outcome.kind === "cancel" ? "×" : "✓"}</span>
-      <div><strong>${authoredText(outcome.title)}</strong>${outcome.detail
-        ? authoredParagraphs(outcome.detail)
+      <div><strong>${citedInline(outcome.title, catalog, dictionary)}</strong>${outcome.detail
+        ? citedParagraphs(outcome.detail, catalog, dictionary)
         : ""}</div>
     </li>`).join("")
   }</ul></div>`;
@@ -292,29 +346,29 @@ function behaviorSection(content, dictionary, number) {
     ${sectionTitle("behavior-title", label(dictionary, "behavior"), number)}
     <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
       <span class="step-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
-      <strong>${authoredText(step.title)}</strong>${step.detail
-        ? authoredParagraphs(step.detail)
+      <strong>${citedInline(step.title, catalog, dictionary)}</strong>${step.detail
+        ? citedParagraphs(step.detail, catalog, dictionary)
         : ""}
     </li>`).join("")}</ol>
     ${outcomes}
   </section>`;
 }
 
-function agreementSection(content, dictionary, number) {
+function agreementSection(content, dictionary, number, catalog) {
   if (content.decisions.length === 0 && content.openChoices.length === 0) return undefined;
   const decisionColumn = content.decisions.length === 0 ? "" : `<div>
     <h3 class="subheading">${escapeHtml(label(dictionary, "agreedDecisions"))}</h3>
     <ol class="decision-list">${content.decisions.map((decision, index) => `<li>
       <span class="decision-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
       <details class="decision-disclosure">
-        <summary><h3>${authoredText(decision.decision)}</h3></summary>
-        <div class="decision-reason">${authoredParagraphs(decision.reason)}</div>
+        <summary><h3>${citedInline(decision.decision, catalog, dictionary)}</h3></summary>
+        <div class="decision-reason">${citedParagraphs(decision.reason, catalog, dictionary)}</div>
       </details>
     </li>`).join("")}</ol>
   </div>`;
   const choiceColumn = content.openChoices.length === 0 ? "" : `<div>
     <h3 class="subheading">${escapeHtml(label(dictionary, "openChoices"))}</h3>
-    ${textList(content.openChoices)}
+    ${textList(content.openChoices, { catalog, dictionary })}
   </div>`;
   return `<section class="body-section document-section" id="agreement" aria-labelledby="agreement-title">
     ${sectionTitle("agreement-title", label(dictionary, "agreement"), number)}
@@ -329,20 +383,28 @@ function evidenceLocation(item) {
   return `<code>${authoredText(item.location)}</code>`;
 }
 
-function evidenceSection(content, dictionary, number) {
-  if (content.evidence.length === 0) return undefined;
+function evidenceSection(catalog, dictionary, number) {
+  if (catalog.entries.length === 0) return undefined;
   return `<details class="body-section document-section section-disclosure" id="evidence">
-    <summary class="section-disclosure-summary">${sectionTitle("evidence-title", label(dictionary, "evidence"), number, ` · ${content.evidence.length}`)}</summary>
-    <div class="section-disclosure-content"><dl class="evidence-list">${content.evidence.map((item) => `<div>
-      <dt>${authoredText(item.label)}</dt>
-      <dd>${evidenceLocation(item)}</dd>
-    </div>`).join("")}</dl></div>
+    <summary class="section-disclosure-summary">${sectionTitle("evidence-title", label(dictionary, "evidence"), number, ` · ${catalog.entries.length}`)}</summary>
+    <div class="section-disclosure-content"><ol class="evidence-list">${catalog.entries.map((entry) => `<li id="${entry.target}" data-evidence-entry>
+      <span class="evidence-number" aria-hidden="true">[${entry.number}]</span>
+      <div class="evidence-entry-copy"><strong class="evidence-entry-title">${authoredText(entry.item.label)}</strong><div class="evidence-entry-location">${evidenceLocation(entry.item)}</div></div>
+    </li>`).join("")}</ol></div>
   </details>`;
 }
 
+function evidencePopover(dictionary) {
+  return `<aside class="evidence-popover" id="evidence-popover" popover="auto" role="dialog" aria-labelledby="evidence-popover-title">
+    <header class="evidence-popover-head"><strong id="evidence-popover-title"></strong><button class="evidence-popover-close" type="button" aria-label="${escapeHtml(label(dictionary, "evidenceClose"))}" title="${escapeHtml(label(dictionary, "evidenceClose"))}">×</button></header>
+    <div class="evidence-popover-body" data-evidence-popover-body></div>
+    <a class="evidence-popover-more" data-evidence-popover-more href="#evidence">${escapeHtml(label(dictionary, "evidenceViewList"))}</a>
+  </aside>`;
+}
+
 function compactRevisionContent(content, dictionary, idPrefix) {
-  const detail = (title, value) => `${authoredText(title)}${value
-    ? ` <span aria-hidden="true">—</span> ${authoredText(value)}`
+  const detail = (title, value) => `${authoredText(citedValue(title))}${value
+    ? ` <span aria-hidden="true">—</span> ${authoredText(citedValue(value))}`
     : ""}`;
   const behavior = content.behavior ? `<div>
     <dt>${escapeHtml(label(dictionary, "behavior"))}</dt>
@@ -372,10 +434,10 @@ function compactRevisionContent(content, dictionary, idPrefix) {
     <dd><ul class="plain-list">${content.evidence.map((item) => `<li><strong>${authoredText(item.label)}</strong><br>${evidenceLocation(item)}</li>`).join("")}</ul></dd>
   </div>`;
   return `<dl class="revision-content">
-    <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(goalValue(content))}</p></dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredText(content.problem)}</dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(citedValue(goalValue(content)))}</p></dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredText(citedValue(content.problem))}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(content.boundary)}</dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(citedValue(content.boundary))}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.scope.included, { empty: label(dictionary, "noIncluded") })}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "excluded"))}</dt><dd>${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded") })}</dd></div>
     ${designDirectionsHtml}${behavior}${decisions}${openChoices}${evidence}
@@ -441,13 +503,6 @@ function css(fontBase64) {
   const [space1, space2, space3, space4, space5, space6, space7, space8, space9] = SPACE;
   return `@font-face {
   font-family: "Hope Sans";
-  src: url(data:font/woff2;base64,${fontBase64.sansLight}) format("woff2");
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Hope Sans";
   src: url(data:font/woff2;base64,${fontBase64.sansMedium}) format("woff2");
   font-style: normal;
   font-weight: 500;
@@ -480,7 +535,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 300 ${TYPE.body.wide.fontSize}px/${TYPE.body.wide.lineHeight} "Hope Sans", sans-serif;
+  font: 500 ${TYPE.body.wide.fontSize}px/${TYPE.body.wide.lineHeight} "Hope Sans", sans-serif;
   text-rendering: optimizeLegibility;
 }
 h1, h2, h3, strong { font-weight: 700; }
@@ -574,8 +629,8 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .check-list li { padding-left: ${space1}px; }
 .check-list li::marker { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .check-condition { display: block; }
-.check-verification { margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.check-verification > summary { min-height: ${space5}px; display: flex; align-items: center; color: var(--muted); cursor: pointer; font-weight: 300; list-style: none; }
+.check-verification { margin-top: ${space1}px; font-size: ${TYPE.supporting.wide.fontSize}px; }
+.check-verification > summary { min-height: ${space5}px; display: flex; align-items: center; color: var(--muted); cursor: pointer; font-weight: 500; list-style: none; }
 .check-verification > summary::-webkit-details-marker { display: none; }
 .check-verification > summary::after { margin-left: ${space2}px; content: "›"; transition: transform 120ms ease; }
 .check-verification[open] > summary::after { transform: rotate(90deg); }
@@ -614,7 +669,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .direction-references > summary::after { margin-left: ${space2}px; content: "›"; transition: transform 120ms ease; }
 .direction-references[open] > summary::after { transform: rotate(90deg); }
 .direction-reference-content { min-width: 0; padding-top: ${space2}px; }
-.direction-references li p { margin: ${space1}px 0 0; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
+.direction-references li p { margin: ${space1}px 0 0; font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-rationales { margin: ${space4}px 0 0; border-top: 1px solid var(--border); }
 .direction-rationales > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: ${space3}px; padding: ${space3}px 0; }
 .direction-rationales > div + div { border-top: 1px solid var(--border); }
@@ -633,11 +688,9 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 }
 .behavior-steps { list-style: none; padding: 0; display: grid; }
 .behavior-steps li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: ${space3}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
-.behavior-steps li:not(:last-child)::after { content: ""; position: absolute; top: 22px; bottom: ${space1}px; left: 13px; width: 1px; background: var(--border); }
 .step-number { position: relative; z-index: 1; display: block; width: 28px; background: var(--bg); color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .behavior-steps strong, .behavior-outcomes strong { display: block; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .behavior-steps p { grid-column: 2; margin-top: ${space1}px; }
-.behavior-steps p, .behavior-outcomes p { color: var(--muted); }
 .behavior-steps p + p, .behavior-outcomes p + p, .decision-list p + p { margin-top: ${space2}px; }
 .behavior-outcomes-block { margin-top: ${space2}px; padding-top: ${space4}px; }
 .behavior-outcomes-title { display: flex; align-items: center; gap: ${space3}px; margin: 0 0 ${space4}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
@@ -660,7 +713,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .decision-disclosure > summary::after { content: "›"; transition: transform 120ms ease; }
 .decision-disclosure[open] > summary::after { transform: rotate(90deg); }
 .decision-list h3 { margin: 0; font-size: inherit; }
-.decision-reason { padding: 0 ${space5}px ${space1}px 0; color: var(--muted); }
+.decision-reason { padding: 0 ${space5}px ${space1}px 0; }
 .decision-number { padding-top: ${space2}px; }
 .section-disclosure { border: 0; }
 .section-disclosure-summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; list-style: none; }
@@ -669,9 +722,24 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .section-disclosure-summary::after { margin-left: ${space2}px; color: var(--text); content: "›"; transition: transform 120ms ease; }
 .section-disclosure[open] > .section-disclosure-summary::after { transform: rotate(90deg); }
 .section-disclosure:not([open]) > .section-disclosure-summary .section-title { margin-bottom: 0; }
-.evidence-list > div { display: grid; grid-template-columns: minmax(140px,.35fr) minmax(0,1fr); gap: ${space4}px; padding: ${space3}px ${space2}px; border-top: 1px solid var(--border); }
-.evidence-list dt { font-weight: 700; }
-.evidence-list dd { margin: 0; overflow-wrap: anywhere; }
+.evidence-markers { display: inline-flex; margin-left: ${space1}px; white-space: nowrap; font-size: .78em; line-height: 1; vertical-align: .4em; }
+.evidence-marker { display: inline-grid; min-width: 24px; min-height: 24px; place-items: center; margin-block: -6px; color: var(--accent); font-weight: 700; text-decoration: none; }
+.evidence-marker:visited { color: var(--accent); }
+.evidence-marker:hover { text-decoration: underline; }
+.evidence-list { margin: 0; padding: 0; list-style: none; }
+.evidence-list > li { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: ${space3}px; padding: ${space4}px ${space2}px; border-top: 1px solid var(--border); }
+.evidence-number { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.evidence-entry-title { display: block; }
+.evidence-entry-location { margin-top: ${space1}px; overflow-wrap: anywhere; }
+.evidence-popover { position: fixed; inset: auto ${space5}px ${space5}px auto; width: min(420px, calc(100vw - ${space6}px)); max-height: min(68vh, 620px); margin: 0; padding: 0; overflow: auto; border: 1px solid var(--component-border); border-radius: 8px; background: var(--panel); color: var(--text); box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 22%, transparent); }
+.evidence-popover::backdrop { background: transparent; }
+.evidence-popover-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: ${space3}px; padding: ${space3}px ${space4}px; border-bottom: 1px solid var(--border); background: var(--panel); }
+.evidence-popover-head strong { min-width: 0; }
+.evidence-popover-close { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; font-size: 20px; }
+.evidence-popover-close:hover { background: var(--bg); }
+.evidence-popover-body { padding: ${space4}px; }
+.evidence-popover-body .evidence-entry-location { margin-top: ${space2}px; }
+.evidence-popover-more { display: flex; min-height: 44px; align-items: center; margin: 0 ${space4}px ${space4}px; font-weight: 700; }
 .revision-content { padding: ${space4}px 0 ${space5}px; }
 .revision-content > div { display: grid; grid-template-columns: 110px minmax(0,1fr); gap: ${space4}px; padding: ${space2}px 0; }
 .revision-content dt { font-weight: 700; }
@@ -706,7 +774,8 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .design-direction { display: block; grid-row: auto; padding-inline: ${space2}px; }
   .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
   .direction-rationales > div { grid-template-columns: 1fr; gap: ${space1}px; }
-  .revision-content > div, .evidence-list > div { grid-template-columns: 1fr; gap: ${space1}px; }
+  .revision-content > div { grid-template-columns: 1fr; gap: ${space1}px; }
+  .evidence-popover { inset: auto ${space3}px ${space3}px ${space3}px; width: auto; max-height: 72vh; }
 }
 @media (max-width: ${LAYOUT.compactBreakpoint}px) {
   .topbar-inner { padding-inline: ${space3}px; gap: ${space2}px; }
@@ -728,7 +797,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 }
 @media print {
   :root, :root[data-theme], :root:not([data-theme="light"]) { color-scheme: light; ${themeVariables(COLORS.light)}; }
-  .topbar, .rail, .mobile-navigation, .skip { display: none !important; }
+  .topbar, .rail, .mobile-navigation, .skip, .evidence-popover { display: none !important; }
   .layout { display: block; }
   .main { padding: 0; }
   .design-direction { break-inside: avoid; }
@@ -755,10 +824,16 @@ const labels=${labels};
 const root=document.documentElement;
 const theme=document.getElementById("theme-toggle");
 const navigation=document.querySelector(".mobile-navigation");
+const evidencePopover=document.getElementById("evidence-popover");
+const evidencePopoverTitle=document.getElementById("evidence-popover-title");
+const evidencePopoverBody=document.querySelector("[data-evidence-popover-body]");
+const evidencePopoverMore=document.querySelector("[data-evidence-popover-more]");
+const evidencePopoverClose=evidencePopover?.querySelector(".evidence-popover-close");
 const links=[...document.querySelectorAll('nav a[href^="#"]')];
 const sections=[...document.querySelectorAll(".document-section[id]")];
 const progress=[...document.querySelectorAll("[data-toc-current]")];
 let frame=0;
+let activeEvidenceMarker;
 const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
 const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
 const focusTarget=target=>{const had=target.hasAttribute("tabindex");if(!had)target.setAttribute("tabindex","-1");target.focus({preventScroll:true});if(!had)target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});};
@@ -768,6 +843,10 @@ const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(
 syncTheme();
 theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
 navigation?.addEventListener("click",event=>{if(event.target.closest?.('a[href^="#"]'))navigation.open=false;});
+document.addEventListener("click",event=>{const marker=event.target.closest?.(".evidence-marker");if(!marker||!evidencePopover?.showPopover)return;const target=document.getElementById(marker.dataset.evidenceTarget);const copy=target?.querySelector(".evidence-entry-copy");if(!target||!copy)return;event.preventDefault();if(activeEvidenceMarker&&activeEvidenceMarker!==marker)activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=marker;marker.setAttribute("aria-expanded","true");evidencePopoverTitle.textContent=marker.textContent+" "+(target.querySelector(".evidence-entry-title")?.textContent||"");evidencePopoverBody.replaceChildren(copy.cloneNode(true));evidencePopoverMore.href="#"+target.id;if(!evidencePopover.matches(":popover-open"))evidencePopover.showPopover();evidencePopoverClose?.focus();});
+evidencePopoverClose?.addEventListener("click",()=>{evidencePopover.hidePopover();activeEvidenceMarker?.focus();});
+evidencePopoverMore?.addEventListener("click",()=>{if(evidencePopover.matches(":popover-open"))evidencePopover.hidePopover();});
+evidencePopover?.addEventListener("toggle",event=>{if(event.newState==="closed"&&activeEvidenceMarker){activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=undefined;}});
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);
 addEventListener("hashchange",openTarget);
 addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});
@@ -801,13 +880,14 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
   const locale = localeMenu(alternateLocale, data.locale, dictionary);
   const current = data.revisions.at(-1);
   const content = current.content;
+  const catalog = evidenceCatalog(content);
   const sections = [
-    { id: "overview", title: label(dictionary, "overview"), include: true, render: (number) => overview(content, dictionary, number) },
-    { id: "scope", title: label(dictionary, "scope"), include: true, render: (number) => scopeSection(content, dictionary, number) },
+    { id: "overview", title: label(dictionary, "overview"), include: true, render: (number) => overview(content, dictionary, number, catalog) },
+    { id: "scope", title: label(dictionary, "scope"), include: true, render: (number) => scopeSection(content, dictionary, number, catalog) },
     { id: "design-directions", title: label(dictionary, "designDirections"), include: content.designDirections !== undefined, render: (number) => designDirectionsSection(content, dictionary, number) },
-    { id: "behavior", title: label(dictionary, "behavior"), include: content.behavior !== undefined, render: (number) => behaviorSection(content, dictionary, number) },
-    { id: "agreement", title: label(dictionary, "agreement"), include: content.decisions.length > 0 || content.openChoices.length > 0, render: (number) => agreementSection(content, dictionary, number) },
-    { id: "evidence", title: label(dictionary, "evidence"), include: content.evidence.length > 0, render: (number) => evidenceSection(content, dictionary, number) },
+    { id: "behavior", title: label(dictionary, "behavior"), include: content.behavior !== undefined, render: (number) => behaviorSection(content, dictionary, number, catalog) },
+    { id: "agreement", title: label(dictionary, "agreement"), include: content.decisions.length > 0 || content.openChoices.length > 0, render: (number) => agreementSection(content, dictionary, number, catalog) },
+    { id: "evidence", title: label(dictionary, "evidence"), include: content.evidence.length > 0, render: (number) => evidenceSection(catalog, dictionary, number) },
   ].filter((section) => section.include).map((section, index) => ({
     ...section,
     number: index + 1,
@@ -871,6 +951,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
       ${railHistory(data, dictionary)}
     </div></aside>
   </div>
+  ${catalog.entries.length === 0 ? "" : evidencePopover(dictionary)}
   <script id="hope-align-data" type="application/json">${embeddedJson(data)}</script>
   <script>${script}</script>
 </body>

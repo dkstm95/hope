@@ -51,8 +51,9 @@ Use the same small set of semantic section patterns across Align and Diff:
 - structured label-and-value rows for summaries, with the goal first;
 - parallel cells only for brief comparisons that must be scanned together;
 - one ordered vertical sequence for behavior or process; and
-- visible conclusions with native disclosures for reasons, verification, and
-  supporting evidence.
+- visible conclusions with native disclosures for reasons and verification;
+  and
+- numbered inline evidence references with one folded source list at the end.
 
 Keep these visual roles consistent without making either renderer import the
 other feature.
@@ -151,12 +152,15 @@ the human choice, condition, and outcome they represent.
 Show only the code excerpts needed for understanding instead of reproducing the
 full diff.
 
-Keep important evidence beside the claim it supports.
+Put a quiet numbered reference such as `[1]` immediately after every grounded
+claim. Reuse the number when the same source interval supports another claim.
+Activating the reference shows a bounded preview popover. Its ordinary fragment
+link remains useful without JavaScript and leads to the canonical source entry.
 
-Keep inline evidence controls quiet and collapsed until requested. Use a
-24-pixel summary on a wide screen and a 44-pixel touch target on a narrow
-screen. Use thin dividers, whitespace, and type hierarchy before introducing a
-contained box.
+Collect the complete numbered source list in one native disclosure at the end
+of Evidence and scope. Start it closed on screen and reveal it for fragment
+navigation and print. Keep code excerpts there instead of repeating them below
+each claim.
 
 Use Evidence and scope as the complete index of the captured snapshot, checked
 files, supporting sources, exclusions, and limits.
@@ -225,9 +229,13 @@ separate contract summary.
 
 Keep conclusions, actions, boundaries, behavior, and unresolved choices
 visible. Fold verification methods, decision reasons, option references, and
-the supporting-evidence section. Use these information roles directly; do not
-add length or item-count thresholds that make the same field change layout
-unpredictably.
+the supporting-evidence section. Put `[n]` after a claim only when its structured
+value names a validated evidence ID. Reuse that number throughout the current
+agreement, show a bounded preview popover when it is activated, and keep the
+complete numbered evidence list in the final folded section. Unreferenced
+supporting evidence stays in that list without an invented claim link. Use
+these information roles directly; do not add length or item-count thresholds
+that make the same field change layout unpredictably.
 
 Show each completion criterion as one visible passing condition. Keep its
 verification method and the agent-or-person decision source in a native
@@ -588,8 +596,8 @@ Use three clear roles.
 
 | Role | Font |
 | --- | --- |
-| Body prose | Hope Sans Light, from Gmarket Sans |
-| Wordmark, controls, labels, and headings | Hope Sans Medium or Bold |
+| Body prose and controls | Hope Sans Medium, from Gmarket Sans |
+| Wordmark and headings | Hope Sans Bold |
 | Code, commands, paths, and hashes | Hope Code, from D2Coding |
 
 Embed the fixed WOFF2 files in every offline artifact.
@@ -784,7 +792,7 @@ Use trusted, fixed scripts only.
 
 Supported interactions can include:
 
-- open or close evidence;
+- preview a numbered evidence reference and open its canonical list entry;
 - move through the table of contents;
 - switch the current document theme;
 - try a safe declarative microworld;
@@ -818,8 +826,9 @@ The **Evidence and scope** section is a dense reference appendix.
 
 Keep the whole section open initially so the available groups remain visible.
 
-Its source groups, context checks, scope limits, checked-file group, and
-artifact details must open independently and start closed.
+Its source groups, context checks, scope limits, checked-file group, artifact
+details, and final numbered evidence list must open independently and start
+closed.
 
 Use native disclosure controls so they work without JavaScript.
 

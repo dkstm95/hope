@@ -190,6 +190,12 @@ second paragraph, separate the paragraphs with a newline so the renderer keeps
 the boundary. Keep the title to one decisive result, the goal to one direct
 statement, and each decision reason to the main practical cause or effect.
 
+Give every evidence item that supports a specific claim a stable lowercase
+`id`. Write that claim with the schema's cited-title or cited-prose object and
+name only the evidence IDs that directly support it. Reuse an ID instead of
+duplicating the evidence item. Keep general supporting evidence as an ordinary
+evidence item without inventing a claim link.
+
 Inspect the project's existing documentation conventions. Use its established
 location for durable design or specification documents when one is clear.
 Otherwise use `docs/alignments/`. Never use a hidden Hope directory for this

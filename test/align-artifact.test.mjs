@@ -186,6 +186,37 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
   );
 });
 
+test("Align input binds cited claims to unique evidence ids", () => {
+  const value = validateAlignInput(makeAlignInput({
+    goal: {
+      text: "중단된 업로드를 안전하게 복구한다.",
+      evidenceIds: ["upload-service", "product-requirements"],
+    },
+    evidence: [
+      { id: "upload-service", label: "업로드 서비스", location: "src/upload/recovery.ts" },
+      { id: "product-requirements", label: "제품 요구", location: "https://example.com/requirements" },
+    ],
+  }));
+  assert.deepEqual(value.goal.evidenceIds, ["upload-service", "product-requirements"]);
+  assert.equal(value.goal.text, "중단된 업로드를 안전하게 복구한다.");
+
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      goal: { text: "근거가 없는 주장", evidenceIds: ["missing"] },
+    })),
+    /refers to unknown evidence id: missing/u,
+  );
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      evidence: [
+        { id: "same", label: "첫 근거", location: "docs/first.md" },
+        { id: "same", label: "둘째 근거", location: "docs/second.md" },
+      ],
+    })),
+    /unique evidence ids/u,
+  );
+});
+
 test("design direction images are validated, embedded, and kept off the network", async () => {
   const root = await repository();
   const firstImage = join(root, "direction-one.png");
@@ -402,7 +433,13 @@ test("two image-rich revisions remain complete within the artifact boundary", as
 test("renderer is deterministic, self-contained, and keeps authored text inert", () => {
   const input = validateAlignInput(makeAlignInput({
     title: '</title><script src="https://evil.example/x.js"></script>',
-    goal: "Keep <img src=x onerror=alert(1)> as text.\nKeep the second idea distinct.",
+    goal: {
+      text: "Keep <img src=x onerror=alert(1)> as text.\nKeep the second idea distinct.",
+      evidenceIds: ["upload-service"],
+    },
+    evidence: [
+      { id: "upload-service", label: "Upload service", location: "src/upload/recovery.ts" },
+    ],
   }));
   const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
   const data = {
@@ -429,7 +466,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="15"/u);
+  assert.match(first, /name="hope-align-design-version" content="16"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
@@ -466,6 +503,9 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, />사용자 확인</u);
   assert.match(first, /<ol class="check-list">/u);
   assert.match(first, /<span class="check-condition">/u);
+  assert.match(first, /class="evidence-marker" href="#evidence-upload-service"/u);
+  assert.match(first, /<ol class="evidence-list"><li id="evidence-upload-service" data-evidence-entry>/u);
+  assert.match(first, /id="evidence-popover" popover="auto" role="dialog"/u);
   assert.match(first, /<details class="check-verification">/u);
   assert.match(first, /<summary>AI 에이전트 확인<\/summary>/u);
   assert.match(first, /<details class="body-section document-section section-disclosure" id="evidence">/u);
@@ -481,7 +521,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /&lt;img src=x onerror=alert\(1\)&gt;/u);
   assert.match(
     first,
-    /<dt>목표<\/dt><dd><p><bdi dir="auto">Keep &lt;img src=x onerror=alert\(1\)&gt; as text\.<\/bdi><\/p><p><bdi dir="auto">Keep the second idea distinct\.<\/bdi><\/p><\/dd>/u,
+    /<dt>목표<\/dt><dd><p><bdi dir="auto">Keep &lt;img src=x onerror=alert\(1\)&gt; as text\.<\/bdi><\/p><p><bdi dir="auto">Keep the second idea distinct\.<\/bdi><sup class="evidence-markers">[\s\S]*?<\/sup><\/p><\/dd>/u,
   );
   assert.doesNotMatch(first, /<script src="https:\/\/evil/u);
   assert.doesNotMatch(first, /localStorage/u);
