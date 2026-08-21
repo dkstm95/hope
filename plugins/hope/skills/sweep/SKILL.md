@@ -10,6 +10,10 @@ evidence, and return a read-only maintenance plan.
 
 Do not edit files during Sweep.
 
+Read `../write/references/writing-standard.md` before drafting user-facing
+language. Apply it without changing the inspected coverage, evidence,
+decisions, uncertainty, or required result.
+
 ## Establish coverage
 
 Identify the repository root and current revision.

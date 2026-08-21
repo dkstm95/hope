@@ -13,6 +13,10 @@ adjudicate the findings, and report the result.
 
 Do not let the active session act as a reviewer or finding verifier.
 
+Read `../write/references/writing-standard.md` before drafting user-facing
+language. Apply it without changing the target scope, evidence, uncertainty,
+adjudication, or required result.
+
 ## Bind the target
 
 State the target, current stage, material risks, evidence in scope, and evidence
