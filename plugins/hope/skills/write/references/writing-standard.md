@@ -22,7 +22,7 @@ These principles adapt George Orwell's six rules in
 ## Structure
 
 - Lead with the conclusion, decision, or requested result.
-- Match supporting detail to the target, reader, and next action.
+- Let the current purpose, reader, and next action determine what belongs.
 - Keep one main idea in each sentence.
 - Split a sentence that is hard to understand in one pass.
 - Give each paragraph one clear job.
