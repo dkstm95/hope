@@ -14,6 +14,24 @@ base, changed files, patches, and bounded context.
 It gives captured sources stable identifiers and validates every analysis
 citation against those sources.
 
+The renderer assigns one document number to each distinct validated source
+interval, places that `[n]` after every claim that cites it, and keeps the full
+code or source excerpt in one folded list at the document bottom. Activating a
+marker previews the same canonical entry; its fragment link remains the
+no-JavaScript fallback.
+
+Validation rejects exact duplicate authored items within one sibling list
+after treating their evidence ranges as an unordered set. It does not compare
+items that serve different document roles, and it permits them to reuse one
+source interval. Meaning and overlapping-but-distinct support remain analysis
+judgments rather than deterministic failures.
+
+A microworld scenario writes `"after": "unchanged"` when its represented
+steps and outcome are identical to `before`. Validation rejects a copied trace,
+and the renderer shows one compact unchanged state instead of repeating the
+same trace. Its live accessibility status is derived from the rendered
+scenario instead of storing a second copy in an HTML data attribute.
+
 The model selects one focused source interval. The runtime validates that
 interval and splits it into bounded evidence references without dropping any
 selected line. This keeps reference-size arithmetic out of the host workflow
@@ -36,6 +54,11 @@ input.
 
 The runtime bounds input size, structure depth, generated prose, evidence,
 snapshots, and the final artifact.
+
+When code evidence exceeds its rendered-line allowance, validation reports the
+actual and target totals, field contributions, largest ranges, and a bounded
+list of overlapping intervals. The limit remains fail-closed, while the
+analysis worker gets enough information to make one focused repair.
 
 It renders authored content as escaped text into one self-contained HTML file.
 

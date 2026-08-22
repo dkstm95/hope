@@ -22,7 +22,6 @@ import { exposeBidiControls } from "./text.mjs";
 const fontUrls = Object.freeze({
   code: new URL("../../../assets/fonts/HopeCode.woff2", import.meta.url),
   sansBold: new URL("../../../assets/fonts/HopeSansBold.woff2", import.meta.url),
-  sansLight: new URL("../../../assets/fonts/HopeSansLight.woff2", import.meta.url),
   sansMedium: new URL("../../../assets/fonts/HopeSansMedium.woff2", import.meta.url),
 });
 const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
@@ -72,9 +71,12 @@ function userText(value, className = "") {
   return `<bdi dir="auto"${className ? ` class="${className}"` : ""}>${text}</bdi>`;
 }
 
-function userParagraphs(value) {
-  return String(value).split(/\r?\n+/u).map(
-    (paragraph) => `<p>${userText(paragraph.trim())}</p>`,
+function userParagraphs(value, suffix = "") {
+  const paragraphs = String(value).split(/\r?\n+/u);
+  return paragraphs.map(
+    (paragraph, index) => `<p>${userText(paragraph.trim())}${
+      index === paragraphs.length - 1 ? suffix : ""
+    }</p>`,
   ).join("");
 }
 
@@ -85,6 +87,11 @@ function basisKey(basis) {
     stated: "basis.stated",
     unknown: "basis.couldNotConfirm",
   }[basis];
+}
+
+function visibleBasisLabel(basis, dictionary) {
+  if (basis === "code") return "";
+  return label(dictionary, basisKey(basis));
 }
 
 function sourceTitle(evidence, dictionary) {
@@ -117,11 +124,6 @@ function trustedCodeUrl(review, evidence) {
     + `#L${evidence.startLine}-L${evidence.endLine}`;
 }
 
-function accessibleEvidenceLabel(context, count, dictionary) {
-  const evidence = `${label(dictionary, "common.evidence")} · ${count}`;
-  return accessibleControlLabel(context, evidence);
-}
-
 function accessibleControlLabel(context, action) {
   const normalized = String(context ?? "").replace(/\s+/gu, " ").trim();
   if (!normalized) return action;
@@ -139,43 +141,62 @@ function evidenceBlock(
   dictionary,
   review,
   codeRenderer,
-  { collapsible = true, context = "" } = {},
+  { context = "" } = {},
 ) {
   if (items.length === 0) return "";
-  const content = `<div class="evidence-list">
-    ${items.map((item) => {
-      const seen = codeRenderer.evidenceTargets;
-      const target = evidenceTarget(item);
-      const url = trustedCodeUrl(review, item);
-      const title = sourceTitle(item, dictionary);
-      if (seen.has(target)) {
-        return `<article class="evidence-reference">
-          <a href="#${target}">${html(title)}</a>
-        </article>`;
-      }
-      seen.add(target);
-      const codeSource = renderedCodeSources.has(item.sourceKind);
-      return `<article class="evidence-item" id="${target}">
-        <div class="evidence-meta">
-          ${url
-            ? `<a href="${html(url)}">${html(title)}</a>`
-            : `<span>${html(title)}</span>`}
-        </div>
-        <pre class="${codeSource ? "code-evidence" : "source-text"}"><code${codeSource
-          ? ` aria-label="${htmlAttribute(item.excerpt)}"`
-          : ""}>${codeSource
-          ? codeRenderer.render(item)
-          : html(item.excerpt)}</code></pre>
-      </article>`;
-    }).join("")}
-  </div>`;
-  if (!collapsible) {
-    return `<div class="evidence evidence-inline" role="group" aria-label="${html(label(dictionary, "common.evidence"))}">${content}</div>`;
-  }
-  return `<details class="evidence">
-    <summary aria-label="${html(accessibleEvidenceLabel(context, items.length, dictionary))}">${html(label(dictionary, "common.evidence"))} · ${items.length}</summary>
-    ${content}
+  return `<sup class="evidence-markers">${items.map((item) => {
+    const target = evidenceTarget(item);
+    let record = codeRenderer.evidenceRecords.get(target);
+    if (!record) {
+      record = Object.freeze({
+        item,
+        number: codeRenderer.evidenceRecords.size + 1,
+        target,
+        title: sourceTitle(item, dictionary),
+      });
+      codeRenderer.evidenceRecords.set(target, record);
+    }
+    const accessible = accessibleControlLabel(
+      context,
+      `${label(dictionary, "common.evidence")} [${record.number}]: ${record.title}`,
+    );
+    return `<a class="evidence-marker" href="#${record.target}" data-evidence-target="${record.target}" aria-controls="evidence-popover" aria-expanded="false" aria-haspopup="dialog" aria-label="${html(accessible)}">[${record.number}]</a>`;
+  }).join("")}</sup>`;
+}
+
+function evidenceFootnotes(review, dictionary, codeRenderer) {
+  const records = [...codeRenderer.evidenceRecords.values()];
+  if (records.length === 0) return "";
+  return `<details class="evidence-group evidence-footnotes" id="evidence-references">
+    <summary><h3>${html(countedLabel(dictionary, "evidence.references", records.length))}</h3></summary>
+    <div class="evidence-group-content"><ol class="evidence-footnote-list">${records.map((record) => {
+      const url = trustedCodeUrl(review, record.item);
+      const codeSource = renderedCodeSources.has(record.item.sourceKind);
+      return `<li>
+        <span class="evidence-number" aria-hidden="true">[${record.number}]</span>
+        <article class="evidence-item" id="${record.target}" data-evidence-entry>
+          <div class="evidence-meta">
+            ${url
+              ? `<a href="${html(url)}">${html(record.title)}</a>`
+              : `<span>${html(record.title)}</span>`}
+          </div>
+          <pre class="${codeSource ? "code-evidence" : "source-text"}"><code${codeSource
+            ? ` aria-label="${htmlAttribute(record.item.excerpt)}"`
+            : ""}>${codeSource
+            ? codeRenderer.render(record.item)
+            : html(record.item.excerpt)}</code></pre>
+        </article>
+      </li>`;
+    }).join("")}</ol></div>
   </details>`;
+}
+
+function evidencePopover(dictionary) {
+  return `<aside class="evidence-popover" id="evidence-popover" popover="auto" role="dialog" aria-labelledby="evidence-popover-title">
+    <header class="evidence-popover-head"><strong id="evidence-popover-title"></strong><button class="evidence-popover-close" type="button" aria-label="${html(label(dictionary, "evidence.closePreview"))}" title="${html(label(dictionary, "evidence.closePreview"))}">×</button></header>
+    <div class="evidence-popover-body" data-evidence-popover-body></div>
+    <a class="evidence-popover-more" data-evidence-popover-more href="#evidence-references">${html(label(dictionary, "evidence.viewList"))}</a>
+  </aside>`;
 }
 
 function claimBlock(
@@ -187,20 +208,21 @@ function claimBlock(
   evidenceContext = claim.text,
   showBasis = true,
 ) {
+  const basis = showBasis
+    ? visibleBasisLabel(claim.basis, dictionary)
+    : "";
+  const markers = evidenceBlock(
+    claim.evidence,
+    dictionary,
+    review,
+    codeRenderer,
+    { context: evidenceContext },
+  );
+  const suffix = `${markers}${basis
+    ? `<span class="claim-basis">${html(basis)}</span>`
+    : ""}`;
   return `<div class="claim ${html(className)}">
-    ${userParagraphs(claim.text)}
-    <div class="claim-meta">
-      ${showBasis
-        ? `<div class="claim-basis">${html(label(dictionary, basisKey(claim.basis)))}</div>`
-        : ""}
-      ${evidenceBlock(
-        claim.evidence,
-        dictionary,
-        review,
-        codeRenderer,
-        { context: evidenceContext },
-      )}
-    </div>
+    ${userParagraphs(claim.text, suffix)}
   </div>`;
 }
 
@@ -225,17 +247,18 @@ function titledClaim(
   </article>`;
 }
 
-function aidEvidence(aid, dictionary, review, codeRenderer) {
-  return `<div class="claim-meta teaching-aid-meta">
-    <div class="claim-basis">${html(label(dictionary, basisKey(aid.basis)))}</div>
-    ${evidenceBlock(
-      aid.evidence,
-      dictionary,
-      review,
-      codeRenderer,
-      { context: aid.title },
-    )}
-  </div>`;
+function aidEvidenceSuffix(aid, dictionary, review, codeRenderer) {
+  const basis = visibleBasisLabel(aid.basis, dictionary);
+  const markers = evidenceBlock(
+    aid.evidence,
+    dictionary,
+    review,
+    codeRenderer,
+    { context: aid.title },
+  );
+  return `${markers}${basis
+    ? `<span class="claim-basis">${html(basis)}</span>`
+    : ""}`;
 }
 
 function visualRoute(from, to, dictionary, { block = false } = {}) {
@@ -252,6 +275,12 @@ function visualRoute(from, to, dictionary, { block = false } = {}) {
 }
 
 function visualBlock(visual, dictionary, review, codeRenderer) {
+  const evidenceSuffix = aidEvidenceSuffix(
+    visual,
+    dictionary,
+    review,
+    codeRenderer,
+  );
   let content;
   if (visual.kind === "flow") {
     content = `<ol class="visual-flow">${visual.items.map((item) => (
@@ -310,10 +339,9 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
   return `<article class="behavior-visual visual-${html(visual.kind)}">
     <header>
       <h3>${userText(visual.title)}</h3>
-      ${userParagraphs(visual.caption)}
+      ${userParagraphs(visual.caption, evidenceSuffix)}
     </header>
     ${content}
-    ${aidEvidence(visual, dictionary, review, codeRenderer)}
   </article>`;
 }
 
@@ -328,23 +356,28 @@ function microworldTrace(trace, title, dictionary) {
   </section>`;
 }
 
+function unchangedMicroworldTrace(dictionary) {
+  return `<section class="microworld-trace microworld-trace-unchanged">
+    <h5>${html(label(dictionary, "microworld.after"))}</h5>
+    <p class="microworld-unchanged">${html(label(dictionary, "microworld.unchanged"))}</p>
+  </section>`;
+}
+
 function microworldBlock(world, dictionary, review, codeRenderer) {
+  const evidenceSuffix = aidEvidenceSuffix(
+    world,
+    dictionary,
+    review,
+    codeRenderer,
+  );
   const defaultKey = world.controls.map(
     (control) => `${control.id}=${control.defaultOptionId}`,
   ).join("|");
-  const defaultScenario = world.scenarios.find(
-    (scenario) => scenario.selectionKey === defaultKey,
-  );
-  const scenarioStatus = (scenario) => (
-    `${label(dictionary, "microworld.before")}: ${scenario.before.outcome}. `
-    + `${label(dictionary, "microworld.after")}: ${scenario.after.outcome}. `
-    + scenario.lesson
-  );
   return `<aside class="microworld" data-microworld aria-labelledby="microworld-title">
     <header>
       <p class="microworld-eyebrow">${html(label(dictionary, "microworld.tryIt"))}</p>
       <h3 id="microworld-title">${userText(world.title)}</h3>
-      ${userParagraphs(world.instructions)}
+      ${userParagraphs(world.instructions, evidenceSuffix)}
       <p class="microworld-notice">${html(label(dictionary, "microworld.notice"))}</p>
     </header>
     <details class="microworld-disclosure">
@@ -379,14 +412,11 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
       </fieldset>`).join("")}</div>
         </div>
         <noscript><p class="microworld-noscript">${html(label(dictionary, "microworld.noScript"))}</p></noscript>
-        <p class="sr-only" role="status" aria-live="polite" data-microworld-status>${html(
-          scenarioStatus(defaultScenario),
-        )}</p>
+        <p class="sr-only" role="status" aria-live="polite" data-microworld-status></p>
         <div class="microworld-scenarios" role="region" aria-label="${html(label(dictionary, "microworld.selection"))}">
           ${world.scenarios.map((scenario) => `<article
         class="microworld-scenario"
         data-selection-key="${html(scenario.selectionKey)}"
-        data-status="${html(scenarioStatus(scenario))}"
         ${scenario.selectionKey === defaultKey ? "" : "hidden"}>
         <h4>${userText(scenario.title)}</h4>
         <div class="microworld-comparison">
@@ -395,11 +425,13 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
             label(dictionary, "microworld.before"),
             dictionary,
           )}
-          ${microworldTrace(
-            scenario.after,
-            label(dictionary, "microworld.after"),
-            dictionary,
-          )}
+          ${scenario.unchanged
+            ? unchangedMicroworldTrace(dictionary)
+            : microworldTrace(
+              scenario.after,
+              label(dictionary, "microworld.after"),
+              dictionary,
+            )}
         </div>
         <div class="microworld-lesson">
           <strong>${html(label(dictionary, "microworld.lesson"))}:</strong>
@@ -417,7 +449,6 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
             <dd>${userParagraphs(world.omits)}</dd>
           </div>
         </dl>
-        ${aidEvidence(world, dictionary, review, codeRenderer)}
       </div>
     </details>
   </aside>`;
@@ -449,17 +480,25 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
   const relatedLimits = item.limitIds.map((limitId) => (
     review.limits.find((limit) => limit.id === limitId)
   )).filter(Boolean);
+  const markers = compact ? "" : evidenceBlock(
+    item.evidence,
+    dictionary,
+    review,
+    codeRenderer,
+    { context: item.title },
+  );
+  const basis = compact ? "" : visibleBasisLabel(item.basis, dictionary);
   return `<article class="${className}" id="${html(id)}">
     <div class="item-head">
       <span class="status kind-${html(item.kind)}">${html(kindLabel(item.kind, dictionary))}</span>
       <span class="importance">${html(importanceLabel(item.importance, dictionary))}</span>
-      ${compact ? "" : `<span class="item-basis">${html(label(dictionary, basisKey(item.basis)))}</span>`}
+      ${basis ? `<span class="item-basis">${html(basis)}</span>` : ""}
     </div>
     ${compact
       ? `<h4><a href="#${html(item.id)}">${userText(item.title)}</a></h4>`
       : `<h3>${userText(item.title)}</h3>`}
     ${compact ? "" : `
-      ${userParagraphs(item.explanation)}
+      ${userParagraphs(item.explanation, markers)}
       ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
         <span>${html(label(dictionary, "item.relatedLimits"))}</span>
         ${relatedLimits.map((limit) => {
@@ -472,9 +511,6 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
         <div class="item-next"><dt>${html(label(dictionary, "item.nextStep"))}</dt><dd>${userParagraphs(item.nextStep)}</dd></div>
         <div class="item-done"><dt>${html(label(dictionary, "item.doneWhen"))}</dt><dd>${userParagraphs(item.doneWhen)}</dd></div>
       </dl>
-      ${evidenceBlock(item.evidence, dictionary, review, codeRenderer, {
-        context: item.title,
-      })}
     `}
   </article>`;
 }
@@ -492,9 +528,16 @@ function sectionHeading(title, number, id = "") {
   return `<h2${idAttribute}><span class="section-number">${sectionOrdinal(number)}</span><span>${html(title)}</span></h2>`;
 }
 
-function documentTitle(title) {
+function documentTitle(claim, dictionary, review, codeRenderer) {
+  const markers = evidenceBlock(
+    claim.evidence,
+    dictionary,
+    review,
+    codeRenderer,
+    { context: claim.text },
+  );
   return `<header class="document-title">
-    <h1 id="review-title">${userText(title)}</h1>
+    <h1 id="review-title">${userText(claim.text)}${markers}</h1>
   </header>`;
 }
 
@@ -629,25 +672,28 @@ function contextCheck(
   const relatedLimits = check.limitIds.map((limitId) => (
     review.limits.find((limit) => limit.id === limitId)
   )).filter(Boolean);
+  const markers = evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
+    context: check.subject,
+  });
+  const basis = check.evidence.length === 0
+    ? ""
+    : visibleBasisLabel(check.basis, dictionary);
+  const suffix = `${markers}${basis
+    ? `<span class="claim-basis">${html(basis)}</span>`
+    : ""}`;
   return `<details class="context-check">
     <summary class="context-check-head">
       <h4>${userText(check.subject)}</h4>
       <span class="context-status context-${html(check.status)}">${html(label(dictionary, `context.${check.status === "not-applicable" ? "notApplicable" : check.status}`))}</span>
     </summary>
     <div class="disclosure-content">
-      ${userParagraphs(check.explanation)}
-      ${check.evidence.length === 0 ? "" : `<p class="claim-basis">${html(
-        label(dictionary, basisKey(check.basis)),
-      )}</p>`}
+      ${userParagraphs(check.explanation, suffix)}
       ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
         ${relatedLimits.map((limit) => {
           const displayed = limitText(limit, dictionary);
           return `<a href="#scope-${html(limit.id)}">${userText(displayed.subject)}</a>`;
         }).join(" · ")}
       </p>`}
-      ${evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
-        context: check.subject,
-      })}
     </div>
   </details>`;
 }
@@ -873,10 +919,13 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
       : `<div class="scope-context-notes">${checks.map((check) => (
         `<section class="scope-context-note">
           <h4>${userText(check.subject)}</h4>
-          ${userParagraphs(check.explanation)}
-          ${evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
-            context: check.subject,
-          })}
+          ${userParagraphs(check.explanation, evidenceBlock(
+            check.evidence,
+            dictionary,
+            review,
+            codeRenderer,
+            { context: check.subject },
+          ))}
         </section>`
       )).join("")}</div>`
   );
@@ -1017,7 +1066,8 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
             <div><dt>${html(label(dictionary, "artifact.theme"))}</dt><dd>${html(label(dictionary, `theme.${snapshot.settings.theme}`))}</dd></div>
           </dl>
         </div>
-      </details>`,
+      </details>
+      ${evidenceFootnotes(review, dictionary, codeRenderer)}`,
     id: "evidence-and-scope",
     initiallyOpen: true,
     number,
@@ -1096,11 +1146,13 @@ function buildSections(review, dictionary, codeRenderer) {
               label(dictionary, "quiz.showAnswer"),
             ))}">${html(label(dictionary, "quiz.showAnswer"))}</summary>
             <div class="quiz-answer-content">
-              ${userParagraphs(item.answer)}
-              ${evidenceBlock(item.evidence, dictionary, review, codeRenderer, {
-                collapsible: false,
-                context: item.question,
-              })}
+              ${userParagraphs(item.answer, evidenceBlock(
+                item.evidence,
+                dictionary,
+                review,
+                codeRenderer,
+                { context: item.question },
+              ))}
             </div>
           </details>
         </div>
@@ -1196,13 +1248,6 @@ function css(fontBase64) {
 
   return `@font-face {
   font-family: "Hope Sans";
-  src: url(data:font/woff2;base64,${fontBase64.sansLight}) format("woff2");
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Hope Sans";
   src: url(data:font/woff2;base64,${fontBase64.sansMedium}) format("woff2");
   font-style: normal;
   font-weight: 500;
@@ -1249,7 +1294,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 300 ${wide.fontSize}px/${wide.lineHeight} "Hope Sans", sans-serif;
+  font: 500 ${wide.fontSize}px/${wide.lineHeight} "Hope Sans", sans-serif;
   text-rendering: optimizeLegibility;
 }
 h1,
@@ -1692,24 +1737,13 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .claim p,
 .summary-line { margin: 0; }
 .more-link { margin: ${space2}px 0 0; }
-.claim-meta {
-  display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
-  gap: 0 ${space2}px;
-  align-items: center;
-}
 .claim-basis {
+  margin-left: ${space2}px;
   color: var(--muted);
   font-size: ${TYPE.micro.fontSize}px;
   line-height: ${TYPE.micro.lineHeight};
   font-weight: 500;
 }
-.claim-meta > .evidence {
-  min-width: 0;
-  max-width: 100%;
-}
-.claim-meta > .evidence[open] { flex: 1 1 100%; }
 .item-basis {
   color: var(--muted);
   font-size: ${TYPE.micro.fontSize}px;
@@ -1717,54 +1751,27 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   font-weight: 500;
 }
 
-.evidence {
-  min-width: 0;
-  max-width: 100%;
-  margin-top: ${space2}px;
-}
-.claim-meta > .evidence { margin-top: 0; }
-.evidence > summary {
-  display: flex;
-  align-items: center;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-}
-.evidence-list {
-  display: grid;
-  min-width: 0;
-  max-width: 100%;
-  margin-top: ${space2}px;
-  gap: ${space2}px;
-}
+.evidence-markers { display: inline-flex; margin-left: ${space1}px; white-space: nowrap; font-size: .78em; line-height: 1; vertical-align: .4em; }
+.evidence-marker { display: inline-grid; min-width: 24px; min-height: 24px; place-items: center; margin-block: -6px; color: var(--accent); font-weight: 700; text-decoration: none; }
+.evidence-marker:visited { color: var(--accent); }
+.evidence-marker:hover { text-decoration: underline; }
+.evidence-footnote-list { margin: 0; padding: 0; list-style: none; }
+.evidence-footnote-list > li { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: ${space3}px; padding: ${space4}px 0; border-top: 1px solid var(--border); }
+.evidence-number { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
 .evidence-item {
   min-width: 0;
   max-width: 100%;
   border: 1px solid var(--component-border);
   background: var(--panel);
 }
-.evidence-reference {
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.evidence-reference a {
-  display: flex;
-  min-height: 44px;
-  padding: ${space2}px 0;
-  align-items: center;
-}
-.evidence-meta a:visited,
-.evidence-reference a:visited {
-  color: var(--visited);
-}
+.evidence-meta a:visited { color: var(--visited); }
 .evidence-meta {
   padding: ${space2}px;
   border-bottom: 1px solid var(--border);
   font: 400 ${TYPE.supporting.wide.fontSize}px/${TYPE.supporting.wide.lineHeight} "Hope Code", ui-monospace, monospace;
   overflow-wrap: anywhere;
 }
-.evidence pre {
+.evidence-item pre {
   width: 100%;
   max-width: 100%;
   margin: 0;
@@ -1774,15 +1781,31 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   overflow: auto;
   font: 400 ${wideCode.fontSize}px/${wideCode.lineHeight} "Hope Code", ui-monospace, monospace;
 }
-.evidence code {
+.evidence-item code {
   display: block;
   width: max-content;
   min-width: 100%;
 }
-.evidence pre.code-evidence {
+.evidence-item pre.code-evidence {
   background: var(--code-bg);
   color: var(--code-fg);
 }
+.evidence-popover { position: fixed; inset: unset; top: 0; left: 0; width: min(520px, calc(100vw - ${space6}px)); max-height: min(72vh, 680px); margin: 0; padding: 0; overflow: visible; border: 1px solid var(--component-border); border-radius: 8px; background: var(--panel); color: var(--text); box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 22%, transparent); }
+.evidence-popover:popover-open { display: flex; flex-direction: column; }
+.evidence-popover::backdrop { background: transparent; }
+.evidence-popover::before { position: absolute; left: var(--popover-arrow-x, 50%); width: 12px; height: 12px; border: 1px solid var(--component-border); background: var(--panel); content: ""; transform: translateX(-50%) rotate(45deg); }
+.evidence-popover[data-placement="below"]::before { top: -7px; border-right: 0; border-bottom: 0; }
+.evidence-popover[data-placement="above"]::before { bottom: -7px; border-top: 0; border-left: 0; }
+.evidence-popover[data-placement="sheet"]::before { display: none; }
+.evidence-popover-head { position: relative; z-index: 1; flex: none; display: flex; align-items: center; justify-content: space-between; gap: ${space3}px; padding: ${space3}px ${space4}px; border-bottom: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--panel); }
+.evidence-popover-head strong { min-width: 0; overflow-wrap: anywhere; }
+.evidence-popover-close { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; font-size: 20px; }
+.evidence-popover-close:hover { background: var(--bg); }
+.evidence-popover-body { min-height: 0; padding: ${space4}px; overflow: auto; }
+.evidence-popover-body .evidence-item { border: 0; }
+.evidence-popover-body .evidence-meta { padding-inline: 0; }
+.evidence-popover-body pre { max-height: 42vh; }
+.evidence-popover-more { flex: none; display: flex; min-height: 44px; align-items: center; margin: 0 ${space4}px ${space4}px; font-weight: 700; }
 .code-line {
   display: inline;
 }
@@ -2143,11 +2166,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   max-width: ${LAYOUT.proseWidth};
   margin: ${space2}px 0 0;
 }
-.teaching-aid-meta {
-  margin-top: ${space3}px;
-  padding-top: ${space3}px;
-  border-top: 1px solid var(--border);
-}
 .visual-flow,
 .visual-sequence {
   display: grid;
@@ -2355,6 +2373,11 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .microworld-trace ol {
   margin: ${space2}px 0;
   padding-left: 22px;
+}
+.microworld-unchanged {
+  margin: ${space2}px 0 0;
+  color: var(--ink);
+  font-weight: 500;
 }
 .microworld-outcome,
 .microworld-lesson {
@@ -2594,7 +2617,6 @@ td:first-child {
   overflow-wrap: anywhere;
 }
 .artifact-details { margin-top: ${space3}px; }
-.evidence > summary,
 .evidence-group > summary,
 .context-check > summary,
 .scope-limit > summary,
@@ -2610,8 +2632,6 @@ td:first-child {
   font-weight: 500;
   list-style: none;
 }
-.evidence > summary { min-height: ${space5}px; }
-.evidence > summary::-webkit-details-marker,
 .evidence-group > summary::-webkit-details-marker,
 .context-check > summary::-webkit-details-marker,
 .scope-limit > summary::-webkit-details-marker,
@@ -2621,7 +2641,6 @@ td:first-child {
 .quiz-answer > summary::-webkit-details-marker {
   display: none;
 }
-.evidence > summary::before,
 .evidence-group > summary::before,
 .context-check > summary::before,
 .scope-limit > summary::before,
@@ -2634,7 +2653,6 @@ td:first-child {
   flex: 0 0 auto;
   transition: transform 120ms ease;
 }
-.evidence[open] > summary::before,
 .evidence-group[open] > summary::before,
 .context-check[open] > summary::before,
 .scope-limit[open] > summary::before,
@@ -2690,10 +2708,6 @@ td:first-child {
   max-width: ${LAYOUT.proseWidth};
   margin: 0 0 ${space2}px;
 }
-.quiz-answer-content > .evidence-inline {
-  margin-top: ${space2}px;
-}
-
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
@@ -2790,12 +2804,10 @@ td:first-child {
   .review-section + .review-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .synopsis-grid > div > h3,
   .synopsis-background > h3,
-  .before-after > div > h3,
-  .evidence > summary {
+  .before-after > div > h3 {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
     line-height: ${TYPE.supporting.narrow.lineHeight};
   }
-  .evidence > summary { min-height: 44px; }
   .status-row { margin-top: ${space3}px; }
   .section-heading h2 {
     font-size: ${narrowSection.fontSize}px;
@@ -2821,10 +2833,12 @@ td:first-child {
   .flow > li::before {
     font-size: ${TYPE.supporting.narrow.fontSize}px;
   }
-  .evidence pre {
+  .evidence-item pre {
     font-size: ${narrowCode.fontSize}px;
     line-height: ${narrowCode.lineHeight};
   }
+  .evidence-footnote-list > li { grid-template-columns: 36px minmax(0,1fr); }
+  .evidence-popover { width: min(520px, calc(100vw - ${space6}px)); max-height: 76vh; }
   .change-shift,
   .visual-components,
   .teaching-aid-choices,
@@ -2942,7 +2956,8 @@ td:first-child {
   .theme-button,
   .microworld-controls,
   .microworld-noscript,
-  .skip { display: none; }
+  .skip,
+  .evidence-popover { display: none !important; }
   .layout {
     display: block;
     max-width: none;
@@ -3006,25 +3021,39 @@ const labels=${labels};
 const root=document.documentElement;
 const theme=document.getElementById("theme-toggle");
 const toc=document.querySelector(".toc-mobile");
+const evidencePopover=document.getElementById("evidence-popover");
+const evidencePopoverTitle=document.getElementById("evidence-popover-title");
+const evidencePopoverBody=document.querySelector("[data-evidence-popover-body]");
+const evidencePopoverMore=document.querySelector("[data-evidence-popover-more]");
+const evidencePopoverClose=evidencePopover?.querySelector(".evidence-popover-close");
 const navLinks=[...document.querySelectorAll('nav a[href^="#"]')];
 const sections=[...document.querySelectorAll(".main > [id]")];
 const progress=[...document.querySelectorAll("[data-toc-current]")];
 let currentFrame=0;
+let popoverFrame=0;
+let activeEvidenceMarker;
 const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
 const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
 const revealTarget=target=>{if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;};
 const focusTarget=target=>{const hadTabindex=target.hasAttribute("tabindex");if(!hadTabindex)target.setAttribute("tabindex","-1");target.focus({preventScroll:true});if(!hadTabindex)target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});};
 const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}const index=sections.indexOf(current);for(const item of progress)item.textContent=String(index+1);for(const link of navLinks){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
+const positionEvidencePopover=()=>{if(!activeEvidenceMarker||!evidencePopover?.matches(":popover-open"))return;const marker=activeEvidenceMarker.getBoundingClientRect();if(marker.bottom<0||marker.top>innerHeight){evidencePopover.hidePopover();return;}const margin=12;const gap=10;const width=Math.min(520,innerWidth-margin*2);evidencePopover.style.width=width+"px";evidencePopover.style.maxHeight="none";const naturalHeight=evidencePopover.scrollHeight;const below=innerHeight-marker.bottom-gap-margin;const above=marker.top-gap-margin;let placement;let available;if(innerWidth<${LAYOUT.narrowBreakpoint}&&Math.max(below,above)<240){placement="sheet";available=innerHeight-margin*2;}else if(below>=Math.min(naturalHeight,240)||below>=above){placement="below";available=below;}else{placement="above";available=above;}evidencePopover.dataset.placement=placement;evidencePopover.style.maxHeight=Math.max(96,Math.min(available,680))+"px";const height=evidencePopover.getBoundingClientRect().height;let left=Math.min(Math.max(marker.left+marker.width/2-width/2,margin),innerWidth-margin-width);let top;if(placement==="sheet"){left=margin;top=innerHeight-margin-height;}else if(placement==="above")top=marker.top-gap-height;else top=marker.bottom+gap;evidencePopover.style.left=Math.round(left)+"px";evidencePopover.style.top=Math.round(Math.max(margin,top))+"px";const arrow=Math.min(Math.max(marker.left+marker.width/2-left,20),width-20);evidencePopover.style.setProperty("--popover-arrow-x",arrow+"px");evidencePopover.style.visibility="";};
+const schedulePopoverPosition=()=>{if(popoverFrame||!evidencePopover?.matches(":popover-open"))return;popoverFrame=requestAnimationFrame(()=>{popoverFrame=0;positionEvidencePopover();});};
 syncTheme();
 theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
 toc?.addEventListener("click",event=>{const link=event.target.closest("a");if(!link)return;toc.open=false;const target=document.getElementById(link.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({behavior:"instant",block:"start"});});});
+document.addEventListener("click",event=>{const marker=event.target.closest?.(".evidence-marker");if(!marker||!evidencePopover?.showPopover)return;const target=document.getElementById(marker.dataset.evidenceTarget);if(!target)return;event.preventDefault();if(activeEvidenceMarker&&activeEvidenceMarker!==marker)activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=marker;marker.setAttribute("aria-expanded","true");evidencePopoverTitle.textContent=marker.textContent+" "+(target.querySelector(".evidence-meta")?.textContent||"");const preview=target.cloneNode(true);preview.removeAttribute("id");preview.removeAttribute("data-evidence-entry");evidencePopoverBody.replaceChildren(preview);evidencePopoverMore.href="#"+target.id;evidencePopover.style.visibility="hidden";if(!evidencePopover.matches(":popover-open"))evidencePopover.showPopover();positionEvidencePopover();evidencePopoverClose?.focus();});
+evidencePopoverClose?.addEventListener("click",()=>{evidencePopover.hidePopover();activeEvidenceMarker?.focus();});
+evidencePopoverMore?.addEventListener("click",()=>{if(evidencePopover.matches(":popover-open"))evidencePopover.hidePopover();});
+evidencePopover?.addEventListener("toggle",event=>{if(event.newState==="closed"&&activeEvidenceMarker){activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=undefined;evidencePopover.removeAttribute("data-placement");evidencePopover.removeAttribute("style");}});
 addEventListener("keydown",event=>{if(event.key!=="Escape"||!toc?.open)return;event.preventDefault();toc.open=false;toc.querySelector(":scope > summary")?.focus();});
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);
-for(const world of document.querySelectorAll("[data-microworld]")){const groups=[...world.querySelectorAll(".microworld-control-group")];const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const updateWorld=()=>{const selectedControls=groups.map(group=>group.querySelector(".microworld-control:checked"));if(selectedControls.some(control=>!control)){if(status)status.textContent=labels.microworldNoScenario;return;}const key=selectedControls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=selectedControls.map(control=>control.dataset.controlLabel+": "+control.dataset.optionLabel).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+active.dataset.status;};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}
+for(const world of document.querySelectorAll("[data-microworld]")){const groups=[...world.querySelectorAll(".microworld-control-group")];const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const sentence=value=>/[.!?。？！]$/u.test(value)?value:value+".";const scenarioStatus=scenario=>{const traces=[...scenario.querySelectorAll(".microworld-trace")].map(trace=>{const heading=trace.querySelector("h5")?.textContent.trim()||"";const outcome=trace.querySelector(".microworld-outcome p, .microworld-unchanged")?.textContent.trim()||"";return heading+": "+sentence(outcome);});const lesson=scenario.querySelector(".microworld-lesson p")?.textContent.trim()||"";return [...traces,lesson].filter(Boolean).join(" ");};const updateWorld=()=>{const selectedControls=groups.map(group=>group.querySelector(".microworld-control:checked"));if(selectedControls.some(control=>!control)){if(status)status.textContent=labels.microworldNoScenario;return;}const key=selectedControls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=selectedControls.map(control=>control.dataset.controlLabel+": "+control.dataset.optionLabel).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+scenarioStatus(active);};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}
 const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({behavior:"instant",block:"start"});});};
 addEventListener("hashchange",openTarget);
 addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});
-addEventListener("scroll",()=>{if(currentFrame)return;currentFrame=requestAnimationFrame(()=>{currentFrame=0;syncCurrent();});},{passive:true});
+addEventListener("resize",schedulePopoverPosition);
+addEventListener("scroll",()=>{schedulePopoverPosition();if(currentFrame)return;currentFrame=requestAnimationFrame(()=>{currentFrame=0;syncCurrent();});},{passive:true});
 openTarget();
 syncCurrent();
 })();`;
@@ -3058,14 +3087,14 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const iconBytes = await readFile(iconUrl);
   const iconDataUrl = `data:image/png;base64,${iconBytes.toString("base64")}`;
   const codeRenderer = Object.freeze({
-    evidenceTargets: new Set(),
+    evidenceRecords: new Map(),
     render: renderCodeEvidence,
   });
   const script = clientScript(dictionary);
   const title = review.title.text;
-  const sections = buildSections(review, dictionary, codeRenderer);
-  const documentTitleHtml = documentTitle(title);
+  const documentTitleHtml = documentTitle(review.title, dictionary, review, codeRenderer);
   const synopsisHtml = synopsis(review, dictionary, codeRenderer, { number: 1 });
+  const sections = buildSections(review, dictionary, codeRenderer);
   const styles = css(Object.fromEntries(Object.entries(fontBytes).map(
     ([name, bytes]) => [name, bytes.toString("base64")],
   )));
@@ -3159,6 +3188,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
       ${toc}
     </nav>
   </div>
+  ${codeRenderer.evidenceRecords.size === 0 ? "" : evidencePopover(dictionary)}
   <script>${script}</script>
 </body>
 </html>

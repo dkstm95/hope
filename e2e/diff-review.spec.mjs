@@ -140,13 +140,10 @@ test.beforeAll(async () => {
           ],
         },
         {
-          after: {
-            outcome: "성공 값이 계속 전달됩니다.",
-            steps: ["마지막 시도가 성공합니다.", "성공 값을 유지합니다."],
-          },
+          after: "unchanged",
           before: {
             outcome: "성공 값이 계속 전달됩니다.",
-            steps: ["마지막 시도가 성공합니다.", "성공 값을 반환합니다."],
+            steps: ["마지막 시도가 성공합니다.", "성공 값을 유지합니다."],
           },
           id: "succeeded-missing",
           lesson: "성공 경로의 보이는 결과는 바뀌지 않습니다.",
@@ -312,6 +309,18 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
   });
   await openArtifact(page, viewports.desktop);
+  await expect(page.locator(".claim-meta")).toHaveCount(0);
+  await expect(page.locator("#core-change .claim-basis")).toHaveCount(0);
+  const microworldInstruction = page.locator(".microworld > header > p").filter({
+    hasText: "마지막 시도와 저장 상태를 바꿔 호출자에게 전달되는 결과를 비교하세요.",
+  });
+  await expect(microworldInstruction.locator(".evidence-marker")).toHaveCount(1);
+  await expect(page.locator(".review-items-full .item-basis")).toHaveText([
+    "근거에서 추론",
+    "근거에서 추론",
+    "근거에서 추론",
+    "근거에서 추론",
+  ]);
   await expect(page.locator("#synopsis-title")).toHaveText("01요약");
   const synopsisLabelStyle = await page.locator("#synopsis-title").evaluate(
     (element) => ({
@@ -470,6 +479,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   );
   await expect(page.locator(".topbar")).toHaveCSS("position", "sticky");
   await expect(page.locator("body")).toHaveCSS("font-size", "14px");
+  await expect(page.locator("body")).toHaveCSS("font-weight", "500");
   await expect(page.locator("#review-title")).toHaveCSS("font-size", "32px");
   await expect(page.locator(".synopsis-purpose > h3")).toHaveCSS(
     "font-size",
@@ -523,9 +533,10 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     "#evidence-and-scope",
   ]);
   await expect(page.locator(".main > [id]")).toHaveCount(4);
-  await expect(page.locator("#review-title")).toHaveText(
+  await expect(page.locator("#review-title")).toContainText(
     "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
   );
+  await expect(page.locator("#review-title .evidence-marker")).toHaveText("[1]");
   const judge = page.locator("#judge");
   await expect(judge).not.toHaveAttribute("open", "");
   await expect(judge.locator(".section-content")).not.toBeVisible();
@@ -813,6 +824,12 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   await missing.check();
   await expect(missing).toBeChecked();
   await expect(visibleScenario).toContainText("성공했고 저장된 오류가 없음");
+  await expect(visibleScenario.locator(".microworld-unchanged")).toHaveText(
+    "이전과 같습니다.",
+  );
+  await expect(world.locator("[data-microworld-status]")).toContainText(
+    "이후: 이전과 같습니다.",
+  );
   await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
 
   await page.setViewportSize(viewports.mobile);
@@ -988,7 +1005,7 @@ test("the theme control works from the keyboard and describes its next action", 
   await expect(theme).toHaveAttribute("aria-label", "다크 모드로 전환");
 });
 
-test("mobile evidence controls are distinct and large enough to touch", async ({
+test("mobile evidence markers open a bounded preview", async ({
   page,
 }) => {
   await openArtifact(page, viewports.mobile);
@@ -998,21 +1015,36 @@ test("mobile evidence controls are distinct and large enough to touch", async ({
   const pullRequestLinkBox = await pullRequestLink.boundingBox();
   expect(pullRequestLinkBox).not.toBeNull();
   expect(pullRequestLinkBox.height).toBeGreaterThanOrEqual(44);
-  const summaries = page.locator("details.evidence > summary");
-  const count = await summaries.count();
+  const markers = page.locator(".evidence-marker");
+  const count = await markers.count();
   expect(count).toBeGreaterThan(1);
-
-  const names = await summaries.evaluateAll((items) => (
+  const names = await markers.evaluateAll((items) => (
     items.map((item) => item.getAttribute("aria-label"))
   ));
   expect(names.every(Boolean)).toBe(true);
-  expect(new Set(names).size).toBe(names.length);
-
-  for (let index = 0; index < count; index += 1) {
-    const box = await summaries.nth(index).boundingBox();
-    expect(box).not.toBeNull();
-    expect(box.height).toBeGreaterThanOrEqual(44);
+  const markerBox = await markers.first().boundingBox();
+  await markers.first().click();
+  const popover = page.locator("#evidence-popover");
+  await expect(popover).toBeVisible();
+  await expect(popover.locator(".code-evidence, .source-text")).toBeVisible();
+  const popoverBox = await popover.boundingBox();
+  expect(popoverBox).not.toBeNull();
+  expect(popoverBox.x).toBeGreaterThanOrEqual(0);
+  expect(popoverBox.x + popoverBox.width).toBeLessThanOrEqual(viewports.mobile.width);
+  const placement = await popover.getAttribute("data-placement");
+  expect(["above", "below", "sheet"]).toContain(placement);
+  if (placement === "below") {
+    expect(popoverBox.y - (markerBox.y + markerBox.height)).toBeGreaterThanOrEqual(9);
+    expect(popoverBox.y - (markerBox.y + markerBox.height)).toBeLessThanOrEqual(11);
+  } else if (placement === "above") {
+    expect(markerBox.y - (popoverBox.y + popoverBox.height)).toBeGreaterThanOrEqual(9);
+    expect(markerBox.y - (popoverBox.y + popoverBox.height)).toBeLessThanOrEqual(11);
   }
+  const closeBox = await popover.locator(".evidence-popover-close").boundingBox();
+  expect(closeBox.height).toBeGreaterThanOrEqual(44);
+  expect(closeBox.width).toBeGreaterThanOrEqual(44);
+  await popover.locator(".evidence-popover-close").click();
+  await expect(popover).not.toBeVisible();
 
   const otherSummaries = page.locator(
     ".quiz-question > summary, "
@@ -1213,7 +1245,7 @@ test("quiz separates an optional response from the answer and evidence", async (
   await answer.locator(":scope > summary").click();
   await expect(answer).toHaveAttribute("open", "");
   await expect(answer.locator(".quiz-answer-content")).toBeVisible();
-  await expect(answer.locator(".evidence-inline")).toBeVisible();
+  await expect(answer.locator(".evidence-markers")).toBeVisible();
   await expect(answer.locator("details.evidence")).toHaveCount(0);
   await expect(answer).toContainText("마지막 재시도 오류가 호출자에게 전달됩니다.");
 
@@ -1230,7 +1262,7 @@ test("quiz separates an optional response from the answer and evidence", async (
   await expect(response).not.toBeVisible();
   await expect(first.locator(":scope > summary")).toBeVisible();
   await expect(answer.locator(".quiz-answer-content")).toBeVisible();
-  await expect(answer.locator(".evidence-inline")).toBeVisible();
+  await expect(answer.locator(".evidence-markers")).toBeVisible();
 });
 
 test("closed disclosures stay compact", async ({
@@ -1238,9 +1270,9 @@ test("closed disclosures stay compact", async ({
 }) => {
   await openArtifact(page, viewports.desktop);
 
-  expect(await page.locator(".evidence > summary").first().evaluate(
+  expect(await page.locator("#evidence-references > summary").evaluate(
     (summary) => summary.getBoundingClientRect().height,
-  )).toBe(24);
+  )).toBeGreaterThanOrEqual(44);
 
   for (const selector of [
     "#judge",
@@ -1273,7 +1305,7 @@ test("closed disclosures stay compact", async ({
   await expect(artifactDetails.locator(":scope > summary > h3")).toHaveText("리뷰 정보");
 
   const endGap = await page.locator("#evidence-and-scope").evaluate((section) => {
-    const summary = section.querySelector(".artifact-details > summary");
+    const summary = section.querySelector("#evidence-references > summary");
     return section.getBoundingClientRect().bottom - summary.getBoundingClientRect().bottom;
   });
   expect(endGap).toBeLessThanOrEqual(32);
@@ -1298,16 +1330,10 @@ test("closed disclosures stay compact", async ({
   )).toBeLessThanOrEqual(1);
 });
 
-test("the evidence appendix starts open while its groups and code evidence stay closed", async ({
+test("the evidence appendix starts open while its groups and evidence list stay closed", async ({
   page,
 }) => {
   await openArtifact(page, viewports.desktop);
-  const codeEvidence = page.locator("#implementation-details details.evidence");
-  expect(await codeEvidence.count()).toBeGreaterThan(0);
-  expect(await codeEvidence.evaluateAll((items) => (
-    items.every((item) => !item.hasAttribute("open"))
-  ))).toBe(true);
-
   const section = page.locator("details#evidence-and-scope");
   await expect(section).toHaveAttribute("open", "");
 
@@ -1319,6 +1345,9 @@ test("the evidence appendix starts open while its groups and code evidence stay 
   expect(await nested.evaluateAll((items) => (
     items.every((item) => !item.hasAttribute("open"))
   ))).toBe(true);
+  const references = page.locator("#evidence-references");
+  await expect(references).not.toHaveAttribute("open", "");
+  await expect(references.locator(".evidence-footnote-list")).not.toBeVisible();
 
   const sourceGroup = section.locator("details.evidence-group").filter({
     has: page.getByRole("heading", {
@@ -1371,7 +1400,7 @@ test("fragment navigation opens details that contain the target", async ({ page 
 
   await openArtifact(page, viewports.desktop);
   const reference = page.locator(
-    '.code-step-list .evidence-reference a[href^="#evidence-"]',
+    '.code-step-list .evidence-marker[href^="#evidence-"]',
   ).first();
   await reference.evaluate((element) => {
     let details = element.closest("details");
@@ -1388,6 +1417,8 @@ test("fragment navigation opens details that contain the target", async ({ page 
     if (details) details.open = false;
   });
   await reference.click();
+  await expect(page.locator("#evidence-popover")).toBeVisible();
+  await page.locator("[data-evidence-popover-more]").click();
 
   await expect(page.locator(`#${targetId}`).locator("xpath=ancestor::details[1]")).toHaveAttribute(
     "open",
@@ -1476,7 +1507,13 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     const quizAnswer = quizQuestion.locator("details.quiz-answer");
     await quizAnswer.locator(":scope > summary").click();
     await expect(quizAnswer.locator(".quiz-answer-content")).toBeVisible();
-    await expect(quizAnswer.locator(".evidence-inline")).toBeVisible();
+    const evidenceMarker = quizAnswer.locator(".evidence-marker").first();
+    await expect(evidenceMarker).toBeVisible();
+    const evidenceTargetId = (await evidenceMarker.getAttribute("href")).slice(1);
+    await evidenceMarker.click();
+    await expect(page).toHaveURL(new RegExp(`#${evidenceTargetId}$`, "u"));
+    await expect(page.locator("#evidence-references")).toHaveAttribute("open", "");
+    await expect(page.locator(`#${evidenceTargetId}`)).toBeVisible();
     await expectNoPageOverflow(page);
     expect(externalRequests).toEqual([]);
   } finally {

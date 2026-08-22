@@ -611,7 +611,15 @@
                 }
               },
               "before": { "$ref": "#/$defs/microworldTrace" },
-              "after": { "$ref": "#/$defs/microworldTrace" },
+              "after": {
+                "oneOf": [
+                  { "$ref": "#/$defs/microworldTrace" },
+                  {
+                    "const": "unchanged",
+                    "description": "Reuse the before trace when the represented steps and outcome do not change."
+                  }
+                ]
+              },
               "lesson": { "$ref": "#/$defs/text" }
             }
           }

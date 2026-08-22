@@ -128,6 +128,12 @@ Use these rules with the analysis schema and the shared Hope Write standard.
   name instead.
 - Keep one idea in one primary field. Reuse the smallest exact evidence range
   only when another field genuinely needs it.
+- Before validation, compare sibling items that cite the same evidence set and
+  items whose source intervals strongly overlap. Shared support is a signal to
+  check redundancy, not proof that two claims are duplicates. Keep both when
+  they answer different reader questions or own different review actions.
+  Otherwise consolidate the repeated meaning in its primary field instead of
+  paraphrasing it. Do not remove evidence needed to ground a remaining claim.
 - Keep each prose value to one semantic paragraph. Put a distinct idea in the
   existing field or array item that owns it. When one field genuinely needs a
   second paragraph, separate the paragraphs with a newline so the renderer
@@ -181,6 +187,9 @@ The complete set must have no more than 12 combinations.
 
 Run `microworld-skeleton` as directed by the Skill and provide exactly one
 grounded scenario for every returned combination.
+
+Write `"after": "unchanged"` when a scenario's represented steps and outcome
+stay exactly the same. Do not copy the `before` trace into `after`.
 
 ### Visual
 
@@ -265,4 +274,13 @@ accurately cover both.
   evidence references, 96 unique evidence ranges, 1,200 unique evidence lines,
   96 KiB of unique excerpts, and 600 code-evidence line occurrences across
   distinct rendered ranges.
+- Target at most 480 code-evidence line occurrences so validation repairs have
+  room. Exact reuse of one source interval counts once. Overlapping intervals
+  with different boundaries render separately and each spends its full length.
+- Before adding another interval, reuse the exact smallest range that already
+  proves the same mechanism. Normally keep an interval to 4–12 lines instead
+  of selecting the 24- or 96-line maximum.
+- If validation reports a code-evidence overage, use its actual total,
+  field-by-field contribution, largest ranges, and overlap list to remove the
+  biggest repetition first.
 - Prefer a focused explanation over exhausting an allowance.

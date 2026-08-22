@@ -186,14 +186,123 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
   );
 });
 
+test("Align input binds cited claims to unique evidence ids", () => {
+  const value = validateAlignInput(makeAlignInput({
+    goal: {
+      text: "중단된 업로드를 안전하게 복구한다.",
+      evidenceIds: ["upload-service", "product-requirements"],
+    },
+    evidence: [
+      { id: "upload-service", label: "업로드 서비스", location: "src/upload/recovery.ts" },
+      { id: "product-requirements", label: "제품 요구", location: "https://example.com/requirements" },
+    ],
+  }));
+  assert.deepEqual(value.goal.evidenceIds, ["upload-service", "product-requirements"]);
+  assert.equal(value.goal.text, "중단된 업로드를 안전하게 복구한다.");
+
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      goal: { text: "근거가 없는 주장", evidenceIds: ["missing"] },
+    })),
+    /refers to unknown evidence id: missing/u,
+  );
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      evidence: [
+        { id: "same", label: "첫 근거", location: "docs/first.md" },
+        { id: "same", label: "둘째 근거", location: "docs/second.md" },
+      ],
+    })),
+    /unique evidence ids/u,
+  );
+});
+
+test("Align input rejects exact evidence and sibling-item duplicates", () => {
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      evidence: [
+        { id: "first", label: "제품 요구", location: "docs/requirements.md" },
+        { id: "second", label: "제품 요구", location: "docs/requirements.md" },
+      ],
+    })),
+    /\$\.evidence\[1\] duplicates \$\.evidence\[0\]/u,
+  );
+
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      evidence: [
+        { id: "first", label: "첫 근거", location: "docs/first.md" },
+        { id: "second", label: "둘째 근거", location: "docs/second.md" },
+      ],
+      scope: {
+        included: [
+          { text: "같은 범위", evidenceIds: ["first", "second"] },
+          { text: "같은 범위", evidenceIds: ["second", "first"] },
+        ],
+        excluded: [],
+      },
+    })),
+    /\$\.scope\.included\[1\] duplicates \$\.scope\.included\[0\]/u,
+  );
+
+  const duplicateCases = [
+    ["$.checks", (input) => input.checks.push(structuredClone(input.checks[0]))],
+    ["$.scope.excluded", (input) => input.scope.excluded.push(input.scope.excluded[0])],
+    ["$.behavior.steps", (input) => input.behavior.steps.push(
+      structuredClone(input.behavior.steps[0]),
+    )],
+    ["$.behavior.outcomes", (input) => input.behavior.outcomes.push(
+      structuredClone(input.behavior.outcomes[0]),
+    )],
+    ["$.decisions", (input) => input.decisions.push(
+      structuredClone(input.decisions[0]),
+    )],
+    ["$.openChoices", (input) => input.openChoices.push(input.openChoices[0])],
+  ];
+  for (const [path, duplicate] of duplicateCases) {
+    const input = makeAlignInput();
+    duplicate(input);
+    assert.throws(
+      () => validateAlignInput(input),
+      new RegExp(`${path.replace(/[.$[\]]/gu, "\\$&")}\\[\\d+\\] duplicates`, "u"),
+    );
+  }
+});
+
+test("inspect keeps exact duplicates in retained history readable", async () => {
+  const root = await repository();
+  const inputPath = await inputFile(root, "input.json", makeAlignInput());
+  const outputPath = join(root, "docs", "alignments", "retained-duplicate.html");
+  await createAlignArtifact({ inputPath, outputPath, root });
+  const original = await readFile(outputPath, "utf8");
+  const retained = resealAlignArtifact(original, (data) => {
+    const evidence = data.revisions[0].content.evidence;
+    evidence.push(structuredClone(evidence[0]));
+  });
+  await writeFile(outputPath, retained, "utf8");
+
+  const inspected = await inspectAlignArtifact(outputPath);
+  assert.equal(inspected.content.evidence.length, 3);
+});
+
 test("design direction images are validated, embedded, and kept off the network", async () => {
   const root = await repository();
   const firstImage = join(root, "direction-one.png");
   const secondImage = join(root, "direction-two.png");
   await copyFile(sampleImage, firstImage);
   await copyFile(sampleImage, secondImage);
+  const designDirections = makeDesignDirections([firstImage, secondImage]);
+  designDirections.options[0].references[0] = {
+    evidenceId: "recovery-reference",
+    influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+  };
   const inputPath = await inputFile(root, "input.json", makeAlignInput({
-    designDirections: makeDesignDirections([firstImage, secondImage]),
+    designDirections,
+    evidence: [{
+      id: "recovery-reference",
+      label: "복구 요구 참고",
+      location: "https://example.com/recovery-reference",
+    }],
   }));
   const outputPath = join(root, "docs", "alignments", "visual-agreement.html");
   const created = await createAlignArtifact({ inputPath, outputPath, root });
@@ -206,6 +315,7 @@ test("design direction images are validated, embedded, and kept off the network"
   assert.equal(directions.options[0].image.height, 128);
   assert.equal(directions.recommendation.optionId, "direction-1");
   assert.equal(directions.selection.optionId, "direction-2");
+  assert.equal(directions.options[0].references[0].evidenceId, "recovery-reference");
   const html = await readFile(outputPath, "utf8");
   assert.equal(verifyAlignHtml(html), created.digest);
   assert.equal((html.match(/class="direction-image"><img src="data:image\/png;base64,/gu) ?? []).length, 2);
@@ -347,6 +457,52 @@ test("design direction input rejects unsafe images and inconsistent choices", as
   );
 });
 
+test("design directions reuse evidence-backed sources instead of copying URLs", () => {
+  const directions = makeDesignDirections([sampleImage, sampleImage]);
+  directions.options[0].references[0] = {
+    evidenceId: "recovery-reference",
+    influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+  };
+  const validated = validateAlignInput(makeAlignInput({
+    designDirections: directions,
+    evidence: [{
+      id: "recovery-reference",
+      label: "복구 요구 참고",
+      location: "https://example.com/recovery-reference",
+    }],
+  }));
+  assert.deepEqual(
+    validated.designDirections.options[0].references[0],
+    {
+      evidenceId: "recovery-reference",
+      influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+    },
+  );
+
+  const copied = makeDesignDirections([sampleImage, sampleImage]);
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      designDirections: copied,
+      evidence: [{
+        id: "recovery-reference",
+        label: "복구 요구 참고",
+        location: "https://example.com/recovery-reference",
+      }],
+    })),
+    /use evidenceId: recovery-reference/u,
+  );
+
+  const unknown = makeDesignDirections([sampleImage, sampleImage]);
+  unknown.options[0].references[0] = {
+    evidenceId: "missing",
+    influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+  };
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({ designDirections: unknown })),
+    /refers to unknown evidence id: missing/u,
+  );
+});
+
 test("two image-rich revisions remain complete within the artifact boundary", async () => {
   const root = await repository();
   const firstImage = join(root, "large-one.png");
@@ -402,7 +558,13 @@ test("two image-rich revisions remain complete within the artifact boundary", as
 test("renderer is deterministic, self-contained, and keeps authored text inert", () => {
   const input = validateAlignInput(makeAlignInput({
     title: '</title><script src="https://evil.example/x.js"></script>',
-    goal: "Keep <img src=x onerror=alert(1)> as text.\nKeep the second idea distinct.",
+    goal: {
+      text: "Keep <img src=x onerror=alert(1)> as text.\nKeep the second idea distinct.",
+      evidenceIds: ["upload-service"],
+    },
+    evidence: [
+      { id: "upload-service", label: "Upload service", location: "src/upload/recovery.ts" },
+    ],
   }));
   const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
   const data = {
@@ -429,7 +591,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="15"/u);
+  assert.match(first, /name="hope-align-design-version" content="18"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
@@ -466,8 +628,13 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, />사용자 확인</u);
   assert.match(first, /<ol class="check-list">/u);
   assert.match(first, /<span class="check-condition">/u);
-  assert.match(first, /<details class="check-verification">/u);
-  assert.match(first, /<summary>AI 에이전트 확인<\/summary>/u);
+  assert.match(first, /class="reference-marker evidence-marker" href="#evidence-upload-service"/u);
+  assert.match(first, /<ol class="evidence-list"><li id="evidence-upload-service" data-evidence-entry>/u);
+  assert.match(first, /id="reference-popover" popover="auto" role="dialog"/u);
+  assert.match(first, /class="reference-marker verification-marker"[^>]*>\[AI\]<\/a>/u);
+  assert.match(first, /class="reference-marker verification-marker"[^>]*>\[유저\]<\/a>/u);
+  assert.match(first, /<details class="body-section document-section section-disclosure" id="verification">/u);
+  assert.doesNotMatch(first, /<details class="check-verification">/u);
   assert.match(first, /<details class="body-section document-section section-disclosure" id="evidence">/u);
   assert.doesNotMatch(first, /<ul class="check-list">/u);
   assert.doesNotMatch(first, /<ol class="check-list"><li><strong>/u);
@@ -481,7 +648,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /&lt;img src=x onerror=alert\(1\)&gt;/u);
   assert.match(
     first,
-    /<dt>목표<\/dt><dd><p><bdi dir="auto">Keep &lt;img src=x onerror=alert\(1\)&gt; as text\.<\/bdi><\/p><p><bdi dir="auto">Keep the second idea distinct\.<\/bdi><\/p><\/dd>/u,
+    /<dt>목표<\/dt><dd><p><bdi dir="auto">Keep &lt;img src=x onerror=alert\(1\)&gt; as text\.<\/bdi><\/p><p><bdi dir="auto">Keep the second idea distinct\.<\/bdi><sup class="reference-markers evidence-markers">[\s\S]*?<\/sup><\/p><\/dd>/u,
   );
   assert.doesNotMatch(first, /<script src="https:\/\/evil/u);
   assert.doesNotMatch(first, /localStorage/u);
@@ -493,12 +660,12 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   const main = first.match(/<main class="main"[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
   assert.deepEqual(
     [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
-    ["01", "02", "03", "04", "05"],
+    ["01", "02", "03", "04", "05", "06"],
   );
   const toc = first.match(/<nav class="toc"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
   assert.deepEqual(
     [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
-    ["01", "02", "03", "04", "05"],
+    ["01", "02", "03", "04", "05", "06"],
   );
 
   const withAlternateLocale = renderAlignArtifact(data, {
@@ -543,7 +710,8 @@ test("renderer omits empty optional sections instead of filling the screen", () 
   };
   const html = renderAlignArtifact(data, { digest: "0".repeat(64) });
   assert.doesNotMatch(html, /id="behavior"|id="agreement"|id="evidence"/u);
-  assert.doesNotMatch(html, /class="toc"|class="toc-mobile"/u);
+  assert.match(html, /id="verification"/u);
+  assert.match(html, /class="toc"/u);
 
   const decisionInput = validateAlignInput(makeAlignInput({
     behavior: undefined,
@@ -659,7 +827,8 @@ test("revise appends a current goal contract to a legacy artifact", async () => 
   assert.equal(inspected.history.length, 2);
   const html = await readFile(outputPath, "utf8");
   assert.match(html, /v2 · 현재 합의/u);
-  assert.match(html, /v1 · <bdi dir="auto">최초 합의/u);
+  assert.match(html, /<strong>v1<\/strong>/u);
+  assert.equal((html.match(/<p><bdi dir="auto">최초 합의<\/bdi><\/p>/gu) ?? []).length, 2);
   assert.match(html, /id="revision-1"/u);
   assert.match(html, /변경 내용 보기/u);
   assert.match(html, /이전 결과 전용 \(취소\)/u);
@@ -718,22 +887,22 @@ test("inspect rejects resealed artifacts with invalid revision content", async (
 
 test("revision rejects an artifact that would exceed the readable size", async () => {
   const root = await repository();
-  const prose = "x".repeat(4_000);
+  const prose = "x".repeat(3_980);
   const largeInput = makeAlignInput({
     behavior: undefined,
     decisions: [],
     evidence: undefined,
     goal: prose,
     problem: prose,
-    checks: Array.from({ length: 4 }, () => ({
-      condition: prose,
-      verify: prose,
+    checks: Array.from({ length: 4 }, (_, index) => ({
+      condition: `${prose} condition ${index}`,
+      verify: `${prose} verify ${index}`,
       by: "agent",
     })),
     boundary: prose,
     scope: {
-      included: Array.from({ length: 25 }, () => prose),
-      excluded: Array.from({ length: 25 }, () => prose),
+      included: Array.from({ length: 25 }, (_, index) => `${prose} included ${index}`),
+      excluded: Array.from({ length: 25 }, (_, index) => `${prose} excluded ${index}`),
     },
     openChoices: [],
   });

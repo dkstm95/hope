@@ -89,15 +89,15 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 14);
-  assert.equal(first.designVersion, 10);
+  assert.equal(first.rendererVersion, 18);
+  assert.equal(first.designVersion, 14);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
   assert.match(html, /&lt;script src=/u);
   assert.match(
     html,
-    /<p><bdi dir="auto">The caller sees the original failure\.<\/bdi><\/p><p><bdi dir="auto">The fallback no longer hides it\.<\/bdi><\/p>/u,
+    /<p><bdi dir="auto">The caller sees the original failure\.<\/bdi><\/p><p><bdi dir="auto">The fallback no longer hides it\.<\/bdi><sup class="evidence-markers">[\s\S]*?<\/sup><\/p>/u,
   );
   assert.match(html, /Content-Security-Policy/u);
   assert.match(html, /default-src &#39;none&#39;|default-src 'none'/u);
@@ -114,7 +114,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /data:font\/woff2;base64/u);
   assert.match(html, /font-family: "Hope Sans"/u);
   assert.match(html, /font-family: "Hope Code"/u);
-  assert.equal((html.match(/@font-face/gu) ?? []).length, 4);
+  assert.equal((html.match(/@font-face/gu) ?? []).length, 3);
   assert.match(html, /aria-label="Switch to dark mode"/u);
   assert.doesNotMatch(html, /aria-pressed=/u);
   assert.doesNotMatch(html, /data-copy-section/u);
@@ -165,10 +165,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<header class="document-title">[\s\S]*?<\/header>/u,
   )?.[0] ?? "";
   assert.doesNotMatch(documentTitleHtml, /example\/hope · PR #142/u);
-  assert.doesNotMatch(documentTitleHtml, /<a /u);
+  assert.doesNotMatch(documentTitleHtml, /pull-request-link|https?:\/\//u);
   assert.match(
     documentTitleHtml,
-    /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><\/h1>/u,
+    /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><sup class="evidence-markers">/u,
   );
   assert.doesNotMatch(documentTitleHtml, /&lt;script|Goal|<dl>|<dt>|Captured|Commit/u);
   const synopsisHtml = html.match(
@@ -244,6 +244,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /\/blob\/[^"]+\/src\/retry\.js#L/u);
   assert.doesNotMatch(html, /<span[^>]+style=/u);
   assert.match(html, /class="review-item kind-verify review-item-compact"/u);
+  assert.doesNotMatch(html, />Code<\/div>|>Code<\/span>|>Code<\/p>/u);
+  assert.doesNotMatch(html, /class="claim-meta"/u);
   assert.doesNotMatch(html, /class="review-result/u);
   assert.doesNotMatch(html, /class="review-count/u);
   assert.doesNotMatch(html, /class="review-kind-counts/u);
@@ -280,7 +282,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<ol class="code-step-list">/u);
   assert.match(html, /<ul class="scope-impact-list"><li><a href="#scope-limit-1">/u);
   assert.equal((html.match(/id="review-item-1"/gu) ?? []).length, 1);
-  assert.match(html, /class="item-basis"/u);
+  assert.match(html, /<span class="item-basis">Inferred from evidence<\/span>/u);
   assert.match(html, /class="item-next"/u);
   assert.match(html, /class="related-limits"/u);
   assert.match(html, /href="#scope-limit-1"/u);
@@ -298,13 +300,12 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     (html.match(/<details class="context-check">/gu) ?? []).length,
     review.contextChecks.filter((check) => check.status !== "limited").length,
   );
-  assert.match(html, /<summary aria-label="[^"]+ · Evidence · \d+">Evidence · \d+<\/summary>/u);
+  assert.match(html, /class="evidence-marker" href="#evidence-[a-f0-9]{12}"/u);
   assert.match(html, /\.code-line-patch\.code-line-unlocated/u);
-  assert.match(html, /class="evidence-reference"/u);
-  assert.match(
-    html,
-    /\.evidence-meta a:visited,[\s\S]*?\.evidence-reference a:visited \{[\s\S]*?color: var\(--visited\);/u,
-  );
+  assert.match(html, /id="evidence-references"/u);
+  assert.match(html, /class="evidence-footnote-list"/u);
+  assert.match(html, /id="evidence-popover" popover="auto" role="dialog"/u);
+  assert.doesNotMatch(html, /class="evidence-reference"/u);
   assert.equal((html.match(/id="evidence-[a-f0-9]{12}"/gu) ?? []).length > 0, true);
   assert.match(html, /<caption class="sr-only">/u);
   assert.match(html, /<time datetime="[^"]+" title="[^"]+">/u);
@@ -435,6 +436,8 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(html, /판단에 영향을 주는 제한/u);
   assert.match(html, /수집한 맥락 밖의 기존 코드/u);
   assert.match(html, /src\/retry\.js · 변경 조각 2–4/u);
+  assert.doesNotMatch(html, />코드<\/div>|>코드<\/span>|>코드<\/p>/u);
+  assert.match(html, /<span class="item-basis">근거에서 추론<\/span>/u);
   assert.match(html, /aria-label="라이트 모드로 전환"/u);
   assert.doesNotMatch(html, /aria-pressed=/u);
   assert.match(html, /data-theme-icon="dark"[^>]* hidden/u);
@@ -669,7 +672,7 @@ test("quiz responses stay visually unlabeled and separate from the answer", asyn
     /placeholder="답을 먼저 적어보세요\. 입력 내용은 저장되지 않습니다\."/u,
   );
   assert.doesNotMatch(html, /<label[^>]*>[^<]*(?:내 생각|선택)/u);
-  assert.equal((html.match(/class="evidence evidence-inline"/gu) ?? []).length, 3);
+  assert.equal((html.match(/class="evidence-markers"/gu) ?? []).length >= 3, true);
   assert.match(
     html,
     /aria-label="모든 재시도가 실패하면 어떤 오류가 전달되나요\? 1 · 답과 근거 보기"/u,
@@ -809,6 +812,7 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
   addTeachingBehavior(analysis);
+  analysis.behavior.microworld.scenarios[0].after = "unchanged";
   analysis.behavior.visual.title = "<img src=x onerror=alert(1)>";
   analysis.behavior.microworld.instructions = "</script><script>alert(1)</script>";
   const review = validateAnalysis(analysis, snapshot, { runId });
@@ -838,13 +842,16 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.equal((html.match(/checked disabled>/gu) ?? []).length, 2);
   assert.doesNotMatch(html, /<select[\s\S]*?microworld-control/u);
   assert.equal((html.match(/class="microworld-scenario"/gu) ?? []).length, 4);
-  assert.equal(
-    (html.match(/data-status="[^"]+"\s+hidden>/gu) ?? []).length,
-    3,
-  );
+  assert.doesNotMatch(html, /data-status=/u);
+  assert.match(html, /class="microworld-trace microworld-trace-unchanged"/u);
+  assert.match(html, /class="microworld-unchanged">Same as before\.<\/p>/u);
   assert.match(html, /<dt>This model simplifies<\/dt>/u);
   assert.match(html, /<dt>This model leaves out<\/dt>/u);
-  assert.match(html, /class="claim-meta teaching-aid-meta"/u);
+  assert.doesNotMatch(html, /class="claim-meta teaching-aid-meta"/u);
+  assert.match(
+    html,
+    /<aside class="microworld"[\s\S]*?<header>[\s\S]*?<\/bdi><sup class="evidence-markers">[\s\S]*?<\/header>/u,
+  );
   assert.equal(
     (html.match(/class="teaching-aid-choice decision-included"/gu) ?? []).length,
     2,
