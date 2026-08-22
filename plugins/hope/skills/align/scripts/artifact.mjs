@@ -438,11 +438,19 @@ function designDirections(value, path, { imageField, validateImage }) {
       references: Object.freeze(item.references.map((reference, referenceIndex) => {
         const referencePath = `${itemPath}.references[${referenceIndex}]`;
         if (!isRecord(reference)) throw new TypeError(`${referencePath} must be an object`);
+        const influence = text(reference.influence, `${referencePath}.influence`);
+        if (reference.evidenceId !== undefined) {
+          assertKeys(reference, ["evidenceId", "influence"], referencePath);
+          return Object.freeze({
+            evidenceId: evidenceId(reference.evidenceId, `${referencePath}.evidenceId`),
+            influence,
+          });
+        }
         assertKeys(reference, ["label", "url", "influence"], referencePath);
         return Object.freeze({
           label: text(reference.label, `${referencePath}.label`, 160),
           url: httpUrl(reference.url, `${referencePath}.url`),
-          influence: text(reference.influence, `${referencePath}.influence`),
+          influence,
         });
       })),
     });
@@ -460,6 +468,46 @@ function designDirections(value, path, { imageField, validateImage }) {
     throw new TypeError(`${path}.selection.optionId must name an option`);
   }
   return Object.freeze({ options: Object.freeze(options), recommendation, selection });
+}
+
+function assertDesignReferenceEvidence(
+  directions,
+  evidence,
+  path,
+  { rejectCopiedUrls = true } = {},
+) {
+  if (directions === undefined) return;
+  const byId = new Map(evidence.flatMap((item, index) => (
+    item.id === undefined ? [] : [[item.id, { index, item }]]
+  )));
+  for (const [optionIndex, option] of directions.options.entries()) {
+    for (const [referenceIndex, reference] of option.references.entries()) {
+      const referencePath = `${path}.options[${optionIndex}].references[${referenceIndex}]`;
+      if (reference.evidenceId !== undefined) {
+        const entry = byId.get(reference.evidenceId);
+        if (entry === undefined) {
+          throw new TypeError(
+            `${referencePath}.evidenceId refers to unknown evidence id: ${reference.evidenceId}`,
+          );
+        }
+        httpUrl(entry.item.location, `${referencePath}.evidenceId location`);
+        continue;
+      }
+      if (!rejectCopiedUrls) continue;
+      const duplicateIndex = evidence.findIndex((item) => item.location === reference.url);
+      if (duplicateIndex !== -1) {
+        const duplicate = evidence[duplicateIndex];
+        if (duplicate.id === undefined) {
+          throw new TypeError(
+            `${referencePath}.url duplicates ${path.replace(/\.designDirections$/u, "")}.evidence[${duplicateIndex}].location; give that evidence an id and reference it`,
+          );
+        }
+        throw new TypeError(
+          `${referencePath}.url duplicates evidence location; use evidenceId: ${duplicate.id}`,
+        );
+      }
+    }
+  }
 }
 
 export function validateAlignInput(value, defaults = {}) {
@@ -486,6 +534,7 @@ export function validateAlignInput(value, defaults = {}) {
   }
   const scope = scopeValue(value.scope, "$.scope", { cited: true });
   const behavior = behaviorValue(value.behavior, "$.behavior", { cited: true });
+  const evidence = evidenceItems(value.evidence, "$.evidence");
 
   const validatedDesignDirections = value.designDirections === undefined
     ? undefined
@@ -499,8 +548,8 @@ export function validateAlignInput(value, defaults = {}) {
     });
 
   const decisions = decisionItems(value.decisions, "$.decisions", { cited: true });
-  const evidence = evidenceItems(value.evidence, "$.evidence");
   const checks = checkItems(value.checks, "$.checks");
+  assertDesignReferenceEvidence(validatedDesignDirections, evidence, "$.designDirections");
   const content = {
     schemaVersion: 2,
     locale,
@@ -909,6 +958,12 @@ function validateArtifactData(value) {
         revision.content.designDirections,
         `$.revisions[${index}].content.designDirections`,
         { imageField: "image", validateImage: embeddedImage },
+      );
+      assertDesignReferenceEvidence(
+        directions,
+        retainedEvidence,
+        `${contentPath}.designDirections`,
+        { rejectCopiedUrls: false },
       );
       const totalBytes = directions.options.reduce(
         (total, option) => total + Buffer.byteLength(option.image.data, "base64"),

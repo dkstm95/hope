@@ -322,6 +322,10 @@ async function captureReadmeAssets(browser, paths, outputDirectory) {
       });
       await page.setViewportSize({ height: 900, width: 1440 });
       await captureElement(page, join(outputDirectory, `hope-diff-core-${suffix}.png`), "#core-change");
+      await page.locator(".microworld-disclosure").evaluate((details) => {
+        details.open = true;
+      });
+      await page.locator('.microworld-control[data-control-id="child"][value="number"]').check();
       await captureElement(page, join(outputDirectory, `hope-diff-microworld-${suffix}.png`), ".microworld", { expandDetails: true });
       await captureElement(page, join(outputDirectory, `hope-diff-quiz-${suffix}.png`), "#quiz", { expandDetails: true });
     } finally {

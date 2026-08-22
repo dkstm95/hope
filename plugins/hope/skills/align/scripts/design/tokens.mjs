@@ -1,4 +1,4 @@
-export const ALIGN_DESIGN_VERSION = 17;
+export const ALIGN_DESIGN_VERSION = 18;
 
 // Align owns this palette. Values follow the approved Align implementation brief.
 export const COLORS = Object.freeze({

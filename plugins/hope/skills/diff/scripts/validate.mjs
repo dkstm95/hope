@@ -645,6 +645,12 @@ function validateMicroworldTrace(value, name) {
   });
 }
 
+function sameMicroworldTrace(first, second) {
+  return first.outcome === second.outcome
+    && first.steps.length === second.steps.length
+    && first.steps.every((step, index) => step === second.steps[index]);
+}
+
 function selectionKey(controls, pairs) {
   return controls.map((control) => {
     const pair = pairs.find((entry) => entry.controlId === control.id);
@@ -728,13 +734,22 @@ function validateMicroworld(value, sourceMap) {
         throw new Error(`${name}.scenarios repeats a control combination`);
       }
       actualKeys.add(key);
+      const before = validateMicroworldTrace(scenario.before, `${scenarioName}.before`);
+      const unchanged = scenario.after === "unchanged";
+      const after = unchanged
+        ? before
+        : validateMicroworldTrace(scenario.after, `${scenarioName}.after`);
+      if (!unchanged && sameMicroworldTrace(before, after)) {
+        throw new Error(`${scenarioName}.after repeats before; use "unchanged"`);
+      }
       return Object.freeze({
-        after: validateMicroworldTrace(scenario.after, `${scenarioName}.after`),
-        before: validateMicroworldTrace(scenario.before, `${scenarioName}.before`),
+        after,
+        before,
         id,
         lesson: text(scenario.lesson, `${scenarioName}.lesson`),
         selectionKey: key,
         title: text(scenario.title, `${scenarioName}.title`),
+        unchanged,
         when: Object.freeze(controls.map(
           (control) => when.find((entry) => entry.controlId === control.id),
         )),

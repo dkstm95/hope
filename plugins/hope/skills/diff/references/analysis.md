@@ -188,6 +188,9 @@ The complete set must have no more than 12 combinations.
 Run `microworld-skeleton` as directed by the Skill and provide exactly one
 grounded scenario for every returned combination.
 
+Write `"after": "unchanged"` when a scenario's represented steps and outcome
+stay exactly the same. Do not copy the `before` trace into `after`.
+
 ### Visual
 
 Choose the visual from the task's teaching job, not from every relationship in

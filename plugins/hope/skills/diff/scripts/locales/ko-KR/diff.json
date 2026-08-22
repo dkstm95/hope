@@ -79,6 +79,7 @@
   "microworld.selection": "선택한 상황",
   "microworld.simplifies": "이 모델에서 단순화한 것",
   "microworld.tryIt": "직접 해보기",
+  "microworld.unchanged": "이전과 같습니다.",
   "quiz.responseLabel": "이해 확인 답변",
   "quiz.responsePlaceholder": "답을 먼저 적어보세요. 입력 내용은 저장되지 않습니다.",
   "quiz.showAnswer": "답과 근거 보기",

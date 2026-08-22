@@ -313,17 +313,24 @@ function scopeSection(content, dictionary, number, catalog) {
   </section>`;
 }
 
-function directionReferences(references, dictionary) {
+function directionReferences(references, dictionary, catalog) {
   if (references.length === 0) return "";
   return `<details class="direction-references">
     <summary>${escapeHtml(label(dictionary, "references"))} · ${references.length}</summary>
     <div class="direction-reference-content"><ul>${references.map(
-    (reference) => `<li><a href="${escapeHtml(reference.url)}">${authoredText(reference.label)}</a><p><strong>${escapeHtml(label(dictionary, "influence"))}:</strong> ${authoredText(reference.influence)}</p></li>`,
+    (reference) => {
+      const evidence = reference.evidenceId === undefined
+        ? undefined
+        : catalog?.byId.get(reference.evidenceId)?.item;
+      const url = evidence?.location ?? reference.url;
+      const title = evidence?.label ?? reference.label;
+      return `<li><a href="${escapeHtml(url)}">${authoredText(title)}</a><p><strong>${escapeHtml(label(dictionary, "influence"))}:</strong> ${authoredText(reference.influence)}</p></li>`;
+    },
   ).join("")}</ul></div>
   </details>`;
 }
 
-function designDirectionsComparison(directions, dictionary, idPrefix = "") {
+function designDirectionsComparison(directions, dictionary, idPrefix = "", catalog) {
   const status = (option) => [
     option.id === directions.recommendation.optionId
       ? `<span class="direction-status recommended">${escapeHtml(label(dictionary, "recommended"))}</span>`
@@ -356,17 +363,17 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "") {
       <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
       <div><h4>${escapeHtml(label(dictionary, "tradeoffs"))}</h4>${textList(option.tradeoffs)}</div>
     </div>
-${rationaleHtml === "" ? "" : `    ${rationaleHtml}\n`}    ${directionReferences(option.references, dictionary)}
+${rationaleHtml === "" ? "" : `    ${rationaleHtml}\n`}    ${directionReferences(option.references, dictionary, catalog)}
   </li>`;
   }).join("");
   return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>`;
 }
 
-function designDirectionsSection(content, dictionary, number) {
+function designDirectionsSection(content, dictionary, number, catalog) {
   if (!content.designDirections) return undefined;
   return `<section class="body-section document-section" id="design-directions" aria-labelledby="design-directions-title">
     ${sectionTitle("design-directions-title", label(dictionary, "designDirections"), number)}
-    ${designDirectionsComparison(content.designDirections, dictionary)}
+    ${designDirectionsComparison(content.designDirections, dictionary, "", catalog)}
   </section>`;
 }
 
@@ -454,6 +461,7 @@ function referencePopover(dictionary) {
 }
 
 function compactRevisionContent(content, dictionary, idPrefix) {
+  const catalog = evidenceCatalog(content);
   const detail = (title, value) => `${authoredText(citedValue(title))}${value
     ? ` <span aria-hidden="true">—</span> ${authoredText(citedValue(value))}`
     : ""}`;
@@ -471,7 +479,7 @@ function compactRevisionContent(content, dictionary, idPrefix) {
   </div>` : "";
   const designDirectionsHtml = content.designDirections ? `<div>
     <dt>${escapeHtml(label(dictionary, "designDirections"))}</dt>
-    <dd>${designDirectionsComparison(content.designDirections, dictionary, idPrefix)}</dd>
+    <dd>${designDirectionsComparison(content.designDirections, dictionary, idPrefix, catalog)}</dd>
   </div>` : "";
   const decisions = content.decisions.length === 0 ? "" : `<div>
     <dt>${escapeHtml(label(dictionary, "agreedDecisions"))}</dt>
@@ -502,7 +510,7 @@ function railRevision(revision, index, data, dictionary, idSuffix) {
     <div class="revision-popup">${compactRevisionContent(revision.content, dictionary, `revision-${revision.number}${idSuffix}-`)}</div>
   </details>`;
   return `<li class="${current ? "current" : "past"}">
-    <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>v${revision.number} · ${current ? escapeHtml(label(dictionary, "currentAgreement")) : authoredText(revision.summary)}</strong><time datetime="${escapeHtml(revision.agreedAt)}">${escapeHtml(revision.agreedAt.slice(0, 10))}</time></div>
+    <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>v${revision.number}${current ? ` · ${escapeHtml(label(dictionary, "currentAgreement"))}` : ""}</strong><time datetime="${escapeHtml(revision.agreedAt)}">${escapeHtml(revision.agreedAt.slice(0, 10))}</time></div>
     <p>${authoredText(revision.summary)}</p>${details ? `
     ${details}` : ""}
   </li>`;
@@ -944,7 +952,7 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
   const sections = [
     { id: "overview", title: label(dictionary, "overview"), include: true, render: (number) => overview(content, dictionary, number, catalog, verifications) },
     { id: "scope", title: label(dictionary, "scope"), include: true, render: (number) => scopeSection(content, dictionary, number, catalog) },
-    { id: "design-directions", title: label(dictionary, "designDirections"), include: content.designDirections !== undefined, render: (number) => designDirectionsSection(content, dictionary, number) },
+    { id: "design-directions", title: label(dictionary, "designDirections"), include: content.designDirections !== undefined, render: (number) => designDirectionsSection(content, dictionary, number, catalog) },
     { id: "behavior", title: label(dictionary, "behavior"), include: content.behavior !== undefined, render: (number) => behaviorSection(content, dictionary, number, catalog) },
     { id: "agreement", title: label(dictionary, "agreement"), include: content.decisions.length > 0 || content.openChoices.length > 0, render: (number) => agreementSection(content, dictionary, number, catalog) },
     { id: "verification", title: label(dictionary, "verification"), include: verifications.entries.length > 0, render: (number) => verificationSection(verifications, dictionary, number) },

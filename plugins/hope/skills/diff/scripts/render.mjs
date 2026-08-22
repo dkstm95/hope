@@ -356,6 +356,13 @@ function microworldTrace(trace, title, dictionary) {
   </section>`;
 }
 
+function unchangedMicroworldTrace(dictionary) {
+  return `<section class="microworld-trace microworld-trace-unchanged">
+    <h5>${html(label(dictionary, "microworld.after"))}</h5>
+    <p class="microworld-unchanged">${html(label(dictionary, "microworld.unchanged"))}</p>
+  </section>`;
+}
+
 function microworldBlock(world, dictionary, review, codeRenderer) {
   const evidenceSuffix = aidEvidenceSuffix(
     world,
@@ -366,14 +373,6 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
   const defaultKey = world.controls.map(
     (control) => `${control.id}=${control.defaultOptionId}`,
   ).join("|");
-  const defaultScenario = world.scenarios.find(
-    (scenario) => scenario.selectionKey === defaultKey,
-  );
-  const scenarioStatus = (scenario) => (
-    `${label(dictionary, "microworld.before")}: ${scenario.before.outcome}. `
-    + `${label(dictionary, "microworld.after")}: ${scenario.after.outcome}. `
-    + scenario.lesson
-  );
   return `<aside class="microworld" data-microworld aria-labelledby="microworld-title">
     <header>
       <p class="microworld-eyebrow">${html(label(dictionary, "microworld.tryIt"))}</p>
@@ -413,14 +412,11 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
       </fieldset>`).join("")}</div>
         </div>
         <noscript><p class="microworld-noscript">${html(label(dictionary, "microworld.noScript"))}</p></noscript>
-        <p class="sr-only" role="status" aria-live="polite" data-microworld-status>${html(
-          scenarioStatus(defaultScenario),
-        )}</p>
+        <p class="sr-only" role="status" aria-live="polite" data-microworld-status></p>
         <div class="microworld-scenarios" role="region" aria-label="${html(label(dictionary, "microworld.selection"))}">
           ${world.scenarios.map((scenario) => `<article
         class="microworld-scenario"
         data-selection-key="${html(scenario.selectionKey)}"
-        data-status="${html(scenarioStatus(scenario))}"
         ${scenario.selectionKey === defaultKey ? "" : "hidden"}>
         <h4>${userText(scenario.title)}</h4>
         <div class="microworld-comparison">
@@ -429,11 +425,13 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
             label(dictionary, "microworld.before"),
             dictionary,
           )}
-          ${microworldTrace(
-            scenario.after,
-            label(dictionary, "microworld.after"),
-            dictionary,
-          )}
+          ${scenario.unchanged
+            ? unchangedMicroworldTrace(dictionary)
+            : microworldTrace(
+              scenario.after,
+              label(dictionary, "microworld.after"),
+              dictionary,
+            )}
         </div>
         <div class="microworld-lesson">
           <strong>${html(label(dictionary, "microworld.lesson"))}:</strong>
@@ -2376,6 +2374,11 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   margin: ${space2}px 0;
   padding-left: 22px;
 }
+.microworld-unchanged {
+  margin: ${space2}px 0 0;
+  color: var(--ink);
+  font-weight: 500;
+}
 .microworld-outcome,
 .microworld-lesson {
   margin: ${space2}px 0 0;
@@ -3045,7 +3048,7 @@ evidencePopoverMore?.addEventListener("click",()=>{if(evidencePopover.matches(":
 evidencePopover?.addEventListener("toggle",event=>{if(event.newState==="closed"&&activeEvidenceMarker){activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=undefined;evidencePopover.removeAttribute("data-placement");evidencePopover.removeAttribute("style");}});
 addEventListener("keydown",event=>{if(event.key!=="Escape"||!toc?.open)return;event.preventDefault();toc.open=false;toc.querySelector(":scope > summary")?.focus();});
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);
-for(const world of document.querySelectorAll("[data-microworld]")){const groups=[...world.querySelectorAll(".microworld-control-group")];const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const updateWorld=()=>{const selectedControls=groups.map(group=>group.querySelector(".microworld-control:checked"));if(selectedControls.some(control=>!control)){if(status)status.textContent=labels.microworldNoScenario;return;}const key=selectedControls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=selectedControls.map(control=>control.dataset.controlLabel+": "+control.dataset.optionLabel).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+active.dataset.status;};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}
+for(const world of document.querySelectorAll("[data-microworld]")){const groups=[...world.querySelectorAll(".microworld-control-group")];const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const sentence=value=>/[.!?。？！]$/u.test(value)?value:value+".";const scenarioStatus=scenario=>{const traces=[...scenario.querySelectorAll(".microworld-trace")].map(trace=>{const heading=trace.querySelector("h5")?.textContent.trim()||"";const outcome=trace.querySelector(".microworld-outcome p, .microworld-unchanged")?.textContent.trim()||"";return heading+": "+sentence(outcome);});const lesson=scenario.querySelector(".microworld-lesson p")?.textContent.trim()||"";return [...traces,lesson].filter(Boolean).join(" ");};const updateWorld=()=>{const selectedControls=groups.map(group=>group.querySelector(".microworld-control:checked"));if(selectedControls.some(control=>!control)){if(status)status.textContent=labels.microworldNoScenario;return;}const key=selectedControls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=selectedControls.map(control=>control.dataset.controlLabel+": "+control.dataset.optionLabel).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+scenarioStatus(active);};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}
 const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({behavior:"instant",block:"start"});});};
 addEventListener("hashchange",openTarget);
 addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});

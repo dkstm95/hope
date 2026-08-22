@@ -1032,6 +1032,29 @@ test("behavior accepts a grounded, exhaustive declarative microworld", () => {
   assert.ok(validated.resources.authoredProseBytes > 842);
 });
 
+test("microworld scenarios name unchanged traces without copying them", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  addTeachingBehavior(analysis);
+  const scenario = analysis.behavior.microworld.scenarios[0];
+  scenario.after = "unchanged";
+
+  const validated = validateAnalysis(analysis, snapshot, { runId });
+  const normalized = validated.behavior.microworld.scenarios[0];
+  assert.equal(normalized.unchanged, true);
+  assert.equal(normalized.after, normalized.before);
+
+  const repeated = makeAnalysis(snapshot, runId);
+  addTeachingBehavior(repeated);
+  repeated.behavior.microworld.scenarios[0].after = structuredClone(
+    repeated.behavior.microworld.scenarios[0].before,
+  );
+  assert.throws(
+    () => validateAnalysis(repeated, snapshot, { runId }),
+    /after repeats before; use "unchanged"/u,
+  );
+});
+
 test("visual validation rejects malformed structure and ungrounded claims", () => {
   const snapshot = makeSnapshot();
 

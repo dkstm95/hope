@@ -140,13 +140,10 @@ test.beforeAll(async () => {
           ],
         },
         {
-          after: {
-            outcome: "성공 값이 계속 전달됩니다.",
-            steps: ["마지막 시도가 성공합니다.", "성공 값을 유지합니다."],
-          },
+          after: "unchanged",
           before: {
             outcome: "성공 값이 계속 전달됩니다.",
-            steps: ["마지막 시도가 성공합니다.", "성공 값을 반환합니다."],
+            steps: ["마지막 시도가 성공합니다.", "성공 값을 유지합니다."],
           },
           id: "succeeded-missing",
           lesson: "성공 경로의 보이는 결과는 바뀌지 않습니다.",
@@ -827,6 +824,12 @@ test("the microworld switches fixed scenarios with accessible native controls", 
   await missing.check();
   await expect(missing).toBeChecked();
   await expect(visibleScenario).toContainText("성공했고 저장된 오류가 없음");
+  await expect(visibleScenario.locator(".microworld-unchanged")).toHaveText(
+    "이전과 같습니다.",
+  );
+  await expect(world.locator("[data-microworld-status]")).toContainText(
+    "이후: 이전과 같습니다.",
+  );
   await expect(world.locator(".microworld-scenario[hidden]")).toHaveCount(3);
 
   await page.setViewportSize(viewports.mobile);

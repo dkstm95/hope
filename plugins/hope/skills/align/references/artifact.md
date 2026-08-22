@@ -18,6 +18,11 @@ name one unique evidence item. The renderer reuses that item's document number
 wherever it is cited; evidence without a claim link remains only in the final
 evidence list.
 
+A design-direction reference may name an evidence ID plus the source's design
+influence. The referenced evidence location must be an HTTP or HTTPS URL. New
+input rejects a copied direct-reference URL when the same location is already
+present in the evidence list, so one source keeps one label and location.
+
 New inputs reject two evidence entries with the same label and location. They
 also reject exact duplicate items within one claim-bearing sibling list after
 treating an item's evidence IDs as an unordered set. Reusing one evidence item
@@ -44,6 +49,10 @@ Completion checks use `[AI]` and a compact locale-specific user marker, with
 links to a final verification-method list. JavaScript adds theme switching,
 current-section indication, focused in-page navigation, and bounded previews
 anchored to the evidence or verification marker that opened them.
+
+Version history shows each revision summary once per responsive view. The
+artifact still contains separate desktop and mobile navigation structures, but
+CSS keeps only the structure for the active viewport visible.
 
 An optional design-direction comparison may read two or three raster images
 from absolute local paths in the structured input. Each path must identify a

@@ -291,8 +291,18 @@ test("design direction images are validated, embedded, and kept off the network"
   const secondImage = join(root, "direction-two.png");
   await copyFile(sampleImage, firstImage);
   await copyFile(sampleImage, secondImage);
+  const designDirections = makeDesignDirections([firstImage, secondImage]);
+  designDirections.options[0].references[0] = {
+    evidenceId: "recovery-reference",
+    influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+  };
   const inputPath = await inputFile(root, "input.json", makeAlignInput({
-    designDirections: makeDesignDirections([firstImage, secondImage]),
+    designDirections,
+    evidence: [{
+      id: "recovery-reference",
+      label: "복구 요구 참고",
+      location: "https://example.com/recovery-reference",
+    }],
   }));
   const outputPath = join(root, "docs", "alignments", "visual-agreement.html");
   const created = await createAlignArtifact({ inputPath, outputPath, root });
@@ -305,6 +315,7 @@ test("design direction images are validated, embedded, and kept off the network"
   assert.equal(directions.options[0].image.height, 128);
   assert.equal(directions.recommendation.optionId, "direction-1");
   assert.equal(directions.selection.optionId, "direction-2");
+  assert.equal(directions.options[0].references[0].evidenceId, "recovery-reference");
   const html = await readFile(outputPath, "utf8");
   assert.equal(verifyAlignHtml(html), created.digest);
   assert.equal((html.match(/class="direction-image"><img src="data:image\/png;base64,/gu) ?? []).length, 2);
@@ -446,6 +457,52 @@ test("design direction input rejects unsafe images and inconsistent choices", as
   );
 });
 
+test("design directions reuse evidence-backed sources instead of copying URLs", () => {
+  const directions = makeDesignDirections([sampleImage, sampleImage]);
+  directions.options[0].references[0] = {
+    evidenceId: "recovery-reference",
+    influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+  };
+  const validated = validateAlignInput(makeAlignInput({
+    designDirections: directions,
+    evidence: [{
+      id: "recovery-reference",
+      label: "복구 요구 참고",
+      location: "https://example.com/recovery-reference",
+    }],
+  }));
+  assert.deepEqual(
+    validated.designDirections.options[0].references[0],
+    {
+      evidenceId: "recovery-reference",
+      influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+    },
+  );
+
+  const copied = makeDesignDirections([sampleImage, sampleImage]);
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      designDirections: copied,
+      evidence: [{
+        id: "recovery-reference",
+        label: "복구 요구 참고",
+        location: "https://example.com/recovery-reference",
+      }],
+    })),
+    /use evidenceId: recovery-reference/u,
+  );
+
+  const unknown = makeDesignDirections([sampleImage, sampleImage]);
+  unknown.options[0].references[0] = {
+    evidenceId: "missing",
+    influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+  };
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({ designDirections: unknown })),
+    /refers to unknown evidence id: missing/u,
+  );
+});
+
 test("two image-rich revisions remain complete within the artifact boundary", async () => {
   const root = await repository();
   const firstImage = join(root, "large-one.png");
@@ -534,7 +591,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="17"/u);
+  assert.match(first, /name="hope-align-design-version" content="18"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
@@ -770,7 +827,8 @@ test("revise appends a current goal contract to a legacy artifact", async () => 
   assert.equal(inspected.history.length, 2);
   const html = await readFile(outputPath, "utf8");
   assert.match(html, /v2 · 현재 합의/u);
-  assert.match(html, /v1 · <bdi dir="auto">최초 합의/u);
+  assert.match(html, /<strong>v1<\/strong>/u);
+  assert.equal((html.match(/<p><bdi dir="auto">최초 합의<\/bdi><\/p>/gu) ?? []).length, 2);
   assert.match(html, /id="revision-1"/u);
   assert.match(html, /변경 내용 보기/u);
   assert.match(html, /이전 결과 전용 \(취소\)/u);

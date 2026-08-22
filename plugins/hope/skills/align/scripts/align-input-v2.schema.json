@@ -243,19 +243,32 @@
       }
     },
     "designReference": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["label", "url", "influence"],
-      "properties": {
-        "label": { "$ref": "#/$defs/title" },
-        "url": {
-          "allOf": [
-            { "$ref": "#/$defs/prose" },
-            { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://[^/?#@]+(?:[/?#]|$)" }
-          ]
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evidenceId", "influence"],
+          "properties": {
+            "evidenceId": { "$ref": "#/$defs/evidenceId" },
+            "influence": { "$ref": "#/$defs/prose" }
+          }
         },
-        "influence": { "$ref": "#/$defs/prose" }
-      }
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label", "url", "influence"],
+          "properties": {
+            "label": { "$ref": "#/$defs/title" },
+            "url": {
+              "allOf": [
+                { "$ref": "#/$defs/prose" },
+                { "pattern": "^[Hh][Tt][Tt][Pp][Ss]?://[^/?#@]+(?:[/?#]|$)" }
+              ]
+            },
+            "influence": { "$ref": "#/$defs/prose" }
+          }
+        }
+      ]
     },
     "absolutePath": {
       "$comment": "The runtime also requires the path to be absolute on the current platform.",

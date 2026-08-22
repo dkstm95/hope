@@ -176,7 +176,7 @@ test("Align presents one compact current agreement with secondary history", asyn
   await expect(page.locator(".rail .rail-history .current .revision-head strong"))
     .toHaveText(/^v2 · 현재 합의/u);
   await expect(page.locator(".rail .rail-history .past .revision-head strong"))
-    .toHaveText(/^v1 ·/u);
+    .toHaveText("v1");
   await expect(page.locator(".rail .rail-history .current")).toContainText("복구 기간과 경계를 명확히 함");
   await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#agreement")).toContainText("자동 감지 기반 복구 우선");

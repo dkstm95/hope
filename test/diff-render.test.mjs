@@ -89,8 +89,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 17);
-  assert.equal(first.designVersion, 13);
+  assert.equal(first.rendererVersion, 18);
+  assert.equal(first.designVersion, 14);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -812,6 +812,7 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
   addTeachingBehavior(analysis);
+  analysis.behavior.microworld.scenarios[0].after = "unchanged";
   analysis.behavior.visual.title = "<img src=x onerror=alert(1)>";
   analysis.behavior.microworld.instructions = "</script><script>alert(1)</script>";
   const review = validateAnalysis(analysis, snapshot, { runId });
@@ -841,10 +842,9 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.equal((html.match(/checked disabled>/gu) ?? []).length, 2);
   assert.doesNotMatch(html, /<select[\s\S]*?microworld-control/u);
   assert.equal((html.match(/class="microworld-scenario"/gu) ?? []).length, 4);
-  assert.equal(
-    (html.match(/data-status="[^"]+"\s+hidden>/gu) ?? []).length,
-    3,
-  );
+  assert.doesNotMatch(html, /data-status=/u);
+  assert.match(html, /class="microworld-trace microworld-trace-unchanged"/u);
+  assert.match(html, /class="microworld-unchanged">Same as before\.<\/p>/u);
   assert.match(html, /<dt>This model simplifies<\/dt>/u);
   assert.match(html, /<dt>This model leaves out<\/dt>/u);
   assert.doesNotMatch(html, /class="claim-meta teaching-aid-meta"/u);

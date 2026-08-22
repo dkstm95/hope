@@ -26,6 +26,12 @@ items that serve different document roles, and it permits them to reuse one
 source interval. Meaning and overlapping-but-distinct support remain analysis
 judgments rather than deterministic failures.
 
+A microworld scenario writes `"after": "unchanged"` when its represented
+steps and outcome are identical to `before`. Validation rejects a copied trace,
+and the renderer shows one compact unchanged state instead of repeating the
+same trace. Its live accessibility status is derived from the rendered
+scenario instead of storing a second copy in an HTML data attribute.
+
 The model selects one focused source interval. The runtime validates that
 interval and splits it into bounded evidence references without dropping any
 selected line. This keeps reference-size arithmetic out of the host workflow

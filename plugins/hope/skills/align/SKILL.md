@@ -203,6 +203,12 @@ name only the evidence IDs that directly support it. Reuse an ID instead of
 duplicating the evidence item. Keep general supporting evidence as an ordinary
 evidence item without inventing a claim link.
 
+When a design-direction reference uses a source already present in `evidence`,
+give that evidence a stable ID and write the reference with `evidenceId` and
+`influence`. Do not copy its label and URL into the design option. Keep a direct
+`label`, `url`, and `influence` reference only when that source does not belong
+in the agreement's evidence list.
+
 Inspect the project's existing documentation conventions. Use its established
 location for durable design or specification documents when one is clear.
 Otherwise use `docs/alignments/`. Never use a hidden Hope directory for this

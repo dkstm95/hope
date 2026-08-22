@@ -129,8 +129,7 @@ export function makeAlignArtifactData(locale, images) {
             local("Urgent actions are less prominent before a date is selected.", "날짜를 선택하기 전에는 긴급 행동이 덜 두드러진다."),
           ],
           references: [{
-            label: "RESCENE go schedule",
-            url: "https://www.rescene.org/schedule",
+            evidenceId: "rescene-go",
             influence: local(
               "Its monthly desktop rhythm and mobile list informed the responsive structure.",
               "데스크톱 월간 흐름과 모바일 목록을 반응형 구조에 반영했다.",
@@ -442,14 +441,12 @@ function makeRetryMicroworld(locale, evidence) {
             ? [text(locale, "Read retry limit 3.", "재시도 한도 3을 읽는다."), text(locale, "Replace it with the child object.", "자식 객체로 대체한다.")]
             : [text(locale, "Read both retry values.", "두 재시도 값을 읽는다."), text(locale, "Apply the ordinary merge rule.", "일반 병합 규칙을 적용한다.")],
         },
-        after: {
-          outcome: changed
-            ? text(locale, "Limit 3 remains while the child conditions are added.", "한도 3을 유지하면서 자식 조건을 추가한다.")
-            : text(locale, "The child value keeps the existing merge behavior.", "자식 값이 기존 병합 동작을 유지한다."),
-          steps: changed
-            ? [text(locale, "Expand 3 to an object with limit 3.", "3을 한도 3인 객체로 펼친다."), text(locale, "Merge the child conditions into it.", "그 안에 자식 조건을 병합한다.")]
-            : [text(locale, "Read both retry values.", "두 재시도 값을 읽는다."), text(locale, "Apply the ordinary merge rule.", "일반 병합 규칙을 적용한다.")],
-        },
+        after: changed
+          ? {
+              outcome: text(locale, "Limit 3 remains while the child conditions are added.", "한도 3을 유지하면서 자식 조건을 추가한다."),
+              steps: [text(locale, "Expand 3 to an object with limit 3.", "3을 한도 3인 객체로 펼친다."), text(locale, "Merge the child conditions into it.", "그 안에 자식 조건을 병합한다.")],
+            }
+          : "unchanged",
         lesson: changed
           ? text(locale, "Only a root number-to-object retry merge needs the new preservation rule.", "최상위 숫자에서 객체로 가는 재시도 병합만 새 보존 규칙이 필요하다.")
           : text(locale, "This combination does not use the new special case.", "이 조합은 새 예외 규칙을 사용하지 않는다."),
