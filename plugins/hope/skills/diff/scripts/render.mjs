@@ -89,6 +89,11 @@ function basisKey(basis) {
   }[basis];
 }
 
+function visibleBasisLabel(basis, dictionary) {
+  if (basis === "code") return "";
+  return label(dictionary, basisKey(basis));
+}
+
 function sourceTitle(evidence, dictionary) {
   const lines = `${evidence.startLine}–${evidence.endLine}`;
   if (evidence.path) {
@@ -203,6 +208,9 @@ function claimBlock(
   evidenceContext = claim.text,
   showBasis = true,
 ) {
+  const basis = showBasis
+    ? visibleBasisLabel(claim.basis, dictionary)
+    : "";
   const markers = evidenceBlock(
     claim.evidence,
     dictionary,
@@ -210,13 +218,11 @@ function claimBlock(
     codeRenderer,
     { context: evidenceContext },
   );
+  const suffix = `${markers}${basis
+    ? `<span class="claim-basis">${html(basis)}</span>`
+    : ""}`;
   return `<div class="claim ${html(className)}">
-    ${userParagraphs(claim.text, markers)}
-    <div class="claim-meta">
-      ${showBasis
-        ? `<div class="claim-basis">${html(label(dictionary, basisKey(claim.basis)))}</div>`
-        : ""}
-    </div>
+    ${userParagraphs(claim.text, suffix)}
   </div>`;
 }
 
@@ -241,17 +247,18 @@ function titledClaim(
   </article>`;
 }
 
-function aidEvidence(aid, dictionary, review, codeRenderer) {
-  return `<div class="claim-meta teaching-aid-meta">
-    <div class="claim-basis">${html(label(dictionary, basisKey(aid.basis)))}</div>
-    ${evidenceBlock(
-      aid.evidence,
-      dictionary,
-      review,
-      codeRenderer,
-      { context: aid.title },
-    )}
-  </div>`;
+function aidEvidenceSuffix(aid, dictionary, review, codeRenderer) {
+  const basis = visibleBasisLabel(aid.basis, dictionary);
+  const markers = evidenceBlock(
+    aid.evidence,
+    dictionary,
+    review,
+    codeRenderer,
+    { context: aid.title },
+  );
+  return `${markers}${basis
+    ? `<span class="claim-basis">${html(basis)}</span>`
+    : ""}`;
 }
 
 function visualRoute(from, to, dictionary, { block = false } = {}) {
@@ -268,6 +275,12 @@ function visualRoute(from, to, dictionary, { block = false } = {}) {
 }
 
 function visualBlock(visual, dictionary, review, codeRenderer) {
+  const evidenceSuffix = aidEvidenceSuffix(
+    visual,
+    dictionary,
+    review,
+    codeRenderer,
+  );
   let content;
   if (visual.kind === "flow") {
     content = `<ol class="visual-flow">${visual.items.map((item) => (
@@ -326,10 +339,9 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
   return `<article class="behavior-visual visual-${html(visual.kind)}">
     <header>
       <h3>${userText(visual.title)}</h3>
-      ${userParagraphs(visual.caption)}
+      ${userParagraphs(visual.caption, evidenceSuffix)}
     </header>
     ${content}
-    ${aidEvidence(visual, dictionary, review, codeRenderer)}
   </article>`;
 }
 
@@ -345,6 +357,12 @@ function microworldTrace(trace, title, dictionary) {
 }
 
 function microworldBlock(world, dictionary, review, codeRenderer) {
+  const evidenceSuffix = aidEvidenceSuffix(
+    world,
+    dictionary,
+    review,
+    codeRenderer,
+  );
   const defaultKey = world.controls.map(
     (control) => `${control.id}=${control.defaultOptionId}`,
   ).join("|");
@@ -360,7 +378,7 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
     <header>
       <p class="microworld-eyebrow">${html(label(dictionary, "microworld.tryIt"))}</p>
       <h3 id="microworld-title">${userText(world.title)}</h3>
-      ${userParagraphs(world.instructions)}
+      ${userParagraphs(world.instructions, evidenceSuffix)}
       <p class="microworld-notice">${html(label(dictionary, "microworld.notice"))}</p>
     </header>
     <details class="microworld-disclosure">
@@ -433,7 +451,6 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
             <dd>${userParagraphs(world.omits)}</dd>
           </div>
         </dl>
-        ${aidEvidence(world, dictionary, review, codeRenderer)}
       </div>
     </details>
   </aside>`;
@@ -472,11 +489,12 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
     codeRenderer,
     { context: item.title },
   );
+  const basis = compact ? "" : visibleBasisLabel(item.basis, dictionary);
   return `<article class="${className}" id="${html(id)}">
     <div class="item-head">
       <span class="status kind-${html(item.kind)}">${html(kindLabel(item.kind, dictionary))}</span>
       <span class="importance">${html(importanceLabel(item.importance, dictionary))}</span>
-      ${compact ? "" : `<span class="item-basis">${html(label(dictionary, basisKey(item.basis)))}</span>`}
+      ${basis ? `<span class="item-basis">${html(basis)}</span>` : ""}
     </div>
     ${compact
       ? `<h4><a href="#${html(item.id)}">${userText(item.title)}</a></h4>`
@@ -659,16 +677,19 @@ function contextCheck(
   const markers = evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
     context: check.subject,
   });
+  const basis = check.evidence.length === 0
+    ? ""
+    : visibleBasisLabel(check.basis, dictionary);
+  const suffix = `${markers}${basis
+    ? `<span class="claim-basis">${html(basis)}</span>`
+    : ""}`;
   return `<details class="context-check">
     <summary class="context-check-head">
       <h4>${userText(check.subject)}</h4>
       <span class="context-status context-${html(check.status)}">${html(label(dictionary, `context.${check.status === "not-applicable" ? "notApplicable" : check.status}`))}</span>
     </summary>
     <div class="disclosure-content">
-      ${userParagraphs(check.explanation, markers)}
-      ${check.evidence.length === 0 ? "" : `<p class="claim-basis">${html(
-        label(dictionary, basisKey(check.basis)),
-      )}</p>`}
+      ${userParagraphs(check.explanation, suffix)}
       ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
         ${relatedLimits.map((limit) => {
           const displayed = limitText(limit, dictionary);
@@ -1718,14 +1739,8 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .claim p,
 .summary-line { margin: 0; }
 .more-link { margin: ${space2}px 0 0; }
-.claim-meta {
-  display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
-  gap: 0 ${space2}px;
-  align-items: center;
-}
 .claim-basis {
+  margin-left: ${space2}px;
   color: var(--muted);
   font-size: ${TYPE.micro.fontSize}px;
   line-height: ${TYPE.micro.lineHeight};
@@ -2152,11 +2167,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .microworld > header > p {
   max-width: ${LAYOUT.proseWidth};
   margin: ${space2}px 0 0;
-}
-.teaching-aid-meta {
-  margin-top: ${space3}px;
-  padding-top: ${space3}px;
-  border-top: 1px solid var(--border);
 }
 .visual-flow,
 .visual-sequence {

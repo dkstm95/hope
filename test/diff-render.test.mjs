@@ -89,8 +89,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 16);
-  assert.equal(first.designVersion, 12);
+  assert.equal(first.rendererVersion, 17);
+  assert.equal(first.designVersion, 13);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -244,6 +244,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /\/blob\/[^"]+\/src\/retry\.js#L/u);
   assert.doesNotMatch(html, /<span[^>]+style=/u);
   assert.match(html, /class="review-item kind-verify review-item-compact"/u);
+  assert.doesNotMatch(html, />Code<\/div>|>Code<\/span>|>Code<\/p>/u);
+  assert.doesNotMatch(html, /class="claim-meta"/u);
   assert.doesNotMatch(html, /class="review-result/u);
   assert.doesNotMatch(html, /class="review-count/u);
   assert.doesNotMatch(html, /class="review-kind-counts/u);
@@ -280,7 +282,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<ol class="code-step-list">/u);
   assert.match(html, /<ul class="scope-impact-list"><li><a href="#scope-limit-1">/u);
   assert.equal((html.match(/id="review-item-1"/gu) ?? []).length, 1);
-  assert.match(html, /class="item-basis"/u);
+  assert.match(html, /<span class="item-basis">Inferred from evidence<\/span>/u);
   assert.match(html, /class="item-next"/u);
   assert.match(html, /class="related-limits"/u);
   assert.match(html, /href="#scope-limit-1"/u);
@@ -434,6 +436,8 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(html, /판단에 영향을 주는 제한/u);
   assert.match(html, /수집한 맥락 밖의 기존 코드/u);
   assert.match(html, /src\/retry\.js · 변경 조각 2–4/u);
+  assert.doesNotMatch(html, />코드<\/div>|>코드<\/span>|>코드<\/p>/u);
+  assert.match(html, /<span class="item-basis">근거에서 추론<\/span>/u);
   assert.match(html, /aria-label="라이트 모드로 전환"/u);
   assert.doesNotMatch(html, /aria-pressed=/u);
   assert.match(html, /data-theme-icon="dark"[^>]* hidden/u);
@@ -843,7 +847,11 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   );
   assert.match(html, /<dt>This model simplifies<\/dt>/u);
   assert.match(html, /<dt>This model leaves out<\/dt>/u);
-  assert.match(html, /class="claim-meta teaching-aid-meta"/u);
+  assert.doesNotMatch(html, /class="claim-meta teaching-aid-meta"/u);
+  assert.match(
+    html,
+    /<aside class="microworld"[\s\S]*?<header>[\s\S]*?<\/bdi><sup class="evidence-markers">[\s\S]*?<\/header>/u,
+  );
   assert.equal(
     (html.match(/class="teaching-aid-choice decision-included"/gu) ?? []).length,
     2,

@@ -312,6 +312,18 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     if (/^https?:/u.test(request.url())) remoteRequests.push(request.url());
   });
   await openArtifact(page, viewports.desktop);
+  await expect(page.locator(".claim-meta")).toHaveCount(0);
+  await expect(page.locator("#core-change .claim-basis")).toHaveCount(0);
+  const microworldInstruction = page.locator(".microworld > header > p").filter({
+    hasText: "마지막 시도와 저장 상태를 바꿔 호출자에게 전달되는 결과를 비교하세요.",
+  });
+  await expect(microworldInstruction.locator(".evidence-marker")).toHaveCount(1);
+  await expect(page.locator(".review-items-full .item-basis")).toHaveText([
+    "근거에서 추론",
+    "근거에서 추론",
+    "근거에서 추론",
+    "근거에서 추론",
+  ]);
   await expect(page.locator("#synopsis-title")).toHaveText("01요약");
   const synopsisLabelStyle = await page.locator("#synopsis-title").evaluate(
     (element) => ({

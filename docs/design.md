@@ -164,6 +164,14 @@ of Evidence and scope. Start it closed on screen and reveal it for fragment
 navigation and print. Keep code excerpts there instead of repeating them below
 each claim.
 
+Do not repeat a plain **Code** or equivalent basis label when the numbered
+reference already links the claim to captured code. Keep a basis label only
+when it changes how the reader should judge the claim, such as an inference, a
+source statement, or something Hope could not confirm. Write those remaining
+labels as explicit phrases beside the claim and its evidence marker rather than
+as a separate metadata row. A teaching aid's evidence marker belongs beside
+the caption or instruction it supports, not alone at the end of the component.
+
 Use Evidence and scope as the complete index of the captured snapshot, checked
 files, supporting sources, exclusions, and limits.
 
@@ -712,10 +720,12 @@ in collapsed review information.
 Use the same section-title divider rhythm as Align. Keep each section number
 the same type size and line height as its title.
 
-In each full review item, align kind, importance, and basis on one visual
-centerline.
+In each full review item, align kind, importance, and any visible basis on one
+visual centerline.
 
-Keep kind and importance as outlined markers and basis as quieter plain text.
+Keep kind and importance as outlined markers. When basis changes how the reader
+should judge the item, show it as quieter plain text; omit a code basis that the
+numbered evidence already makes visible.
 
 Render behavior steps as one connected vertical sequence at every viewport.
 Keep the same two-digit number gutter, text, and order in Align and Diff. This
