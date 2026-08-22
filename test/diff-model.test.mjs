@@ -929,7 +929,23 @@ test("overlapping evidence ranges count every rendered code line", () => {
 
   assert.throws(
     () => validateAnalysis(analysis, budgetSnapshot, { runId }),
-    /more than 600 code evidence lines/u,
+    (error) => {
+      const issue = error.issues.find(
+        (item) => item.code === "RESOURCE_CODE_EVIDENCE_LINES",
+      );
+      assert.ok(issue);
+      assert.match(issue.message, /renders \d+ code evidence lines; limit is 600/u);
+      assert.equal(issue.details.limit, 600);
+      assert.equal(issue.details.target, 480);
+      assert.ok(issue.details.actual > issue.details.limit);
+      assert.ok(issue.details.byField.find(
+        (item) => item.field === "codeSteps" && item.lines >= 864,
+      ));
+      assert.equal(issue.details.largestRanges[0].lines, 24);
+      assert.equal(issue.details.largestRanges[0].field, "codeSteps");
+      assert.ok(issue.details.overlappingRanges.length > 0);
+      return true;
+    },
   );
 });
 

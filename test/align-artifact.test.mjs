@@ -466,7 +466,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="16"/u);
+  assert.match(first, /name="hope-align-design-version" content="17"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
@@ -503,11 +503,13 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, />사용자 확인</u);
   assert.match(first, /<ol class="check-list">/u);
   assert.match(first, /<span class="check-condition">/u);
-  assert.match(first, /class="evidence-marker" href="#evidence-upload-service"/u);
+  assert.match(first, /class="reference-marker evidence-marker" href="#evidence-upload-service"/u);
   assert.match(first, /<ol class="evidence-list"><li id="evidence-upload-service" data-evidence-entry>/u);
-  assert.match(first, /id="evidence-popover" popover="auto" role="dialog"/u);
-  assert.match(first, /<details class="check-verification">/u);
-  assert.match(first, /<summary>AI 에이전트 확인<\/summary>/u);
+  assert.match(first, /id="reference-popover" popover="auto" role="dialog"/u);
+  assert.match(first, /class="reference-marker verification-marker"[^>]*>\[AI\]<\/a>/u);
+  assert.match(first, /class="reference-marker verification-marker"[^>]*>\[유저\]<\/a>/u);
+  assert.match(first, /<details class="body-section document-section section-disclosure" id="verification">/u);
+  assert.doesNotMatch(first, /<details class="check-verification">/u);
   assert.match(first, /<details class="body-section document-section section-disclosure" id="evidence">/u);
   assert.doesNotMatch(first, /<ul class="check-list">/u);
   assert.doesNotMatch(first, /<ol class="check-list"><li><strong>/u);
@@ -521,7 +523,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /&lt;img src=x onerror=alert\(1\)&gt;/u);
   assert.match(
     first,
-    /<dt>목표<\/dt><dd><p><bdi dir="auto">Keep &lt;img src=x onerror=alert\(1\)&gt; as text\.<\/bdi><\/p><p><bdi dir="auto">Keep the second idea distinct\.<\/bdi><sup class="evidence-markers">[\s\S]*?<\/sup><\/p><\/dd>/u,
+    /<dt>목표<\/dt><dd><p><bdi dir="auto">Keep &lt;img src=x onerror=alert\(1\)&gt; as text\.<\/bdi><\/p><p><bdi dir="auto">Keep the second idea distinct\.<\/bdi><sup class="reference-markers evidence-markers">[\s\S]*?<\/sup><\/p><\/dd>/u,
   );
   assert.doesNotMatch(first, /<script src="https:\/\/evil/u);
   assert.doesNotMatch(first, /localStorage/u);
@@ -533,12 +535,12 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   const main = first.match(/<main class="main"[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
   assert.deepEqual(
     [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
-    ["01", "02", "03", "04", "05"],
+    ["01", "02", "03", "04", "05", "06"],
   );
   const toc = first.match(/<nav class="toc"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
   assert.deepEqual(
     [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
-    ["01", "02", "03", "04", "05"],
+    ["01", "02", "03", "04", "05", "06"],
   );
 
   const withAlternateLocale = renderAlignArtifact(data, {
@@ -583,7 +585,8 @@ test("renderer omits empty optional sections instead of filling the screen", () 
   };
   const html = renderAlignArtifact(data, { digest: "0".repeat(64) });
   assert.doesNotMatch(html, /id="behavior"|id="agreement"|id="evidence"/u);
-  assert.doesNotMatch(html, /class="toc"|class="toc-mobile"/u);
+  assert.match(html, /id="verification"/u);
+  assert.match(html, /class="toc"/u);
 
   const decisionInput = validateAlignInput(makeAlignInput({
     behavior: undefined,

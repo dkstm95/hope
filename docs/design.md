@@ -50,9 +50,9 @@ Use the same small set of semantic section patterns across Align and Diff:
 
 - structured label-and-value rows for summaries, with the goal first;
 - parallel cells only for brief comparisons that must be scanned together;
-- one ordered vertical sequence for behavior or process; and
-- visible conclusions with native disclosures for reasons and verification;
-  and
+- one ordered vertical sequence for behavior or process;
+- visible conclusions with native disclosures for reasons;
+- compact inline markers for evidence and completion verification; and
 - numbered inline evidence references with one folded source list at the end.
 
 Keep these visual roles consistent without making either renderer import the
@@ -154,8 +154,10 @@ full diff.
 
 Put a quiet numbered reference such as `[1]` immediately after every grounded
 claim. Reuse the number when the same source interval supports another claim.
-Activating the reference shows a bounded preview popover. Its ordinary fragment
-link remains useful without JavaScript and leads to the canonical source entry.
+Activating the reference shows a bounded preview popover anchored to that
+reference. Place it below the marker when space allows, flip it above when
+needed, and keep it within the viewport. Its ordinary fragment link remains
+useful without JavaScript and leads to the canonical source entry.
 
 Collect the complete numbered source list in one native disclosure at the end
 of Evidence and scope. Start it closed on screen and reveal it for fragment
@@ -237,17 +239,20 @@ supporting evidence stays in that list without an invented claim link. Use
 these information roles directly; do not add length or item-count thresholds
 that make the same field change layout unpredictably.
 
-Show each completion criterion as one visible passing condition. Keep its
-verification method and the agent-or-person decision source in a native
-disclosure directly below it. Keep completion criteria in the summary near the
-goal. Do not turn them into progress controls or store their execution results
-in the artifact. Use a compact 24-pixel summary on a wide screen and a 44-pixel
-touch target on a narrow screen.
+Show each completion criterion as one visible passing condition. Put `[AI]`
+after a condition that the AI agent verifies and `[User]` or the locale's
+equally compact user label after one that a person verifies. Activating the
+marker opens the verification method in a bounded popover anchored to that
+marker. Keep the complete verification methods in one folded list at the end,
+before the final evidence list, so fragment navigation and print preserve them.
+Keep completion criteria in the summary near the goal. Do not turn them into
+progress controls or store their execution results in the artifact. Keep each
+inline marker at least 24 pixels and use a 44-pixel close target.
 
 Number every completion criterion in reading order with `01`, `02`, `03`, even
 when the list is short. Use body prose weight for each passing condition,
-reserve stronger emphasis for the number, and keep the verification source
-label quiet and secondary.
+reserve stronger emphasis for the number and marker, and keep the expanded
+verification source label quiet and secondary.
 
 Do not show implementation progress, completion controls, work owners, comments,
 changed files, test status, or model and interview metrics.
@@ -798,6 +803,11 @@ Supported interactions can include:
 - try a safe declarative microworld;
 - draft an optional quiz response without submitting or saving it; and
 - reveal the quiz answer and evidence through a separate disclosure.
+
+Anchor a reference preview to the marker that opened it. Prefer the space below
+the marker, flip above when needed, and clamp it to the viewport. Reposition it
+after scrolling or resizing while the marker remains visible. On a narrow
+screen, use a bottom sheet only when neither side has enough usable height.
 
 Keep a microworld's title, instructions, and model warning visible. Fold its
 controls, scenarios, simplifying assumptions, omissions, and evidence into one

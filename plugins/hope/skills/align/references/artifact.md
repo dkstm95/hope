@@ -33,8 +33,10 @@ changing the last readable artifact.
 The renderer escapes authored text and produces one self-contained HTML file.
 It makes no network request and keeps the current agreement readable without
 JavaScript. Numbered evidence links fall back to their final list entries.
-JavaScript adds theme switching, current-section indication, focused in-page
-navigation, and a bounded evidence preview popover.
+Completion checks use `[AI]` and a compact locale-specific user marker, with
+links to a final verification-method list. JavaScript adds theme switching,
+current-section indication, focused in-page navigation, and bounded previews
+anchored to the evidence or verification marker that opened them.
 
 An optional design-direction comparison may read two or three raster images
 from absolute local paths in the structured input. Each path must identify a

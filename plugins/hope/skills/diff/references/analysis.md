@@ -265,4 +265,13 @@ accurately cover both.
   evidence references, 96 unique evidence ranges, 1,200 unique evidence lines,
   96 KiB of unique excerpts, and 600 code-evidence line occurrences across
   distinct rendered ranges.
+- Target at most 480 code-evidence line occurrences so validation repairs have
+  room. Exact reuse of one source interval counts once. Overlapping intervals
+  with different boundaries render separately and each spends its full length.
+- Before adding another interval, reuse the exact smallest range that already
+  proves the same mechanism. Normally keep an interval to 4–12 lines instead
+  of selecting the 24- or 96-line maximum.
+- If validation reports a code-evidence overage, use its actual total,
+  field-by-field contribution, largest ranges, and overlap list to remove the
+  biggest repetition first.
 - Prefer a focused explanation over exhausting an allowance.

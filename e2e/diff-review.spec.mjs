@@ -1007,6 +1007,7 @@ test("mobile evidence markers open a bounded preview", async ({
     items.map((item) => item.getAttribute("aria-label"))
   ));
   expect(names.every(Boolean)).toBe(true);
+  const markerBox = await markers.first().boundingBox();
   await markers.first().click();
   const popover = page.locator("#evidence-popover");
   await expect(popover).toBeVisible();
@@ -1015,6 +1016,15 @@ test("mobile evidence markers open a bounded preview", async ({
   expect(popoverBox).not.toBeNull();
   expect(popoverBox.x).toBeGreaterThanOrEqual(0);
   expect(popoverBox.x + popoverBox.width).toBeLessThanOrEqual(viewports.mobile.width);
+  const placement = await popover.getAttribute("data-placement");
+  expect(["above", "below", "sheet"]).toContain(placement);
+  if (placement === "below") {
+    expect(popoverBox.y - (markerBox.y + markerBox.height)).toBeGreaterThanOrEqual(9);
+    expect(popoverBox.y - (markerBox.y + markerBox.height)).toBeLessThanOrEqual(11);
+  } else if (placement === "above") {
+    expect(markerBox.y - (popoverBox.y + popoverBox.height)).toBeGreaterThanOrEqual(9);
+    expect(markerBox.y - (popoverBox.y + popoverBox.height)).toBeLessThanOrEqual(11);
+  }
   const closeBox = await popover.locator(".evidence-popover-close").boundingBox();
   expect(closeBox.height).toBeGreaterThanOrEqual(44);
   expect(closeBox.width).toBeGreaterThanOrEqual(44);

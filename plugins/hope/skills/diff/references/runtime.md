@@ -43,6 +43,11 @@ input.
 The runtime bounds input size, structure depth, generated prose, evidence,
 snapshots, and the final artifact.
 
+When code evidence exceeds its rendered-line allowance, validation reports the
+actual and target totals, field contributions, largest ranges, and a bounded
+list of overlapping intervals. The limit remains fail-closed, while the
+analysis worker gets enough information to make one focused repair.
+
 It renders authored content as escaped text into one self-contained HTML file.
 
 The renderer needs no repository `node_modules/` directory or network request.

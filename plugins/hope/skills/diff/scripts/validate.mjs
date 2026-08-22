@@ -259,9 +259,11 @@ function analysisResources(analysis, roots, {
   const evidenceLines = new Set();
   let codeEvidenceLines = 0;
   const ranges = new Set();
-  const visit = (value) => {
+  const codeRanges = [];
+  const codeLinesByField = new Map();
+  const visit = (value, path) => {
     if (Array.isArray(value)) {
-      for (const item of value) visit(item);
+      value.forEach((item, index) => visit(item, `${path}[${index}]`));
       return;
     }
     if (!value || typeof value !== "object") return;
@@ -281,14 +283,28 @@ function analysisResources(analysis, roots, {
           evidenceLines.add(coordinate);
         }
         if (codeSources.has(value.sourceKind)) {
-          codeEvidenceLines += value.endLine - value.startLine + 1;
+          const lines = value.endLine - value.startLine + 1;
+          const field = path.match(/^[^.[]+/u)?.[0] ?? "analysis";
+          codeEvidenceLines += lines;
+          codeLinesByField.set(field, (codeLinesByField.get(field) ?? 0) + lines);
+          codeRanges.push(Object.freeze({
+            endLine: value.endLine,
+            field,
+            lines,
+            path,
+            sourceId: value.sourceId,
+            sourcePath: value.path,
+            startLine: value.startLine,
+          }));
         }
       }
       return;
     }
-    for (const item of Object.values(value)) visit(item);
+    for (const [key, item] of Object.entries(value)) {
+      visit(item, `${path}.${key}`);
+    }
   };
-  for (const root of roots) visit(root);
+  for (const [path, root] of roots) visit(root, path);
 
   if (enforceLimits && evidenceReferences > LIMITS.evidenceReferences) {
     throw new RangeError(
@@ -311,9 +327,54 @@ function analysisResources(analysis, roots, {
     );
   }
   if (enforceLimits && codeEvidenceLines > LIMITS.codeEvidenceLines) {
-    throw new RangeError(
-      `Analysis renders more than ${LIMITS.codeEvidenceLines} code evidence lines`,
+    const overlaps = [];
+    for (let index = 0; index < codeRanges.length && overlaps.length < 8; index += 1) {
+      const first = codeRanges[index];
+      for (
+        let comparison = index + 1;
+        comparison < codeRanges.length && overlaps.length < 8;
+        comparison += 1
+      ) {
+        const second = codeRanges[comparison];
+        if (
+          first.sourceId !== second.sourceId
+          || Math.max(first.startLine, second.startLine)
+            > Math.min(first.endLine, second.endLine)
+        ) continue;
+        overlaps.push(Object.freeze({
+          first: Object.freeze({
+            endLine: first.endLine,
+            path: first.path,
+            startLine: first.startLine,
+          }),
+          overlapLines: Math.min(first.endLine, second.endLine)
+            - Math.max(first.startLine, second.startLine) + 1,
+          second: Object.freeze({
+            endLine: second.endLine,
+            path: second.path,
+            startLine: second.startLine,
+          }),
+          sourceId: first.sourceId,
+          sourcePath: first.sourcePath,
+        }));
+      }
+    }
+    const error = new RangeError(
+      `Analysis renders ${codeEvidenceLines} code evidence lines; limit is ${LIMITS.codeEvidenceLines}`,
     );
+    error.resource = Object.freeze({
+      actual: codeEvidenceLines,
+      byField: Object.freeze([...codeLinesByField].map(
+        ([field, lines]) => Object.freeze({ field, lines }),
+      ).sort((first, second) => second.lines - first.lines)),
+      largestRanges: Object.freeze([...codeRanges].sort(
+        (first, second) => second.lines - first.lines,
+      ).slice(0, 8)),
+      limit: LIMITS.codeEvidenceLines,
+      overlappingRanges: Object.freeze(overlaps),
+      target: Math.floor(LIMITS.codeEvidenceLines * 0.8),
+    });
+    throw error;
   }
 
   return Object.freeze({
@@ -1172,16 +1233,16 @@ function validateAnalysisValue(analysis, snapshot, {
   const analysisResourceValues = analysisResources(
     analysis,
     [
-      background,
-      behavior,
-      codeSteps,
-      contextChecks,
-      coreChange,
-      beginnerPrimer,
-      purpose,
-      quiz,
-      reviewItems,
-      title,
+      ["background", background],
+      ["behavior", behavior],
+      ["codeSteps", codeSteps],
+      ["contextChecks", contextChecks],
+      ["coreChange", coreChange],
+      ["beginnerPrimer", beginnerPrimer],
+      ["purpose", purpose],
+      ["quiz", quiz],
+      ["reviewItems", reviewItems],
+      ["title", title],
     ],
     { analysisFileBytes, enforceLimits: enforceResourceLimits },
   );
@@ -1260,7 +1321,12 @@ function analysisIssue(error, path) {
   } else if (message.includes("must be grounded")) {
     code = "CHANGE_GROUNDING";
   }
-  return Object.freeze({ code, message, path: path ?? inferredPath });
+  return Object.freeze({
+    code,
+    ...(error?.resource === undefined ? {} : { details: error.resource }),
+    message,
+    path: path ?? inferredPath,
+  });
 }
 
 function collectAnalysisIssues(analysis, snapshot, options, firstError) {
@@ -1438,7 +1504,7 @@ function collectAnalysisIssues(analysis, snapshot, options, firstError) {
       && Object.hasOwn(value, "endLine")
     ) {
       const validated = capture(path, () => evidenceReferences(value, path, sourceMap));
-      if (validated) validatedReferences.push(...validated);
+      if (validated) validatedReferences.push([path, validated]);
       return;
     }
     for (const [key, item] of Object.entries(value)) {
