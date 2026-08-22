@@ -184,6 +184,13 @@ Put each fact in one section only. Omit optional behavior, decisions,
 implementation choices, and evidence when they add no information. Add a
 behavior flow only when sequence or branching is clearer than prose.
 
+Before writing the input, compare items within each sibling list. Matching or
+strongly overlapping evidence-ID sets are signals to check whether two items do
+the same job; they do not prove duplication. Keep both when they own distinct
+requirements, decisions, checks, scope boundaries, or outcomes. Otherwise
+consolidate the repeated meaning instead of paraphrasing it. Never remove a
+necessary claim merely because another claim cites the same evidence.
+
 Keep each prose value to one semantic paragraph. Put a distinct idea in the
 existing field or list item that owns it. When one field genuinely needs a
 second paragraph, separate the paragraphs with a newline so the renderer keeps

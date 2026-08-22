@@ -149,6 +149,31 @@ function evidenceRange(value) {
   return `${value.sourceId}:${value.startLine}:${value.endLine}`;
 }
 
+function evidenceSetIdentity(values) {
+  return [...values].map(evidenceRange).sort();
+}
+
+function claimIdentity(value) {
+  return JSON.stringify([
+    value.title ?? null,
+    value.text,
+    value.basis,
+    evidenceSetIdentity(value.evidence),
+  ]);
+}
+
+function assertUniqueSiblings(values, name, identity) {
+  const firstIndexByIdentity = new Map();
+  for (const [index, value] of values.entries()) {
+    const key = identity(value);
+    const firstIndex = firstIndexByIdentity.get(key);
+    if (firstIndex !== undefined) {
+      throw new Error(`${name}[${index}] duplicates ${name}[${firstIndex}]`);
+    }
+    firstIndexByIdentity.set(key, index);
+  }
+}
+
 function enumeration(value, name, values) {
   if (!values.includes(value)) {
     throw new RangeError(`${name} must be one of ${values.join(", ")}`);
@@ -1109,11 +1134,13 @@ function validateAnalysisValue(analysis, snapshot, {
     : array(analysis.background, "background", 8).map(
       (value, index) => claim(value, `background[${index}]`, sourceMap, { title: true }),
     );
+  assertUniqueSiblings(background, "background", claimIdentity);
   const beginnerPrimer = analysis.beginnerPrimer === undefined
     ? []
     : boundedArray(analysis.beginnerPrimer, "beginnerPrimer", 1, 8).map(
       (value, index) => primerClaim(value, `beginnerPrimer[${index}]`, sourceMap),
     );
+  assertUniqueSiblings(beginnerPrimer, "beginnerPrimer", claimIdentity);
   let behavior;
   if (analysis.behavior !== undefined) {
     object(analysis.behavior, "behavior", [
@@ -1130,21 +1157,40 @@ function validateAnalysisValue(analysis, snapshot, {
     const microworld = analysis.behavior.microworld === undefined
       ? undefined
       : validateMicroworld(analysis.behavior.microworld, sourceMap);
+    const validatedSteps = steps.map(
+      (value, index) => claim(value, `behavior.steps[${index}]`, sourceMap),
+    );
+    assertUniqueSiblings(validatedSteps, "behavior.steps", claimIdentity);
     behavior = Object.freeze({
       microworld,
-      steps: steps.map(
-        (value, index) => claim(value, `behavior.steps[${index}]`, sourceMap),
-      ),
+      steps: validatedSteps,
       summary: claim(analysis.behavior.summary, "behavior.summary", sourceMap),
       visual,
     });
   }
 
-  const sorted = sortReviewItems(array(
+  const authoredReviewItems = array(
     analysis.reviewItems,
     "reviewItems",
     LIMITS.reviewItems,
-  ).map((value, index) => reviewItem(value, index, sourceMap, limitMap)));
+  ).map((value, index) => reviewItem(value, index, sourceMap, limitMap));
+  assertUniqueSiblings(
+    authoredReviewItems,
+    "reviewItems",
+    (item) => JSON.stringify([
+      item.kind,
+      item.importance,
+      item.basis,
+      item.title,
+      item.explanation,
+      item.effect,
+      item.nextStep,
+      item.doneWhen,
+      evidenceSetIdentity(item.evidence),
+      [...item.limitIds].sort(),
+    ]),
+  );
+  const sorted = sortReviewItems(authoredReviewItems);
   const reviewItems = sorted.map((item, index) => Object.freeze({
     ...item,
     id: `review-item-${index + 1}`,
@@ -1177,18 +1223,29 @@ function validateAnalysisValue(analysis, snapshot, {
         question: text(value.question, `${name}.question`),
       });
     });
+    assertUniqueSiblings(
+      quiz,
+      "quiz",
+      (item) => JSON.stringify([
+        item.question,
+        item.answer,
+        evidenceSetIdentity(item.evidence),
+      ]),
+    );
   }
   const teachingAids = validateTeachingAidDecisions(analysis.teachingAids, {
     behavior,
     quiz,
   });
 
+  const coreDetails = array(core.details, "coreChange.details", 4).map(
+    (value, index) => claim(value, `coreChange.details[${index}]`, sourceMap),
+  );
+  assertUniqueSiblings(coreDetails, "coreChange.details", claimIdentity);
   const coreChange = Object.freeze({
     after: claim(core.after, "coreChange.after", sourceMap),
     before: claim(core.before, "coreChange.before", sourceMap),
-    details: Object.freeze(array(core.details, "coreChange.details", 4).map(
-      (value, index) => claim(value, `coreChange.details[${index}]`, sourceMap),
-    )),
+    details: Object.freeze(coreDetails),
     why: claim(core.why, "coreChange.why", sourceMap),
   });
   if (coreChange.details.length === 0) {
@@ -1230,6 +1287,7 @@ function validateAnalysisValue(analysis, snapshot, {
     revision: source.revision,
   }));
   const codeSteps = validateCodeSteps(analysis.codeSteps, sourceMap, fileMap);
+  assertUniqueSiblings(codeSteps, "codeSteps", claimIdentity);
   const analysisResourceValues = analysisResources(
     analysis,
     [

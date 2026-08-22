@@ -217,6 +217,74 @@ test("Align input binds cited claims to unique evidence ids", () => {
   );
 });
 
+test("Align input rejects exact evidence and sibling-item duplicates", () => {
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      evidence: [
+        { id: "first", label: "제품 요구", location: "docs/requirements.md" },
+        { id: "second", label: "제품 요구", location: "docs/requirements.md" },
+      ],
+    })),
+    /\$\.evidence\[1\] duplicates \$\.evidence\[0\]/u,
+  );
+
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      evidence: [
+        { id: "first", label: "첫 근거", location: "docs/first.md" },
+        { id: "second", label: "둘째 근거", location: "docs/second.md" },
+      ],
+      scope: {
+        included: [
+          { text: "같은 범위", evidenceIds: ["first", "second"] },
+          { text: "같은 범위", evidenceIds: ["second", "first"] },
+        ],
+        excluded: [],
+      },
+    })),
+    /\$\.scope\.included\[1\] duplicates \$\.scope\.included\[0\]/u,
+  );
+
+  const duplicateCases = [
+    ["$.checks", (input) => input.checks.push(structuredClone(input.checks[0]))],
+    ["$.scope.excluded", (input) => input.scope.excluded.push(input.scope.excluded[0])],
+    ["$.behavior.steps", (input) => input.behavior.steps.push(
+      structuredClone(input.behavior.steps[0]),
+    )],
+    ["$.behavior.outcomes", (input) => input.behavior.outcomes.push(
+      structuredClone(input.behavior.outcomes[0]),
+    )],
+    ["$.decisions", (input) => input.decisions.push(
+      structuredClone(input.decisions[0]),
+    )],
+    ["$.openChoices", (input) => input.openChoices.push(input.openChoices[0])],
+  ];
+  for (const [path, duplicate] of duplicateCases) {
+    const input = makeAlignInput();
+    duplicate(input);
+    assert.throws(
+      () => validateAlignInput(input),
+      new RegExp(`${path.replace(/[.$[\]]/gu, "\\$&")}\\[\\d+\\] duplicates`, "u"),
+    );
+  }
+});
+
+test("inspect keeps exact duplicates in retained history readable", async () => {
+  const root = await repository();
+  const inputPath = await inputFile(root, "input.json", makeAlignInput());
+  const outputPath = join(root, "docs", "alignments", "retained-duplicate.html");
+  await createAlignArtifact({ inputPath, outputPath, root });
+  const original = await readFile(outputPath, "utf8");
+  const retained = resealAlignArtifact(original, (data) => {
+    const evidence = data.revisions[0].content.evidence;
+    evidence.push(structuredClone(evidence[0]));
+  });
+  await writeFile(outputPath, retained, "utf8");
+
+  const inspected = await inspectAlignArtifact(outputPath);
+  assert.equal(inspected.content.evidence.length, 3);
+});
+
 test("design direction images are validated, embedded, and kept off the network", async () => {
   const root = await repository();
   const firstImage = join(root, "direction-one.png");
@@ -761,22 +829,22 @@ test("inspect rejects resealed artifacts with invalid revision content", async (
 
 test("revision rejects an artifact that would exceed the readable size", async () => {
   const root = await repository();
-  const prose = "x".repeat(4_000);
+  const prose = "x".repeat(3_980);
   const largeInput = makeAlignInput({
     behavior: undefined,
     decisions: [],
     evidence: undefined,
     goal: prose,
     problem: prose,
-    checks: Array.from({ length: 4 }, () => ({
-      condition: prose,
-      verify: prose,
+    checks: Array.from({ length: 4 }, (_, index) => ({
+      condition: `${prose} condition ${index}`,
+      verify: `${prose} verify ${index}`,
       by: "agent",
     })),
     boundary: prose,
     scope: {
-      included: Array.from({ length: 25 }, () => prose),
-      excluded: Array.from({ length: 25 }, () => prose),
+      included: Array.from({ length: 25 }, (_, index) => `${prose} included ${index}`),
+      excluded: Array.from({ length: 25 }, (_, index) => `${prose} excluded ${index}`),
     },
     openChoices: [],
   });

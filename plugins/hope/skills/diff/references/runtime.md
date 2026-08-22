@@ -20,6 +20,12 @@ code or source excerpt in one folded list at the document bottom. Activating a
 marker previews the same canonical entry; its fragment link remains the
 no-JavaScript fallback.
 
+Validation rejects exact duplicate authored items within one sibling list
+after treating their evidence ranges as an unordered set. It does not compare
+items that serve different document roles, and it permits them to reuse one
+source interval. Meaning and overlapping-but-distinct support remain analysis
+judgments rather than deterministic failures.
+
 The model selects one focused source interval. The runtime validates that
 interval and splits it into bounded evidence references without dropping any
 selected line. This keeps reference-size arithmetic out of the host workflow

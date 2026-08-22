@@ -128,6 +128,76 @@ function citedTextList(value, path, maximumItems = 30) {
   return value.map((item, index) => citedText(item, `${path}[${index}]`));
 }
 
+function citedTextIdentity(value) {
+  return JSON.stringify(typeof value === "string"
+    ? [value]
+    : [value.text, [...value.evidenceIds].sort()]);
+}
+
+function assertUniqueSiblings(values, path, identity) {
+  const firstIndexByIdentity = new Map();
+  for (const [index, value] of values.entries()) {
+    const key = identity(value);
+    const firstIndex = firstIndexByIdentity.get(key);
+    if (firstIndex !== undefined) {
+      throw new TypeError(`${path}[${index}] duplicates ${path}[${firstIndex}]`);
+    }
+    firstIndexByIdentity.set(key, index);
+  }
+}
+
+function assertNoExactInputDuplicates(content) {
+  assertUniqueSiblings(
+    content.evidence,
+    "$.evidence",
+    (item) => JSON.stringify([item.label, item.location]),
+  );
+  assertUniqueSiblings(
+    content.checks,
+    "$.checks",
+    (item) => JSON.stringify([
+      citedTextIdentity(item.condition),
+      item.verify,
+      item.by,
+    ]),
+  );
+  for (const name of ["included", "excluded"]) {
+    assertUniqueSiblings(
+      content.scope[name],
+      `$.scope.${name}`,
+      citedTextIdentity,
+    );
+  }
+  if (content.behavior !== undefined) {
+    assertUniqueSiblings(
+      content.behavior.steps,
+      "$.behavior.steps",
+      (item) => JSON.stringify([
+        citedTextIdentity(item.title),
+        item.detail === undefined ? null : citedTextIdentity(item.detail),
+      ]),
+    );
+    assertUniqueSiblings(
+      content.behavior.outcomes,
+      "$.behavior.outcomes",
+      (item) => JSON.stringify([
+        citedTextIdentity(item.title),
+        item.detail === undefined ? null : citedTextIdentity(item.detail),
+        item.kind ?? null,
+      ]),
+    );
+  }
+  assertUniqueSiblings(
+    content.decisions,
+    "$.decisions",
+    (item) => JSON.stringify([
+      citedTextIdentity(item.decision),
+      citedTextIdentity(item.reason),
+    ]),
+  );
+  assertUniqueSiblings(content.openChoices, "$.openChoices", citedTextIdentity);
+}
+
 function checkItems(value, path, maximumItems = 12) {
   if (!Array.isArray(value)) throw new TypeError(`${path} must be an array`);
   if (value.length === 0 || value.length > maximumItems) {
@@ -460,6 +530,7 @@ export function validateAlignInput(value, defaults = {}) {
     decisions: content.decisions,
     openChoices: content.openChoices,
   }, evidence, "$");
+  assertNoExactInputDuplicates(content);
   return Object.freeze(content);
 }
 

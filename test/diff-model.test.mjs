@@ -187,6 +187,27 @@ test("the main explanation keeps at most four focused details", () => {
   );
 });
 
+test("analysis rejects exact duplicate sibling claims", () => {
+  const snapshot = makeSnapshot();
+  const duplicateDetail = makeAnalysis(snapshot, runId);
+  duplicateDetail.coreChange.details.push(
+    structuredClone(duplicateDetail.coreChange.details[0]),
+  );
+  assert.throws(
+    () => validateAnalysis(duplicateDetail, snapshot, { runId }),
+    /coreChange\.details\[1\] duplicates coreChange\.details\[0\]/u,
+  );
+
+  const duplicateCodeStep = makeAnalysis(snapshot, runId);
+  duplicateCodeStep.codeSteps.push(
+    structuredClone(duplicateCodeStep.codeSteps[0]),
+  );
+  assert.throws(
+    () => validateAnalysis(duplicateCodeStep, snapshot, { runId }),
+    /codeSteps\[1\] duplicates codeSteps\[0\]/u,
+  );
+});
+
 test("beginner primer requires grounded items and stays optional", () => {
   const snapshot = makeSnapshot();
   const withoutPrimer = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });

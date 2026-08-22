@@ -18,6 +18,13 @@ name one unique evidence item. The renderer reuses that item's document number
 wherever it is cited; evidence without a claim link remains only in the final
 evidence list.
 
+New inputs reject two evidence entries with the same label and location. They
+also reject exact duplicate items within one claim-bearing sibling list after
+treating an item's evidence IDs as an unordered set. Reusing one evidence item
+across distinct claims remains valid. Retained artifact history is not subject
+to these newer authoring checks, so an existing verified artifact stays
+inspectable and can receive a clean revision.
+
 `inspect` still validates existing artifact histories that contain the earlier
 `intent` and `success` contract. `revise` preserves those revisions while
 appending a v2 revision. The artifact's internal schema version is separate

@@ -128,6 +128,12 @@ Use these rules with the analysis schema and the shared Hope Write standard.
   name instead.
 - Keep one idea in one primary field. Reuse the smallest exact evidence range
   only when another field genuinely needs it.
+- Before validation, compare sibling items that cite the same evidence set and
+  items whose source intervals strongly overlap. Shared support is a signal to
+  check redundancy, not proof that two claims are duplicates. Keep both when
+  they answer different reader questions or own different review actions.
+  Otherwise consolidate the repeated meaning in its primary field instead of
+  paraphrasing it. Do not remove evidence needed to ground a remaining claim.
 - Keep each prose value to one semantic paragraph. Put a distinct idea in the
   existing field or array item that owns it. When one field genuinely needs a
   second paragraph, separate the paragraphs with a newline so the renderer
