@@ -4,8 +4,9 @@ Before changing Hope:
 
 - Read [PRINCIPLES.md](PRINCIPLES.md).
 - Follow the workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
-- Read [docs/architecture.md](docs/architecture.md) before changing a main
-  folder, build boundary, or delivery structure.
+- Read [docs/architecture.md](docs/architecture.md) before changing
+  implementation dependencies, shared code or assets, a main folder, a build
+  boundary, or delivery structure.
 - Read the matching `plugins/hope/skills/<feature>/SKILL.md` before changing
   feature behavior.
 - Read [docs/design.md](docs/design.md) before changing a Hope GUI.
