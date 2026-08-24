@@ -89,8 +89,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 18);
-  assert.equal(first.designVersion, 14);
+  assert.equal(first.rendererVersion, 19);
+  assert.equal(first.designVersion, 15);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -338,6 +338,28 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.equal((synopsis.match(/Scope limited/gu) ?? []).length, 0);
   assert.equal((synopsis.match(/>Limited</gu) ?? []).length, 0);
   assert.match(html, /<\/span>\n<span class="code-line/u);
+});
+
+test("evidence marker groups follow document number order", async () => {
+  const snapshot = makeSnapshot();
+  const review = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
+  const html = (await renderReview(review)).bytes.toString("utf8");
+  const synopsis = html.match(
+    /<section class="synopsis" id="synopsis"[\s\S]*?<\/section>/u,
+  )?.[0] ?? "";
+  const impactStart = synopsis.indexOf('class="synopsis-row synopsis-impact"');
+  const reviewStart = synopsis.indexOf('class="synopsis-row synopsis-review"');
+  const impact = synopsis.slice(impactStart, reviewStart);
+
+  assert.deepEqual(
+    [...impact.matchAll(/class="evidence-marker"[^>]*>\[([0-9]+)\]<\/a>/gu)]
+      .map((match) => Number(match[1])),
+    [1, 2],
+  );
+  assert.deepEqual(
+    review.coreChange.why.evidence.map((item) => item.sourceId),
+    ["source-2", "source-3"],
+  );
 });
 
 test("oversized embedded assets cannot create an artifact", async () => {

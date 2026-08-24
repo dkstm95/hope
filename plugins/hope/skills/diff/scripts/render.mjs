@@ -144,7 +144,7 @@ function evidenceBlock(
   { context = "" } = {},
 ) {
   if (items.length === 0) return "";
-  return `<sup class="evidence-markers">${items.map((item) => {
+  const records = items.map((item) => {
     const target = evidenceTarget(item);
     let record = codeRenderer.evidenceRecords.get(target);
     if (!record) {
@@ -156,6 +156,9 @@ function evidenceBlock(
       });
       codeRenderer.evidenceRecords.set(target, record);
     }
+    return record;
+  }).sort((left, right) => left.number - right.number);
+  return `<sup class="evidence-markers">${records.map((record) => {
     const accessible = accessibleControlLabel(
       context,
       `${label(dictionary, "common.evidence")} [${record.number}]: ${record.title}`,

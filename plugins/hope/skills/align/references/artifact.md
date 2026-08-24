@@ -16,7 +16,9 @@ or prose value accepted by `citedTitle` or `citedProse` may remain a string or
 become `{ "text": "...", "evidenceIds": ["..."] }`. Every referenced ID must
 name one unique evidence item. The renderer reuses that item's document number
 wherever it is cited; evidence without a claim link remains only in the final
-evidence list.
+evidence list. When one claim cites several items, the renderer displays that
+marker group in ascending document-number order without changing the evidence
+catalog.
 
 A design-direction reference may name an evidence ID plus the source's design
 influence. The referenced evidence location must be an HTTP or HTTPS URL. New
