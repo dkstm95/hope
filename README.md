@@ -108,19 +108,20 @@ its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.en.
 
 Red finds. Blue challenges. The active agent judges.
 
-Independent Red reviewers probe distinct material risks. When a finding is
-consequential or materially uncertain, a fresh Blue verifier sees only the
-sealed finding and scoped evidence. Blue tries to disprove it and expose
-overstatement or missing context; it does not defend the work product or decide
-the result.
+Independent Red reviewers probe distinct material risks. Every high-priority
+finding, every finding that proposes a broad or difficult-to-reverse action,
+and every materially uncertain finding receives a fresh Blue verifier. Blue
+separately challenges the issue, impact, scope, and proposed action against the
+sealed finding and scoped evidence.
 
-The active agent retains final judgment and reports only the findings supported
-by the evidence.
+The active agent retains final judgment, records each candidate's disposition
+and each actionable candidate's final priority, and reports findings no more
+strongly than the evidence supports.
 
 > [!TIP]
 > Ask Hope to limit the Red reviewer count when you want a smaller routine run.
-> Review size alone does not add Blue, but a consequential or materially
-> uncertain finding still triggers it.
+> Review size alone does not add Blue, but high-priority, broad-action, or
+> materially uncertain findings still require it.
 
 ---
 
