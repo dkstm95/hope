@@ -160,9 +160,11 @@ function evidenceCatalog(content) {
 
 function evidenceMarkers(value, catalog, dictionary) {
   if (typeof value === "string" || value.evidenceIds.length === 0) return "";
-  return `<sup class="reference-markers evidence-markers">${value.evidenceIds.map((id) => {
+  const entries = value.evidenceIds.flatMap((id) => {
     const entry = catalog.byId.get(id);
-    if (!entry) return "";
+    return entry === undefined ? [] : [entry];
+  }).sort((left, right) => left.number - right.number);
+  return `<sup class="reference-markers evidence-markers">${entries.map((entry) => {
     const accessible = `${label(dictionary, "evidence")} [${entry.number}]: ${entry.item.label}`;
     return `<a class="reference-marker evidence-marker" href="#${entry.target}" data-reference-target="${entry.target}" data-reference-title="[${entry.number}] ${escapeHtml(entry.item.label)}" data-reference-list-label="${escapeHtml(label(dictionary, "evidenceViewList"))}" aria-controls="reference-popover" aria-expanded="false" aria-haspopup="dialog" aria-label="${escapeHtml(accessible)}">[${entry.number}]</a>`;
   }).join("")}</sup>`;

@@ -591,7 +591,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="18"/u);
+  assert.match(first, /name="hope-align-design-version" content="19"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
@@ -684,6 +684,43 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
     }),
     /alternateLocale must name a supported locale and sibling HTML file/u,
   );
+});
+
+test("evidence marker groups follow document number order", () => {
+  const input = validateAlignInput(makeAlignInput({
+    goal: {
+      text: "근거 순서와 관계없이 번호를 읽기 쉽게 표시한다.",
+      evidenceIds: ["third", "first", "second"],
+    },
+    evidence: [
+      { id: "first", label: "첫 근거", location: "docs/first.md" },
+      { id: "second", label: "둘째 근거", location: "docs/second.md" },
+      { id: "third", label: "셋째 근거", location: "docs/third.md" },
+    ],
+  }));
+  const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
+  const html = renderAlignArtifact({
+    alignId: "11111111-1111-4111-8111-111111111111",
+    createdAt: now.toISOString(),
+    locale,
+    repository: "acme/storage",
+    revisions: [{
+      agreedAt: now.toISOString(),
+      content,
+      number: 1,
+      summary: revisionSummary,
+    }],
+    schemaVersion: 1,
+    theme,
+  }, { digest: "0".repeat(64) });
+  const goal = html.match(/<dt>목표<\/dt><dd>[\s\S]*?<\/dd>/u)?.[0] ?? "";
+
+  assert.deepEqual(
+    [...goal.matchAll(/class="reference-marker evidence-marker"[^>]*>\[([0-9]+)\]<\/a>/gu)]
+      .map((match) => Number(match[1])),
+    [1, 2, 3],
+  );
+  assert.deepEqual(input.goal.evidenceIds, ["third", "first", "second"]);
 });
 
 test("renderer omits empty optional sections instead of filling the screen", () => {

@@ -55,6 +55,10 @@ Use the same small set of semantic section patterns across Align and Diff:
 - compact inline markers for evidence and completion verification; and
 - numbered inline evidence references with one folded source list at the end.
 
+When one claim cites several numbered evidence entries, display that marker
+group in ascending document-number order. Keep each source's assigned number
+and the final source-list order unchanged.
+
 Keep these visual roles consistent without making either renderer import the
 other feature.
 

@@ -18,7 +18,9 @@ The renderer assigns one document number to each distinct validated source
 interval, places that `[n]` after every claim that cites it, and keeps the full
 code or source excerpt in one folded list at the document bottom. Activating a
 marker previews the same canonical entry; its fragment link remains the
-no-JavaScript fallback.
+no-JavaScript fallback. When one claim cites several intervals, the renderer
+displays that marker group in ascending document-number order without changing
+the canonical entries.
 
 Validation rejects exact duplicate authored items within one sibling list
 after treating their evidence ranges as an unordered set. It does not compare
