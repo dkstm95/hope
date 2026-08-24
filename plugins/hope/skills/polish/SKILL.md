@@ -1,6 +1,6 @@
 ---
 name: polish
-description: Use after a work product or code change is complete when someone asks to polish, simplify, clean up, deduplicate, consolidate, refactor, or improve efficiency without changing settled behavior, meaning, or public contracts. Review a named target or the current repository change set with independent cleanup scouts, let a fresh finisher apply one bounded local improvement pass by default, and verify it. Do not use for initial implementation, requested feature changes, bug hunting, architecture migrations, or broad maintenance sweeps.
+description: Use only when someone explicitly invokes $hope:polish or /hope:polish to improve a completed work product without changing settled behavior, meaning, or public contracts. Do not use for ordinary implementation, bug fixes, feature or design changes, architecture migrations, or follow-ups that accept a proposed change.
 ---
 
 # Hope Polish
@@ -14,6 +14,28 @@ scout or finisher.
 Perform one candidate-discovery round and at most one coherent modification
 pass. A limited correction or reversion of a regression introduced by that pass
 is part of verification, not another cleanup round.
+
+## Confirm eligibility
+
+Before inspecting the target or assigning a worker, confirm that:
+
+- the person explicitly invoked `$hope:polish` or `/hope:polish`;
+- the target is completed and identifiable;
+- the request is a cleanup-only finishing pass; and
+- its behavior, meaning, and public contracts are already settled and can stay
+  unchanged.
+
+Do not infer Polish from an assistant's proposal, a referential follow-up such
+as “do that,” or ordinary implementation that happens to simplify code. Do not
+invent a preservation contract to make a feature, design, architecture, or bug
+fix task eligible.
+
+If an implicit selection reaches this Skill, stop Polish before inspection or
+delegation and continue the underlying request through the ordinary workflow.
+If an explicit invocation includes ineligible work, keep that work outside
+Polish and report the boundary. A mixed implementation and cleanup request is
+ordinary work unless the person separates and explicitly invokes the later
+Polish pass.
 
 ## Bind the target
 
