@@ -11,6 +11,7 @@ import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { normalizeLineEndings } from "../tools/build-plugin.mjs";
 import { pluginPackageFiles } from "../tools/plugin-files.mjs";
 import { stagePlugin } from "../tools/stage-plugin.mjs";
 
@@ -35,6 +36,15 @@ test("the staged plugin runs from an external platform path", async (context) =>
   ));
   assert.equal(manifest.name, "hope");
   assert.equal(manifest.skills, "./skills/");
+
+  const polishOpenAi = normalizeLineEndings(await readFile(
+    join(destination, "skills", "polish", "agents", "openai.yaml"),
+    "utf8",
+  ));
+  assert.match(
+    polishOpenAi,
+    /\npolicy:\n  allow_implicit_invocation: false\n/u,
+  );
 
   const outsideRepository = join(temporaryRoot, "outside repository");
   await mkdir(outsideRepository);

@@ -3,3 +3,5 @@ interface:
   short_description: "Improve completed work without changing behavior"
   brand_color: "#087EA4"
   default_prompt: "Use $hope:polish to simplify this completed work while preserving its behavior and meaning."
+policy:
+  allow_implicit_invocation: false
