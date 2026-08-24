@@ -1,6 +1,6 @@
 ---
 name: sweep
-description: Use to inventory a project for broad maintenance and return an evidence-linked, decision-ready whole-project plan without changing files.
+description: Use when someone asks to inspect a whole project for broad maintenance risks and return an evidence-linked, decision-ready plan without changing files. Do not use for generic questions about what to do next, roadmap or backlog prioritization, review of a specific change, or implementation.
 ---
 
 # Hope Sweep
