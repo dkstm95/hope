@@ -37,13 +37,29 @@ test("the staged plugin runs from an external platform path", async (context) =>
   assert.equal(manifest.name, "hope");
   assert.equal(manifest.skills, "./skills/");
 
-  const polishOpenAi = normalizeLineEndings(await readFile(
-    join(destination, "skills", "polish", "agents", "openai.yaml"),
+  const sweepOpenAi = normalizeLineEndings(await readFile(
+    join(destination, "skills", "sweep", "agents", "openai.yaml"),
     "utf8",
   ));
   assert.match(
-    polishOpenAi,
+    sweepOpenAi,
     /\npolicy:\n  allow_implicit_invocation: false\n/u,
+  );
+
+  const sweepSkill = normalizeLineEndings(await readFile(
+    join(destination, "skills", "sweep", "SKILL.md"),
+    "utf8",
+  ));
+  assert.match(sweepSkill, /description: Use only when someone explicitly invokes/u);
+  assert.match(sweepSkill, /\$hope:sweep in Codex/u);
+  assert.match(sweepSkill, /\/hope:sweep in Claude Code/u);
+  assert.match(
+    sweepSkill,
+    /If an implicit selection reaches this Skill, stop before inspecting or editing/u,
+  );
+  assert.equal(
+    stagedFiles.some((path) => path.startsWith("skills/polish/")),
+    false,
   );
 
   const outsideRepository = join(temporaryRoot, "outside repository");

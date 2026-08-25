@@ -1,173 +1,82 @@
 ---
 name: sweep
-description: Use when someone asks to inspect a whole project for broad maintenance risks and return an evidence-linked, decision-ready plan without changing files. Do not use for generic questions about what to do next, roadmap or backlog prioritization, review of a specific change, or implementation.
+description: Use only when someone explicitly invokes $hope:sweep in Codex, /hope:sweep in Claude Code, or the host's explicit Hope Sweep command to apply behavior-preserving maintenance across a codebase and its directly supporting material. Do not use for ordinary maintenance questions, reviews, planning, bug fixes, feature changes, or product decisions.
 ---
 
 # Hope Sweep
 
-Use the active host session to set the scope, inspect the project, merge
-evidence, and return a read-only maintenance plan.
+Use the active host session to find and apply evidence-backed maintenance
+changes to operating code and its directly supporting material without changing
+customer-observed behavior.
 
-Do not edit files during Sweep.
+Read `../../references/code-maintenance.md` before judging code, tests,
+configuration, build logic, documentation, or other support material.
 
 Read `../write/references/writing-standard.md` before drafting user-facing
-language. Apply it without changing the inspected coverage, evidence,
-decisions, uncertainty, or required result.
+language. Apply it without changing evidence, uncertainty, or the required
+result.
 
-## Establish coverage
+## Confirm explicit invocation
 
-Identify the repository root and current revision.
+Start Sweep only when the person explicitly invokes it through the active
+host:
 
-Inspect tracked files and relevant untracked files owned by the project.
+- `$hope:sweep` in Codex;
+- `/hope:sweep` in Claude Code; or
+- Hope Sweep's namespaced, explicit Skill command in another host.
 
-Exclude ignored dependencies, caches, build outputs, external directories, and
-other non-owned paths.
+Do not infer Sweep from a request to inspect a project, suggest improvements,
+choose the next task, review work, fix a bug, or clean up code. A follow-up such
+as “do that” is not an explicit invocation.
 
-Report every material exclusion and coverage gap.
+If an implicit selection reaches this Skill, stop before inspecting or editing
+the target and continue the underlying request through the ordinary workflow.
 
-Treat symbolic links as entries.
+## Bind the maintenance target
 
-Record their target text without following them outside the project.
+Use the repository named by the person. Otherwise use the current repository.
+The entire repository is the default target. Narrow it only when the person
+names a smaller scope inside that repository.
 
-Use subagents for disjoint batches when that materially improves coverage.
+The target includes operating code and the tests, configuration, build logic,
+documentation, comments, examples, generation, and assets that directly
+support it. Do not widen into unrelated material or external directories.
 
-Every batch inspector must use a fresh context with no inherited conversation,
-previous reasoning, findings, or another inspector's output.
+Record the current revision and working-tree state. Preserve unrelated changes
+and project-owned instructions.
 
-Give each subagent an explicit file assignment.
+Explicit invocation grants authority for reversible local edits within this
+boundary. Do not ask for approval for each candidate. It does not override host
+permissions or authorize commits, pushes, pull requests, or merges.
 
-Give it only the person's exact request, project-owned instructions, assigned
-files, applicable maintenance risks, exclusions, the location of this Skill,
-and expected evidence format.
+## Find and apply proven cleanup
 
-Tell each inspector to read this Skill before acting.
+Use the maintenance guidance to inspect only enough surrounding evidence
+to prove a coherent cleanup. Sweep does not require an inventory of every
+project file or a finding in every maintenance category.
 
-If fresh contexts are unavailable, inspect sequentially in the active session
-and disclose that independent batch inspection was unavailable.
+Apply proven changes immediately in small, coherent batches. Recheck the
+affected consumers before writing and keep each edit inside the bound target.
 
-Merge their evidence and report missing or overlapping coverage.
+Do not fix or report suspected bugs, customer-behavior or public-contract
+changes, product or compatibility decisions, or removals whose safety is
+uncertain. Silently leave them outside Sweep. Do not turn an out-of-scope signal
+into a recommendation or follow-up task.
 
-Reconcile reported counts and coverage claims against the source inventory.
+## Verify the result
 
-Every project-owned entry must be inspected, excluded with a reason, or named
-as a coverage gap.
+Use the maintenance guidance to verify the changed scope.
 
-Do not claim whole-project coverage when inspection was partial.
-
-## Inspect maintenance risks
-
-Consider:
-
-- broken references and configuration drift;
-- dead or stale code and content;
-- missing, repeated, or premature abstractions;
-- test gaps and documentation drift;
-- checks that freeze wording, file names, or implementation shape without
-  guarding a concrete failure;
-- dependency, security, license, and compatibility risk;
-- performance, package, build, and CI waste;
-- generated-source and release-boundary drift; and
-- unclear ownership or project structure.
-
-The list guides inspection.
-
-It does not require a finding in every area.
-
-## Require evidence
-
-Tie each finding to concrete files, symbols, configuration, tests, or
-authoritative external sources.
-
-Separate confirmed facts from inferences and open questions.
-
-Name the affected behavior or contract precisely.
-
-Do not collapse distinct input versions, stored artifacts, compatibility paths,
-or product promises into one label such as "legacy" or "history."
-
-Check consumers, generated copies, public contracts, and history before calling
-something unused.
-
-Do not treat a passing test as proof that a file or abstraction is necessary.
-
-Do not treat a missing reference search as proof that removal is safe when an
-external contract may exist.
-
-Try to disprove every material finding before reporting it.
-
-Check the strongest plausible alternative explanation and contradictory
-evidence.
-
-Remove the finding or lower its certainty when it does not survive that check.
-
-For a visual or interactive finding, reproduce the relevant viewport and state
-in the intended viewer.
-
-Treat thumbnails, composite previews, and screenshots from another state as
-leads, not confirmation.
-
-## Make decisions easy
-
-Classify every actionable finding as one of:
-
-- `Recommend`: evidence supports a specific change and no material product
-  choice remains;
-- `Decide`: the person owns a product, compatibility, retention, or other
-  material trade-off; or
-- `Defer`: evidence or authority is insufficient for a recommendation.
-
-Give each item a stable ID and include:
-
-- the exact behavior, promise, or files in scope;
-- evidence and whether it is fact, inference, or an open question;
-- user or maintenance impact; and
-- the verification needed after implementation.
-
-When dependencies, recommended order, compatibility, or release effects are
-material, include them. Mark any that evidence does not establish as `unknown`.
-
-For each `Decide` item, ask one concrete question, recommend a default with a
-reason, and state the consequence of each viable option.
-
-Turn a broad concern into the behavior the choice would preserve or remove.
-
-Do not put a `Defer` item in the recommended implementation order.
-
-Group compatible `Recommend` items and already accepted `Decide` items into
-proposed, bounded implementation batches with their file scope and checks.
-
-For each unresolved `Decide` item, show which proposed batch its recommended
-default would join if accepted.
-
-Finalize and run selected batches only in a separate implementation task after
-the person accepts any included defaults.
-
-## Return the plan
-
-Lead with the most important conclusion.
+Inspect the final difference against the operating behavior and this Skill's
+allowed categories. Correct or revert a regression introduced by Sweep. Do not
+fix a pre-existing failure or use verification to widen the cleanup.
 
 Report:
 
-- coverage, exclusions, and gaps;
-- `Recommend`, `Decide`, and `Defer` items;
-- proposed implementation batches and their order; and
-- the smallest response needed from the person.
+- the behavior-preserving cleanup that was applied, or that no proven cleanup
+  was available;
+- the supporting code, tests, documentation, configuration, generation, or
+  assets changed with it; and
+- the checks run and what passed or failed.
 
-Keep the final request to answers for unresolved `Decide` items and selection
-of proposed batches for a separate implementation task. Offer one reply that
-accepts every recommended default and selects all recommended batches.
-
-If no product decision remains, say so directly.
-
-A no-change or findings-only result is valid.
-
-Prefer removing an unneeded product promise, its implementation, and its tests
-together.
-
-Do not create approval records, completion records, session records, or Polish
-composition data.
-
-Do not invoke Polish.
-
-After returning the plan, wait for the person to select a separate
-implementation task.
+Do not mention skipped out-of-scope signals or propose work for them.

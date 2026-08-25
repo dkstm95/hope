@@ -12,6 +12,14 @@ const sharedWritingStandard = resolve(
   skillsRoot,
   "write/references/writing-standard.md",
 );
+const sharedCodeMaintenanceGuidance = resolve(
+  pluginRoot,
+  "references/code-maintenance.md",
+);
+const publishedSharedGuidance = new Set([
+  sharedCodeMaintenanceGuidance,
+  sharedWritingStandard,
+]);
 const deliveryDependencyPattern =
   /(?:CLAUDE_)?PLUGIN_ROOT|plugins\/hope|\.codex-plugin|\.claude-plugin|marketplace/u;
 
@@ -127,7 +135,7 @@ function guidanceBoundaryIssues(source, path, featureRoot) {
     const dependency = resolve(dirname(path), reference.split("#", 1)[0]);
     if (
       !isInside(featureRoot, dependency)
-      && dependency !== sharedWritingStandard
+      && !publishedSharedGuidance.has(dependency)
     ) {
       issues.push(
         `references guidance outside its Skill without a published shared contract: ${reference}`,
@@ -165,7 +173,9 @@ test("feature script dependencies stay within their allowed boundaries", async (
 });
 
 test("feature documents use only published cross-feature guidance", async () => {
-  assert.equal(await exists(sharedWritingStandard), true);
+  for (const guidance of publishedSharedGuidance) {
+    assert.equal(await exists(guidance), true);
+  }
   const issues = [];
   for (const feature of await discoverFeatures()) {
     const documents = [
