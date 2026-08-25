@@ -27,38 +27,40 @@ Align reviews the request against verifiable evidence and interviews the person
 about material gaps, contradictions, risks, unsupported assumptions, edge
 cases, and simpler alternatives that could change the result.
 
-When the agreement needs a durable record for later work or review, or the
-person asks for an artifact, Align writes one self-contained HTML brief inside
+When the agreed intent needs a durable record for later work or review, or the
+person asks for an artifact, Align writes one self-contained HTML record inside
 the project. A small, clear task that will continue in the current session can
 stay in the conversation without creating a file.
 
-A brief contains one agreed goal and a set of completion criteria. Each
-criterion includes how it is verified and who—AI or the person—judges it.
-Material changes remain as new versions in the same file, and the document
-serves as the implementation contract.
+The record preserves one agreed goal and problem, the observable outcomes that
+define the decided intent, deliberately excluded work, and any user flow that
+needs sequence. It excludes
+solution design, implementation details, current implementation state, and
+completion results. Later work may consult it as evidence of intent, but it is
+not an implementation contract or current-system specification.
 
 For material UI work without attached references, Align checks the project
 first, uses web search when needed, and presents two or three image mockups.
 
 > [!IMPORTANT]
-> Generated Align briefs are project documentation. Later version-control work
+> Generated Align records are project documentation. Later version-control work
 > includes them with related project changes unless the person excludes them.
 
-**Complete example HTML:** [Open the English Align brief for a fan schedule that
-makes source conflicts, changes, cancellations, and verification ownership
+**Complete example HTML:** [Open the English Align record for a fan schedule that
+makes source conflicts, changes, cancellations, and judgment responsibility
 explicit.](docs/alignments/rescene-fan-calendar.en.html)
 
 The captures below come from this example. It uses sample data and does not
 represent the live `rescene.fan` interface.
 
-![English Hope Align example showing the trusted fan-schedule goal, completion criteria, and boundary](assets/readme/hope-align-en.png)
+![English Hope Align example showing the trusted fan-schedule goal and decided intent](assets/readme/hope-align-en.png)
 
 <details>
 <summary>View detailed Align captures</summary>
 
-| Compared UI directions | Source and lifecycle decisions |
+| Compared design directions | Decided intent and judgment markers |
 | --- | --- |
-| [![Two UI directions for the trusted fan schedule in an English Align artifact](assets/readme/hope-align-directions-en.png)](assets/readme/hope-align-directions-en.png) | [![Source priority, conflict, freshness, and cancellation decisions in an English Align artifact](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
+| [![Two design directions for the trusted fan schedule in an English Align artifact](assets/readme/hope-align-directions-en.png)](assets/readme/hope-align-directions-en.png) | [![Decided outcomes, user flow, exclusions, and judgment markers in an English Align artifact](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
 
 </details>
 

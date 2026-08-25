@@ -17,43 +17,38 @@ const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
 
 const dictionaries = Object.freeze({
   "en-US": Object.freeze({
-    agreement: "Decisions",
-    agreedDecisions: "Confirmed decisions",
-    behavior: "Agreed behavior",
+    behavior: "User flow",
     boundary: "Boundary",
     cancelOutcome: "cancel",
-    checkedByAgent: "Agent check",
-    checkedByHuman: "Human check",
-    checks: "Completion criteria",
+    checkedByAgent: "Agent assessment",
+    checkedByHuman: "Person judgment",
     completeOutcome: "complete",
-    currentAgreement: "Current agreement",
+    currentAgreement: "Current intent",
     decidedByDelegated: "AI choice delegated by the person",
     decidedByUser: "Selected by the person",
+    decidedIntent: "Decided intent",
     designDirections: "Design directions",
     earlierRevisions: "earlier versions",
     evidence: "Basis",
     evidenceClose: "Close preview",
     evidenceViewList: "View in the evidence list",
-    excluded: "Out of scope",
+    excluded: "Not included",
     history: "Version history",
     goal: "Goal",
     influence: "Influence",
-    included: "In scope",
+    included: "Additional included intent",
     language: "Language",
     menu: "Contents",
     navigation: "Contents and version history",
-    noExcluded: "No explicit exclusion was needed.",
-    noIncluded: "No separate included item was needed.",
-    openChoices: "Decisions during implementation",
-    outcomes: "Results",
+    openChoices: "Retained questions from an earlier version",
+    outcomes: "Expected outcomes",
     overview: "Summary",
     problem: "Problem",
     recommendation: "AI recommendation",
     recommended: "Recommended",
     references: "References",
     revisionDetails: "View changes",
-    scope: "Scope",
-    skip: "Skip to agreement",
+    skip: "Skip to decided intent",
     selected: "Selected",
     selection: "Selection",
     strengths: "Strengths",
@@ -61,49 +56,44 @@ const dictionaries = Object.freeze({
     useDarkTheme: "Switch to dark mode",
     useLightTheme: "Switch to light mode",
     tradeoffs: "Trade-offs",
-    verification: "Verification methods",
+    verification: "Ways to judge",
     verificationMarkerAgent: "AI",
     verificationMarkerHuman: "User",
-    verificationViewList: "View in the verification list",
+    verificationViewList: "View in the judgment list",
   }),
   "ko-KR": Object.freeze({
-    agreement: "결정 사항",
-    agreedDecisions: "확정 사항",
-    behavior: "합의된 동작",
+    behavior: "사용 흐름",
     boundary: "경계",
     cancelOutcome: "취소",
-    checkedByAgent: "AI 에이전트 확인",
-    checkedByHuman: "사용자 확인",
-    checks: "완료 기준",
+    checkedByAgent: "AI 판단 가능",
+    checkedByHuman: "사용자 판단",
     completeOutcome: "완료",
-    currentAgreement: "현재 합의",
+    currentAgreement: "현재 의도",
     decidedByDelegated: "사용자가 AI에 선택을 위임함",
     decidedByUser: "사용자가 선택함",
+    decidedIntent: "결정된 의도",
     designDirections: "디자인 시안",
     earlierRevisions: "개의 이전 버전",
     evidence: "근거",
     evidenceClose: "미리보기 닫기",
     evidenceViewList: "근거 목록에서 보기",
-    excluded: "제외 범위",
+    excluded: "포함하지 않음",
     history: "버전 이력",
     goal: "목표",
     influence: "반영한 점",
-    included: "포함 범위",
+    included: "추가 포함 내용",
     language: "언어",
     menu: "목차",
     navigation: "목차와 버전 이력",
-    noExcluded: "명시적으로 제외한 범위가 없습니다.",
-    noIncluded: "별도로 포함한 범위가 없습니다.",
-    openChoices: "구현 시 결정 사항",
-    outcomes: "판정 결과",
+    openChoices: "이전 버전에서 유지된 질문",
+    outcomes: "기대 결과",
     overview: "요약",
     problem: "문제",
     recommendation: "AI 추천",
     recommended: "추천",
     references: "참고 자료",
     revisionDetails: "변경 내용 보기",
-    scope: "범위",
-    skip: "합의 내용으로 건너뛰기",
+    skip: "결정된 의도로 건너뛰기",
     selected: "선택",
     selection: "선택 결과",
     strengths: "장점",
@@ -111,10 +101,10 @@ const dictionaries = Object.freeze({
     useDarkTheme: "다크 모드로 전환",
     useLightTheme: "라이트 모드로 전환",
     tradeoffs: "고려 사항",
-    verification: "확인 방법",
+    verification: "판단 방법",
     verificationMarkerAgent: "AI",
     verificationMarkerHuman: "유저",
-    verificationViewList: "확인 방법 목록에서 보기",
+    verificationViewList: "판단 방법 목록에서 보기",
   }),
 });
 
@@ -171,23 +161,23 @@ function evidenceMarkers(value, catalog, dictionary) {
 }
 
 function verificationCatalog(content, dictionary) {
-  const checks = content.checks ?? [];
-  const entries = checks.flatMap((check, checkIndex) => {
-    if (check.verify === undefined) return [];
-    const human = check.by === "human";
+  const intent = canonicalIntent(content);
+  const entries = intent.flatMap((item, intentIndex) => {
+    if (item.verify === undefined) return [];
+    const human = item.by === "human";
     return [Object.freeze({
-      check,
-      checkIndex,
+      intent: item,
+      intentIndex,
       label: label(dictionary, human ? "checkedByHuman" : "checkedByAgent"),
       marker: label(
         dictionary,
         human ? "verificationMarkerHuman" : "verificationMarkerAgent",
       ),
-      target: `verification-${checkIndex + 1}`,
+      target: `verification-${intentIndex + 1}`,
     })];
   });
   return Object.freeze({
-    byCheckIndex: new Map(entries.map((entry) => [entry.checkIndex, entry])),
+    byIntentIndex: new Map(entries.map((entry) => [entry.intentIndex, entry])),
     entries: Object.freeze(entries),
   });
 }
@@ -195,7 +185,7 @@ function verificationCatalog(content, dictionary) {
 function verificationMarker(entry, dictionary) {
   if (!entry) return "";
   const visible = `[${entry.marker}]`;
-  const accessible = `${entry.label}: ${entry.check.verify}`;
+  const accessible = `${entry.label}: ${entry.intent.verify}`;
   return `<sup class="reference-markers verification-markers"><a class="reference-marker verification-marker" href="#${entry.target}" data-reference-target="${entry.target}" data-reference-title="${escapeHtml(`${visible} ${entry.label}`)}" data-reference-list-label="${escapeHtml(label(dictionary, "verificationViewList"))}" aria-controls="reference-popover" aria-expanded="false" aria-haspopup="dialog" aria-label="${escapeHtml(accessible)}">${escapeHtml(visible)}</a></sup>`;
 }
 
@@ -252,6 +242,28 @@ function goalValue(content) {
   return content.goal ?? content.intent;
 }
 
+function canonicalIntent(content) {
+  if (Array.isArray(content.intent)) return content.intent;
+  const checks = content.checks ?? content.success.map((condition) => ({ condition }));
+  const conditions = checks.map((check) => ({
+    statement: check.condition,
+    ...(check.verify === undefined ? {} : { verify: check.verify, by: check.by }),
+  }));
+  const decisions = (content.decisions ?? []).map((decision) => ({
+    statement: decision.decision,
+    reason: decision.reason,
+  }));
+  return [...conditions, ...decisions];
+}
+
+function intentExclusions(content) {
+  return content.exclusions ?? content.scope?.excluded ?? [];
+}
+
+function intentFlow(content) {
+  return content.flow ?? content.behavior;
+}
+
 function sectionOrdinal(number) {
   return String(number).padStart(2, "0");
 }
@@ -270,48 +282,39 @@ function documentTitle(content) {
   </header>`;
 }
 
-function checkList(content, dictionary, catalog, verification) {
-  const checks = content.checks ?? content.success.map((condition) => ({ condition }));
-  return `<ol class="check-list">${checks.map((check, checkIndex) => {
+function intentList(content, dictionary, catalog, verification) {
+  const intent = canonicalIntent(content);
+  return `<ol class="decision-list intent-list">${intent.map((item, intentIndex) => {
     const marker = verificationMarker(
-      verification?.byCheckIndex.get(checkIndex),
+      verification?.byIntentIndex.get(intentIndex),
       dictionary,
     );
-    const compactMarker = check.by === "human"
+    const compactMarker = item.by === "human"
       ? label(dictionary, "verificationMarkerHuman")
       : label(dictionary, "verificationMarkerAgent");
-    const compactVerification = verification === undefined && check.verify !== undefined
-      ? `<span class="compact-check-verification"><strong>[${escapeHtml(compactMarker)}]</strong> ${authoredText(check.verify)}</span>`
+    const compactVerification = verification === undefined && item.verify !== undefined
+      ? `<span class="compact-check-verification"><strong>[${escapeHtml(compactMarker)}]</strong> ${authoredText(item.verify)}</span>`
       : "";
-    return `<li><span class="check-condition">${catalog
-      ? citedInline(check.condition, catalog, dictionary)
-      : authoredText(citedValue(check.condition))}${marker}${compactVerification}</span></li>`;
+    const statement = catalog
+      ? citedInline(item.statement, catalog, dictionary)
+      : authoredText(citedValue(item.statement));
+    const reason = item.reason === undefined ? "" : `<details class="decision-disclosure intent-reason">
+      <summary><span>${statement}${marker}${compactVerification}</span></summary>
+      <div class="decision-reason">${catalog
+        ? citedParagraphs(item.reason, catalog, dictionary)
+        : authoredParagraphs(citedValue(item.reason))}</div>
+    </details>`;
+    return `<li><span class="decision-number" aria-hidden="true">${String(intentIndex + 1).padStart(2, "0")}</span>${reason || `<span class="intent-statement">${statement}${marker}${compactVerification}</span>`}</li>`;
   }).join("")}</ol>`;
 }
 
-function overview(content, dictionary, number, catalog, verification) {
+function overview(content, dictionary, number, catalog) {
   return `<section class="overview document-section" id="overview" aria-labelledby="overview-title">
     ${sectionTitle("overview-title", label(dictionary, "overview"), number)}
     <dl class="synopsis">
       <div>${summaryLabelElement("dt", label(dictionary, "goal"))}<dd>${citedParagraphs(goalValue(content), catalog, dictionary)}</dd></div>
       <div>${summaryLabelElement("dt", label(dictionary, "problem"))}<dd>${citedParagraphs(content.problem, catalog, dictionary)}</dd></div>
-      <div>${summaryLabelElement("dt", label(dictionary, "checks"))}<dd>${checkList(content, dictionary, catalog, verification)}</dd></div>
-      <div>${summaryLabelElement("dt", label(dictionary, "boundary"))}<dd>${citedParagraphs(content.boundary, catalog, dictionary)}</dd></div>
     </dl>
-  </section>`;
-}
-
-function scopeSection(content, dictionary, number, catalog) {
-  return `<section class="scope document-section" id="scope" aria-labelledby="scope-title">
-    ${sectionTitle("scope-title", label(dictionary, "scope"), number)}
-    <div class="scope-column">
-      <h3>${escapeHtml(label(dictionary, "included"))}</h3>
-      ${textList(content.scope.included, { empty: label(dictionary, "noIncluded"), catalog, dictionary })}
-    </div>
-    <div class="scope-column">
-      <h3>${escapeHtml(label(dictionary, "excluded"))}</h3>
-      ${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded"), catalog, dictionary })}
-    </div>
   </section>`;
 }
 
@@ -379,49 +382,76 @@ function designDirectionsSection(content, dictionary, number, catalog) {
   </section>`;
 }
 
-function behaviorSection(content, dictionary, number, catalog) {
-  if (!content.behavior) return undefined;
-  const outcomes = content.behavior.outcomes.length === 0 ? "" : `<div class="behavior-outcomes-block">
+function flowBlock(content, dictionary, catalog) {
+  const flow = intentFlow(content);
+  if (!flow) return "";
+  const outcomes = flow.outcomes.length === 0 ? "" : `<div class="behavior-outcomes-block">
     <h3 class="behavior-outcomes-title">${escapeHtml(label(dictionary, "outcomes"))}</h3>
     <ul class="behavior-outcomes">${
-    content.behavior.outcomes.map((outcome) => `<li class="${outcome.kind === "cancel" ? "cancel" : "complete"}">
+    flow.outcomes.map((outcome) => `<li class="${outcome.kind === "cancel" ? "cancel" : "complete"}">
       <span class="outcome-mark" aria-hidden="true">${outcome.kind === "cancel" ? "×" : "✓"}</span>
       <div><strong>${citedInline(outcome.title, catalog, dictionary)}</strong>${outcome.detail
         ? citedParagraphs(outcome.detail, catalog, dictionary)
         : ""}</div>
     </li>`).join("")
   }</ul></div>`;
-  return `<section class="body-section document-section" id="behavior" aria-labelledby="behavior-title">
-    ${sectionTitle("behavior-title", label(dictionary, "behavior"), number)}
-    <ol class="behavior-steps">${content.behavior.steps.map((step, index) => `<li>
+  return `<div class="intent-group intent-flow" id="flow">
+    <h3 class="subheading">${escapeHtml(label(dictionary, "behavior"))}</h3>
+    <ol class="behavior-steps">${flow.steps.map((step, index) => `<li>
       <span class="step-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
       <strong>${citedInline(step.title, catalog, dictionary)}</strong>${step.detail
         ? citedParagraphs(step.detail, catalog, dictionary)
         : ""}
     </li>`).join("")}</ol>
     ${outcomes}
-  </section>`;
+  </div>`;
 }
 
-function agreementSection(content, dictionary, number, catalog) {
-  if (content.decisions.length === 0 && content.openChoices.length === 0) return undefined;
-  const decisionColumn = content.decisions.length === 0 ? "" : `<div>
-    <h3 class="subheading">${escapeHtml(label(dictionary, "agreedDecisions"))}</h3>
-    <ol class="decision-list">${content.decisions.map((decision, index) => `<li>
-      <span class="decision-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
-      <details class="decision-disclosure">
-        <summary><h3>${citedInline(decision.decision, catalog, dictionary)}</h3></summary>
-        <div class="decision-reason">${citedParagraphs(decision.reason, catalog, dictionary)}</div>
-      </details>
-    </li>`).join("")}</ol>
+function verificationDetails(catalog, dictionary) {
+  if (catalog.entries.length === 0) return "";
+  return `<details class="intent-group section-disclosure intent-verification" id="verification">
+    <summary>${escapeHtml(label(dictionary, "verification"))} · ${catalog.entries.length}</summary>
+    <div class="section-disclosure-content"><ol class="verification-list">${catalog.entries.map((entry) => `<li id="${entry.target}" data-verification-entry>
+      <span class="verification-symbol" aria-hidden="true">[${escapeHtml(entry.marker)}]</span>
+      <div class="reference-entry-copy verification-entry-copy"><strong class="reference-entry-title verification-entry-title">${authoredText(citedValue(entry.intent.statement))}</strong><span class="verification-source">${escapeHtml(entry.label)}</span>${authoredParagraphs(entry.intent.verify)}</div>
+    </li>`).join("")}</ol></div>
+  </details>`;
+}
+
+function legacyIntentDetails(content, dictionary, catalog) {
+  if (Array.isArray(content.intent)) return "";
+  const included = content.scope?.included ?? [];
+  const boundary = content.boundary === undefined ? "" : `<div class="legacy-intent-group">
+    <h3 class="subheading">${escapeHtml(label(dictionary, "boundary"))}</h3>
+    ${citedParagraphs(content.boundary, catalog, dictionary)}
   </div>`;
-  const choiceColumn = content.openChoices.length === 0 ? "" : `<div>
+  const includedHtml = included.length === 0 ? "" : `<div class="legacy-intent-group">
+    <h3 class="subheading">${escapeHtml(label(dictionary, "included"))}</h3>
+    ${textList(included, { catalog, dictionary })}
+  </div>`;
+  const questions = (content.openChoices ?? []).length === 0 ? "" : `<div class="legacy-intent-group">
     <h3 class="subheading">${escapeHtml(label(dictionary, "openChoices"))}</h3>
     ${textList(content.openChoices, { catalog, dictionary })}
   </div>`;
-  return `<section class="body-section document-section" id="agreement" aria-labelledby="agreement-title">
-    ${sectionTitle("agreement-title", label(dictionary, "agreement"), number)}
-    <div class="agreement-groups">${decisionColumn}${choiceColumn}</div>
+  return `${boundary}${includedHtml}${questions}`;
+}
+
+function intentSection(content, dictionary, number, catalog, verification) {
+  const exclusions = intentExclusions(content);
+  const exclusionBlock = exclusions.length === 0 ? "" : `<div class="intent-group intent-exclusions" id="exclusions">
+    <h3 class="subheading">${escapeHtml(label(dictionary, "excluded"))}</h3>
+    ${textList(exclusions, { className: "exclusion-list", catalog, dictionary })}
+  </div>`;
+  const groups = [
+    `<div class="intent-group intent-record">${intentList(content, dictionary, catalog, verification)}</div>`,
+    flowBlock(content, dictionary, catalog),
+    exclusionBlock,
+    legacyIntentDetails(content, dictionary, catalog),
+    verificationDetails(verification, dictionary),
+  ].filter(Boolean).join("\n");
+  return `<section class="body-section document-section" id="intent" aria-labelledby="intent-title">
+    ${sectionTitle("intent-title", label(dictionary, "decidedIntent"), number)}
+    <div class="intent-groups">${groups}</div>
   </section>`;
 }
 
@@ -443,17 +473,6 @@ function evidenceSection(catalog, dictionary, number) {
   </details>`;
 }
 
-function verificationSection(catalog, dictionary, number) {
-  if (catalog.entries.length === 0) return undefined;
-  return `<details class="body-section document-section section-disclosure" id="verification">
-    <summary class="section-disclosure-summary">${sectionTitle("verification-title", label(dictionary, "verification"), number, ` · ${catalog.entries.length}`)}</summary>
-    <div class="section-disclosure-content"><ol class="verification-list">${catalog.entries.map((entry) => `<li id="${entry.target}" data-verification-entry>
-      <span class="verification-symbol" aria-hidden="true">[${escapeHtml(entry.marker)}]</span>
-      <div class="reference-entry-copy verification-entry-copy"><strong class="reference-entry-title verification-entry-title">${authoredText(citedValue(entry.check.condition))}</strong><span class="verification-source">${escapeHtml(entry.label)}</span>${authoredParagraphs(entry.check.verify)}</div>
-    </li>`).join("")}</ol></div>
-  </details>`;
-}
-
 function referencePopover(dictionary) {
   return `<aside class="reference-popover" id="reference-popover" popover="auto" role="dialog" aria-labelledby="reference-popover-title">
     <header class="reference-popover-head"><strong id="reference-popover-title"></strong><button class="reference-popover-close" type="button" aria-label="${escapeHtml(label(dictionary, "evidenceClose"))}" title="${escapeHtml(label(dictionary, "evidenceClose"))}">×</button></header>
@@ -464,32 +483,25 @@ function referencePopover(dictionary) {
 
 function compactRevisionContent(content, dictionary, idPrefix) {
   const catalog = evidenceCatalog(content);
-  const detail = (title, value) => `${authoredText(citedValue(title))}${value
-    ? ` <span aria-hidden="true">—</span> ${authoredText(citedValue(value))}`
-    : ""}`;
-  const behavior = content.behavior ? `<div>
+  const flow = intentFlow(content);
+  const flowHtml = flow ? `<div>
     <dt>${escapeHtml(label(dictionary, "behavior"))}</dt>
-    <dd><ul class="plain-list">${content.behavior.steps.map(
-      (step) => `<li>${detail(step.title, step.detail)}</li>`,
-    ).join("")}${content.behavior.outcomes.map((outcome) => `<li>${detail(
-      `${outcome.title} (${label(
+    <dd><ul class="plain-list">${flow.steps.map(
+      (step) => `<li>${authoredText(citedValue(step.title))}${step.detail ? ` <span aria-hidden="true">—</span> ${authoredText(citedValue(step.detail))}` : ""}</li>`,
+    ).join("")}${flow.outcomes.map((outcome) => `<li>${authoredText(`${citedValue(outcome.title)} (${label(
         dictionary,
         outcome.kind === "cancel" ? "cancelOutcome" : "completeOutcome",
-      )})`,
-      outcome.detail,
-    )}</li>`).join("")}</ul></dd>
+      )})`)}${outcome.detail ? ` <span aria-hidden="true">—</span> ${authoredText(citedValue(outcome.detail))}` : ""}</li>`).join("")}</ul></dd>
   </div>` : "";
   const designDirectionsHtml = content.designDirections ? `<div>
     <dt>${escapeHtml(label(dictionary, "designDirections"))}</dt>
     <dd>${designDirectionsComparison(content.designDirections, dictionary, idPrefix, catalog)}</dd>
   </div>` : "";
-  const decisions = content.decisions.length === 0 ? "" : `<div>
-    <dt>${escapeHtml(label(dictionary, "agreedDecisions"))}</dt>
-    <dd><ul class="plain-list">${content.decisions.map(
-      (decision) => `<li>${detail(decision.decision, decision.reason)}</li>`,
-    ).join("")}</ul></dd>
-  </div>`;
-  const openChoices = content.openChoices.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "openChoices"))}</dt><dd>${textList(content.openChoices)}</dd></div>`;
+  const exclusions = intentExclusions(content);
+  const excluded = exclusions.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "excluded"))}</dt><dd>${textList(exclusions)}</dd></div>`;
+  const legacyBoundary = Array.isArray(content.intent) ? "" : `<div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(citedValue(content.boundary))}</dd></div>`;
+  const legacyIncluded = Array.isArray(content.intent) || content.scope.included.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.scope.included)}</dd></div>`;
+  const openChoices = Array.isArray(content.intent) || content.openChoices.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "openChoices"))}</dt><dd>${textList(content.openChoices)}</dd></div>`;
   const evidence = content.evidence.length === 0 ? "" : `<div>
     <dt>${escapeHtml(label(dictionary, "evidence"))}</dt>
     <dd><ul class="plain-list">${content.evidence.map((item) => `<li><strong>${authoredText(item.label)}</strong><br>${evidenceLocation(item)}</li>`).join("")}</ul></dd>
@@ -497,11 +509,8 @@ function compactRevisionContent(content, dictionary, idPrefix) {
   return `<dl class="revision-content">
     <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(citedValue(goalValue(content)))}</p></dd></div>
     <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredText(citedValue(content.problem))}</dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "checks"))}</dt><dd>${checkList(content, dictionary)}</dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(citedValue(content.boundary))}</dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.scope.included, { empty: label(dictionary, "noIncluded") })}</dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "excluded"))}</dt><dd>${textList(content.scope.excluded, { empty: label(dictionary, "noExcluded") })}</dd></div>
-    ${designDirectionsHtml}${behavior}${decisions}${openChoices}${evidence}
+    <div><dt>${escapeHtml(label(dictionary, "decidedIntent"))}</dt><dd>${intentList(content, dictionary)}</dd></div>
+    ${excluded}${designDirectionsHtml}${flowHtml}${legacyBoundary}${legacyIncluded}${openChoices}${evidence}
   </dl>`;
 }
 
@@ -686,17 +695,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .synopsis dt { font-weight: 700; }
 .summary-label-stacked { display: inline-flex; flex-direction: column; align-items: flex-start; }
 .synopsis dd { margin: 0; }
-.check-list { list-style: decimal-leading-zero; padding-left: ${space6}px; display: grid; gap: ${space3}px; }
-.check-list li { padding-left: ${space1}px; }
-.check-list li::marker { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.check-condition { display: block; }
 .compact-check-verification { margin-left: ${space2}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.scope { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.scope > .section-title { grid-column: 1 / -1; }
-.scope-column { padding: ${space4}px ${space2}px ${space5}px; }
-.scope-column { min-width: 0; }
-.scope-column + .scope-column { padding-left: ${space5}px; border-left: 1px solid var(--border); }
-.scope h3 { margin: 0 0 ${space4}px; color: var(--accent); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .section-title { width: 100%; margin: 0 0 ${space4}px; padding-bottom: ${space3}px; border-bottom: 2px solid var(--component-border); color: var(--text); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
@@ -755,21 +754,29 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .behavior-outcomes li + li { margin-top: ${space4}px; padding-top: ${space4}px; border-top: 1px solid var(--border); }
 .outcome-mark { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--accent); border-radius: 50%; color: var(--accent); font-weight: 700; }
 .behavior-outcomes .cancel .outcome-mark { border-color: var(--component-border); color: var(--muted); }
-.agreement-groups > div { padding: ${space4}px ${space2}px 0; }
-.agreement-groups > div + div { margin-top: ${space5}px; padding-top: ${space5}px; border-top: 1px solid var(--border); }
+.intent-groups > .intent-group, .intent-groups > .legacy-intent-group { padding: ${space4}px ${space2}px 0; }
+.intent-groups > .intent-group + .intent-group,
+.intent-groups > .intent-group + .legacy-intent-group,
+.intent-groups > .legacy-intent-group + .legacy-intent-group,
+.intent-groups > .legacy-intent-group + .intent-group { margin-top: ${space5}px; padding-top: ${space5}px; border-top: 1px solid var(--border); }
 .subheading { margin: 0 0 ${space3}px; color: var(--accent); font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .decision-list { list-style: none; padding: 0; }
 .decision-list li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space1}px ${space4}px; padding: ${space2}px 0; border-top: 1px solid var(--border); }
 .decision-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .decision-list li:first-child { border-top: 0; }
+.intent-statement { display: block; min-width: 0; padding-block: ${space2}px; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .decision-disclosure { min-width: 0; }
 .decision-disclosure > summary { min-height: 32px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: ${space2}px; cursor: pointer; list-style: none; }
 .decision-disclosure > summary::-webkit-details-marker { display: none; }
 .decision-disclosure > summary::after { content: "›"; transition: transform 120ms ease; }
 .decision-disclosure[open] > summary::after { transform: rotate(90deg); }
-.decision-list h3 { margin: 0; font-size: inherit; }
 .decision-reason { padding: 0 ${space5}px ${space1}px 0; }
 .decision-number { padding-top: ${space2}px; }
+.exclusion-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: ${space2}px ${space6}px; padding-left: ${space4}px; }
+.intent-verification > summary { min-height: 44px; display: flex; align-items: center; color: var(--muted); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; list-style: none; }
+.intent-verification > summary::-webkit-details-marker { display: none; }
+.intent-verification > summary::after { margin-left: ${space2}px; color: var(--text); content: "›"; transition: transform 120ms ease; }
+.intent-verification[open] > summary::after { transform: rotate(90deg); }
 .section-disclosure { border: 0; }
 .section-disclosure-summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; list-style: none; }
 .section-disclosure-summary::-webkit-details-marker { display: none; }
@@ -835,8 +842,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .document-section + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .document-head h1 { font-size: ${TYPE.pageTitle.narrow.fontSize}px; line-height: ${TYPE.pageTitle.narrow.lineHeight}; }
   .direction-references > summary, .decision-disclosure > summary { min-height: 44px; }
-  .scope { grid-template-columns: 1fr; }
-  .scope-column + .scope-column { padding-left: ${space2}px; border-top: 1px solid var(--border); border-left: 0; }
+  .exclusion-list { grid-template-columns: 1fr; }
   .design-direction-list, .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
   .design-direction { display: block; grid-row: auto; padding-inline: ${space2}px; }
   .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
@@ -952,12 +958,9 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
   const catalog = evidenceCatalog(content);
   const verifications = verificationCatalog(content, dictionary);
   const sections = [
-    { id: "overview", title: label(dictionary, "overview"), include: true, render: (number) => overview(content, dictionary, number, catalog, verifications) },
-    { id: "scope", title: label(dictionary, "scope"), include: true, render: (number) => scopeSection(content, dictionary, number, catalog) },
+    { id: "overview", title: label(dictionary, "overview"), include: true, render: (number) => overview(content, dictionary, number, catalog) },
+    { id: "intent", title: label(dictionary, "decidedIntent"), include: true, render: (number) => intentSection(content, dictionary, number, catalog, verifications) },
     { id: "design-directions", title: label(dictionary, "designDirections"), include: content.designDirections !== undefined, render: (number) => designDirectionsSection(content, dictionary, number, catalog) },
-    { id: "behavior", title: label(dictionary, "behavior"), include: content.behavior !== undefined, render: (number) => behaviorSection(content, dictionary, number, catalog) },
-    { id: "agreement", title: label(dictionary, "agreement"), include: content.decisions.length > 0 || content.openChoices.length > 0, render: (number) => agreementSection(content, dictionary, number, catalog) },
-    { id: "verification", title: label(dictionary, "verification"), include: verifications.entries.length > 0, render: (number) => verificationSection(verifications, dictionary, number) },
     { id: "evidence", title: label(dictionary, "evidence"), include: content.evidence.length > 0, render: (number) => evidenceSection(catalog, dictionary, number) },
   ].filter((section) => section.include).map((section, index) => ({
     ...section,

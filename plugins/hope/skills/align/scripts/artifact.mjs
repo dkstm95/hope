@@ -39,6 +39,10 @@ const contentKeysBySchema = Object.freeze({
     "title", "goal", "problem", "checks", "boundary", "scope",
     "designDirections", "behavior", "decisions", "openChoices", "evidence",
   ]),
+  3: Object.freeze([
+    "title", "goal", "problem", "intent", "exclusions",
+    "designDirections", "flow", "evidence",
+  ]),
 });
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -152,6 +156,39 @@ function assertNoExactInputDuplicates(content) {
     "$.evidence",
     (item) => JSON.stringify([item.label, item.location]),
   );
+  if (content.schemaVersion === 3) {
+    assertUniqueSiblings(
+      content.intent,
+      "$.intent",
+      (item) => JSON.stringify([
+        citedTextIdentity(item.statement),
+        item.verify,
+        item.by,
+        item.reason === undefined ? null : citedTextIdentity(item.reason),
+      ]),
+    );
+    assertUniqueSiblings(content.exclusions, "$.exclusions", citedTextIdentity);
+    if (content.flow !== undefined) {
+      assertUniqueSiblings(
+        content.flow.steps,
+        "$.flow.steps",
+        (item) => JSON.stringify([
+          citedTextIdentity(item.title),
+          item.detail === undefined ? null : citedTextIdentity(item.detail),
+        ]),
+      );
+      assertUniqueSiblings(
+        content.flow.outcomes,
+        "$.flow.outcomes",
+        (item) => JSON.stringify([
+          citedTextIdentity(item.title),
+          item.detail === undefined ? null : citedTextIdentity(item.detail),
+          item.kind ?? null,
+        ]),
+      );
+    }
+    return;
+  }
   assertUniqueSiblings(
     content.checks,
     "$.checks",
@@ -196,6 +233,29 @@ function assertNoExactInputDuplicates(content) {
     ]),
   );
   assertUniqueSiblings(content.openChoices, "$.openChoices", citedTextIdentity);
+}
+
+function intentItems(value, path, maximumItems = 12) {
+  if (!Array.isArray(value)) throw new TypeError(`${path} must be an array`);
+  if (value.length === 0 || value.length > maximumItems) {
+    throw new TypeError(`${path} must contain between 1 and ${maximumItems} items`);
+  }
+  return value.map((item, index) => {
+    const itemPath = `${path}[${index}]`;
+    if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
+    assertKeys(item, ["statement", "verify", "by", "reason"], itemPath);
+    if (!["agent", "human"].includes(item.by)) {
+      throw new TypeError(`${itemPath}.by must be agent or human`);
+    }
+    return Object.freeze({
+      statement: citedText(item.statement, `${itemPath}.statement`),
+      verify: text(item.verify, `${itemPath}.verify`),
+      by: item.by,
+      ...(item.reason === undefined
+        ? {}
+        : { reason: citedText(item.reason, `${itemPath}.reason`) }),
+    });
+  });
 }
 
 function checkItems(value, path, maximumItems = 12) {
@@ -512,8 +572,18 @@ function assertDesignReferenceEvidence(
 
 export function validateAlignInput(value, defaults = {}) {
   if (!isRecord(value)) throw new TypeError("Align input must be an object");
+  if (value.schemaVersion !== 3) {
+    throw new TypeError(
+      "$.schemaVersion must be 3; migrate v2 input before creating or revising an artifact",
+    );
+  }
+  return validateAlignInputV3(value, defaults);
+}
+
+function validateAlignInputV2(value) {
+  if (!isRecord(value)) throw new TypeError("Align v2 input must be an object");
   if (value.schemaVersion !== 2) {
-    throw new TypeError("$.schemaVersion must be 2");
+    throw new TypeError("$.schemaVersion must be 2 for input migration");
   }
   const allowed = [
     "schemaVersion",
@@ -524,8 +594,8 @@ export function validateAlignInput(value, defaults = {}) {
   ];
   assertKeys(value, allowed, "$");
 
-  const locale = value.locale ?? defaults.locale ?? "en-US";
-  const theme = value.theme ?? defaults.theme ?? "system";
+  const locale = value.locale ?? "en-US";
+  const theme = value.theme ?? "system";
   if (!["en-US", "ko-KR"].includes(locale)) {
     throw new TypeError("$.locale must be en-US or ko-KR");
   }
@@ -578,6 +648,101 @@ export function validateAlignInput(value, defaults = {}) {
     behavior: content.behavior,
     decisions: content.decisions,
     openChoices: content.openChoices,
+  }, evidence, "$");
+  assertNoExactInputDuplicates(content);
+  return Object.freeze(content);
+}
+
+export function migrateAlignInputV2(value) {
+  const input = validateAlignInputV2(value);
+  const draft = Object.freeze({
+    schemaVersion: 3,
+    locale: input.locale,
+    theme: input.theme,
+    title: input.title,
+    goal: input.goal,
+    problem: input.problem,
+    intent: Object.freeze(input.checks.map((item) => Object.freeze({
+      statement: item.condition,
+      verify: item.verify,
+      by: item.by,
+    }))),
+    exclusions: input.scope.excluded,
+    ...(input.designDirections === undefined
+      ? {}
+      : { designDirections: input.designDirections }),
+    ...(input.behavior === undefined ? {} : { flow: input.behavior }),
+    evidence: input.evidence,
+    revisionSummary: input.revisionSummary,
+  });
+  return Object.freeze({
+    inputSchemaVersion: 2,
+    targetSchemaVersion: 3,
+    ready: false,
+    draft,
+    review: Object.freeze({
+      boundary: input.boundary,
+      included: input.scope.included,
+      decisions: input.decisions,
+      openChoices: input.openChoices,
+    }),
+  });
+}
+
+function validateAlignInputV3(value, defaults = {}) {
+  const allowed = [
+    "schemaVersion",
+    "locale",
+    "theme",
+    ...contentKeysBySchema[3],
+    "revisionSummary",
+  ];
+  assertKeys(value, allowed, "$");
+
+  const locale = value.locale ?? defaults.locale ?? "en-US";
+  const theme = value.theme ?? defaults.theme ?? "system";
+  if (!["en-US", "ko-KR"].includes(locale)) {
+    throw new TypeError("$.locale must be en-US or ko-KR");
+  }
+  if (!["system", "light", "dark"].includes(theme)) {
+    throw new TypeError("$.theme must be system, light, or dark");
+  }
+  const evidence = evidenceItems(value.evidence, "$.evidence");
+  const validatedDesignDirections = value.designDirections === undefined
+    ? undefined
+    : designDirections(value.designDirections, "$.designDirections", {
+      imageField: "imagePath",
+      validateImage: (imagePath, path) => {
+        const normalized = text(imagePath, path);
+        if (!isAbsolute(normalized)) throw new TypeError(`${path} must be an absolute path`);
+        return normalized;
+      },
+    });
+  const intent = intentItems(value.intent, "$.intent");
+  const flow = behaviorValue(value.flow, "$.flow", { cited: true });
+  const content = {
+    schemaVersion: 3,
+    locale,
+    theme,
+    title: text(value.title, "$.title", 160),
+    goal: citedText(value.goal, "$.goal"),
+    problem: citedText(value.problem, "$.problem"),
+    intent: Object.freeze(intent),
+    exclusions: Object.freeze(citedTextList(value.exclusions, "$.exclusions")),
+    ...(validatedDesignDirections === undefined
+      ? {}
+      : { designDirections: validatedDesignDirections }),
+    ...(flow === undefined ? {} : { flow }),
+    evidence,
+    revisionSummary: text(value.revisionSummary, "$.revisionSummary"),
+  };
+  assertDesignReferenceEvidence(validatedDesignDirections, evidence, "$.designDirections");
+  assertCitations({
+    goal: content.goal,
+    problem: content.problem,
+    intent: content.intent,
+    exclusions: content.exclusions,
+    flow: content.flow,
   }, evidence, "$");
   assertNoExactInputDuplicates(content);
   return Object.freeze(content);
@@ -790,14 +955,21 @@ async function hydrateDesignDirections(value) {
   return Object.freeze({ ...value, options: Object.freeze(options) });
 }
 
-export async function readAlignInput(path, defaults) {
+async function readInputJson(path) {
   const { bytes } = await readStableFile(path, INPUT_MAXIMUM_BYTES, "Align input");
-  let value;
   try {
-    value = JSON.parse(bytes.toString("utf8"));
+    return JSON.parse(bytes.toString("utf8"));
   } catch (error) {
     throw new Error("Align input is not valid JSON", { cause: error });
   }
+}
+
+export async function migrateAlignInputFile(path) {
+  return migrateAlignInputV2(await readInputJson(path));
+}
+
+export async function readAlignInput(path, defaults) {
+  const value = await readInputJson(path);
   const input = validateAlignInput(value, defaults);
   const hydratedDirections = await hydrateDesignDirections(input.designDirections);
   return hydratedDirections === undefined
@@ -899,26 +1071,33 @@ function validateArtifactData(value) {
       throw new Error("Align artifact revision history is invalid");
     }
     const contentPath = `$.revisions[${index}].content`;
-    const hasLegacyGoal = revision.content.intent !== undefined
+    const hasLegacyGoal = typeof revision.content.intent === "string"
       || revision.content.success !== undefined;
-    const hasCurrentGoal = revision.content.goal !== undefined
-      || revision.content.checks !== undefined;
-    if (hasLegacyGoal === hasCurrentGoal) {
-      throw new Error("Align artifact goal contract is invalid");
+    const hasCurrentGoal = revision.content.checks !== undefined;
+    const hasCanonicalIntent = Array.isArray(revision.content.intent)
+      || revision.content.exclusions !== undefined
+      || revision.content.flow !== undefined;
+    if ([hasLegacyGoal, hasCurrentGoal, hasCanonicalIntent].filter(Boolean).length !== 1) {
+      throw new Error("Align artifact intent record is invalid");
     }
-    const contentSchema = hasCurrentGoal ? 2 : 1;
+    const contentSchema = hasCanonicalIntent ? 3 : hasCurrentGoal ? 2 : 1;
     assertKeys(revision.content, contentKeysBySchema[contentSchema], contentPath);
     text(revision.content.title, `${contentPath}.title`, 160);
     const retainedEvidence = evidenceItems(
       revision.content.evidence,
       `${contentPath}.evidence`,
     );
-    if (hasCurrentGoal) {
+    if (hasCurrentGoal || hasCanonicalIntent) {
       citedText(revision.content.problem, `${contentPath}.problem`);
     } else {
       text(revision.content.problem, `${contentPath}.problem`);
     }
-    if (hasCurrentGoal) {
+    if (hasCanonicalIntent) {
+      citedText(revision.content.goal, `${contentPath}.goal`);
+      intentItems(revision.content.intent, `${contentPath}.intent`);
+      citedTextList(revision.content.exclusions, `${contentPath}.exclusions`);
+      behaviorValue(revision.content.flow, `${contentPath}.flow`, { cited: true });
+    } else if (hasCurrentGoal) {
       citedText(revision.content.goal, `${contentPath}.goal`);
       checkItems(revision.content.checks, `${contentPath}.checks`);
     } else {
@@ -926,18 +1105,28 @@ function validateArtifactData(value) {
       const success = textList(revision.content.success, `${contentPath}.success`, 12);
       if (success.length === 0) throw new Error("Align artifact success list is empty");
     }
-    if (hasCurrentGoal) {
+    if (hasCanonicalIntent) {
+      assertCitations({
+        goal: revision.content.goal,
+        problem: revision.content.problem,
+        intent: revision.content.intent,
+        exclusions: revision.content.exclusions,
+        flow: revision.content.flow,
+      }, retainedEvidence, contentPath);
+    } else if (hasCurrentGoal) {
       citedText(revision.content.boundary, `${contentPath}.boundary`);
-    } else {
+    } else if (hasLegacyGoal) {
       text(revision.content.boundary, `${contentPath}.boundary`);
     }
-    scopeValue(revision.content.scope, `${contentPath}.scope`, { cited: hasCurrentGoal });
-    behaviorValue(revision.content.behavior, `${contentPath}.behavior`, {
-      cited: hasCurrentGoal,
-    });
-    decisionItems(revision.content.decisions, `${contentPath}.decisions`, {
-      cited: hasCurrentGoal,
-    });
+    if (!hasCanonicalIntent) {
+      scopeValue(revision.content.scope, `${contentPath}.scope`, { cited: hasCurrentGoal });
+      behaviorValue(revision.content.behavior, `${contentPath}.behavior`, {
+        cited: hasCurrentGoal,
+      });
+      decisionItems(revision.content.decisions, `${contentPath}.decisions`, {
+        cited: hasCurrentGoal,
+      });
+    }
     if (hasCurrentGoal) {
       citedTextList(revision.content.openChoices, `${contentPath}.openChoices`);
       assertCitations({
@@ -950,7 +1139,7 @@ function validateArtifactData(value) {
         decisions: revision.content.decisions,
         openChoices: revision.content.openChoices,
       }, retainedEvidence, contentPath);
-    } else {
+    } else if (hasLegacyGoal) {
       textList(revision.content.openChoices, `${contentPath}.openChoices`);
     }
     if (revision.content.designDirections !== undefined) {

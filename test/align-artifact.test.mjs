@@ -19,6 +19,7 @@ import { deflateSync } from "node:zlib";
 import {
   createAlignArtifact,
   inspectAlignArtifact,
+  migrateAlignInputV2,
   reviseAlignArtifact,
   validateAlignInput,
   verifyAlignHtml,
@@ -27,6 +28,7 @@ import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render
 import {
   makeAlignInput,
   makeDesignDirections,
+  makeLegacyAlignInputV2,
   writeLegacyAlignArtifact,
 } from "../test-support/align-fixture.mjs";
 import {
@@ -110,14 +112,13 @@ async function inputFile(root, name, value) {
 
 test("Align input keeps optional detail conditional and rejects unknown fields", () => {
   const minimal = makeAlignInput({
-    behavior: undefined,
-    decisions: [],
+    flow: undefined,
     evidence: undefined,
-    openChoices: [],
+    exclusions: [],
   });
   const value = validateAlignInput(minimal);
-  assert.equal(value.behavior, undefined);
-  assert.deepEqual(value.decisions, []);
+  assert.equal(value.flow, undefined);
+  assert.deepEqual(value.exclusions, []);
   assert.deepEqual(value.evidence, []);
 
   assert.throws(
@@ -125,41 +126,29 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
     /unsupported field: progress/u,
   );
   assert.throws(
-    () => validateAlignInput({ ...makeAlignInput(), checks: [] }),
+    () => validateAlignInput({ ...makeAlignInput(), intent: [] }),
     /must contain between 1 and 12 items/u,
   );
   assert.throws(
     () => validateAlignInput(makeAlignInput({
-      checks: [{ condition: "완료", by: "agent" }],
+      intent: [{ statement: "완료", by: "agent" }],
     })),
     /verify must be text/u,
   );
   assert.throws(
     () => validateAlignInput(makeAlignInput({
-      checks: [{ condition: "완료", verify: "테스트한다.", by: "model" }],
+      intent: [{ statement: "완료", verify: "테스트한다.", by: "model" }],
     })),
     /by must be agent or human/u,
   );
-  const current = makeAlignInput();
-  const {
-    goal,
-    checks,
-    schemaVersion: _schemaVersion,
-    ...legacyShared
-  } = current;
   assert.throws(
-    () => validateAlignInput({
-      ...legacyShared,
-      schemaVersion: 1,
-      intent: goal,
-      success: checks.map((check) => check.condition),
-    }),
-    /schemaVersion must be 2/u,
+    () => validateAlignInput(makeLegacyAlignInputV2()),
+    /schemaVersion must be 3; migrate v2 input/u,
   );
   assert.throws(
     () => validateAlignInput(makeAlignInput({
-      behavior: {
-        ...makeAlignInput().behavior,
+      flow: {
+        ...makeAlignInput().flow,
         outcomes: [{ title: "보류", kind: "unknown" }],
       },
     })),
@@ -184,6 +173,79 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
     () => validateAlignInput(makeAlignInput({ title: "broken\ud800" })),
     /malformed Unicode/u,
   );
+});
+
+test("Align accepts only the canonical v3 intent model", () => {
+  const current = validateAlignInput(makeAlignInput());
+  assert.equal(current.schemaVersion, 3);
+  assert.equal(current.intent.length, 3);
+  assert.equal(current.intent[0].reason, "중단된 작업을 처음부터 반복하지 않고도 데이터 손실을 피해야 한다.");
+  assert.equal(current.flow.steps.length, 3);
+  assert.equal(current.exclusions.length, 3);
+
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({ intent: [] })),
+    /\$\.intent must contain between 1 and 12 items/u,
+  );
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({ scope: { included: [], excluded: [] } })),
+    /unsupported field: scope/u,
+  );
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      intent: [
+        makeAlignInput().intent[0],
+        structuredClone(makeAlignInput().intent[0]),
+      ],
+    })),
+    /\$\.intent\[1\] duplicates \$\.intent\[0\]/u,
+  );
+});
+
+test("Align migrates v2 input only through an explicit review result", () => {
+  const legacy = makeLegacyAlignInputV2();
+  const migration = migrateAlignInputV2(legacy);
+
+  assert.equal(migration.inputSchemaVersion, 2);
+  assert.equal(migration.targetSchemaVersion, 3);
+  assert.equal(migration.ready, false);
+  assert.deepEqual(
+    migration.draft.intent,
+    legacy.checks.map(({ condition, verify, by }) => ({ statement: condition, verify, by })),
+  );
+  assert.deepEqual(migration.draft.exclusions, legacy.scope.excluded);
+  assert.deepEqual(migration.draft.flow, legacy.behavior);
+  assert.deepEqual(migration.review, {
+    boundary: legacy.boundary,
+    included: legacy.scope.included,
+    decisions: legacy.decisions,
+    openChoices: legacy.openChoices,
+  });
+  assert.equal(validateAlignInput(migration.draft).schemaVersion, 3);
+});
+
+test("create and revise reject direct v2 input", async () => {
+  const root = await repository();
+  const legacyInput = await inputFile(root, "legacy-v2.json", makeLegacyAlignInputV2());
+  const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
+
+  await assert.rejects(
+    createAlignArtifact({ inputPath: legacyInput, outputPath, root }),
+    /schemaVersion must be 3; migrate v2 input/u,
+  );
+
+  const currentInput = await inputFile(root, "current-v3.json", makeAlignInput());
+  const created = await createAlignArtifact({ inputPath: currentInput, outputPath, root });
+  await assert.rejects(
+    reviseAlignArtifact({
+      artifactPath: outputPath,
+      expectedDigest: created.digest,
+      inputPath: legacyInput,
+      root,
+    }),
+    /schemaVersion must be 3; migrate v2 input/u,
+  );
+  assert.equal((await inspectAlignArtifact(outputPath)).revision, 1);
 });
 
 test("Align input binds cited claims to unique evidence ids", () => {
@@ -234,30 +296,23 @@ test("Align input rejects exact evidence and sibling-item duplicates", () => {
         { id: "first", label: "첫 근거", location: "docs/first.md" },
         { id: "second", label: "둘째 근거", location: "docs/second.md" },
       ],
-      scope: {
-        included: [
-          { text: "같은 범위", evidenceIds: ["first", "second"] },
-          { text: "같은 범위", evidenceIds: ["second", "first"] },
-        ],
-        excluded: [],
-      },
+      exclusions: [
+        { text: "같은 제외", evidenceIds: ["first", "second"] },
+        { text: "같은 제외", evidenceIds: ["second", "first"] },
+      ],
     })),
-    /\$\.scope\.included\[1\] duplicates \$\.scope\.included\[0\]/u,
+    /\$\.exclusions\[1\] duplicates \$\.exclusions\[0\]/u,
   );
 
   const duplicateCases = [
-    ["$.checks", (input) => input.checks.push(structuredClone(input.checks[0]))],
-    ["$.scope.excluded", (input) => input.scope.excluded.push(input.scope.excluded[0])],
-    ["$.behavior.steps", (input) => input.behavior.steps.push(
-      structuredClone(input.behavior.steps[0]),
+    ["$.intent", (input) => input.intent.push(structuredClone(input.intent[0]))],
+    ["$.exclusions", (input) => input.exclusions.push(input.exclusions[0])],
+    ["$.flow.steps", (input) => input.flow.steps.push(
+      structuredClone(input.flow.steps[0]),
     )],
-    ["$.behavior.outcomes", (input) => input.behavior.outcomes.push(
-      structuredClone(input.behavior.outcomes[0]),
+    ["$.flow.outcomes", (input) => input.flow.outcomes.push(
+      structuredClone(input.flow.outcomes[0]),
     )],
-    ["$.decisions", (input) => input.decisions.push(
-      structuredClone(input.decisions[0]),
-    )],
-    ["$.openChoices", (input) => input.openChoices.push(input.openChoices[0])],
   ];
   for (const [path, duplicate] of duplicateCases) {
     const input = makeAlignInput();
@@ -591,20 +646,23 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="19"/u);
+  assert.match(first, /name="hope-align-design-version" content="22"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
   );
-  assert.match(first, /v1 · 현재 합의/u);
+  assert.match(first, /v1 · 현재 의도/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
   assert.match(first, /aria-label="다크 모드로 전환"/u);
   assert.match(first, /class="outcome-mark" aria-hidden="true">×</u);
-  assert.match(first, />판정 결과</u);
-  assert.match(first, /<ol class="decision-list">/u);
-  assert.match(first, /<details class="decision-disclosure">/u);
-  assert.match(first, />결정 사항</u);
+  assert.match(first, />기대 결과</u);
+  assert.match(first, /<ol class="decision-list intent-list">/u);
+  assert.match(first, /<details class="decision-disclosure intent-reason">/u);
+  assert.match(
+    first,
+    /id="intent-title"><span class="section-number">\d{2}<\/span><span>결정된 의도<\/span><\/h2>/u,
+  );
   assert.doesNotMatch(first, /id="intent-history"/u);
   assert.doesNotMatch(first, /id="goal-history"/u);
   assert.match(first, />목표</u);
@@ -618,27 +676,21 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
     /<header class="document-head">\s*<h1 id="artifact-title">[\s\S]*?<\/h1>\s*<\/header><section class="overview document-section" id="overview" aria-labelledby="overview-title">\s*<h2 class="section-title" id="overview-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u,
   );
   assert.doesNotMatch(first, /artifact-title-line/u);
-  assert.match(
-    first,
-    /<dt><span class="summary-label-stacked"><span>완료<\/span> <span>기준<\/span><\/span><\/dt>/u,
-  );
-  assert.match(first, />확정 사항</u);
-  assert.match(first, />구현 시 결정 사항</u);
-  assert.match(first, />AI 에이전트 확인</u);
-  assert.match(first, />사용자 확인</u);
-  assert.match(first, /<ol class="check-list">/u);
-  assert.match(first, /<span class="check-condition">/u);
+  assert.match(first, />결정된 의도</u);
+  assert.doesNotMatch(first, />미결정 의도</u);
+  assert.match(first, />AI 판단 가능</u);
+  assert.match(first, />사용자 판단</u);
+  assert.match(first, /<span class="intent-statement">/u);
   assert.match(first, /class="reference-marker evidence-marker" href="#evidence-upload-service"/u);
   assert.match(first, /<ol class="evidence-list"><li id="evidence-upload-service" data-evidence-entry>/u);
   assert.match(first, /id="reference-popover" popover="auto" role="dialog"/u);
   assert.match(first, /class="reference-marker verification-marker"[^>]*>\[AI\]<\/a>/u);
   assert.match(first, /class="reference-marker verification-marker"[^>]*>\[유저\]<\/a>/u);
-  assert.match(first, /<details class="body-section document-section section-disclosure" id="verification">/u);
+  assert.match(first, /<details class="intent-group section-disclosure intent-verification" id="verification">/u);
   assert.doesNotMatch(first, /<details class="check-verification">/u);
   assert.match(first, /<details class="body-section document-section section-disclosure" id="evidence">/u);
-  assert.doesNotMatch(first, /<ul class="check-list">/u);
-  assert.doesNotMatch(first, /<ol class="check-list"><li><strong>/u);
-  assert.match(first, /list-style: decimal-leading-zero/u);
+  assert.doesNotMatch(first, /class="check-list"/u);
+  assert.doesNotMatch(first, /list-style: decimal-leading-zero/u);
   assert.match(first, /prefers-color-scheme: dark/u);
   assert.match(first, /@media print/u);
   assert.match(first, /Content-Security-Policy/u);
@@ -660,12 +712,12 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   const main = first.match(/<main class="main"[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
   assert.deepEqual(
     [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
-    ["01", "02", "03", "04", "05", "06"],
+    ["01", "02", "03"],
   );
   const toc = first.match(/<nav class="toc"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
   assert.deepEqual(
     [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
-    ["01", "02", "03", "04", "05", "06"],
+    ["01", "02", "03"],
   );
 
   const withAlternateLocale = renderAlignArtifact(data, {
@@ -725,10 +777,9 @@ test("evidence marker groups follow document number order", () => {
 
 test("renderer omits empty optional sections instead of filling the screen", () => {
   const input = validateAlignInput(makeAlignInput({
-    behavior: undefined,
-    decisions: [],
+    exclusions: [],
+    flow: undefined,
     evidence: undefined,
-    openChoices: [],
   }));
   const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
   const data = {
@@ -746,36 +797,11 @@ test("renderer omits empty optional sections instead of filling the screen", () 
     }],
   };
   const html = renderAlignArtifact(data, { digest: "0".repeat(64) });
-  assert.doesNotMatch(html, /id="behavior"|id="agreement"|id="evidence"/u);
+  assert.doesNotMatch(html, /id="flow"|id="evidence"/u);
+  assert.match(html, /id="intent"/u);
   assert.match(html, /id="verification"/u);
-  assert.match(html, /class="toc"/u);
-
-  const decisionInput = validateAlignInput(makeAlignInput({
-    behavior: undefined,
-    evidence: undefined,
-    openChoices: [],
-  }));
-  const {
-    revisionSummary: decisionSummary,
-    locale: decisionLocale,
-    theme: decisionTheme,
-    schemaVersion: _decisionSchemaVersion,
-    ...decisionContent
-  } = decisionInput;
-  const decisionHtml = renderAlignArtifact({
-    ...data,
-    locale: decisionLocale,
-    theme: decisionTheme,
-    revisions: [{
-      number: 1,
-      agreedAt: now.toISOString(),
-      summary: decisionSummary,
-      content: decisionContent,
-    }],
-  }, { digest: "0".repeat(64) });
-  assert.match(decisionHtml, /class="agreement-groups"/u);
-  assert.doesNotMatch(decisionHtml, /agreement-grid/u);
-  assert.doesNotMatch(decisionHtml, />구현 시 결정 사항</u);
+  assert.doesNotMatch(html, /class="toc"/u);
+  assert.doesNotMatch(html, />미결정 의도</u);
 });
 
 test("create publishes one owned project artifact without replacing a path", async () => {
@@ -796,6 +822,8 @@ test("create publishes one owned project artifact without replacing a path", asy
   const inspected = await inspectAlignArtifact(outputPath);
   assert.equal(inspected.digest, result.digest);
   assert.equal(inspected.content.title, "실패한 업로드 복구");
+  assert.equal(inspected.content.intent.length, 3);
+  assert.equal(inspected.content.exclusions.length, 3);
   assert.deepEqual(inspected.history, [{
     agreedAt: now.toISOString(),
     number: 1,
@@ -809,14 +837,14 @@ test("create publishes one owned project artifact without replacing a path", asy
   assert.equal(await readFile(outputPath, "utf8"), html);
 });
 
-test("revise appends a current goal contract to a legacy artifact", async () => {
+test("revise appends a current intent record to a legacy artifact", async () => {
   const root = await repository();
   const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
   const created = await writeLegacyAlignArtifact({
     artifactPath: outputPath,
     content: {
       behavior: {
-        ...makeAlignInput().behavior,
+        ...makeLegacyAlignInputV2().behavior,
         outcomes: [{
           title: "이전 결과 전용",
           detail: "이전 버전에서만 합의한 결과다.",
@@ -829,14 +857,17 @@ test("revise appends a current goal contract to a legacy artifact", async () => 
   const legacy = await inspectAlignArtifact(outputPath);
   assert.equal(legacy.digest, created.digest);
   assert.equal(legacy.revision, 1);
-  assert.equal(legacy.content.intent, makeAlignInput().goal);
+  assert.equal(legacy.content.intent, makeLegacyAlignInputV2().goal);
   assert.deepEqual(
     legacy.content.success,
-    makeAlignInput().checks.map((check) => check.condition),
+    makeLegacyAlignInputV2().checks.map((check) => check.condition),
   );
   const revisedAt = new Date("2026-08-15T00:00:00.000Z");
   const secondInput = await inputFile(root, "second.json", makeAlignInput({
-    boundary: "복구 기간은 24시간이며 만료된 항목은 복구하지 않는다.",
+    exclusions: [
+      ...makeAlignInput().exclusions,
+      "복구 기간이 24시간을 지난 항목",
+    ],
     revisionSummary: "복구 기간과 경계를 명확히 함",
   }));
   const revised = await reviseAlignArtifact(
@@ -856,14 +887,11 @@ test("revise appends a current goal contract to a legacy artifact", async () => 
   const inspected = await inspectAlignArtifact(outputPath);
   assert.equal(inspected.revision, 2);
   assert.equal(inspected.content.goal, makeAlignInput().goal);
-  assert.deepEqual(inspected.content.checks, makeAlignInput().checks);
-  assert.equal(
-    inspected.content.boundary,
-    "복구 기간은 24시간이며 만료된 항목은 복구하지 않는다.",
-  );
+  assert.deepEqual(inspected.content.intent, makeAlignInput().intent);
+  assert.match(inspected.content.exclusions.at(-1), /24시간/u);
   assert.equal(inspected.history.length, 2);
   const html = await readFile(outputPath, "utf8");
-  assert.match(html, /v2 · 현재 합의/u);
+  assert.match(html, /v2 · 현재 의도/u);
   assert.match(html, /<strong>v1<\/strong>/u);
   assert.equal((html.match(/<p><bdi dir="auto">최초 합의<\/bdi><\/p>/gu) ?? []).length, 2);
   assert.match(html, /id="revision-1"/u);
@@ -873,7 +901,7 @@ test("revise appends a current goal contract to a legacy artifact", async () => 
   assert.match(html, /이전 근거 전용/u);
   assert.match(html, /docs\/previous\.md/u);
   assert.match(html, /중단 지점부터 이어서 완료할 수 있다/u);
-  assert.match(html, /재개 요청의 시작 위치/u);
+  assert.match(html, /원본과 같은 파일을 받을 수 있는지/u);
 
   await assert.rejects(
     reviseAlignArtifact({
@@ -910,15 +938,15 @@ test("inspect rejects resealed artifacts with invalid revision content", async (
   await createAlignArtifact({ inputPath, outputPath, root });
   const original = await readFile(outputPath, "utf8");
   const invalidChanges = [
-    (data) => { data.revisions[0].content.scope.included = "not a list"; },
+    (data) => { data.revisions[0].content.exclusions = "not a list"; },
     (data) => { data.revisions[0].content.progress = 50; },
-    (data) => { delete data.revisions[0].content.checks; },
+    (data) => { delete data.revisions[0].content.intent; },
     (data) => { data.revisions[0].content.intent = data.revisions[0].content.goal; },
   ];
 
   for (const change of invalidChanges) {
     await writeFile(outputPath, resealAlignArtifact(original, change), "utf8");
-    await assert.rejects(inspectAlignArtifact(outputPath), /content|goal contract/u);
+    await assert.rejects(inspectAlignArtifact(outputPath), /content|intent record/u);
   }
 });
 
@@ -926,22 +954,16 @@ test("revision rejects an artifact that would exceed the readable size", async (
   const root = await repository();
   const prose = "x".repeat(3_980);
   const largeInput = makeAlignInput({
-    behavior: undefined,
-    decisions: [],
+    flow: undefined,
     evidence: undefined,
     goal: prose,
     problem: prose,
-    checks: Array.from({ length: 4 }, (_, index) => ({
-      condition: `${prose} condition ${index}`,
+    intent: Array.from({ length: 4 }, (_, index) => ({
+      statement: `${prose} condition ${index}`,
       verify: `${prose} verify ${index}`,
       by: "agent",
     })),
-    boundary: prose,
-    scope: {
-      included: Array.from({ length: 25 }, (_, index) => `${prose} included ${index}`),
-      excluded: Array.from({ length: 25 }, (_, index) => `${prose} excluded ${index}`),
-    },
-    openChoices: [],
+    exclusions: Array.from({ length: 25 }, (_, index) => `${prose} excluded ${index}`),
   });
   const inputPath = await inputFile(root, "large.json", largeInput);
   const outputPath = join(root, "docs", "alignments", "large.html");

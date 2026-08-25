@@ -41,20 +41,20 @@ export function makeAlignArtifactData(locale, images) {
       "Broadcasts, performances, releases, votes, and applications use different dates and sources. Fans can miss a deadline or act on stale information while moving between them.",
       "방송, 공연, 발매, 투표, 신청은 날짜와 출처가 서로 다르다. 팬이 여러 곳을 오가는 동안 마감을 놓치거나 오래된 정보로 행동할 수 있다.",
     ),
-    checks: [
+    intent: [
       {
-        condition: local(
+        statement: local(
           "Desktop shows the monthly schedule beside the selected date, while mobile presents the same events in date order.",
           "데스크톱은 월간 일정과 선택한 날짜를 함께 보여 주고, 모바일은 같은 일정을 날짜순으로 보여 준다.",
         ),
         verify: local(
-          "Compare event order, selected-date details, and missing information at 1440px and 390px in a browser.",
-          "브라우저의 1440px와 390px 화면에서 일정 순서, 선택 날짜 상세, 정보 누락을 비교한다.",
+          "Compare event order, selected-date details, and missing information in the wide and narrow experiences.",
+          "넓은 화면과 좁은 화면에서 일정 순서, 선택 날짜 상세, 정보 누락을 비교한다.",
         ),
         by: "agent",
       },
       {
-        condition: {
+        statement: {
           text: local(
             "Every event shows its KST time, primary source, last checked time, and a direct action link when action is required.",
             "각 일정은 KST 시각, 우선 출처, 마지막 확인 시각을 보여 주고 행동이 필요하면 원본 링크를 제공한다.",
@@ -62,24 +62,61 @@ export function makeAlignArtifactData(locale, images) {
           evidenceIds: ["rescene-go", "mnet-plus", "blip-event"],
         },
         verify: local(
-          "Check representative event details and reject fixtures that omit a required time or source.",
-          "대표 일정 상세를 확인하고 필수 시각이나 출처가 없는 입력이 거부되는지 테스트한다.",
+          "Review representative event details and confirm that each required time and source is visible.",
+          "대표 일정 상세에서 필요한 시각과 출처가 모두 보이는지 확인한다.",
         ),
         by: "agent",
+        reason: local(
+          "Fans need enough source context to judge whether an action is still safe.",
+          "팬이 행동이 여전히 안전한지 판단하려면 충분한 출처 맥락이 필요하다.",
+        ),
       },
       {
-        condition: local(
+        statement: local(
           "Source conflicts, schedule changes, and cancellations remain visible until an authoritative source resolves them.",
           "출처 충돌, 일정 변경, 취소는 권위 있는 출처가 해소할 때까지 화면에 남는다.",
         ),
         verify: local(
-          "Load conflict, change, and cancellation fixtures and compare the shown state, source order, and available actions.",
-          "충돌, 변경, 취소 예시를 불러와 표시 상태, 출처 순서, 가능한 행동을 비교한다.",
+          "Review conflict, change, and cancellation examples and compare the visible state, source order, and available actions.",
+          "충돌, 변경, 취소 예시에서 표시 상태, 출처 순서, 가능한 행동을 비교한다.",
+        ),
+        by: "agent",
+        reason: local(
+          "Visible uncertainty is safer than presenting one disputed value as final.",
+          "충돌을 보이는 편이 하나의 불확실한 값을 확정 정보로 제시하는 것보다 안전하다.",
+        ),
+      },
+      {
+        statement: {
+          text: local(
+            "Official organizers and artists have highest source priority, and action links require a recent check.",
+            "공식 주최사와 아티스트를 가장 높은 출처로 두고, 최근 확인한 행동 링크만 제공한다.",
+          ),
+          evidenceIds: ["mnet-plus"],
+        },
+        verify: local(
+          "Compare representative conflicts and action deadlines against the visible source order and last-checked time.",
+          "대표 충돌과 행동 마감을 화면의 출처 순서와 마지막 확인 시각에 대조한다.",
+        ),
+        by: "agent",
+        reason: local(
+          "These sources can confirm changes directly, while voting and application deadlines can change within hours.",
+          "이 출처들은 변경을 직접 확정할 수 있고 투표와 신청 마감은 몇 시간 안에도 바뀔 수 있다.",
+        ),
+      },
+      {
+        statement: local(
+          "The schedule identifies itself as unofficial and sends final participation decisions to the linked official source.",
+          "팬 일정이 비공식 정보임을 밝히고 최종 참여 판단은 연결된 공식 원본에서 하게 한다.",
+        ),
+        verify: local(
+          "Check the schedule notice and every participation action for an explicit official-source destination.",
+          "일정 안내와 각 참여 행동에서 공식 원본 목적지가 명확한지 확인한다.",
         ),
         by: "agent",
       },
       {
-        condition: local(
+        statement: local(
           "The chosen direction fits the existing fan site and makes monthly context and urgent actions easy to distinguish.",
           "선택한 방향이 기존 팬 사이트와 어울리고 월간 맥락과 긴급 행동을 쉽게 구분하게 한다.",
         ),
@@ -90,24 +127,12 @@ export function makeAlignArtifactData(locale, images) {
         by: "human",
       },
     ],
-    boundary: local(
-      "This is an unofficial fan schedule built from public sources. Final participation decisions stay with the linked official source.",
-      "공개 출처를 정리한 비공식 팬 일정이다. 최종 참여 판단은 연결된 공식 원본에서 한다.",
-    ),
-    scope: {
-      included: [
-        local("Broadcast, performance, release, anniversary, vote, and application events", "방송, 공연, 발매, 기념일, 투표, 신청 일정"),
-        local("Monthly desktop view and date-ordered mobile view", "데스크톱 월간 보기와 모바일 날짜순 보기"),
-        local("Source priority, conflicts, changes, cancellations, and freshness", "출처 우선순위, 충돌, 변경, 취소, 최신성"),
-        local("Deadline state and links to official actions", "마감 상태와 공식 행동 링크"),
-      ],
-      excluded: [
-        local("Push, email, or text notifications", "푸시, 이메일, 문자 알림"),
-        local("Personal calendar synchronization", "개인 캘린더 동기화"),
-        local("Voting or applying inside the fan site", "팬 사이트 안에서 직접 투표하거나 신청하는 기능"),
-        local("A guarantee that every official announcement is collected", "모든 공식 공지를 수집한다는 보장"),
-      ],
-    },
+    exclusions: [
+      local("Push, email, or text notifications", "푸시, 이메일, 문자 알림"),
+      local("Personal calendar synchronization", "개인 캘린더 동기화"),
+      local("Voting or applying inside the fan site", "팬 사이트 안에서 직접 투표하거나 신청하는 기능"),
+      local("A guarantee that every official announcement is collected", "모든 공식 공지를 수집한다는 보장"),
+    ],
     designDirections: {
       options: [
         {
@@ -182,7 +207,7 @@ export function makeAlignArtifactData(locale, images) {
         decidedBy: "delegated",
       },
     },
-    behavior: {
+    flow: {
       steps: [
         { title: local("Choose a view", "보기 선택"), detail: local("Choose today, week, or month and filter event types.", "오늘, 주, 월 보기를 고르고 일정 종류를 필터링한다.") },
         { title: local("Compare time and urgency", "시각과 긴급도 비교"), detail: local("Scan the monthly rhythm together with deadlines, changes, and cancellations.", "월간 흐름과 함께 마감, 변경, 취소를 살핀다.") },
@@ -195,13 +220,6 @@ export function makeAlignArtifactData(locale, images) {
         { title: local("Action held", "행동 보류"), detail: local("An unresolved conflict remains visible and blocks an unsafe action.", "해결되지 않은 충돌이 보이고 안전하지 않은 행동을 막는다."), kind: "cancel" },
       ],
     },
-    decisions: [
-      { decision: { text: local("Official organizers and artists have highest priority", "공식 주최사와 아티스트를 가장 높은 출처로 둔다"), evidenceIds: ["mnet-plus"] }, reason: local("They can confirm changes and cancellations directly.", "변경과 취소를 직접 확정할 수 있다.") },
-      { decision: local("Do not hide or merge source conflicts", "출처 충돌을 숨기거나 합치지 않는다"), reason: local("Visible evidence is safer than presenting one uncertain value as final.", "하나의 불확실한 값을 확정 정보로 보여 주는 것보다 근거를 보이는 편이 안전하다.") },
-      { decision: local("Action links require a recent check", "행동 링크에는 최근 확인이 필요하다"), reason: local("Voting and application deadlines can change within hours.", "투표와 신청 마감은 몇 시간 안에도 바뀔 수 있다.") },
-      { decision: local("Keep previous values and cancellation reasons", "이전 값과 취소 근거를 남긴다"), reason: { text: local("Fans can understand why an action they saw earlier is no longer safe.", "팬이 이전에 본 행동이 더는 안전하지 않은 이유를 이해할 수 있다."), evidenceIds: ["rescene-go", "blip-event"] } },
-    ],
-    openChoices: [],
     evidence: [
       { id: "rescene-go", label: "RESCENE go", location: "https://www.rescene.org/schedule" },
       { id: "mnet-plus", label: local("RESCENE official Mnet Plus", "RESCENE 공식 Mnet Plus"), location: "https://artist.mnetplus.world/main/stg/rescene-official/home" },

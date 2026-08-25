@@ -8,7 +8,7 @@ import { dirname } from "node:path";
 import { sealAlignHtml } from "../plugins/hope/skills/align/scripts/artifact.mjs";
 import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render.mjs";
 
-export function makeAlignInput(overrides = {}) {
+export function makeLegacyAlignInputV2(overrides = {}) {
   return {
     schemaVersion: 2,
     locale: "ko-KR",
@@ -19,12 +19,12 @@ export function makeAlignInput(overrides = {}) {
     checks: [
       {
         condition: "중단 지점부터 이어서 완료할 수 있다.",
-        verify: "통합 테스트에서 재개 요청의 시작 위치, 최종 체크섬, 종료 코드를 보고한다.",
+        verify: "중단된 업로드를 다시 열어 이어서 완료한 뒤 원본과 같은 파일을 받을 수 있는지 확인한다.",
         by: "agent",
       },
       {
         condition: "복구를 취소해도 관련 없는 데이터가 바뀌지 않는다.",
-        verify: "통합 테스트에서 취소 전후의 관련 없는 데이터 스냅샷을 비교해 결과를 보고한다.",
+        verify: "복구 취소 전후에 관련 없는 업로드 항목과 파일이 그대로 남는지 비교한다.",
         by: "agent",
       },
       {
@@ -63,17 +63,69 @@ export function makeAlignInput(overrides = {}) {
         reason: "사용자 개입 없이 중단 항목을 감지해 복구 기회를 제공한다.",
       },
       {
-        decision: "서버 측 임시 보관",
-        reason: "안정적인 복구를 위해 제한된 기간 동안 데이터를 보관한다.",
+        decision: "복구 항목은 제한된 기간만 제공",
+        reason: "사용자가 복구 가능 기간을 알고 오래된 항목을 완료된 작업으로 오해하지 않게 한다.",
       },
     ],
     openChoices: [
-      "재시도 정책 및 백오프 전략",
-      "임시 보관 기간과 항목 보존 조건",
-      "알림 방식",
+      "복구 가능 항목을 별도로 알릴지 여부",
+      "복구 항목을 보여 줄 기간",
+      "이어 하기와 취소 중 어느 선택을 먼저 보여 줄지",
     ],
     evidence: [
-      { label: "업로드 서비스", location: "src/upload/recovery.ts" },
+      { label: "업로드 중단 고객 문의", location: "docs/research/upload-interruptions.md" },
+      { label: "제품 요구", location: "https://example.com/requirements" },
+    ],
+    revisionSummary: "최초 합의",
+    ...overrides,
+  };
+}
+
+export function makeAlignInput(overrides = {}) {
+  return {
+    schemaVersion: 3,
+    locale: "ko-KR",
+    theme: "system",
+    title: "실패한 업로드 복구",
+    goal: "중단된 업로드를 감지해 사용자가 데이터 손실 없이 이어서 완료하거나 안전하게 취소할 수 있게 한다.",
+    problem: "업로드 중단 시 파일이 손실되거나 불완전한 상태로 남는다.",
+    intent: [
+      {
+        statement: "중단 지점부터 이어서 완료할 수 있다.",
+        verify: "중단된 업로드를 다시 열어 이어서 완료한 뒤 원본과 같은 파일을 받을 수 있는지 확인한다.",
+        by: "agent",
+        reason: "중단된 작업을 처음부터 반복하지 않고도 데이터 손실을 피해야 한다.",
+      },
+      {
+        statement: "복구를 취소해도 관련 없는 데이터가 바뀌지 않는다.",
+        verify: "복구 취소 전후에 관련 없는 업로드 항목과 파일이 그대로 남는지 비교한다.",
+        by: "agent",
+      },
+      {
+        statement: "복구 취소 결과와 안내를 이해할 수 있다.",
+        verify: "복구 화면에서 취소 결과와 안내가 이해되는지 사용자가 확인한다.",
+        by: "human",
+        reason: "취소가 어떤 임시 데이터에 영향을 주는지 오해하면 안전한 선택을 할 수 없다.",
+      },
+    ],
+    exclusions: [
+      "다른 사용자의 업로드 인계",
+      "서버 보관 기간 만료 항목 복구",
+      "암호화 키 분실 시 복구",
+    ],
+    flow: {
+      steps: [
+        { title: "중단 감지", detail: "업로드 중단을 감지한다." },
+        { title: "복구 항목 유지", detail: "항목과 상태를 목록에 유지한다." },
+        { title: "사용자 선택", detail: "이어 완료하거나 취소한다." },
+      ],
+      outcomes: [
+        { title: "이어 완료", detail: "중단 지점부터 업로드를 완료한다.", kind: "complete" },
+        { title: "안전하게 취소", detail: "임시 데이터를 제거한다.", kind: "cancel" },
+      ],
+    },
+    evidence: [
+      { label: "업로드 중단 고객 문의", location: "docs/research/upload-interruptions.md" },
       { label: "제품 요구", location: "https://example.com/requirements" },
     ],
     revisionSummary: "최초 합의",
@@ -109,7 +161,7 @@ export async function writeLegacyAlignArtifact({
   repository = "acme/storage",
   repositoryIdentity = "remote://github.com/acme/storage",
 }) {
-  const current = makeAlignInput();
+  const current = makeLegacyAlignInputV2();
   const {
     goal,
     checks,

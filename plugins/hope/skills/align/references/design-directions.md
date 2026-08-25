@@ -3,6 +3,10 @@
 Use this guidance when a material UI choice remains open and the person has not
 already supplied an authoritative visual direction.
 
+These directions compare the person-facing experience. They do not preserve
+component structure, frontend architecture, implementation tools, or other
+internal solution design in the Align artifact.
+
 ## Decide whether visuals are needed
 
 Create visual directions for a new screen or component, or for a layout or
