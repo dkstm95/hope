@@ -5,60 +5,33 @@ description: Use as the cross-cutting language standard whenever clearer languag
 
 # Hope Write
 
-Use the active host session to draft, edit, review, or improve language.
+Use the active host session to draft, edit, review, or improve language. Read
+`references/writing-standard.md` before doing the work.
 
-Write may own a standalone language task or accompany implementation and
-another Skill.
+Write may own a standalone language task or accompany another task or Skill.
+When it accompanies other work, preserve that work's scope, authority, process,
+and completion conditions. Apply the standard to its language-bearing parts in
+the same session; do not create a separate Write workflow, result, or worker.
 
-Read [references/writing-standard.md](references/writing-standard.md) before
-doing the work.
+## Choose the language action
 
-When another task or Skill owns the work, keep its scope, authority, process,
-and completion conditions.
-
-Apply Write to its language-bearing parts in the same session.
-
-Do not create a separate Write pass, result, or worker merely to apply the
-standard.
-
-## Choose the language mode
-
-- Use `draft` for new prose.
-- Use `edit` to change existing prose or files.
-- Use `review` to report clarity, meaning, or flow problems without changing
+- `draft` creates new prose.
+- `edit` changes existing prose or files.
+- `review` reports material clarity, meaning, or flow problems without changing
   the target.
 
-Do not ask for a mode when the request already makes the action clear.
+Infer the action when the request already makes it clear. It describes the
+language work, not the surrounding task: implementation, feature changes,
+architecture migrations, and broad restructuring remain ordinary work.
 
-The mode describes the language action, not the surrounding task.
+## Return the requested result
 
-## Preserve the work
+For a draft, lead with the requested text and only its necessary context. For an
+edit, make the authorized change and report the result. For a review, report
+material findings without editing the target.
 
-Keep the person's meaning, facts, uncertainty, citations, exact text, and
-intended voice.
-
-Do not silently narrow, expand, or resolve a material ambiguity.
-
-Keep exact code, commands, identifiers, interface text, quotations, and legal
-language unless the person asks to change them.
-
-Write in the current language unless the person or project asks for another
-one.
-
-For translated or parallel text, first read the target version on its own for
-naturalness, then compare the versions for meaning drift.
-
-## Apply the mode
-
-For a draft, lead with the requested result and use only the context needed to
-support it.
-
-For an edit, change the requested target and report the completed result.
-
-For a review, report material findings without editing files.
+Use the current language unless the person or project chooses another. For
+translated or parallel text, first read the target version for naturalness,
+then compare versions for meaning drift.
 
 Do not copy the writing standard or its checklist into the response.
-
-Initial implementation, feature changes, architecture migrations, and broad
-restructuring remain ordinary work even when they must preserve existing
-behavior.
