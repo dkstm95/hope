@@ -314,7 +314,7 @@ async function captureReadmeAssets(browser, paths, outputDirectory) {
       const { alignPath, diffPath } = paths[suffix];
       await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`));
       await captureElement(page, join(outputDirectory, `hope-align-directions-${suffix}.png`), "#design-directions");
-      await captureElement(page, join(outputDirectory, `hope-align-decisions-${suffix}.png`), "#agreement");
+      await captureElement(page, join(outputDirectory, `hope-align-decisions-${suffix}.png`), "#intent");
 
       await capturePage(page, diffPath, join(outputDirectory, `hope-diff-${suffix}.png`), {
         expectedTopSection: "#synopsis",

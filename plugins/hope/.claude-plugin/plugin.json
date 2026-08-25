@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "hope",
-  "version": "5.0.0",
-  "description": "Adds alignment with a durable HTML brief before implementation, explicit behavior-preserving codebase cleanup, evidence-based review, PR explanations, and clear writing. Requires Node.js 22 or newer.",
+  "version": "5.1.0",
+  "description": "Adds alignment with a durable HTML intent record before implementation, explicit behavior-preserving codebase cleanup, evidence-based review, PR explanations, and clear writing. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"

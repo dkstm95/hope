@@ -52,19 +52,55 @@ Use the same small set of semantic section patterns across Align and Diff:
 - parallel cells only for brief comparisons that must be scanned together;
 - one ordered vertical sequence for behavior or process;
 - visible conclusions with native disclosures for reasons;
-- compact inline markers for evidence and completion verification; and
+- compact inline markers for evidence and judgment methods; and
 - numbered inline evidence references with one folded source list at the end.
 
 When one claim cites several numbered evidence entries, display that marker
 group in ascending document-number order. Keep each source's assigned number
 and the final source-list order unchanged.
 
-Keep these visual roles consistent without making either renderer import the
-other feature.
-
 Keep summary labels compact without changing their wording. In Korean, when a
 summary label consists of two two-syllable words, stack one word per line in
 the label gutter while preserving the space in its text and accessible name.
+
+## Hope artifact layout
+
+Use one linear document at every viewport. Place the unnumbered document title
+first, then start the numbered reading areas with a visible `01 Summary`. Show
+the same number beside each area title and table-of-contents link. Number
+conditional areas in rendered order and leave no gap when one is omitted. Keep
+each section number the same type size and line height as its title.
+
+Give every numbered area a blue section number, text-colored title, and one
+clear divider directly below its title. Do not add a second rule above the
+area. Use 40 pixels between the document title and Summary, then 48 pixels
+between later areas on a wide screen and 40 pixels on a narrow screen. Use the
+smaller steps in this shared spacing scale within an area:
+
+```text
+4 · 8 · 12 · 16 · 24 · 32 · 40 · 48 · 64
+```
+
+On a wide screen, place a compact table-of-contents rail beside the document
+when it improves navigation. On a narrow screen, move the same navigation into
+a bounded panel opened from a control beside the display controls. Preserve the
+reading order and access to every item instead of hiding or squeezing them.
+
+Keep the Hope brand, repository identity, artifact status, and controls in one
+compact product bar. Group the language dropdown and bordered theme button as
+one display control, separate from navigation. Use one gap between the brand,
+repository, status, and action group, and the next smaller gap between controls
+inside the action group. Do not correct an individual item with a one-off
+margin.
+
+Render an ordered behavior or process as one connected vertical sequence. Keep
+each two-digit step number beside its title and put the detail below. Use
+horizontal columns only for direct comparison.
+
+Give the document title enough emphasis to establish the reading path, then
+keep body type compact and readable. Use thin dividers instead of enclosing
+ordinary content in cards. Omit an optional area instead of rendering an empty
+box.
 
 ## Diff artifact direction
 
@@ -109,8 +145,6 @@ comparison.
 Keep internal source IDs, model details, token counts, processing state, and
 capture time out of the first screen.
 
-Do not repeat repository identity in multiple prominent places.
-
 Use four top-level reading areas and omit a conditional area when it adds no
 value:
 
@@ -118,11 +152,6 @@ value:
 2. Behavior change
 3. Review items
 4. Evidence and scope
-
-Place the unnumbered document title first. Start the numbered reading areas
-below it with a visible `01 Summary`. Use the same number beside each area
-title and beside its table-of-contents link. When a conditional area is
-omitted, do not leave a gap.
 
 Summary previews the most important review items. Keep the complete **Review
 items** section in a native disclosure that starts closed; a fragment link to a
@@ -179,37 +208,25 @@ the caption or instruction it supports, not alone at the end of the component.
 Use Evidence and scope as the complete index of the captured snapshot, checked
 files, supporting sources, exclusions, and limits.
 
-This order is informed by research showing that context supplied before a
-passage improves comprehension and recall
+This order follows evidence that context before a passage improves
+comprehension and recall
 ([Bransford and Johnson, 1972](https://doi.org/10.1016/S0022-5371(72)80006-9)),
-pre-training on a system's parts helps people build a mental model
+pre-training helps people build a mental model
 ([Mayer, Mathias, and Wetzell, 2002](https://pubmed.ncbi.nlm.nih.gov/12240927/)),
-and headings and previews direct attention in complex text
-([Lorch and Lorch, 1996](https://doi.org/10.1037/0022-0663.88.1.38)). The main
-path keeps secondary implementation mechanics folded while a new reader builds
-the first mental model, informed by research on the processing cost that can
-compete with learning
+and headings and previews direct attention
+([Lorch and Lorch, 1996](https://doi.org/10.1037/0022-0663.88.1.38)). Keep
+secondary implementation mechanics folded while the reader builds that model
+to reduce competing processing
 ([Sweller, 1988](https://doi.org/10.1207/s15516709cog1202_4)). Use a diagram
 only when its spatial structure makes a relationship or inference easier to
-find than equivalent prose
+find than prose
 ([Larkin and Simon, 1987](https://doi.org/10.1111/j.1551-6708.1987.tb00863.x)).
-
-Keep repository identity, the reviewed commit, a visible pull-request link, and
-artifact controls in one compact product bar. Use the same folder mark,
-repository type treatment, display-control group, and contents treatment as
-Align. Present the reviewed commit with the same quiet status treatment that
-Align uses for its current version. Keep the pull-request link outside the
-display-control group and preserve it when repository text is hidden at narrow
-widths. Group the language dropdown and bordered theme button as one control.
-Use a numbered desktop contents rail when it fits. Show the current section
-with an accent bar, a quiet tinted background, and its position in the reading
-order. Otherwise use an icon beside the display-control group and open the
-same contents treatment in a bounded right-side panel.
 
 ## Align artifact direction
 
-The Align artifact should feel like a compact project specification: direct,
-quiet, easy to scan, and complete enough to guide implementation.
+The Align artifact should feel like a compact intent record: direct, quiet,
+easy to scan, and complete enough to preserve what the person meant without
+describing the solution or implemented result.
 
 The Align feature's `scripts/design/tokens.mjs` owns its exact visual values.
 Diff rendering, Diff tokens, and removed Align implementations do not constrain
@@ -217,57 +234,67 @@ it.
 
 ## Align artifact structure
 
-The artifact is the current implementation agreement, not a progress tracker.
+The artifact is the current agreed intent. It is not a solution design,
+implementation contract, current-system description, or progress tracker.
 
 Show each fact once, in this order:
 
-1. title, then a summary whose first row is the one-sentence goal;
-2. problem, completion criteria, and governing boundary;
-3. included and excluded scope;
-4. compared design directions and the selected option, only when material UI
-   design needed visual agreement;
-5. agreed behavior, only when sequence or branching is clearer than prose;
-6. confirmed decision titles, their folded reasons, and decisions left to
-   implementation;
-7. supporting evidence, only when it adds a source that matters.
+1. title, then a summary containing only the one-sentence goal and problem;
+2. decided intent as the canonical observable outcome statements, followed by
+   an optional person-visible or domain-visible flow and a compact list of what
+   is not included;
+3. compared design directions and the selected option, only when the
+   person-facing experience needed visual agreement;
+4. supporting evidence, only when it adds a source that matters.
+
+Positive intent statements define what is included. Do not repeat them in a
+scope list, expected-behavior section, boundary section, or decision section.
+Attach a material reason to the statement it explains. Show a flow only when
+sequence or branching adds information that the statements do not already
+carry. Put deferred product work in **Not included**.
+
+Do not show unresolved intent in a ready artifact. A material unresolved intent
+means alignment is not ready. Put deliberately deferred work in **Not
+included**, and leave research or implementation uncertainty in the work that
+owns it. Earlier artifact versions may retain their historical fields, but the
+current record follows this structure.
 
 Keep earlier versions in the secondary version history navigation. Do not
 repeat version history at the bottom of the agreement.
 
-Keep repository identity, current version, and theme control in the compact
-product bar. Use **current agreement**, not language that implies an external
-approval workflow.
+Label the current version **current intent**, not with language that implies an
+external approval workflow or current implementation state. Do not repeat the
+record in a separate contract or implementation summary.
 
-The whole document is the implementation contract. Do not repeat it in a
-separate contract summary.
-
-Keep conclusions, actions, boundaries, behavior, and unresolved choices
-visible. Fold verification methods, decision reasons, option references, and
-the supporting-evidence section. Put `[n]` after a claim only when its structured
+Keep decided outcomes, exclusions, and any necessary user flow visible. Fold
+judgment methods, intent reasons, option references, and the
+supporting-evidence section. Put `[n]` after a claim only when its structured
 value names a validated evidence ID. Reuse that number throughout the current
-agreement, show a bounded preview popover when it is activated, and keep the
+intent, show a bounded preview popover when it is activated, and keep the
 complete numbered evidence list in the final folded section. Unreferenced
 supporting evidence stays in that list without an invented claim link. Use
 these information roles directly; do not add length or item-count thresholds
 that make the same field change layout unpredictably.
 
-Show each completion criterion as one visible passing condition. Put `[AI]`
-after a condition that the AI agent verifies and `[User]` or the locale's
-equally compact user label after one that a person verifies. Activating the
-marker opens the verification method in a bounded popover anchored to that
-marker. Keep the complete verification methods in one folded list at the end,
-before the final evidence list, so fragment navigation and print preserve them.
-Keep completion criteria in the summary near the goal. Do not turn them into
-progress controls or store their execution results in the artifact. Keep each
-inline marker at least 24 pixels and use a 44-pixel close target.
+Show each decided intent item as one visible observable condition. Put `[AI]` after a
+condition an AI agent can assess and `[User]` or the locale's equally compact
+user label after one that needs a person's judgment. Activating the marker
+opens the way to recognize the condition in a bounded popover anchored to that
+marker. Keep the complete judgment methods in one folded list at the end of the
+decided-intent section so fragment navigation and print preserve them. Do not turn them into progress
+controls or store their results in the artifact. Keep each inline marker at
+least 24 pixels and use a 44-pixel close target.
 
-Number every completion criterion in reading order with `01`, `02`, `03`, even
-when the list is short. Use body prose weight for each passing condition,
-reserve stronger emphasis for the number and marker, and keep the expanded
-verification source label quiet and secondary.
+Number every decided intent item in reading order with `01`, `02`, `03`, even when the
+list is short. Use body prose weight for each observable condition, reserve
+stronger emphasis for the number and marker, and keep the expanded judgment
+source label quiet and secondary. When a statement has a reason, keep it in a
+native disclosure attached to that statement.
 
-Do not show implementation progress, completion controls, work owners, comments,
-changed files, test status, or model and interview metrics.
+Do not show architecture, modules, algorithms, tools, files, protocols, data
+structures, implementation order, test commands, implementation progress,
+completion controls, work owners, comments, changed files, test status, or
+model and interview metrics.
 
 ## Project GUI widgets
 
@@ -490,55 +517,28 @@ in Hope's language.
 
 ## Align artifact layout
 
-Use one linear document. Give the current agreement most of the page and keep
-version history secondary.
+Give the current intent most of the page and keep version history secondary. In
+the wide-screen rail, show the current version and at most one prior version
+summary. Open earlier detail from that history instead of repeating it in the
+document. When the rail does not fit, include the history in the common
+navigation panel opened by one 44-pixel control to the right of the theme
+control.
 
-Place the unnumbered document title first. Start the numbered reading areas
-below it with a visible `01 Summary`. Use the same number beside each area
-title and beside its table-of-contents link. Omitted optional areas do not
-leave gaps. Keep each section number the same type size and line height as its
-title.
+Keep the positive intent statements in one reading column. Present **Not
+included** as one compact list in two columns on a wide screen and one column on
+a narrow screen. Do not create a matching included-scope column.
 
-Give every numbered area one clear divider directly below its title. Do not add
-a second rule above the area. Combine margin and padding into 40 pixels between
-the document title and Summary. Between later areas, use 48 pixels on a wide
-screen and 40 pixels on a narrow screen. Use the smaller internal spacing steps
-for related content inside one area.
+Nest an optional flow below the intent statements. Stack outcomes after its
+sequence in their original order. Do not invent phase groups or branches that
+the artifact data does not contain.
 
-On a wide screen, place a narrow rail beside the document. Show a table of
-contents only when it improves navigation. Keep the current version and at
-most one prior version summary visible. Open earlier version detail from that
-history instead of repeating it in the document.
+Number decided intent items in reading order and keep their reasons directly
+attached. Do not create another decision list.
 
-Put one 44-pixel navigation control to the
-right of the theme control and open the table of contents and version history in
-a bounded right-side panel when the navigation rail does not fit. Treat included
-and excluded scope as one parallel classification: compare them in two columns
-on a wide screen, then stack included scope before excluded scope on a narrow
-screen. Do not choose the layout from item length or count.
-
-Render agreed behavior as one ordered vertical sequence at every viewport.
-Keep each step's number beside its title and place the detail below the title.
-Stack outcomes after the sequence in their original order. Do not invent phase
-groups or branches that the artifact data does not contain.
-
-In the product bar, use the same folder mark and repository type treatment as
-Diff. Group the language dropdown and bordered theme button as one display
-control, separate from navigation. Use one gap between the brand, repository,
-version, and action group. Use the next smaller gap only between controls inside
-the action group. Do not add one-off margins to an individual product-bar item.
-
-Number agreed decisions in reading order.
-
-Use thin dividers instead of enclosing ordinary content in cards. Give the
-document title enough emphasis to establish the reading path, then keep body
-type compact and readable. Omit an optional section instead of rendering an
-empty box.
-
-Show two or three design directions together in one comparison section. Keep
-the same option order. Keep recommendation and selection labels beside the
-option title so they do not create a separate comparison row. On a wide screen,
-compare each option's title, image,
+Show two or three person-facing design directions together in one
+comparison section. Keep the same option order. Keep recommendation and
+selection labels beside the option title so they do not create a separate
+comparison row. On a wide screen, compare each option's title, image,
 brief summary, strengths, and trade-offs in parallel; align those shared rows
 across the options and stack each complete option on a narrow screen. Inside
 each option, put strengths and trade-offs before recommendation and selection
@@ -563,21 +563,16 @@ visible wordmark as the accessible name; the icon is decorative.
 
 ## Diff artifact layout
 
-Use one linear document in every viewport.
-
 On a wide screen:
 
 - keep the main text at a readable width;
-- place a compact table of contents beside it when space allows;
-- keep the product bar compact and place the artifact title in the document;
 - keep dense body text intentionally smaller than mobile text; and
 - do not stretch paragraphs across a large monitor.
 
 On a narrow screen:
 
-- keep the same information order and status language;
-- use one column;
-- put a compact native collapsible table of contents in the product bar;
+- open a compact native collapsible table of contents from an icon-only control
+  beside the display control in the product bar;
 - do not give the closed table of contents its own body row or vertical gap;
 - open its links in a bounded panel directly below the product bar;
 - keep the panel vertically scrollable without passing its scroll gesture to
@@ -585,21 +580,26 @@ On a narrow screen:
 - close the open panel with Escape and return focus to its control; and
 - use larger body text and touch targets.
 
-Group the language dropdown and theme control as one 44-pixel display control.
-Give the theme segment a visible boundary. Keep the pull-request link outside
-that group. When the display and contents controls appear together, give both a
-44-pixel height, the same border role, and the same corner radius.
+Use the same folder mark and repository type treatment as Align. Present the
+reviewed commit with the same quiet status treatment that Align uses for its
+current version. In both the rail and panel, mark the current section with an
+accent bar, quiet tinted background, and its position in the reading order.
+
+Give the common display control a 44-pixel height and give its theme segment a
+visible boundary. Keep the pull-request link outside that group. When the
+display and contents controls appear together, give them the same height,
+border role, and corner radius. Preserve the pull-request link when repository
+text is hidden on a narrow screen.
 
 An icon-only control may be narrower, but it must not look like a smaller
 control family.
 
-The product bar owns repository and pull request identity.
+The product bar is the only place that shows repository and pull-request
+identity.
 
 The document owns the change-based artifact title. Summary owns the goal. The
 product bar owns the compact reviewed commit, and collapsed review information
 owns capture time.
-
-Do not repeat repository identity.
 
 Do not add a persistent sentence that explains that an offline artifact does not
 update itself.
@@ -617,12 +617,9 @@ Use three clear roles.
 | Wordmark and headings | Hope Sans Bold |
 | Code, commands, paths, and hashes | Hope Code, from D2Coding |
 
-Embed the fixed WOFF2 files in every offline artifact.
-
-Use a local sans-serif or monospace fallback only for characters that the
-bundled fonts do not contain.
-
-Do not synthesize a missing font weight.
+Embed the fixed WOFF2 files in every offline artifact. Use a local sans-serif or
+monospace fallback only for characters that the bundled fonts do not contain,
+and do not synthesize a missing font weight.
 
 Hope presents the converted files under Hope-owned family names because both
 source licenses reserve their original family names.
@@ -641,35 +638,11 @@ tokens. Diff keeps a separate code scale:
 | Page title | 32px / 1.2 | 28px / 1.2 |
 | Section title | 18px / 1.4 | 16px / 1.4 |
 
-Keep prose near 60–80 characters per line.
-
-Long paths and code may scroll inside their own region.
-
-Text-bearing controls use a minimum height and grow when text is enlarged.
-
-They must not create page-level horizontal scrolling.
+Keep prose near 60–80 characters per line. Long paths and code may scroll
+inside their own region. Text-bearing controls use a minimum height and grow
+when text is enlarged without creating page-level horizontal scrolling.
 
 ## Diff artifact space and boundaries
-
-Use Align's small, consistent spacing scale.
-
-Do not invent a new gap for each component.
-
-```text
-4 · 8 · 12 · 16 · 24 · 32 · 40 · 48 · 64
-```
-
-Give each top-level section a clear start.
-
-Use a blue section number, a text-colored title, a clear title divider, and
-measured space. Match Align's 48-pixel wide-screen and 40-pixel narrow-screen
-separation between top-level areas.
-
-Number conditional sections in their rendered order so the document and its
-table of contents agree.
-
-Use one clear divider directly below each top-level section title instead of a
-second rule above the section or a line extending through its body.
 
 Use two border roles:
 
@@ -697,32 +670,19 @@ Use one quiet marker gutter to help the eye follow body content:
   not paired with another generic bullet; and
 - nested lists stop after one level and use a neutral marker inside.
 
-Keep the first-screen review result especially compact.
-
-Render each preview as a small kind marker, plain importance text, and title.
-
-Do not add a representative status, total, or kind counts above the previews.
-
+Keep the first-screen review result especially compact. Render each preview as
+a small kind marker, plain importance text, and title, separated by spacing
+rather than rules. Do not add a representative status, total, or kind counts.
 When no item exists, show one plain empty-result sentence.
 
-Show concrete material scope limits without a generic scope badge.
-
-Omit that synopsis row when no material limit exists.
-
-Use the same label-and-value grid as the other synopsis rows.
-
-Separate preview items with spacing, not rules.
+Show concrete material scope limits in the same label-and-value grid as the
+other synopsis rows, without a generic scope badge. Omit the row when no
+material limit exists.
 
 Use semantic `ul` and `ol` elements for content that is a list.
 
-Put the unnumbered change-based artifact title first. Start the self-contained
-synopsis below it with a visible `01 Summary`. Render the goal as the first
-label-and-value row, using the same label type, spacing, and divider rhythm as
-the other summary rows. Keep the provider's pull-request title and capture time
-in collapsed review information.
-
-Use the same section-title divider rhythm as Align. Keep each section number
-the same type size and line height as its title.
+Render the goal as the first label-and-value row in Summary. Keep the
+provider's pull-request title and capture time in collapsed review information.
 
 In each full review item, align kind, importance, and any visible basis on one
 visual centerline.
@@ -731,14 +691,15 @@ Keep kind and importance as outlined markers. When basis changes how the reader
 should judge the item, show it as quieter plain text; omit a code basis that the
 numbered evidence already makes visible.
 
-Render behavior steps as one connected vertical sequence at every viewport.
-Keep the same two-digit number gutter, text, and order in Align and Diff. This
-keeps the reading path stable when a step contains longer prose and reserves
-horizontal columns for direct comparison.
+## Hope artifact themes
 
-## Align artifact color and themes
+Generate each artifact as one self-contained file that supports light and dark
+themes. The initial theme comes from the artifact input or resolved display option:
+`system`, `light`, or `dark`. The theme control changes only the open document;
+it does not write host configuration or browser storage. Reload restores the
+generated initial theme, and print uses the light surface.
 
-Generate one Align artifact that supports light and dark themes.
+## Align artifact color
 
 The light view uses a warm near-white document surface, near-black text, thin
 neutral dividers, and blue for navigation and agreement state. The dark view
@@ -748,14 +709,7 @@ blue accent.
 Exact Align values live only in
 `plugins/hope/skills/align/scripts/design/tokens.mjs`.
 
-The initial theme comes from the artifact input: `system`, `light`, or `dark`.
-The theme button changes only the open document. It does not write browser
-storage or host configuration, and reload restores the generated initial
-theme. Print uses the Align light surface.
-
-## Diff artifact color and themes
-
-Generate one Diff artifact that supports light and dark themes.
+## Diff artifact color
 
 The official light palette is `Sand Paper`: the same warm near-white page and
 slightly brighter reading surface used by Align.
@@ -765,30 +719,9 @@ It should feel softer than pure white without looking beige or gray.
 Exact Hope surface values live only in the Diff feature's
 `scripts/design/tokens.mjs`.
 
-Code is a separate visual surface with fixed Hope light and dark colors.
-
-A theme change switches both at once.
-
-It does not replace the Hope palette outside code.
-
-Insert repository text only as escaped content.
-
-Keep source lines explicit in the document and distinguish patch additions,
-deletions, context, and hunk headers without a stateful language parser.
-
-The initial theme comes from the resolved Diff display option:
-
-- `system`;
-- `light`; or
-- `dark`.
-
-The theme control changes only the open document.
-
-It does not write host configuration or browser storage.
-
-Reloading returns to the generated initial theme.
-
-Print uses a light surface.
+Code is a separate visual surface with fixed Hope light and dark colors. A theme
+change switches the code surface with the artifact without replacing the Hope
+palette outside code.
 
 Use these status roles:
 
@@ -799,9 +732,7 @@ Use these status roles:
 | Verify | Blue |
 | Scope | Neutral blue-gray |
 
-Importance stays in text.
-
-Never use color as the only status signal.
+Keep importance in text and never use color as the only status signal.
 
 ## Diff artifact interaction
 
@@ -828,50 +759,36 @@ controls, scenarios, simplifying assumptions, omissions, and evidence into one
 native disclosure. These are optional exploration details, not prerequisites
 for understanding the behavior summary and flow.
 
-Use the visible quiz question as the response field's persistent label.
+Use the visible quiz question as the response field's persistent label. When
+that question and a clear placeholder make the purpose evident, do not repeat a
+generic label such as **My answer** or **Selection**. Keep the question
+programmatically associated with the field, and give repeated controls unique
+accessible names through their questions. A response is never required before
+the answer can be opened.
 
-When that question and a clear placeholder make the purpose evident, do not
-repeat a generic visible label such as **My answer** or **Selection**.
+Print omits the reader's transient quiz response and shows every review item,
+microworld detail, question, answer, and supporting evidence regardless of the
+current disclosure state.
 
-Keep the question programmatically associated with the field and retain an
-accessible name for assistive technology.
+The **Evidence and scope** section is a dense reference appendix. Keep the
+section open initially so its source groups, context checks, scope limits,
+checked-file group, artifact details, and final numbered evidence list remain
+visible as independent disclosures that start closed.
 
-A response is never required before the answer can be opened.
+Use native disclosure controls so they work without JavaScript. Opening a
+fragment link must reveal every disclosure that contains its target.
 
-Give repeated controls a unique accessible name by associating each one with its
-question.
+Code markup must contain explicit line separators. One source line remains one
+visible line without layout styles; long lines scroll inside the code surface
+instead of merging with adjacent lines.
 
-Print output omits the reader's transient quiz response.
+Do not make audit completeness look like repeated interface content. Merge
+changed-file source metadata into the changed-file table, keep other sources in
+a separate small table, and group exclusions that share a reason.
 
-It shows every review item, microworld detail, question, answer, and supporting
-evidence regardless of the current disclosure state.
-
-The **Evidence and scope** section is a dense reference appendix.
-
-Keep the whole section open initially so the available groups remain visible.
-
-Its source groups, context checks, scope limits, checked-file group, artifact
-details, and final numbered evidence list must open independently and start
-closed.
-
-Use native disclosure controls so they work without JavaScript.
-
-Opening a fragment link must reveal every disclosure that contains its target.
-
-Code markup must contain explicit line separators.
-
-One source line must remain one visible line even without layout styles; long
-lines scroll inside the code surface instead of merging with adjacent lines.
-
-Do not make audit completeness look like repeated interface content.
-
-Merge changed-file source metadata into the changed-file table, keep other
-sources in a separate small table, and group exclusions with the same reason.
-
-Keep the collapsed interface compact.
-
-A closed disclosure occupies only its summary row and borders. It must not
-reserve body padding or leave unused parent spacing below the row.
+Keep the collapsed interface compact. A closed disclosure occupies only its
+summary row and borders; it does not reserve body padding or leave unused parent
+spacing.
 
 Keep the understanding-check subsection visible when it is present. Let each
 question and its answer open independently instead of collapsing the whole
@@ -879,12 +796,9 @@ subsection.
 
 Expanded details must still account for every source, file, and limit.
 
-Do not show a section-copy control while artifacts use temporary local paths.
-
-Stable section IDs remain available for navigation.
-
-Add copying only when Hope has a portable publication URL and can show visible
-success feedback.
+Keep stable section IDs available for navigation. Do not show a section-copy
+control while artifacts use temporary local paths; add copying only when Hope
+has a portable publication URL and can show visible success feedback.
 
 Do not add task completion, assignment, comments, or hidden persistence.
 
@@ -920,6 +834,10 @@ Repository, provider, and model content is untrusted.
 Each renderer inserts authored prose as text and never accepts authored HTML,
 CSS, JavaScript, or SVG. Diff separately validates the source URLs it owns;
 Align renders only `http` and `https` evidence locations as links.
+
+Diff inserts repository text only as escaped content. It keeps source lines
+explicit and distinguishes patch additions, deletions, context, and hunk
+headers without a stateful language parser.
 
 Align may embed raster design-direction images only after its runtime verifies
 their supported signature, dimensions, and size. It never treats an authored

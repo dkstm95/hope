@@ -6,8 +6,7 @@ description: Use before implementation when requirements, scope, design, expecte
 # Hope Align
 
 Use the active host session to inspect the task, build a shared understanding
-with the person, and preserve the agreed goal in a durable implementation brief
-when one is needed.
+with the person, and preserve the agreed intent when a durable record is needed.
 
 Align does not implement the task.
 
@@ -15,212 +14,111 @@ Read `../write/references/writing-standard.md` before drafting user-facing
 language. Apply it without changing the agreement, evidence distinctions,
 readiness conditions, or artifact contract.
 
-## Inspect first
+## Inspect and challenge
 
 Read available repository, document, and conversation evidence before asking a
-question.
+question. Do not ask the person to repeat a fact that evidence can answer.
 
-Do not ask the person to repeat a fact that the available evidence can answer.
+Keep repository facts, user decisions, AI proposals, assumptions, material
+questions, and research or implementation uncertainty distinct.
 
-Keep these kinds of information distinct:
+Test whether the requested work is likely to achieve the goal. Surface only an
+omission, contradiction, risk, unsupported assumption, edge case, or materially
+simpler path that could change the intended result or prevent material harm. Do
+not invent concerns, treat taste as a defect, or widen the task because another
+product could be better.
 
-- repository facts;
-- user decisions;
-- AI proposals;
-- assumptions;
-- open questions; and
-- uncertainty that belongs to research or implementation.
+For each concern, explain the issue, impact, evidence, and uncertainty. Recommend
+a sensible default when one exists. Treat a reversible, non-blocking improvement
+as an AI proposal rather than a readiness condition. Keep this challenge and
+review in the active Align session.
 
-Do not fill a missing requirement with a recommended design during the
-teach-back.
+## Build shared intent
 
-Label any proposed check, scope exclusion, or expected behavior as
-an AI proposal and keep it open until the person confirms it.
-
-## Challenge the brief
-
-After inspection and before teach-back, test whether the requested work is
-likely to achieve the goal. Surface only a material omission, contradiction,
-risk, unsupported assumption, edge case, or materially simpler path that could
-change the work or prevent material harm. Do not invent concerns, treat taste
-as a defect, or widen the task because another product could be better.
-
-Classify each concern as one of:
-
-- a material question whose answer could change the goal, checks, scope, or
-  expected behavior;
-- a non-blocking optional improvement; or
-- research or implementation uncertainty.
-
-For each concern, explain the issue, impact, evidence, and uncertainty, then
-recommend the sensible default when one exists. If none qualifies, continue.
-
-## Teach back
-
-Start with a short account of:
+Teach back:
 
 - the goal;
-- the conditions that must pass, how to verify them, and who decides whether
-  they pass: an agent or person;
-- in-scope and out-of-scope work;
-- expected behavior;
+- each decided observable outcome, how to recognize it, and whether an agent or
+  person can judge it;
+- deliberately excluded work;
+- a person-visible or domain-visible flow when sequence matters;
 - important assumptions; and
 - the next material choice.
 
-Match the detail to the task risk.
+Match the detail and number of questions to the task's risk.
 
-Interview length is not a reason to leave a question or assumption that could
-change the result unresolved.
+Label a proposed intent statement, exclusion, or flow as an AI proposal until
+the person confirms it. Do not fill a missing requirement with a recommended
+design during the teach-back.
 
-## Ask only material questions
+Ask only about a goal, preference, work rule, expected behavior, or choice that
+could change the result. Explain why the answer matters and offer realistic
+options with a recommended default when one is sensible.
 
-Ask about the goal, preference, work rules, expected behavior, or a choice that
-would change the result.
+Group questions the person can answer independently. Sequence them only when an
+answer changes the next question. Once the person accepts, declines, or delegates
+a reversible low-impact proposal, close it and do not let it block readiness.
+Use an example or edge case only when it tests the shared mental model.
 
-Explain why the answer matters.
+Continue until the person and agent agree on every point that could change the
+work. Leave research and implementation checks to the work that can resolve
+them.
 
-Offer realistic options and a recommendation when one choice is a sensible
-default.
+## Route material UI choices
 
-An optional improvement remains an AI proposal until the person accepts it,
-declines it, or delegates the choice when it is reversible and low-impact.
-Each outcome closes the proposal: do not reopen or keep advocating it, and
-never let it block readiness.
-
-Ask related questions together when the person can answer them independently;
-do not impose an arbitrary limit. Sequence them only when an answer determines
-the content or need for the next question.
-
-Continue the interview until the person's goal and the agent's understanding
-agree on every point that could change the work.
-
-Reduce the person's effort with concise questions and updated teach-backs, not
-by lowering the readiness standard.
-
-Do not repeat a closed question in different words.
-
-Use an example, edge case, or counterexample only when it tests the shared
-mental model.
-
-Leave research and implementation checks open when the conversation cannot
-honestly settle them.
-
-## Keep review inside Align
-
-Keep Align's challenge and interview in the active session. Do not start or
-recommend a separate review, reviewer, or review feature.
-
-## Show material UI choices
-
-When the task may require a new screen, component, or material visual redesign,
-read `references/design-directions.md` after inspecting the available project
-and conversation evidence.
-
-Use that guidance only when a visual choice could change the implemented
-result. Do not turn a small UI correction into a design exercise.
+When a new screen, component, or material visual redesign leaves a choice that
+could change the intended experience, read `references/design-directions.md`
+and follow it. Do not turn a small UI correction into a design exercise.
 
 ## Decide readiness
 
-Complete alignment only when:
+Alignment is ready only when:
 
-- the goal and checks are clear enough to judge the result;
-- scope boundaries are visible;
-- important expected behavior is understood;
+- the goal and decided intent are clear enough to judge;
+- deliberately excluded work is visible;
+- any important person-visible or domain-visible sequence is understood;
 - no material question or open assumption remains; and
 - the work can be divided into verifiable pieces.
 
 Model confidence is not approval.
 
-Write each check as one condition, one verification method, and one decision
-source. Use `agent` only when an implementation agent can perform the check and
-report the result needed for judgment. Use `human` when completion depends on a
-person's preference, observation, or approval. Do not let an agent infer that a
-human check passed.
+Write each intent item as one observable condition, one way to recognize it,
+and one judgment source. Use `agent` only when an agent can observe and report
+the outcome. Use `human` when judgment depends on a person's preference,
+observation, or approval. Do not let an agent infer a person's judgment.
 
-Align owns this agreed goal contract. It does not start or manage a host's goal
-feature, implementation loop, retry state, progress, or completion evidence.
+Align does not start or manage a host goal, implementation loop, retry state,
+progress, or completion evidence.
 
-## Decide whether the agreement needs an artifact
+## Decide whether to preserve an artifact
 
-When the person supplies an artifact path or available evidence identifies one
-that may own the same goal, inspect it before deciding the artifact outcome:
+If the person supplies an artifact path, or available evidence identifies one
+for the same goal, read `references/artifact.md` and inspect it. Do not search
+for a repository-wide latest artifact.
 
-```text
-inspect --artifact <artifact.html>
-```
+If inspection verifies the same goal, revise the artifact only when the
+agreement changed materially; otherwise retain it. If Hope cannot verify its
+identity or contents, leave it in place and ask where to create a new artifact.
 
-Do not search for a repository-wide latest artifact. If inspection verifies
-the same goal and the agreement changed materially, revise it. If the agreement
-did not change materially, retain the artifact. If inspection cannot verify the
-artifact, or shows that it is unknown, manually changed, or identity-mismatched,
-leave it in place and ask the person where to create a new artifact.
-
-After alignment reaches readiness, create or revise an HTML artifact when:
+After readiness, create or revise an artifact when:
 
 - the person asks for one;
-- implementation is expected to continue in another session or pass to another
-  worker;
-- a material decision, assumption, or scope boundary must survive the active
-  conversation; or
-- a completion check depends on a person's later observation or approval.
+- the work will continue in another session or pass to another worker;
+- a material decision, assumption, or exclusion must survive this conversation;
+  or
+- later human observation or approval is part of the decided intent.
 
-When none applies, keep the agreement in the conversation and do not create an
-artifact. This commonly covers a small, clear task that will continue in the
-active session. Do not create an artifact merely because Align ran.
+Otherwise keep the agreement in the conversation. Do not create an artifact
+merely because Align ran, and do not ask the person to choose unless the need
+for a durable record is itself material or uncertain.
 
-Decide from the available evidence. Do not ask the person to choose unless the
-need for a durable record is itself material or uncertain.
+## Preserve the agreement
 
-When an artifact is required, preserve the agreement as follows.
+When an artifact is required, read `references/artifact.md` and the complete
+`scripts/align-input-v3.schema.json`, including its referenced shared
+definitions. Follow them for authoring, migration, publication, and revision.
 
-Read `references/artifact.md` and the complete
-`scripts/align-input-v2.schema.json` before creating structured input.
-
-If visual directions were used, re-read `references/design-directions.md` at
-this point and follow its **Preserve the selection** section before writing the
-input.
-
-Put each fact in one section only. Omit optional behavior, decisions,
-implementation choices, and evidence when they add no information. Add a
-behavior flow only when sequence or branching is clearer than prose.
-
-Before writing the input, compare items within each sibling list. Matching or
-strongly overlapping evidence-ID sets are signals to check whether two items do
-the same job; they do not prove duplication. Keep both when they own distinct
-requirements, decisions, checks, scope boundaries, or outcomes. Otherwise
-consolidate the repeated meaning instead of paraphrasing it. Never remove a
-necessary claim merely because another claim cites the same evidence.
-
-Keep each prose value to one semantic paragraph. Put a distinct idea in the
-existing field or list item that owns it. When one field genuinely needs a
-second paragraph, separate the paragraphs with a newline so the renderer keeps
-the boundary. Keep the title to one decisive result, the goal to one direct
-statement, and each decision reason to the main practical cause or effect.
-
-Give every evidence item that supports a specific claim a stable lowercase
-`id`. Write that claim with the schema's cited-title or cited-prose object and
-name only the evidence IDs that directly support it. Reuse an ID instead of
-duplicating the evidence item. Keep general supporting evidence as an ordinary
-evidence item without inventing a claim link.
-
-When a design-direction reference uses a source already present in `evidence`,
-give that evidence a stable ID and write the reference with `evidenceId` and
-`influence`. Do not copy its label and URL into the design option. Keep a direct
-`label`, `url`, and `influence` reference only when that source does not belong
-in the agreement's evidence list.
-
-Inspect the project's existing documentation conventions. Use its established
-location for durable design or specification documents when one is clear.
-Otherwise use `docs/alignments/`. Never use a hidden Hope directory for this
-project knowledge.
-
-Choose one stable, descriptive HTML path for one goal. Another implementation
-attempt, branch, or pull request for the same goal does not create another
-artifact.
-
-Write the structured input to a temporary JSON file outside the repository.
-Run the adapter with every argument passed separately, then remove the temporary
-input.
+Run the private adapter through the active host:
 
 Claude Code:
 
@@ -237,51 +135,24 @@ node <skill-dir>/scripts/cli.mjs
 For Codex, replace `<skill-dir>` with the absolute directory containing this
 file.
 
-Create a first artifact with:
+If visual directions were used, also follow **Preserve the selection** in
+`references/design-directions.md`.
 
-```text
-create --input <draft.json> --output <artifact.html> --root <repository>
-```
+The artifact records the agreed intent, not solution design, implementation
+choices, current implementation state, or completion results.
 
-A material change to the goal, checks, scope, expected behavior, constraint,
-or non-goal creates a new revision in the same artifact. A reversible technical
-choice does not.
+## Continue or hand off
 
-Revise only after `inspect` verifies the Hope-owned artifact and only when it is
-still the same goal:
+Report that alignment is ready, the artifact outcome—created, revised, retained,
+or skipped—and why. For an existing artifact, report its absolute path and
+current revision. If skipped, state that the agreement remains in the active
+conversation.
 
-```text
-revise --input <draft.json> --artifact <artifact.html> --expect <digest> --root <repository>
-```
+Wait for an explicit response before implementation. When implementation is
+approved in the same session, carry the agreement into the work.
 
-When visual directions were used, run `inspect` on the created or revised
-artifact before reporting alignment complete.
-
-Treat the artifact as project documentation for the related work. Keep it in
-the project by default, including after implementation. Do not delete a
-completed artifact merely because the related work finished; remove it only
-when the person decides to do so.
-
-## Continue into implementation
-
-Report that alignment is ready. Report the artifact outcome—created, revised,
-retained, or skipped—and why. For a created, revised, or retained artifact,
-report its absolute path and current revision. If it was skipped, state that
-the agreement remains in the active conversation.
-
-Wait for an explicit user response before implementation. When implementation
-is approved in the same session, use the current agreement as the
-implementation contract. If an artifact exists, run `inspect` again before
-editing files and use its current content as that contract.
-
-Before work moves to another session or worker, create or revise the artifact
-if the agreement exists only in the conversation. Report its absolute path and
-revision, and pass that explicit path with the work. The receiving session or
-worker must inspect it before editing files.
-
-In a later session, one explicit artifact path is enough. Inspect it and use
-the current revision; do not guess a global or repository-wide “latest” Align
-artifact.
-
-The artifact does not track implementation progress and Align does not link it
-to a Diff artifact.
+Before another session or worker relies on the agreement, ensure it has a
+durable artifact, pass its explicit path and revision, and require the receiving
+session to inspect it. Treat the artifact as the intent authority, inspect the
+current project separately, and choose implementation details through the
+ordinary project workflow.

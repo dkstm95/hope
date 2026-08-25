@@ -23,6 +23,7 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/align/references/artifact.md",
   "plugins/hope/skills/align/references/design-directions.md",
   "plugins/hope/skills/align/scripts/align-input-v2.schema.json",
+  "plugins/hope/skills/align/scripts/align-input-v3.schema.json",
   "plugins/hope/skills/align/scripts/artifact.mjs",
   "plugins/hope/skills/align/scripts/cli.mjs",
   "plugins/hope/skills/align/scripts/design/tokens.mjs",

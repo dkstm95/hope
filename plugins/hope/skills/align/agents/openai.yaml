@@ -1,5 +1,5 @@
 interface:
   display_name: "Hope Align"
-  short_description: "Align a goal and preserve its verifiable implementation brief"
+  short_description: "Align a goal and preserve the agreed intent"
   brand_color: "#006FBE"
   default_prompt: "Use $hope:align to build a shared understanding before implementation."

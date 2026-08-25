@@ -1,6 +1,6 @@
-export const ALIGN_DESIGN_VERSION = 19;
+export const ALIGN_DESIGN_VERSION = 22;
 
-// Align owns this palette. Values follow the approved Align implementation brief.
+// Align owns this palette. Values follow the selected person-facing direction.
 export const COLORS = Object.freeze({
   dark: Object.freeze({
     accent: "#5db8ff",
