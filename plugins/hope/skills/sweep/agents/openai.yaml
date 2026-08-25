@@ -1,4 +1,6 @@
 interface:
   display_name: "Hope Sweep"
-  short_description: "Plan decision-ready codebase maintenance"
-  default_prompt: "Use $hope:sweep to inspect this codebase and return a decision-ready, evidence-linked maintenance plan without editing files."
+  short_description: "Apply behavior-preserving codebase cleanup"
+  default_prompt: "Use $hope:sweep to remove proven codebase waste while preserving customer-observed behavior."
+policy:
+  allow_implicit_invocation: false

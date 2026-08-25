@@ -125,30 +125,26 @@ strongly than the evidence supports.
 
 ---
 
-### ✨ Polish — Refine implemented work
-
-Independent review agents look for useful improvements.
-
-For code, they check reuse of existing helpers, simplicity, efficiency, and
-abstraction fit.
-
-A fresh finisher judges the results, applies only the improvements that work
-together, and verifies the result.
-
-Polish does not hunt for bugs, develop features, perform migrations, or handle
-broad maintenance.
-
----
-
 ### 🧹 Sweep — Clean up a codebase
 
-Sweep performs a read-only review of a codebase.
+Sweep runs only when explicitly invoked. It immediately applies proven,
+behavior-preserving cleanup.
 
-It looks for broken references, stale code, unsupported abstractions,
-verification gaps, dependency or license risk, delivery waste, unclear
-ownership, and similar maintenance risks.
+Sweep uses the entire current repository unless the request names a narrower
+scope inside it.
 
-Select a candidate from the review results to start work.
+It cleans up:
+
+- dead code and its dedicated tests, documentation, configuration, generation,
+  and assets;
+- duplicated implementations, unnecessary work, and needless indirection;
+- abstractions that are missing, excessive, or owned by the wrong boundary;
+- documentation, comments, examples, and configuration that no longer match
+  the code; and
+- the minimum tests or checks needed to refactor safely.
+
+Bug fixes, behavior or public-contract changes, product decisions, and
+uncertain removals remain outside Sweep.
 
 ---
 
