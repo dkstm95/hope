@@ -1,286 +1,140 @@
 # Diff analysis rules
 
-Use these rules with the analysis schema and the shared Hope Write standard.
+Use these rules with the complete analysis schema and the shared Hope Write
+standard.
 
-## Evidence and identity
+## Ground every claim
 
 - Copy `runId`, the latest `snapshotDigest`, and `locale` from Hope.
 - Cite only source IDs and line ranges delivered by inspection.
-- Keep each claim no broader than its evidence. Split claims whose parts rest
-  on code, stated intent, or inference differently.
-- Select the smallest continuous source interval that proves the claim. An
-  authored interval may contain up to 96 lines. Hope preserves that interval
-  and deterministically splits it into rendered evidence references of at most
-  24 lines, so do not partition one interval by hand.
-- Test code establishes an expected condition, not that the test ran or that a
-  wider integration behavior succeeded.
-- Do not invent execution or CI results.
-- Compare pull-request and commit claims with the changed-file map and code. A
-  material stale or contradictory claim belongs in a review item.
-- Keep provider titles, code, paths, commands, and excerpts exact in source and
-  evidence fields. Refer to them plainly in generated prose.
+- Keep a claim no broader than its evidence. Split parts supported by code,
+  stated intent, or inference differently.
+- Select the smallest continuous interval that proves a claim. Hope preserves
+  an authored interval of up to 96 lines and splits it into rendered references
+  of at most 24 lines; do not partition one interval by hand.
+- Treat a test as evidence of an expected condition, not proof that it ran or
+  that wider integration behavior succeeded. Never invent execution or CI
+  results.
+- Compare provider claims with the changed-file map and code. Report a material
+  contradiction as a review item.
+- Keep provider titles, code, paths, commands, and excerpts exact in source
+  fields. Refer to them plainly in generated prose.
 
-## Explanation
+## Explain the change
 
-- Write `title` as a short, direct statement of the observable change in the
-  review locale. Ground it in changed code. A natural noun phrase is valid when
-  it is clearer than a full sentence. Do not copy the pull-request title, lead
-  with a code identifier, or use a vague label such as "refactor retry logic."
-  Prefer the result a person can understand, such as "The last failure now
-  reaches the caller." Name one decisive result and normally stay within 60
-  characters. Leave secondary mechanics for the summary.
-- Reuse the exact changed-code evidence range from `coreChange` for `title`.
-  The title names the core result; it does not introduce separate evidence.
-- Let the visible explanation answer these reader questions in order: what
-  changed, why it matters, how previous and new behavior differ, when the
-  outcome changes, what the review found, and how the review knows. Do not turn
-  these questions into headings when the existing fields already answer them.
-- State `purpose` as the goal itself. Do not wrap it in phrases such as "this
-  change aims to," "this is intended to," or their translated equivalents.
-- Give `purpose` a `stated`, `inferred`, or `unknown` basis. Source code may
-  establish the implementation, but is not itself a statement of purpose.
-- Ground both `coreChange.before` and `coreChange.after` in collected
-  changed-file code. Pull-request prose may explain why the change exists, but
-  cannot establish either code state by itself.
-- Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` to one
-  main idea each. Start with the actor or affected thing, then state the
-  condition or result. Normally use one sentence for each compact comparison
-  summary. Avoid a sentence whose subject changes halfway through.
-- Write `coreChange.why` as the practical effect. Do not end with a generic
-  purpose phrase when the reader can be told what becomes safer, faster, or
-  easier to decide.
-- Use `background` only for context a new reader needs before the comparison.
-  Normally use zero or one item. Prefer one small concrete situation over a
-  general definition when both explain the concept.
-- Keep `purpose`, `background`, `coreChange`, `behavior`, visual, microworld,
-  and quiz prose understandable without code identifiers. Put identifiers and
-  technical mechanics in `codeSteps`. When a public identifier is necessary
-  to understand the main promise, explain its role in plain language first and
-  use the identifier once.
-- In the main reading path, describe a person's choice, a condition, and its
-  outcome instead of spelling source states such as boolean literals, callback
-  return values, operators, or option assignments. Those source mechanics
-  belong in `codeSteps` and linked evidence.
-- Keep `coreChange.before`, `coreChange.after`, and `coreChange.why` short
-  enough for the first screen.
-- Use `coreChange.details` for one to four observable outcomes or preserved
-  conditions that help a new reader predict the change. Use plain language.
-  Keep functions, types, identifiers, inheritance, clocks, files, and
-  file-by-file mechanics out of these visible details.
-- Put implementation sequences and technical mechanics in `codeSteps`. They
-  appear as collapsed implementation evidence, not in the main reading path.
-- Use `behavior` only when a flow, condition, state change, comparison, or
-  small experiment helps the reader predict an outcome. Do not duplicate
-  `codeSteps`.
-- When runtime behavior intentionally stays unchanged, explain the actual
-  maintenance, development, build, documentation, dependency, or test effect.
-  Do not invent a runtime change.
-- Give each included file exactly one `explained`, `supporting`, or
-  `mechanical` disposition.
+Write `title` as one short, direct observable result in the review locale.
+Ground it in the same changed-code range as `coreChange`; do not copy the pull-
+request title, lead with an identifier, or introduce separate evidence.
 
-## Context and limits
+Let the visible explanation answer: what changed, why it matters, how old and
+new behavior differ, when the outcome changes, what the review found, and how
+it knows.
 
-- Add `contextChecks` only for concrete categories that mattered. Mark each
-  `checked`, `not-applicable`, or `limited`.
-- A checked category needs a grounded basis and evidence whose role matches
-  it. Pull-request prose can establish stated intent; collected code is needed
-  for code behavior.
-- Use `unknown` without evidence for an unchecked limited or not-applicable
-  category.
-- Do not use vague categories such as the whole repository or ecosystem.
-- Give every reported limit one concrete impact and link it from a limited
-  context check. Name the exact caller, state path, setting, test, or question
-  left unknown and state whether that omission materially limits a main
-  explanation or judgment.
-- Not reading the whole repository is not itself a material limit.
-- Diff does not run or collect CI, tests, builds, or lint. That standard boundary
-  is not material by itself. Mark it material only when the main explanation or
-  judgment depends on an execution result that static evidence cannot establish.
-  In that case, add one linked `verify` review item that states the missing
-  evidence and what would close the uncertainty.
+- State `purpose` as the goal, without an “aims to” wrapper. Use `stated`,
+  `inferred`, or `unknown`; code is not itself a purpose statement.
+- Ground both `coreChange.before` and `coreChange.after` in changed-file code.
+  Pull-request prose may explain why, but cannot establish either code state.
+- Give `before`, `after`, and `why` one main idea each. Start with the affected
+  actor or thing and state the practical result.
+- Use zero or one `background` item for context a new reader needs before the
+  comparison.
+- Keep the main path understandable without code identifiers. Put technical
+  mechanics and implementation sequence in collapsed `codeSteps`.
+- Use one to four `coreChange.details` for distinct observable outcomes or
+  preserved conditions. Do not turn them into a file or identifier inventory.
+- Use `behavior` only when a flow, condition, state, comparison, or small
+  experiment helps the reader predict an outcome. Do not repeat `codeSteps`.
+- When runtime behavior is unchanged, explain the real maintenance, build,
+  documentation, dependency, development, or test effect.
+- Give each included file exactly one `explained`, `supporting`, or `mechanical`
+  disposition.
 
-## Review items
+## Account for context and limits
 
-- Choose the kind by the next action: `resolve` for a concrete change,
-  `decide` for a requirement or trade-off choice, and `verify` for evidence
-  needed to close uncertainty.
-- Set importance by the harm of ignoring the item. High covers security,
-  privacy, data, recovery, broad, core, or main-goal harm. Medium is real but
-  limited or recoverable. Low is local and does not affect the core result.
-- Omit taste-only style comments.
-- Give every item a basis that matches its evidence.
-- When an item closes a known scope limit, add its ID to `limitIds` and put the
-  action in the item instead of repeating the limit.
-- For a `verify` item, make `doneWhen` close the exact uncertainty. A component
-  test cannot prove a wider end-to-end, migration, hang, or security property
-  that it does not exercise.
-- Do not advise approval or rejection.
+Add `contextChecks` only for concrete categories that mattered. Mark each
+`checked`, `not-applicable`, or `limited`.
 
-## Prose and focus
+A checked category needs evidence whose role matches the claim. Use `unknown`
+without evidence for an unchecked limited or not-applicable category. Do not
+use vague categories such as the whole repository or ecosystem.
 
-- Follow the shared Hope Write standard for every user-facing field. Preserve
-  evidence, uncertainty, exact-source constraints, and the resolved locale
-  when simpler wording would change meaning.
-- Write generated prose in the resolved locale as plain text. Hope does not
-  parse Markdown or HTML, and validation rejects backticks.
-- Never put internal IDs such as `source-7`, `file-2`, or `limit-1` in
-  user-facing prose. Use the recognizable file, component, behavior, or limit
-  name instead.
-- Keep one idea in one primary field. Reuse the smallest exact evidence range
-  only when another field genuinely needs it.
-- Before validation, compare sibling items that cite the same evidence set and
-  items whose source intervals strongly overlap. Shared support is a signal to
-  check redundancy, not proof that two claims are duplicates. Keep both when
-  they answer different reader questions or own different review actions.
-  Otherwise consolidate the repeated meaning in its primary field instead of
-  paraphrasing it. Do not remove evidence needed to ground a remaining claim.
-- Keep each prose value to one semantic paragraph. Put a distinct idea in the
-  existing field or array item that owns it. When one field genuinely needs a
-  second paragraph, separate the paragraphs with a newline so the renderer
-  keeps the boundary.
-- Normally use at most 12 review items, 4 core details, and 12 code steps. Do
-  not fill maxima for their own sake.
+Give every material limit one concrete impact and link it from a limited
+context check. Name what remains unknown and whether it limits a main
+explanation or judgment. Not reading the whole repository is not a material
+limit by itself.
 
-## Teaching-aid decisions
+Diff does not run CI, tests, builds, or lint. Treat that as material only when a
+main claim depends on execution that static evidence cannot establish. Then add
+one linked `verify` item stating what evidence would close the uncertainty.
 
-Record one decision for each of `visual`, `microworld`, and `quiz`.
+## Report actionable review items
 
-For each aid:
+- Use `resolve` for a concrete change, `decide` for a requirement or trade-off,
+  and `verify` for missing evidence.
+- Set importance by the harm of ignoring the item: high for security, privacy,
+  data, recovery, broad, core, or main-goal harm; medium for real but limited or
+  recoverable harm; low for local non-core harm.
+- Omit taste-only comments and never advise approval or rejection.
+- Match each item's basis to its evidence.
+- When an item closes a known limit, link the limit and put the action only in
+  the item.
+- Make `doneWhen` close the exact uncertainty. Do not claim that a narrow test
+  proves a wider end-to-end, migration, hang, or security property.
 
-1. Identify the distinct teaching job from the task and evidence. A sequence,
-   identifier, or technical term in the source does not create a teaching job
-   by itself.
-2. Use `not-applicable` when the aid has no distinct teaching job. One aid may
-   be useful while another remains not applicable.
-3. Use `omitted` when the aid has a distinct teaching job, but prose or another
-   selected aid already performs it clearly.
-4. Use `included` only when the aid still makes its distinct teaching job
-   materially easier to understand.
+## Keep prose focused
 
-Every decision needs a clear `reason`.
+Write user-facing fields in the resolved locale as plain text. Hope does not
+parse Markdown or HTML, and validation rejects backticks. Keep internal IDs out
+of visible prose.
 
-An included aid also needs a concise `teachingJob`.
+Put one idea in one primary field. Before validation, compare siblings that
+share evidence or strongly overlapping ranges. Shared support signals a
+redundancy check but does not prove duplication. Consolidate repeated meaning
+without removing evidence needed by a distinct claim.
 
-Do not give two included aids the same teaching job.
+Keep each prose value to one semantic paragraph unless a real paragraph
+boundary is needed. Normally use at most 12 review items, four core details,
+and 12 code steps; do not fill maxima for their own sake.
 
-Consider the aids in this order:
+## Decide teaching aids
 
-1. Use a microworld for a small, bounded input, condition, or state whose
-   changes help the reader predict different outcomes.
-2. Use a visual for a static flow, branch, interaction, or component
-   relationship that prose alone makes hard to follow.
-3. Use a quiz for one to five non-trivial predictions, preserved conditions,
-   or failure cases that do not need an interactive model.
+Record one decision for each `visual`, `microworld`, and `quiz`:
 
-### Microworld
+- `not-applicable` when it has no distinct teaching job;
+- `omitted` when prose or another selected aid already does that job clearly;
+  or
+- `included` when it makes a distinct job materially easier to understand.
 
-Use declarative explanation text only.
+Give every decision a reason and every included aid a concise `teachingJob`.
+Do not assign the same job to two included aids.
 
-Do not put repository code, commands, expressions, URLs, or scripts in the
-microworld.
+Consider a microworld for a bounded input or state whose changes help predict
+outcomes, a visual for a static relationship or flow that prose makes hard to
+follow, and a quiz for non-trivial predictions or preserved conditions that do
+not need interaction.
 
-Never claim that it ran repository code or produced a test result.
+If any aid has a distinct teaching job, read `teaching-aids.md` before deciding
+whether to omit or include it and before authoring its content. If none has such
+a job, mark all three not applicable without loading that reference.
 
-Choose one to three controls with two to four options each.
+## Add a beginner primer only when needed
 
-The complete set must have no more than 12 combinations.
+Use a beginner primer only for a named concept or deeper starting point that
+ordinary background cannot supply. A new-reader request alone does not require
+one, and a selected aid may already do the job.
 
-Run `microworld-skeleton` as directed by the Skill and provide exactly one
-grounded scenario for every returned combination.
+Use `code` when an item paraphrases a mechanism directly established by code.
+Use `inferred` only when its material meaning goes beyond the evidence. Split
+the two when one basis cannot accurately cover both.
 
-Write `"after": "unchanged"` when a scenario's represented steps and outcome
-stay exactly the same. Do not copy the `before` trace into `after`.
+## Stay within the analysis budget
 
-### Visual
+The schema and preflight own the exact size and evidence limits. Prefer a
+focused explanation over exhausting them. Reuse an exact smallest interval
+that already proves the same mechanism, and normally keep a range to 4–12
+lines.
 
-Choose the visual from the task's teaching job, not from every relationship in
-the evidence.
-
-- Use `component-map` for fixed components, responsibilities, calls, or
-  handoffs when structure is the teaching job. A call alone does not make
-  timing or order the teaching job.
-- Use `decision-table` when comparing meaningful branches or conditions and
-  their outcomes is the teaching job.
-- Use `flow` when runtime data movement or control flow is the teaching job.
-- Use `sequence` only when time order or ordered messages between participants
-  are themselves the teaching job.
-
-Do not add a visual for a short relationship that the ordinary explanation
-already makes clear.
-
-Do not add one when the only deeper need is a concept definition handled by
-the beginner primer.
-
-For a presentation-only change with no flow, branch, component relationship,
-interaction, state transition, or prediction to visualize, use
-`not-applicable`.
-
-Do not use `omitted` merely because ordinary Background already explains that
-change.
-
-Use concrete example values in a caption, detail, message label, or table cell
-only when they make data movement or control flow easier to follow.
-
-Ground each value in review evidence.
-
-Mark a simplified or inferred value in the surrounding explanation.
-
-Use the smallest set of values needed for the teaching job.
-
-Record one underlying evidence value once.
-
-Do not repeat it in cardinal, ordinal, or paraphrased form, or in another
-visual field.
-
-Code identifiers, component names, and prose step labels are not concrete
-example values merely because they appear in evidence.
-
-Do not invent values for a static relationship that has none.
-
-### Quiz
-
-Include one to five evidence-backed questions.
-
-Test a non-trivial behavior, preserved condition, or failure case.
-
-Do not test whether the reader memorized a name, path, or sentence from the
-review.
-
-## Beginner primer
-
-Include a beginner primer only when the task requires a named concept or a
-deeper starting point that ordinary Background cannot supply.
-
-A request for a new reader does not by itself require one.
-
-Omit the primer when Background, the main explanation, or a selected aid
-already gives enough context.
-
-Use `code` when an item paraphrases a mechanism directly established by code
-evidence.
-
-Plain language does not make that mechanism inferred.
-
-Use `inferred` only when the item's material meaning goes beyond what its
-evidence directly establishes.
-
-Split direct behavior from a broader inferred definition when one basis cannot
-accurately cover both.
-
-## Resource limits
-
-- Keep the full analysis within Hope's preflight limits: 128 KiB for both the
-  JSON file and canonical serialization, 48 KiB of generated prose, 192
-  evidence references, 96 unique evidence ranges, 1,200 unique evidence lines,
-  96 KiB of unique excerpts, and 600 code-evidence line occurrences across
-  distinct rendered ranges.
-- Target at most 480 code-evidence line occurrences so validation repairs have
-  room. Exact reuse of one source interval counts once. Overlapping intervals
-  with different boundaries render separately and each spends its full length.
-- Before adding another interval, reuse the exact smallest range that already
-  proves the same mechanism. Normally keep an interval to 4–12 lines instead
-  of selecting the 24- or 96-line maximum.
-- If validation reports a code-evidence overage, use its actual total,
-  field-by-field contribution, largest ranges, and overlap list to remove the
-  biggest repetition first.
-- Prefer a focused explanation over exhausting an allowance.
+Target at most 480 rendered code-evidence line occurrences so validation
+repairs have room. If validation reports an overage, use its field
+contributions, largest ranges, and overlap list to remove the largest
+repetition first.

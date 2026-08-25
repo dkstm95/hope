@@ -33,6 +33,8 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/diff/assets/hope-protected-light.png",
   "plugins/hope/skills/diff/references/analysis.md",
   "plugins/hope/skills/diff/references/runtime.md",
+  "plugins/hope/skills/diff/references/teaching-aids.md",
+  "plugins/hope/skills/diff/references/workflow.md",
   ...[
     "analysis-v3.schema.json",
     "artifact.mjs",
@@ -69,6 +71,8 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/toxic-review/SKILL.md",
   "plugins/hope/skills/toxic-review/agents/openai.yaml",
   "plugins/hope/skills/toxic-review/references/causal-review.md",
+  "plugins/hope/skills/toxic-review/references/red-review.md",
+  "plugins/hope/skills/toxic-review/references/verification.md",
   "plugins/hope/skills/write/SKILL.md",
   "plugins/hope/skills/write/agents/openai.yaml",
   "plugins/hope/skills/write/assets/hope-protected-light.png",

@@ -5,188 +5,110 @@ description: Use for a strict, skeptical, risk-focused review of a named work pr
 
 # Hope Toxic Review
 
-Be demanding about the work and respectful toward people.
+Use the active host session to bind one work product, assign fresh red
+reviewers, arrange blue verification when a finding warrants it, adjudicate the
+evidence, and report one proportionate result.
 
-Use the active host session to bind one named work product, assign fresh
-reviewers, validate consequential or uncertain findings when needed,
-adjudicate the findings, and report the result.
-
-Do not let the active session act as a reviewer or finding verifier.
+Be demanding about the work and respectful toward people. The active session
+coordinates and adjudicates; it must not act as a reviewer or verifier.
 
 Read `../write/references/writing-standard.md` before drafting user-facing
-language. Apply it without changing the target scope, evidence, uncertainty,
-adjudication, or required result.
+language. Preserve the target scope, evidence, uncertainty, adjudication, and
+required result.
 
-## Bind the target
+## Bind one target
 
-State the target, current stage, material risks, evidence in scope, and evidence
-that is unavailable.
+State the named work product, current stage, material risks, evidence in scope,
+and unavailable evidence. Do not widen the review into unrelated work. Changed
+evidence starts a new review.
 
-Do not widen the review into unrelated work.
+## Assign red reviewers
 
-Changed evidence starts a new review.
+Choose the smallest role set that covers the material risks. Use one focused
+role when it is enough and add roles only for distinct questions.
 
-## Choose red reviewer roles
+Every role needs a fresh subagent context, including a one-role review. If the
+host cannot provide one, stop without reviewing the work.
 
-Choose the smallest useful role set: use one focused role when it covers the
-material question, and add roles only to test distinct risks.
+Give each reviewer only:
 
-Use a fresh subagent context for every red reviewer role, including a one-role
-review. Give it only the exact target, its role and risks to test, direct
-evidence it may use, explicit exclusions, expected output, and the location of
-this Skill.
+- the exact target;
+- its role and risks to test;
+- direct evidence it may use;
+- explicit exclusions;
+- the expected output; and
+- this Skill directory.
 
-Tell each reviewer to read this Skill before acting.
+Do not pass the active conversation, earlier reasoning, drafts, implementation
+narrative, prior conclusions, or another reviewer's input or output. Parallel
+roles or separate sequential contexts are valid; repeated prompts in one
+context are not independent.
 
-Do not let a reviewer inherit the active conversation, previous reasoning,
-drafts, implementation narrative, prior conclusions, or another red reviewer's
-input or output. Run roles in parallel or in separate sequential contexts.
+Tell every red reviewer to read `references/red-review.md` and the shared Hope
+Write standard.
 
-Repeated prompts in one shared context are not independent reviewers.
+When the work product makes or relies on a material causal claim, assign the
+causal-completeness method to one role and tell it to also read
+`references/causal-review.md`. Do not activate that method merely because the
+target is an incident.
 
-If a fresh context is unavailable, stop without performing the review.
+## Decide whether findings need blue verification
 
-## Review the work
+Seal the red findings first. A candidate requires a fresh blue verifier when
+any of these applies:
 
-Each finding needs:
-
-- a concrete issue;
-- practical impact;
-- evidence;
-- a proposed action;
-- priority;
-- confidence; and
-- an important limit or uncertainty.
-
-Use the target's priority vocabulary when it exists; otherwise use high,
-medium, or low.
-
-Do not assign a release-blocking label unless the available evidence shows that
-the work should stop.
-
-Do not manufacture criticism.
-
-Finding no material issue is a valid result.
-
-Do not turn uncertainty into an established defect.
-
-Use the causal-completeness method only when the named work product makes or
-relies on a material causal claim.
-
-When it applies, read
-[references/causal-review.md](references/causal-review.md) and assign the method
-to one role.
-
-Do not activate it merely because the target is an incident.
-
-## Validate findings when needed
-
-Seal the red reviewers' candidate findings before validation.
-
-Use a blue verifier subagent in a fresh context when a candidate finding:
-
-- has high priority or the target vocabulary's equivalent level for a material
-  defect;
-- would stop a release or require broad, costly, destructive, or
+- it alleges a high-priority material defect or equivalent;
+- it would stop a release or require broad, costly, destructive, or
   difficult-to-reverse action;
-- relies on incomplete or ambiguous evidence; or
-- has materially uncertain scope or impact.
+- its evidence is incomplete or ambiguous; or
+- its scope or impact is materially uncertain.
 
-Every candidate that meets any condition must receive blue verification. Do not
-let reviewer confidence bypass it. Review size alone does not call for a blue
-verifier. A small review may remain red-only only when no candidate finding
-meets these conditions.
+Reviewer confidence and review size do not change this rule. If no candidate
+meets it, continue without a blue verifier.
 
-Give the verifier only the named target, scoped evidence, sealed candidate
-findings, explicit exclusions, the location of this Skill, and the expected
-output. Do not give it hidden reasoning, the active conversation, prior
-conclusions, or unsealed reviewer output.
+For required verification, give a fresh verifier only the target, scoped
+evidence, sealed candidates, exclusions, expected output, and this Skill
+directory. Tell it to read `references/verification.md` and the shared Hope
+Write standard. Use one verifier for related findings and add another only for
+distinct expertise.
 
-Tell the verifier to read this Skill before acting.
+If a required fresh verifier is unavailable, stop and identify what could not
+be validated.
 
-The verifier tests the candidate findings. It does not defend the work product
-or try to cancel criticism. For each finding, test these parts separately:
+## Adjudicate the evidence
 
-- whether the issue exists;
-- whether the claimed impact and priority are proportionate;
-- whether the claimed scope is supported; and
-- whether the proposed action is necessary, proportionate, and no broader than
-  the evidence requires.
+Before adjudicating, confirm that every required candidate has a blue result.
+Use only the named target, scoped evidence, sealed red findings, and blue
+results. Do not introduce hidden conversation context or count votes.
 
-For each part, try to falsify it, identify missing context, unsupported
-assumptions, and overstatement, acknowledge evidence that survives the
-challenge, and return uphold, qualify, or refute with direct evidence and any
-important uncertainty. For impact, state the highest priority supported by the
-evidence. For action, name a smaller or more reversible action when it would
-address the supported risk.
+Treat blue verification as evidence, not a decision. Judge each candidate by
+the target evidence, impact, scope, feasibility, duplication, and blue
+challenge. Accept, partly accept, reject, defer, or merge it.
 
-Return one overall outcome for the finding. Use uphold only when all four parts
-are upheld. Refute the finding when the issue is refuted or no supported
-material impact remains. Otherwise use qualify and state exactly what must be
-narrowed. Missing evidence does not justify a worst-case assumption.
+For every candidate, record its disposition and a short evidence-based reason.
+Give an actionable candidate its final priority, explain any changed priority
+or action, and do not state it more strongly than verification supports. A
+deferred finding needs a concrete next step.
 
-Use one verifier for related findings. Add another only when a distinct kind of
-expertise is needed.
+Reject a refuted issue or a finding with no supported material impact. When the
+issue remains material, narrow any refuted impact, scope, or action.
 
-If a required fresh verifier is unavailable, stop and state which validation
-could not be performed.
+Keep rejected and duplicate findings out of the actionable list while
+accounting for them in a concise adjudication summary.
 
-## Adjudicate
+## Respond once
 
-Use the active host to combine red reviewer output and any blue verifier output.
-
-Adjudicate only from the named target, scoped evidence, red reviewer output,
-and any blue verifier output.
-
-Do not introduce hidden conversation context as evidence.
-
-Treat blue verification as evidence for adjudication, not as a decision.
-
-Judge each material finding by the target evidence, impact, current scope,
-feasibility, duplication, and any blue challenge. Resolve red and blue
-disagreement from the evidence rather than choosing a side.
-
-Before adjudicating, confirm that every candidate meeting any blue-verification
-condition has a blue result. If any required verification is missing, stop and
-identify it.
-
-Do not count reviewer votes.
-
-Accept, partly accept, reject, defer, or merge each finding.
-
-For every candidate, record its final disposition, final priority when it
-remains actionable, and a short evidence-based reason. State why the priority
-or proposed action changed from the red finding. Do not report a claim or
-action more strongly than its blue results support. Reject a refuted issue or a
-finding with no supported material impact. Narrow a refuted impact, scope, or
-action when a material issue remains.
-
-A deferred finding needs a concrete next step.
-
-Keep rejected and duplicate findings out of the actionable list, but account
-for them in a concise adjudication summary.
-
-## Respond
-
-Use one strict, competent, and proportionate voice.
-
-Lead with the highest-priority accepted issue.
-
-Keep deferred risk visible.
-
-Include the concise adjudication summary so the person can see every
-candidate's disposition and each actionable candidate's final priority. Keep
-the actionable list focused on accepted, partly accepted, and deferred
+Use one strict, competent, proportionate voice. Lead with the highest-priority
+accepted issue and keep deferred risk visible. Include the adjudication summary
+and focus the actionable list on accepted, partly accepted, and deferred
 findings.
 
-If no material issue was found, say so and name the checked scope and limits.
+If no material issue remains, say so and name the checked scope and limits. Do
+not attack a person.
 
-Do not attack a person.
-
-Perform one review round for one evidence snapshot.
-
-Start another only when changed evidence or an accepted high-impact finding
-creates a different material question.
+Perform one review round for one evidence snapshot. Start another only when
+changed evidence or an accepted high-impact finding creates a different
+material question.
 
 Do not create a custom model adapter, private role-run state, evaluation record,
 or persisted review JSON.

@@ -26,6 +26,8 @@ skills/diff/agents/openai.yaml
 skills/diff/assets/hope-protected-light.png
 skills/diff/references/analysis.md
 skills/diff/references/runtime.md
+skills/diff/references/teaching-aids.md
+skills/diff/references/workflow.md
 skills/diff/scripts/analysis-v3.schema.json
 skills/diff/scripts/artifact.mjs
 skills/diff/scripts/checkpoint-window-v2.schema.json
@@ -60,6 +62,8 @@ skills/sweep/agents/openai.yaml
 skills/toxic-review/SKILL.md
 skills/toxic-review/agents/openai.yaml
 skills/toxic-review/references/causal-review.md
+skills/toxic-review/references/red-review.md
+skills/toxic-review/references/verification.md
 skills/write/SKILL.md
 skills/write/agents/openai.yaml
 skills/write/assets/hope-protected-light.png

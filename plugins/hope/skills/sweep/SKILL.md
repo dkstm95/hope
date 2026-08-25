@@ -5,25 +5,16 @@ description: Use only when someone explicitly invokes $hope:sweep in Codex, /hop
 
 # Hope Sweep
 
-Use the active host session to find and apply evidence-backed maintenance
-changes to operating code and its directly supporting material without changing
-customer-observed behavior.
+Use the active host session to apply proven, behavior-preserving maintenance to
+operating code and its directly supporting material.
 
-Read `../../references/code-maintenance.md` before judging code, tests,
-configuration, build logic, documentation, or other support material.
+Read `../../references/code-maintenance.md` before inspecting the target. Read
+`../write/references/writing-standard.md` before drafting user-facing language.
 
-Read `../write/references/writing-standard.md` before drafting user-facing
-language. Apply it without changing evidence, uncertainty, or the required
-result.
+## Require explicit invocation
 
-## Confirm explicit invocation
-
-Start Sweep only when the person explicitly invokes it through the active
-host:
-
-- `$hope:sweep` in Codex;
-- `/hope:sweep` in Claude Code; or
-- Hope Sweep's namespaced, explicit Skill command in another host.
+Start only after the person explicitly invokes `$hope:sweep` in Codex,
+`/hope:sweep` in Claude Code, or the host's namespaced Hope Sweep command.
 
 Do not infer Sweep from a request to inspect a project, suggest improvements,
 choose the next task, review work, fix a bug, or clean up code. A follow-up such
@@ -32,51 +23,38 @@ as “do that” is not an explicit invocation.
 If an implicit selection reaches this Skill, stop before inspecting or editing
 the target and continue the underlying request through the ordinary workflow.
 
-## Bind the maintenance target
+## Bind the target
 
-Use the repository named by the person. Otherwise use the current repository.
-The entire repository is the default target. Narrow it only when the person
-names a smaller scope inside that repository.
+Use the named repository or, when none is named, the current repository. The
+whole repository is the default; narrow it only when the person names a smaller
+scope.
 
-The target includes operating code and the tests, configuration, build logic,
+Include operating code and only the tests, configuration, build logic,
 documentation, comments, examples, generation, and assets that directly
-support it. Do not widen into unrelated material or external directories.
+support it. Record the current revision and working-tree state, and preserve
+unrelated changes and project instructions.
 
-Record the current revision and working-tree state. Preserve unrelated changes
-and project-owned instructions.
+Explicit invocation authorizes reversible local edits inside this boundary. It
+does not override host permissions or authorize commits, pushes, pull requests,
+or merges.
 
-Explicit invocation grants authority for reversible local edits within this
-boundary. Do not ask for approval for each candidate. It does not override host
-permissions or authorize commits, pushes, pull requests, or merges.
+## Apply proven cleanup
 
-## Find and apply proven cleanup
+Follow the maintenance guidance to trace active consumers, choose safe
+candidates, and verify the changed scope. Inspect only enough surrounding
+evidence to prove a coherent cleanup; Sweep does not require a complete file or
+category inventory.
 
-Use the maintenance guidance to inspect only enough surrounding evidence
-to prove a coherent cleanup. Sweep does not require an inventory of every
-project file or a finding in every maintenance category.
+Apply proven changes in small coherent batches. Do not fix or report suspected
+bugs, customer-visible or public-contract changes, product or compatibility
+decisions, or uncertain removals. Leave those signals outside Sweep without
+turning them into recommendations or follow-up tasks.
 
-Apply proven changes immediately in small, coherent batches. Recheck the
-affected consumers before writing and keep each edit inside the bound target.
+Correct or revert any regression introduced by Sweep. Do not fix a pre-existing
+failure or widen the cleanup during verification.
 
-Do not fix or report suspected bugs, customer-behavior or public-contract
-changes, product or compatibility decisions, or removals whose safety is
-uncertain. Silently leave them outside Sweep. Do not turn an out-of-scope signal
-into a recommendation or follow-up task.
+## Report the result
 
-## Verify the result
-
-Use the maintenance guidance to verify the changed scope.
-
-Inspect the final difference against the operating behavior and this Skill's
-allowed categories. Correct or revert a regression introduced by Sweep. Do not
-fix a pre-existing failure or use verification to widen the cleanup.
-
-Report:
-
-- the behavior-preserving cleanup that was applied, or that no proven cleanup
-  was available;
-- the supporting code, tests, documentation, configuration, generation, or
-  assets changed with it; and
-- the checks run and what passed or failed.
-
-Do not mention skipped out-of-scope signals or propose work for them.
+Report the behavior-preserving cleanup, or that no proven cleanup was available;
+the directly supporting material changed with it; and the checks that passed or
+failed. Do not mention skipped out-of-scope signals.
