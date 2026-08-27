@@ -35,3 +35,8 @@ translated or parallel text, first read the target version for naturalness,
 then compare versions for meaning drift.
 
 Do not copy the writing standard or its checklist into the response.
+
+Return when the requested language action is complete and meaning, facts,
+uncertainty, citations, exact text, and voice remain preserved. Correct a
+clarity or preservation problem introduced by Write, but do not continue
+polishing beyond the requested result.

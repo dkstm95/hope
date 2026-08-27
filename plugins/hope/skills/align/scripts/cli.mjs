@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 import {
   createAlignArtifact,
   inspectAlignArtifact,
-  migrateAlignInputFile,
   reviseAlignArtifact,
 } from "./artifact.mjs";
 
@@ -17,7 +16,6 @@ function usage() {
     "Internal Skill subcommands:",
     "  create --input <draft.json> --output <artifact.html> [--root <repository>]",
     "  inspect --artifact <artifact.html>",
-    "  migrate-input --input <legacy-v2.json>",
     "  revise --input <draft.json> --artifact <artifact.html> --expect <digest> [--root <repository>]",
   ].join("\n");
 }
@@ -48,7 +46,7 @@ export function parseAlignArguments(argv) {
     return { command: "help" };
   }
   const [command, ...rest] = argv;
-  if (!["create", "inspect", "migrate-input", "revise"].includes(command)) {
+  if (!["create", "inspect", "revise"].includes(command)) {
     throw new TypeError(usage());
   }
   const options = takeOptions(rest);
@@ -68,12 +66,6 @@ export function parseAlignArguments(argv) {
       throw new TypeError(usage());
     }
     return { artifactPath: options.artifact, command };
-  }
-  if (command === "migrate-input") {
-    if (!options.input || options.artifact || options.output || options.expect || options.root) {
-      throw new TypeError(usage());
-    }
-    return { command, inputPath: options.input };
   }
   if (!options.artifact || !options.expect || !options.input || options.output) {
     throw new TypeError(usage());
@@ -103,11 +95,6 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   } else if (options.command === "inspect") {
     result = await (dependencies.inspectAlignArtifact ?? inspectAlignArtifact)(
       options.artifactPath,
-      dependencies,
-    );
-  } else if (options.command === "migrate-input") {
-    result = await (dependencies.migrateAlignInputFile ?? migrateAlignInputFile)(
-      options.inputPath,
       dependencies,
     );
   } else {

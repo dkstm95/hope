@@ -1,5 +1,5 @@
 interface:
   display_name: "Hope Align"
-  short_description: "Align a goal and preserve the agreed intent"
+  short_description: "Interview until the task intent is shared"
   brand_color: "#006FBE"
-  default_prompt: "Use $hope:align to build a shared understanding before implementation."
+  default_prompt: "Use $hope:align to interview me until every material intent decision is explicit and shared before implementation."

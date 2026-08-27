@@ -1,16 +1,39 @@
 # Align artifact
 
-Read this reference only when inspecting, creating, migrating, or revising an
-Align artifact. `SKILL.md` owns the conversation, readiness, artifact timing,
-and revision judgment. This reference owns artifact authoring and commands.
+Read this reference when inspecting, creating, or revising an Align artifact,
+or after confirmed intent needs a durable record. `SKILL.md` owns the interview
+and confirmation. This reference owns artifact timing, authoring, identity,
+revision judgment, and commands.
+
+## Inspect supplied evidence
+
+If the person supplies an artifact path, inspect that exact path. Do not search
+for a repository-wide latest artifact. Use its current content as evidence for
+the interview, not as proof that the person still agrees with it.
+
+If inspection verifies the same goal, retain the artifact when the confirmed
+agreement is unchanged and revise it when the goal, intent, exclusions, flow,
+or visual selection changed materially. If Hope cannot verify its identity or
+contents, leave it in place and ask where to create a new artifact.
+
+## Decide whether to preserve the agreement
+
+After confirmation, create or revise an artifact when:
+
+- the person asks for one;
+- another session or worker will rely on the agreement;
+- a material decision, assumption, or exclusion must survive the conversation;
+  or
+- later human observation or approval is part of the intent.
+
+Otherwise keep the agreement in the conversation. Do not create an artifact
+merely because Align ran, and do not ask the person to choose unless the need
+for a durable record is itself material or uncertain.
 
 ## Author the current intent
 
-Read the complete `scripts/align-input-v3.schema.json` before writing input. It
-reuses shared scalar and visual definitions from
-`scripts/align-input-v2.schema.json`.
-
-`create` and `revise` accept only v3 input:
+Read the complete `../scripts/align-input-v3.schema.json` before writing input.
+`create` and `revise` accept only that current input format.
 
 - `goal` and `problem` form the summary;
 - each `intent` item binds one observable outcome to its judgment method and
@@ -44,6 +67,9 @@ one semantic paragraph unless a real paragraph boundary is needed. Use one
 decisive result for the title, one direct statement for the goal, and only the
 main practical cause or effect for an intent reason.
 
+If visual directions were used, also follow **Preserve the selection** in
+`design-directions.md`.
+
 ## Attach evidence
 
 Give evidence that supports a specific claim a stable lowercase `id`. Write the
@@ -58,17 +84,6 @@ when the source does not belong in the evidence list.
 The runtime rejects duplicate evidence entries and exact duplicate sibling
 items. Shared evidence IDs are a review signal, not proof that two claims are
 duplicates.
-
-## Migrate v2 input
-
-`migrate-input` is the only path that accepts a v2 input file. It returns a v3
-`draft` for fields with a direct mapping and keeps the former boundary, included
-scope, decisions, and open choices in `review`.
-
-The result has `ready: false`. Resolve every review item against the current
-agreement, remove repeated meaning, and pass only a clean v3 input to `create`
-or `revise`. Do not guess how an earlier boundary, decision, or open choice
-becomes current intent.
 
 ## Choose the artifact and input paths
 
@@ -90,12 +105,11 @@ Do not supply a symbolic link, authored HTML, CSS, JavaScript, SVG, or data URL.
 
 ## Run a command
 
-Use the adapter command selected in `SKILL.md` with one subcommand:
+Use the adapter selected in `SKILL.md` with one subcommand:
 
 ```text
 create --input <draft.json> --output <artifact.html> [--root <repository>]
 inspect --artifact <artifact.html>
-migrate-input --input <legacy-v2.json>
 revise --input <draft.json> --artifact <artifact.html> --expect <digest> [--root <repository>]
 ```
 
@@ -117,9 +131,18 @@ or selected design direction creates one new revision in the same artifact. An
 implementation result or technical choice does not.
 
 `inspect` keeps v1, v2, and v3 history readable. `revise` preserves those
-revisions and appends v3 current intent.
+revisions and appends current intent.
 
 Treat the artifact as project documentation of the agreement at that time.
 Keep it by default after implementation. Do not update it to mirror the
 implemented result, delete it merely because work finished, or link it to a
 Diff artifact. Remove it only when the person decides to do so.
+
+## Report or hand off
+
+Report the artifact outcome—created, revised, retained, or skipped—and why. For
+an existing artifact, report its absolute path and current revision. If skipped,
+state that the agreement remains in the active conversation.
+
+Before another session or worker relies on the agreement, pass its explicit
+path and revision and require the receiving session to inspect it.

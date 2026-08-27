@@ -36,6 +36,13 @@ import {
   resolveGitHubPullRequestNumber,
 } from "./target.mjs";
 import { createMicroworldSkeleton } from "./teaching-aids.mjs";
+import {
+  nextAfterCheckpoint,
+  nextAfterInspection,
+  nextAfterLedger,
+  nextAfterPrepare,
+  nextAfterValidation,
+} from "./transitions.mjs";
 import { validateAnalysis } from "./validate.mjs";
 
 export const DIFF_REVALIDATION_RETRYABLE_CODE =
@@ -318,6 +325,7 @@ export async function prepareDiff({
     ),
     analysisSchemaVersion: ANALYSIS_VERSION,
     locale: display.locale,
+    next: nextAfterPrepare(run.path),
     pullRequest: snapshot.pullRequest,
     selection: target.selection ?? "explicit",
     theme: display.theme,
@@ -338,10 +346,14 @@ export async function buildMicroworldSkeleton(inputPath, dependencies = {}) {
 }
 
 export async function readDiffWindow(runPath, startPage, dependencies = {}) {
-  return await (
+  const window = await (
     dependencies.inspectRunWindow ?? inspectDiffRunWindow
   )(runPath, startPage, {
     temporaryRoot: dependencies.temporaryRoot,
+  });
+  return Object.freeze({
+    ...window,
+    next: nextAfterInspection(runPath, window),
   });
 }
 
@@ -358,6 +370,12 @@ function checkpointRecord(checkpoint) {
     ),
     snapshotDigest: checkpoint.snapshotDigest,
   });
+}
+
+function uncollectedContextRequests(ledgerState) {
+  return Object.freeze(ledgerState.requests
+    .filter((request) => !request.collected)
+    .map(({ collected: _collected, ...request }) => Object.freeze(request)));
 }
 
 export async function checkpointDiffWindow(
@@ -388,16 +406,22 @@ export async function checkpointDiffWindow(
       if (error?.code !== "ENOENT") throw error;
     });
   }
-  const pending = result.ledgerState.requests
-    .filter((request) => !request.collected)
-    .map(({ collected: _collected, ...request }) => Object.freeze(request));
-  return Object.freeze({
+  const pending = uncollectedContextRequests(result.ledgerState);
+  const response = {
     checkpointCount: result.ledgerState.currentPage,
     checkpoints: Object.freeze(result.checkpoints.map(checkpointRecord)),
     committedThrough: result.ledgerState.currentPage,
     nextWindow: result.nextWindow,
     pendingContextRequests: Object.freeze(pending),
     replayed: result.replayed,
+  };
+  return Object.freeze({
+    ...response,
+    next: nextAfterCheckpoint(
+      runPath,
+      response.nextWindow,
+      response.pendingContextRequests,
+    ),
   });
 }
 
@@ -409,7 +433,11 @@ export async function readDiffLedger(runPath, page = 1, dependencies = {}) {
   const run = await (dependencies.loadRun ?? loadDiffRun)(runPath, {
     temporaryRoot: dependencies.temporaryRoot,
   });
-  return diffLedgerView(run.ledger, run.snapshot, { page });
+  const ledger = diffLedgerView(run.ledger, run.snapshot, { page });
+  return Object.freeze({
+    ...ledger,
+    next: nextAfterLedger(runPath, ledger, run.analysisPath),
+  });
 }
 
 export async function addDiffContext(runPath, requestIds, dependencies = {}) {
@@ -422,17 +450,32 @@ export async function addDiffContext(runPath, requestIds, dependencies = {}) {
       === operationKey,
   );
   if (priorOperation) {
-    const firstWindow = priorOperation.generation === run.manifest.generation
+    const resumeWindow = run.ledgerState.currentPage < run.manifest.pageCount
       ? await (
         dependencies.inspectRunWindow ?? inspectDiffRunWindow
-      )(run.path, 1, { temporaryRoot: dependencies.temporaryRoot })
+      )(run.path, run.ledgerState.currentPage + 1, {
+        temporaryRoot: dependencies.temporaryRoot,
+      })
       : undefined;
-    return Object.freeze({
+    const isFirstWindow = priorOperation.generation === run.manifest.generation
+      && run.ledgerState.currentPage === 0;
+    const response = {
       ...priorOperation,
-      ...(firstWindow ? { firstWindow } : {}),
+      ...(isFirstWindow ? { firstWindow: resumeWindow } : {}),
+      ...(!isFirstWindow && resumeWindow ? { resumeWindow } : {}),
       path: run.path,
       replayed: true,
       runId: run.manifest.runId,
+    };
+    return Object.freeze({
+      ...response,
+      next: resumeWindow
+        ? nextAfterInspection(runPath, resumeWindow)
+        : nextAfterCheckpoint(
+          runPath,
+          undefined,
+          uncollectedContextRequests(run.ledgerState),
+        ),
     });
   }
   if (
@@ -505,7 +548,7 @@ export async function addDiffContext(runPath, requestIds, dependencies = {}) {
   const firstWindow = await (
     dependencies.inspectRunWindow ?? inspectDiffRunWindow
   )(updated.path, 1, { temporaryRoot: dependencies.temporaryRoot });
-  return Object.freeze({
+  const response = {
     collected: candidates.filter((candidate) => candidate.kind === "context-file").length,
     firstWindow,
     generation: updated.manifest.generation,
@@ -519,6 +562,10 @@ export async function addDiffContext(runPath, requestIds, dependencies = {}) {
     snapshotDigest: updated.snapshot.digest,
     retainedCheckpoints: updated.ledger.checkpoints.length,
     replayed: false,
+  };
+  return Object.freeze({
+    ...response,
+    next: nextAfterInspection(runPath, response.firstWindow),
   });
 }
 
@@ -536,6 +583,7 @@ export async function validateDiff(runPath, dependencies = {}) {
     throw error;
   }
   return Object.freeze({
+    next: nextAfterValidation(runPath),
     runId: run.manifest.runId,
     resources: Object.freeze({
       ...run.resources,

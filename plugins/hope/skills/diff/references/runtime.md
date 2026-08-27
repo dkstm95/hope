@@ -29,6 +29,13 @@ Validation rejects malformed, ungrounded, duplicate, or over-budget authored
 data where the scripts can decide that deterministically. Meaning,
 proportionality, and overlapping-but-distinct claims remain analysis judgments.
 
+Each successful adapter step returns `next`, a structured description of the
+state transitions allowed by the current run. Mandatory inspection,
+checkpointing, ledger, validation, and finish transitions are runtime-owned.
+The only model choice is whether a grounded pending context request would close
+a material review question. These descriptors are state data, not shell command
+strings, and remain valid only for the run identity that returned them.
+
 Diff does not run CI, tests, builds, or lint. When analysis makes that absence
 material, the runtime requires a linked verification item.
 

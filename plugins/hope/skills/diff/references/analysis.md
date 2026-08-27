@@ -3,6 +3,27 @@
 Use these rules with the complete analysis schema and the shared Hope Write
 standard.
 
+## Work the review frontier
+
+Start with the material claims and questions needed to explain or judge the
+pull request: its observable core before and after, purpose and significance,
+changed-file accounting, and any material risk or uncertainty.
+
+The review frontier is the unresolved subset whose prerequisites have been
+inspected. Close a claim with the smallest captured evidence that proves it.
+Close a question with evidence, an explicit material limit, or a verification
+item that names what would resolve it. New evidence may split or reopen a claim.
+
+Collect context only when it advances this frontier. Do not add a branch because
+information is merely available, and do not use the analysis schema as a
+thinking checklist. It serializes the review after the reasoning is complete.
+
+The frontier is closed when the core before and after are grounded, every
+classifiable file has a supported disposition, every material finding is
+grounded, and every remaining material uncertainty is an explicit limit or
+verification item. Do not author the final analysis while a material frontier
+item remains unresolved.
+
 ## Ground every claim
 
 - Copy `runId`, the latest `snapshotDigest`, and `locale` from Hope.
@@ -97,6 +118,9 @@ boundary is needed. Normally use at most 12 review items, four core details,
 and 12 code steps; do not fill maxima for their own sake.
 
 ## Decide teaching aids
+
+Consider teaching aids after the core review frontier is closed. Do not open an
+aid branch during evidence inspection.
 
 Record one decision for each `visual`, `microworld`, and `quiz`:
 

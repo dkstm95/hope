@@ -244,6 +244,13 @@ test("invalid analysis remains repairable without a failure counter", async () =
   );
   const validated = await validateDiff(created.path, { temporaryRoot });
   assert.equal(validated.valid, true);
+  assert.deepEqual(validated.next, {
+    kind: "required",
+    transition: {
+      command: "finish",
+      runPath: created.path,
+    },
+  });
   await removeDiffRun(created.path, { temporaryRoot });
 });
 

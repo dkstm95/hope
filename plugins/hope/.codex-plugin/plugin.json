@@ -1,7 +1,7 @@
 {
   "name": "hope",
-  "version": "5.1.1",
-  "description": "Align before implementation and preserve the agreed intent, sweep codebase maintenance, challenge work with evidence, understand pull requests, and improve writing. Requires Node.js 22 or newer.",
+  "version": "6.0.0",
+  "description": "Interview to align intent before implementation and optionally preserve it, sweep codebase maintenance, challenge work with evidence, understand pull requests, and improve writing. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"

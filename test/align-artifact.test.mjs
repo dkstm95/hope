@@ -19,7 +19,6 @@ import { deflateSync } from "node:zlib";
 import {
   createAlignArtifact,
   inspectAlignArtifact,
-  migrateAlignInputV2,
   reviseAlignArtifact,
   validateAlignInput,
   verifyAlignHtml,
@@ -127,7 +126,7 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
   );
   assert.throws(
     () => validateAlignInput({ ...makeAlignInput(), intent: [] }),
-    /must contain between 1 and 12 items/u,
+    /must contain at least 1 item/u,
   );
   assert.throws(
     () => validateAlignInput(makeAlignInput({
@@ -143,7 +142,7 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
   );
   assert.throws(
     () => validateAlignInput(makeLegacyAlignInputV2()),
-    /schemaVersion must be 3; migrate v2 input/u,
+    /schemaVersion must be 3/u,
   );
   assert.throws(
     () => validateAlignInput(makeAlignInput({
@@ -185,8 +184,14 @@ test("Align accepts only the canonical v3 intent model", () => {
 
   assert.throws(
     () => validateAlignInput(makeAlignInput({ intent: [] })),
-    /\$\.intent must contain between 1 and 12 items/u,
+    /\$\.intent must contain at least 1 item/u,
   );
+  const broadIntent = Array.from({ length: 13 }, (_, index) => ({
+    statement: `관찰 가능한 결과 ${index + 1}`,
+    verify: `결과 ${index + 1}을 확인한다.`,
+    by: "agent",
+  }));
+  assert.equal(validateAlignInput(makeAlignInput({ intent: broadIntent })).intent.length, 13);
   assert.throws(
     () => validateAlignInput(makeAlignInput({ scope: { included: [], excluded: [] } })),
     /unsupported field: scope/u,
@@ -202,28 +207,6 @@ test("Align accepts only the canonical v3 intent model", () => {
   );
 });
 
-test("Align migrates v2 input only through an explicit review result", () => {
-  const legacy = makeLegacyAlignInputV2();
-  const migration = migrateAlignInputV2(legacy);
-
-  assert.equal(migration.inputSchemaVersion, 2);
-  assert.equal(migration.targetSchemaVersion, 3);
-  assert.equal(migration.ready, false);
-  assert.deepEqual(
-    migration.draft.intent,
-    legacy.checks.map(({ condition, verify, by }) => ({ statement: condition, verify, by })),
-  );
-  assert.deepEqual(migration.draft.exclusions, legacy.scope.excluded);
-  assert.deepEqual(migration.draft.flow, legacy.behavior);
-  assert.deepEqual(migration.review, {
-    boundary: legacy.boundary,
-    included: legacy.scope.included,
-    decisions: legacy.decisions,
-    openChoices: legacy.openChoices,
-  });
-  assert.equal(validateAlignInput(migration.draft).schemaVersion, 3);
-});
-
 test("create and revise reject direct v2 input", async () => {
   const root = await repository();
   const legacyInput = await inputFile(root, "legacy-v2.json", makeLegacyAlignInputV2());
@@ -231,7 +214,7 @@ test("create and revise reject direct v2 input", async () => {
 
   await assert.rejects(
     createAlignArtifact({ inputPath: legacyInput, outputPath, root }),
-    /schemaVersion must be 3; migrate v2 input/u,
+    /schemaVersion must be 3/u,
   );
 
   const currentInput = await inputFile(root, "current-v3.json", makeAlignInput());
@@ -243,7 +226,7 @@ test("create and revise reject direct v2 input", async () => {
       inputPath: legacyInput,
       root,
     }),
-    /schemaVersion must be 3; migrate v2 input/u,
+    /schemaVersion must be 3/u,
   );
   assert.equal((await inspectAlignArtifact(outputPath)).revision, 1);
 });

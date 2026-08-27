@@ -185,6 +185,11 @@ test("inspection windows persist grounded memory before advancing", async (conte
   );
   assert.equal(ledger.evidenceExcerpts[0].sourceId, grounded.sourceId);
   assert.equal(ledger.evidenceExcerpts[0].startLine, grounded.line);
+  assert.equal(ledger.next.kind, "required");
+  assert.equal(
+    ledger.next.transition.command ?? ledger.next.transition.kind,
+    ledger.page < ledger.totalPages ? "ledger" : "write-analysis",
+  );
 });
 
 test("a window checkpoint cannot cite source text from another page", async (context) => {

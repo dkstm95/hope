@@ -161,8 +161,7 @@ function evidenceMarkers(value, catalog, dictionary) {
 }
 
 function verificationCatalog(content, dictionary) {
-  const intent = canonicalIntent(content);
-  const entries = intent.flatMap((item, intentIndex) => {
+  const entries = content.intent.flatMap((item, intentIndex) => {
     if (item.verify === undefined) return [];
     const human = item.by === "human";
     return [Object.freeze({
@@ -238,12 +237,14 @@ function textList(items, {
   ).join("")}</ul>`;
 }
 
-function goalValue(content) {
-  return content.goal ?? content.intent;
-}
-
-function canonicalIntent(content) {
-  if (Array.isArray(content.intent)) return content.intent;
+function presentationContent(content) {
+  if (Array.isArray(content.intent)) {
+    return Object.freeze({
+      ...content,
+      flow: content.flow,
+      legacy: undefined,
+    });
+  }
   const checks = content.checks ?? content.success.map((condition) => ({ condition }));
   const conditions = checks.map((check) => ({
     statement: check.condition,
@@ -253,15 +254,18 @@ function canonicalIntent(content) {
     statement: decision.decision,
     reason: decision.reason,
   }));
-  return [...conditions, ...decisions];
-}
-
-function intentExclusions(content) {
-  return content.exclusions ?? content.scope?.excluded ?? [];
-}
-
-function intentFlow(content) {
-  return content.flow ?? content.behavior;
+  return Object.freeze({
+    ...content,
+    goal: content.goal ?? content.intent,
+    intent: Object.freeze([...conditions, ...decisions]),
+    exclusions: content.scope?.excluded ?? [],
+    flow: content.behavior,
+    legacy: Object.freeze({
+      boundary: content.boundary,
+      included: content.scope?.included ?? [],
+      openChoices: content.openChoices ?? [],
+    }),
+  });
 }
 
 function sectionOrdinal(number) {
@@ -283,8 +287,7 @@ function documentTitle(content) {
 }
 
 function intentList(content, dictionary, catalog, verification) {
-  const intent = canonicalIntent(content);
-  return `<ol class="decision-list intent-list">${intent.map((item, intentIndex) => {
+  return `<ol class="decision-list intent-list">${content.intent.map((item, intentIndex) => {
     const marker = verificationMarker(
       verification?.byIntentIndex.get(intentIndex),
       dictionary,
@@ -312,7 +315,7 @@ function overview(content, dictionary, number, catalog) {
   return `<section class="overview document-section" id="overview" aria-labelledby="overview-title">
     ${sectionTitle("overview-title", label(dictionary, "overview"), number)}
     <dl class="synopsis">
-      <div>${summaryLabelElement("dt", label(dictionary, "goal"))}<dd>${citedParagraphs(goalValue(content), catalog, dictionary)}</dd></div>
+      <div>${summaryLabelElement("dt", label(dictionary, "goal"))}<dd>${citedParagraphs(content.goal, catalog, dictionary)}</dd></div>
       <div>${summaryLabelElement("dt", label(dictionary, "problem"))}<dd>${citedParagraphs(content.problem, catalog, dictionary)}</dd></div>
     </dl>
   </section>`;
@@ -383,7 +386,7 @@ function designDirectionsSection(content, dictionary, number, catalog) {
 }
 
 function flowBlock(content, dictionary, catalog) {
-  const flow = intentFlow(content);
+  const flow = content.flow;
   if (!flow) return "";
   const outcomes = flow.outcomes.length === 0 ? "" : `<div class="behavior-outcomes-block">
     <h3 class="behavior-outcomes-title">${escapeHtml(label(dictionary, "outcomes"))}</h3>
@@ -419,25 +422,24 @@ function verificationDetails(catalog, dictionary) {
 }
 
 function legacyIntentDetails(content, dictionary, catalog) {
-  if (Array.isArray(content.intent)) return "";
-  const included = content.scope?.included ?? [];
-  const boundary = content.boundary === undefined ? "" : `<div class="legacy-intent-group">
+  if (content.legacy === undefined) return "";
+  const boundary = content.legacy.boundary === undefined ? "" : `<div class="legacy-intent-group">
     <h3 class="subheading">${escapeHtml(label(dictionary, "boundary"))}</h3>
-    ${citedParagraphs(content.boundary, catalog, dictionary)}
+    ${citedParagraphs(content.legacy.boundary, catalog, dictionary)}
   </div>`;
-  const includedHtml = included.length === 0 ? "" : `<div class="legacy-intent-group">
+  const includedHtml = content.legacy.included.length === 0 ? "" : `<div class="legacy-intent-group">
     <h3 class="subheading">${escapeHtml(label(dictionary, "included"))}</h3>
-    ${textList(included, { catalog, dictionary })}
+    ${textList(content.legacy.included, { catalog, dictionary })}
   </div>`;
-  const questions = (content.openChoices ?? []).length === 0 ? "" : `<div class="legacy-intent-group">
+  const questions = content.legacy.openChoices.length === 0 ? "" : `<div class="legacy-intent-group">
     <h3 class="subheading">${escapeHtml(label(dictionary, "openChoices"))}</h3>
-    ${textList(content.openChoices, { catalog, dictionary })}
+    ${textList(content.legacy.openChoices, { catalog, dictionary })}
   </div>`;
   return `${boundary}${includedHtml}${questions}`;
 }
 
 function intentSection(content, dictionary, number, catalog, verification) {
-  const exclusions = intentExclusions(content);
+  const exclusions = content.exclusions;
   const exclusionBlock = exclusions.length === 0 ? "" : `<div class="intent-group intent-exclusions" id="exclusions">
     <h3 class="subheading">${escapeHtml(label(dictionary, "excluded"))}</h3>
     ${textList(exclusions, { className: "exclusion-list", catalog, dictionary })}
@@ -483,7 +485,7 @@ function referencePopover(dictionary) {
 
 function compactRevisionContent(content, dictionary, idPrefix) {
   const catalog = evidenceCatalog(content);
-  const flow = intentFlow(content);
+  const flow = content.flow;
   const flowHtml = flow ? `<div>
     <dt>${escapeHtml(label(dictionary, "behavior"))}</dt>
     <dd><ul class="plain-list">${flow.steps.map(
@@ -497,17 +499,17 @@ function compactRevisionContent(content, dictionary, idPrefix) {
     <dt>${escapeHtml(label(dictionary, "designDirections"))}</dt>
     <dd>${designDirectionsComparison(content.designDirections, dictionary, idPrefix, catalog)}</dd>
   </div>` : "";
-  const exclusions = intentExclusions(content);
+  const exclusions = content.exclusions;
   const excluded = exclusions.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "excluded"))}</dt><dd>${textList(exclusions)}</dd></div>`;
-  const legacyBoundary = Array.isArray(content.intent) ? "" : `<div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(citedValue(content.boundary))}</dd></div>`;
-  const legacyIncluded = Array.isArray(content.intent) || content.scope.included.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.scope.included)}</dd></div>`;
-  const openChoices = Array.isArray(content.intent) || content.openChoices.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "openChoices"))}</dt><dd>${textList(content.openChoices)}</dd></div>`;
+  const legacyBoundary = content.legacy?.boundary === undefined ? "" : `<div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(citedValue(content.legacy.boundary))}</dd></div>`;
+  const legacyIncluded = !content.legacy || content.legacy.included.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.legacy.included)}</dd></div>`;
+  const openChoices = !content.legacy || content.legacy.openChoices.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "openChoices"))}</dt><dd>${textList(content.legacy.openChoices)}</dd></div>`;
   const evidence = content.evidence.length === 0 ? "" : `<div>
     <dt>${escapeHtml(label(dictionary, "evidence"))}</dt>
     <dd><ul class="plain-list">${content.evidence.map((item) => `<li><strong>${authoredText(item.label)}</strong><br>${evidenceLocation(item)}</li>`).join("")}</ul></dd>
   </div>`;
   return `<dl class="revision-content">
-    <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(citedValue(goalValue(content)))}</p></dd></div>
+    <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(citedValue(content.goal))}</p></dd></div>
     <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredText(citedValue(content.problem))}</dd></div>
     <div><dt>${escapeHtml(label(dictionary, "decidedIntent"))}</dt><dd>${intentList(content, dictionary)}</dd></div>
     ${excluded}${designDirectionsHtml}${flowHtml}${legacyBoundary}${legacyIncluded}${openChoices}${evidence}
@@ -953,7 +955,14 @@ function localeMenu(value, currentLocale, dictionary) {
 export function renderAlignArtifact(data, { alternateLocale, digest }) {
   const dictionary = dictionaries[data.locale];
   const locale = localeMenu(alternateLocale, data.locale, dictionary);
-  const current = data.revisions.at(-1);
+  const presentationData = Object.freeze({
+    ...data,
+    revisions: Object.freeze(data.revisions.map((revision) => Object.freeze({
+      ...revision,
+      content: presentationContent(revision.content),
+    }))),
+  });
+  const current = presentationData.revisions.at(-1);
   const content = current.content;
   const catalog = evidenceCatalog(content);
   const verifications = verificationCatalog(content, dictionary);
@@ -976,7 +985,7 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
     <div class="mobile-navigation-panel">
       ${repositoryMark(data.repository, "mobile-repository")}
       ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}">${tocHeading(dictionary, sections.length)}${toc}</nav>` : ""}
-      ${railHistory(data, dictionary, "-mobile")}
+      ${railHistory(presentationData, dictionary, "-mobile")}
     </div>
   </details>`;
   const fontBytes = Object.fromEntries(Object.entries(fontUrls).map(
@@ -1022,7 +1031,7 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
     <main class="main" id="agreement-document">${documentTitle(content)}${sections.map((section) => section.html).join("")}</main>
     <aside class="rail"><div class="rail-inner">
       ${showToc ? `<nav class="toc" aria-label="${escapeHtml(label(dictionary, "toc"))}">${tocHeading(dictionary, sections.length)}${toc}</nav>` : ""}
-      ${railHistory(data, dictionary)}
+      ${railHistory(presentationData, dictionary)}
     </div></aside>
   </div>
   ${catalog.entries.length === 0 && verifications.entries.length === 0 ? "" : referencePopover(dictionary)}
