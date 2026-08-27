@@ -40,18 +40,25 @@ or merges.
 
 ## Apply proven cleanup
 
-Follow the maintenance guidance to trace active consumers, choose safe
-candidates, and verify the changed scope. Inspect only enough surrounding
-evidence to prove a coherent cleanup; Sweep does not require a complete file or
-category inventory.
+Follow the maintenance guidance to trace active consumers and form a candidate
+frontier: evidence-backed cleanup opportunities whose prerequisites have been
+inspected. Resolve each candidate by applying it, rejecting it when the evidence
+does not prove safety, or leaving it outside the bound target. Inspect only
+enough surrounding evidence to resolve the frontier; Sweep does not require a
+complete file or category inventory.
 
 Apply proven changes in small coherent batches. Do not fix or report suspected
 bugs, customer-visible or public-contract changes, product or compatibility
 decisions, or uncertain removals. Leave those signals outside Sweep without
 turning them into recommendations or follow-up tasks.
 
-Correct or revert any regression introduced by Sweep. Do not fix a pre-existing
-failure or widen the cleanup during verification.
+After each batch, verify affected consumers and recompute only the affected
+frontier. Correct or revert any regression introduced by Sweep. Do not fix a
+pre-existing failure or widen the cleanup during verification.
+
+Stop when the candidate frontier is empty and one evidence pass over the changed
+scope finds no new proven candidate. Do not keep searching to fill a category or
+justify having invoked Sweep.
 
 ## Report the result
 

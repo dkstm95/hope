@@ -58,6 +58,7 @@ export const staticPluginFiles = Object.freeze([
     "target.mjs",
     "teaching-aids.mjs",
     "text.mjs",
+    "transitions.mjs",
     "validate.mjs",
   ].map((name) => `plugins/hope/skills/diff/scripts/${name}`),
   "plugins/hope/skills/diff/scripts/design/tokens.mjs",

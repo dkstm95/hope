@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test, { after } from "node:test";
 
 import { addDiffContext } from "../plugins/hope/skills/diff/scripts/index.mjs";
+import { nextAfterInspection } from "../plugins/hope/skills/diff/scripts/transitions.mjs";
 import {
   checkpointDiffRunWindow,
   createDiffRun,
@@ -302,14 +303,16 @@ test("a committed context operation replays without recollecting", async () => {
   });
   let collections = 0;
   const dependencies = {
-    collectContext: async () => {
+    collectContext: async (_snapshot, requests) => {
       collections += 1;
-      return [{
+      return requests.map((request) => ({
         kind: "context-file",
-        path: "src/caller.js",
+        path: request.path,
         revision: "b".repeat(40),
-        text: "export const caller = true",
-      }];
+        text: request.path === "src/caller.js"
+          ? "export { helper } from 'src/helper.js'"
+          : "export const helper = true",
+      }));
     },
     temporaryRoot,
   };
@@ -331,5 +334,27 @@ test("a committed context operation replays without recollecting", async () => {
   assert.equal(replay.generation, first.generation);
   assert.equal(replay.snapshotDigest, first.snapshotDigest);
   assert.deepEqual(replay.firstWindow, first.firstWindow);
+
+  const secondRequestId = await inspectAll(created, temporaryRoot, {
+    path: "src/helper.js",
+    revision: "head",
+  });
+  const second = await addDiffContext(
+    created.path,
+    [secondRequestId],
+    dependencies,
+  );
+  const priorReplay = await addDiffContext(
+    created.path,
+    [requestId],
+    dependencies,
+  );
+  assert.equal(collections, 2);
+  assert.equal(priorReplay.firstWindow, undefined);
+  assert.deepEqual(priorReplay.resumeWindow, second.firstWindow);
+  assert.deepEqual(
+    priorReplay.next,
+    nextAfterInspection(created.path, second.firstWindow),
+  );
   await removeDiffRun(created.path, { temporaryRoot });
 });
