@@ -23,9 +23,10 @@
 
 ### 🤝 Align — Reach shared understanding before implementation and prevent `intent debt`
 
-Align reviews the request against verifiable evidence and interviews the person
-about material gaps, contradictions, risks, unsupported assumptions, edge
-cases, and simpler alternatives that could change the result.
+Align reviews the request against verifiable evidence, maps every material
+intent decision, and interviews the person in dependency-aware rounds. Each
+answer reshapes the remaining questions; Align finishes only after no material
+decision remains and the person confirms the complete intent in a teach-back.
 
 When the agreed intent needs a durable record for later work or review, or the
 person asks for an artifact, Align writes one self-contained HTML record inside
@@ -39,8 +40,9 @@ solution design, implementation details, current implementation state, and
 completion results. Later work may consult it as evidence of intent, but it is
 not an implementation contract or current-system specification.
 
-For material UI work without attached references, Align checks the project
-first, uses web search when needed, and presents two or three image mockups.
+When a material visual choice cannot be settled honestly through conversation,
+Align checks the project first and presents two or three image mockups as
+evidence for that choice. It does not turn every UI task into a design exercise.
 
 > [!IMPORTANT]
 > Generated Align records are project documentation. Later version-control work
