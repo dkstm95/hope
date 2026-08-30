@@ -28,11 +28,8 @@ job, artifact schema, and delivery. The artifact accepts only `component-map`,
 `decision-table`, `flow`, or `sequence`; choose within those kinds and keep the
 exact schema required by the Diff workflow.
 
-Use concrete example values only when they clarify data movement or control
-flow. Ground each value, mark simplification or inference, and use the smallest
-set needed. Record one underlying value once; do not repeat it in another form
-or visual field. Identifiers and prose labels are not example values merely
-because they appear in evidence.
+Identifiers and prose labels are not example values merely because they appear
+in evidence.
 
 ## Quiz
 

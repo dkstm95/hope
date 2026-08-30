@@ -77,7 +77,3 @@ Do not rely on position, shape, or color alone. Provide visible data labels when
 they remain readable, or an adjacent accessible table or text equivalent with
 the precise values and units. State the conclusion, source, uncertainty, and
 important exceptions in text.
-
-This is part of Hope's adaptation of Diagram Design described in the source
-section of `diagram-standard.md`. The upstream MIT notice is in
-`../LICENSE.diagram-design`.
