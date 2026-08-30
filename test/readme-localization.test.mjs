@@ -13,13 +13,13 @@ const captureNames = [
   "diff-core",
   "diff-microworld",
   "diff-quiz",
-  "visualize",
+  "diagram",
 ];
 
 const read = (path) => readFile(new URL(path, root), "utf8");
 
 function readmeImages(source) {
-  return [...source.matchAll(/!\[[^\]]*\]\((assets\/readme\/hope-(?:align|diff|visualize)[^)]+\.png)\)/gu)]
+  return [...source.matchAll(/!\[[^\]]*\]\((assets\/readme\/hope-(?:align|diff|diagram)[^)]+\.png)\)/gu)]
     .map((match) => match[1]);
 }
 

@@ -1,6 +1,6 @@
 # Hope diagram standard
 
-This is Hope's published shared standard for explanatory visuals. Visualize
+This is Hope's published shared standard for explanatory visuals. Diagram
 owns the standard. The active task still owns facts, evidence, artifact schema,
 visual system, and delivery.
 

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Hope Diagram"
+  short_description: "Design clear, faithful diagrams and data charts"
+  brand_color: "#087EA4"
+  default_prompt: "Use $hope:diagram to make this explanatory diagram or data chart clear, faithful, and accessible."

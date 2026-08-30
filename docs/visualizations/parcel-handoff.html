@@ -1,1554 +1,537 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<title>Parcel Handoff</title>
-<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
-</head>
-<body>
-<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Parcel Handoff" srcdoc="&lt;!doctype html&gt;
-&lt;html lang=&quot;en&quot;&gt;
-&lt;head&gt;
-&lt;meta charset=&quot;utf-8&quot;&gt;
-&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
-&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
-&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
-&lt;title&gt;Parcel Handoff&lt;/title&gt;
-&lt;style&gt;:root {
-  color-scheme: light dark;
-  background-color: var(
-    --background,
-    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
-  ) !important;
-
-  /* Agent-facing contract; keep in sync with SKILL.md. */
-  --background: var(
-    --color-background-primary,
-    light-dark(rgb(255 255 255), rgb(24 24 24))
-  );
-  --foreground: var(
-    --color-text-primary,
-    light-dark(rgb(26 28 31), rgb(255 255 255))
-  );
-  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
-  --card-foreground: var(
-    --color-text-primary,
-    light-dark(rgb(26 28 31), rgb(255 255 255))
-  );
-  --popover: var(
-    --color-background-secondary,
-    light-dark(rgb(255 255 255), rgb(45 45 45))
-  );
-  --popover-foreground: var(
-    --color-text-primary,
-    light-dark(rgb(26 28 31), rgb(255 255 255))
-  );
-  --primary: var(
-    --color-text-info,
-    light-dark(rgb(51 156 255), rgb(131 195 255))
-  );
-  --primary-foreground: var(
-    --color-text-inverse,
-    light-dark(rgb(255 255 255), rgb(13 13 13))
-  );
-  --secondary: var(
-    --color-background-secondary,
-    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
-  );
-  --secondary-foreground: var(
-    --color-text-primary,
-    light-dark(rgb(26 28 31), rgb(255 255 255))
-  );
-  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
-  --muted-foreground: var(
-    --color-text-secondary,
-    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
-  );
-  --accent: var(
-    --color-background-info,
-    light-dark(rgb(229 242 255), rgb(13 39 63))
-  );
-  --accent-foreground: var(
-    --color-text-info,
-    light-dark(rgb(51 156 255), rgb(131 195 255))
-  );
-  --destructive: var(
-    --color-text-warning,
-    light-dark(rgb(226 85 7), rgb(255 133 73))
-  );
-  --border: var(
-    --color-border-secondary,
-    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
-  );
-  --input: var(
-    --color-border-primary,
-    light-dark(
-      rgb(26 28 31 / 11.8%),
-      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
-    )
-  );
-  --ring: var(
-    --color-ring-primary,
-    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
-  );
-  --font-size-base: var(--font-text-md-size, 14px);
-  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
-  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
-  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
-  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
-  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
-  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
-  --viz-series-1: var(--primary);
-  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
-  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
-  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
-  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
-  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
-
-  /* Internal implementation variables; not part of the agent contract. */
-  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
-  --font-mono:
-    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
-    monospace;
-  --font-size-normal: max(11px, var(--font-size-base));
-  --font-size-tooltip: calc(var(--font-size-base) - 1px);
-  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
-  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
-  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
-  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
-  --font-weight-normal: 430;
-  --font-weight-medium: 500;
-  --line-height-normal: calc(var(--font-size-normal) * 1.5);
-  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
-  --line-height-small: calc(var(--font-size-small) + 4px);
-  --radius: var(--border-radius-lg, 12.5px);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-2xl: calc(var(--radius) * 1.6);
-  --radius-full: 9999px;
-  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
-  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
-
-  /* Legacy aliases; not part of the current agent contract. */
-  --viz-bg: transparent;
-  --viz-panel: var(--card);
-  --viz-border: var(--border);
-  --viz-text: var(--foreground);
-  --viz-muted: var(--muted-foreground);
-  --viz-accent: var(--primary);
-  --viz-accent-text: var(--primary-foreground);
-  --viz-accent-bg: var(--accent);
-  --viz-font-size: var(--font-size-base);
-  --viz-warning: var(--destructive);
-}
-
-:root[data-theme=&quot;light&quot;] {
-  color-scheme: light;
-}
-
-:root[data-theme=&quot;dark&quot;] {
-  color-scheme: dark;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html &gt; body {
-  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
-  --color-background-primary: var(
-    --background,
-    light-dark(rgb(255 255 255), rgb(24 24 24))
-  );
-  --color-text-primary: var(
-    --foreground,
-    light-dark(rgb(26 28 31), rgb(255 255 255))
-  );
-  --color-border-secondary: var(
-    --border,
-    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
-  );
-
-  margin: 0;
-  padding: 5px;
-  color: var(--foreground);
-  background: transparent !important;
-  font-family: var(--font-sans) !important;
-  font-size: var(--font-size-normal);
-  font-weight: var(--font-weight-normal);
-  line-height: var(--line-height-normal);
-}
-
-a {
-  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
-  cursor: pointer;
-  font-weight: var(--font-weight-medium, 500);
-  text-decoration: none;
-  text-underline-offset: 2px;
-}
-
-a:is(:hover, :focus-visible) {
-  text-decoration-line: underline;
-  text-decoration-style: dashed;
-  text-decoration-thickness: 0.5px;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p {
-  margin-block: 0;
-}
-
-h1 {
-  font-size: var(--font-size-h1);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.25;
-}
-
-h2 {
-  font-size: var(--font-size-h2);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.25;
-}
-
-h3,
-h4,
-h5,
-h6 {
-  font-size: var(--font-size-h3);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.3;
-}
-
-b,
-strong,
-th {
-  font-weight: var(--font-weight-medium);
-}
-
-code:not(pre code) {
-  display: inline;
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  corner-shape: superellipse(1.5);
-  background: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.92em;
-  overflow-wrap: anywhere;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-  word-break: break-word;
-}
-
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  color: var(--foreground);
-  font: inherit;
-  text-align: start;
-}
-
-.table :is(th, td) {
-  padding-block: 10px;
-  padding-inline: 0 24px;
-  overflow-wrap: anywhere;
-  border-bottom: 1px solid var(--border);
-  text-align: start;
-  vertical-align: top;
-}
-
-.table-responsive &gt; .table :is(th, td) {
-  overflow-wrap: break-word;
-}
-
-.table :is(th, td):last-child {
-  padding-inline-end: 0;
-}
-
-.table :is(caption, thead th) {
-  font-weight: 600;
-}
-
-.table thead th {
-  padding-block: 8px;
-  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
-}
-
-.table tbody tr:last-child :is(th, td) {
-  border-bottom: 0;
-}
-
-.table.table-sm :is(th, td) {
-  padding-block: 6px;
-}
-
-.table.table-sm :is(th, td):not(:last-child) {
-  padding-inline-end: 16px;
-}
-
-.table :is(.text-end, [align=&quot;right&quot;]) {
-  text-align: end;
-  font-variant-numeric: tabular-nums;
-}
-
-.table :is(.text-center, [align=&quot;center&quot;]) {
-  text-align: center;
-}
-
-.table .text-nowrap {
-  white-space: nowrap;
-}
-
-#widget {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  padding: 0;
-  background: transparent !important;
-}
-
-.card {
-  min-width: 0;
-  padding: 12px;
-  overflow: hidden;
-  overflow-wrap: break-word;
-  border-radius: var(--radius-2xl);
-  corner-shape: superellipse(1.5);
-  color: var(--card-foreground);
-  background: var(--card);
-}
-
-#widget &gt; :not(.card, .progress) {
-  width: 100% !important;
-  max-width: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.tooltip {
-  position: fixed;
-  z-index: 50;
-  top: 0;
-  left: 0;
-  width: max-content;
-  max-width: min(
-    20rem,
-    var(--tooltip-available-width, calc(100vw - 10px)),
-    calc(100vw - 10px)
-  );
-  max-height: min(
-    var(--tooltip-available-height, calc(100vh - 10px)),
-    calc(100vh - 10px)
-  );
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  corner-shape: superellipse(1.5);
-  color: var(--popover-foreground);
-  background: var(--popover);
-  box-shadow: none;
-  font-size: var(--font-size-tooltip);
-  line-height: var(--line-height-tooltip);
-  overflow-wrap: break-word;
-  white-space: normal;
-  pointer-events: none;
-  user-select: none;
-}
-
-.viz-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
-  gap: 10px;
-}
-
-.viz-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.viz-stat-value {
-  font-size: var(--font-size-h2);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.25;
-}
-
-.viz-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.progress {
-  display: flex;
-  height: 6px;
-  margin-block: calc((var(--line-height-normal, 1.5em) - 6px) / 2);
-  overflow: hidden;
-  border: 0;
-  border-radius: var(--radius-full);
-  background: var(--muted);
-}
-
-.progress-bar {
-  height: 100%;
-  flex-shrink: 0;
-  border: 0;
-  background: var(--viz-series-1);
-}
-
-.viz-badge {
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  color: var(--accent-foreground);
-  background: var(--accent);
-  font-weight: var(--font-weight-medium);
-}
-
-small,
-.text-small,
-.viz-badge {
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-small);
-}
-
-.text-muted {
-  color: var(--muted-foreground);
-}
-
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.viz-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.viz-controls &gt; .form-label {
-  display: grid;
-  min-width: min(100%, 260px);
-  flex: 1 1 280px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 2px 12px;
-  margin-bottom: 0;
-}
-
-.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
-  grid-column: 1 / -1;
-}
-
-.btn,
-.form-check-input,
-.form-control,
-.form-range,
-.form-select {
-  font: inherit;
-}
-
-.btn {
-  appearance: button;
-  display: inline-flex;
-  inline-size: fit-content;
-  max-inline-size: 100%;
-  min-height: 28px;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin: 0;
-  padding: 0 8px;
-  -webkit-app-region: no-drag;
-  border: 1px solid var(--input);
-  border-radius: var(--radius-lg);
-  corner-shape: superellipse(1.5);
-  color: var(--secondary-foreground);
-  background: var(--secondary);
-  cursor: var(--cursor-interaction, pointer);
-  text-align: center;
-  text-decoration: none;
-  white-space: nowrap;
-  user-select: none;
-  -webkit-font-smoothing: antialiased;
-}
-
-.btn:is(.btn-block, .viz-tile) {
-  inline-size: 100%;
-}
-
-.btn.viz-tile {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-
-a.btn {
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.btn:not(:disabled):hover {
-  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
-}
-
-.btn-primary {
-  border-color: transparent;
-  color: var(--primary-foreground);
-  background: var(--foreground);
-  background-clip: padding-box;
-}
-
-.btn-primary .text-muted {
-  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
-}
-
-.btn-primary:not(:disabled):hover {
-  background: color-mix(in srgb, var(--foreground) 80%, transparent);
-  background-clip: padding-box;
-}
-
-.btn-ghost {
-  border-color: transparent;
-  color: var(--muted-foreground);
-  background: transparent;
-}
-
-.btn-ghost:not(:disabled):hover {
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
-}
-
-.btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-[data-lucide] {
-  stroke-width: 1.6;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--foreground);
-}
-
-.form-control {
-  display: block;
-  width: 100%;
-  min-height: 28px;
-  padding: 0 8px;
-  outline: none;
-  border: 1px solid var(--input);
-  border-radius: var(--radius-lg);
-  corner-shape: superellipse(1.5);
-  color: var(--foreground);
-  background: var(--secondary);
-}
-
-.form-control::placeholder {
-  color: var(--muted-foreground);
-}
-
-.form-control[type=&quot;file&quot;] {
-  padding: 0;
-  overflow: hidden;
-  cursor: var(--cursor-interaction, pointer);
-}
-
-.form-control[type=&quot;file&quot;]::file-selector-button {
-  min-height: 26px;
-  margin-right: 8px;
-  padding: 0 8px;
-  border: 0;
-  border-right: 1px solid var(--input);
-  color: var(--secondary-foreground);
-  background: var(--secondary);
-  cursor: inherit;
-  font: inherit;
-}
-
-.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
-  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
-}
-
-.form-control-color[type=&quot;color&quot;] {
-  width: 40px;
-  height: 28px;
-  padding: 3px;
-  cursor: var(--cursor-interaction, pointer);
-}
-
-.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-
-.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
-  border: 0;
-  border-radius: calc(var(--radius-lg) - 4px);
-  corner-shape: superellipse(1.5);
-}
-
-textarea.form-control {
-  height: auto;
-  min-height: 72px;
-  padding: 8px 10px;
-  resize: vertical;
-}
-
-.form-control:focus-visible {
-  border-color: var(--ring);
-  box-shadow: inset 0 0 0 1px var(--ring);
-}
-
-.form-control:disabled,
-.form-select:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.form-select {
-  appearance: none;
-  display: block;
-  width: 100%;
-  min-height: 28px;
-  margin: 0;
-  padding: 0 32px 0 8px;
-  outline: none;
-  border: 1px solid var(--input);
-  border-radius: var(--radius-lg);
-  corner-shape: superellipse(1.5);
-  color: var(--foreground);
-  background-color: var(--secondary);
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
-    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
-  background-position:
-    calc(100% - 14px) 50%,
-    calc(100% - 10px) 50%;
-  background-repeat: no-repeat;
-  background-size: 4px 4px;
-  cursor: var(--cursor-interaction, default);
-}
-
-.form-select:not(:disabled):hover {
-  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
-}
-
-.form-select:focus-visible {
-  border-color: var(--ring);
-  box-shadow: inset 0 0 0 1px var(--ring);
-}
-
-.form-check {
-  display: flex;
-  min-height: 20px;
-  align-items: center;
-  gap: 6px;
-}
-
-.form-check-input {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  flex: 0 0 auto;
-  margin: 0;
-  border: 1px solid var(--input);
-  color: var(--primary-foreground);
-  background-color: transparent;
-  cursor: var(--cursor-interaction, default);
-  transition:
-    background-color 150ms,
-    border-color 150ms,
-    box-shadow 150ms;
-}
-
-.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
-  border-color: var(--input);
-  border-radius: var(--radius-sm);
-  corner-shape: superellipse(1.5);
-  background-color: var(--secondary);
-  box-shadow: var(--shadow-sm);
-}
-
-.form-check:not(.form-switch)
-  .form-check-input:not(:disabled):not(:checked):hover {
-  background-color: var(--card);
-}
-
-.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
-  border-color: var(--primary);
-  background-color: var(--primary);
-}
-
-.form-check:not(.form-switch)
-  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: var(--primary-foreground);
-  content: &quot;&quot;;
-  mask: var(--checkmark-image) center / 12px 12px no-repeat;
-}
-
-.form-check-input[type=&quot;radio&quot;] {
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius-full);
-}
-
-.form-check-input[type=&quot;radio&quot;]:checked {
-  border: 2px solid var(--primary);
-  background:
-    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
-    var(--primary);
-}
-
-.form-check:not(.form-switch) .form-check-input:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-.form-check:not(.form-switch) .form-check-input:disabled {
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
-  cursor: not-allowed;
-}
-
-.form-switch .form-check-input:disabled,
-.form-switch .form-check-input:disabled + .form-check-label {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.form-check-label {
-  color: var(--foreground);
-  cursor: var(--cursor-interaction, default);
-}
-
-.form-switch .form-check-input {
-  position: relative;
-  width: 32px;
-  height: 20px;
-  border: 0;
-  border-radius: var(--radius-full);
-  background: var(--muted);
-  box-shadow: none;
-  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
-}
-
-.form-switch .form-check-input::before {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 16px;
-  height: 16px;
-  box-sizing: border-box;
-  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
-  border-radius: var(--radius-full);
-  background: light-dark(var(--primary-foreground), var(--foreground));
-  box-shadow: var(--shadow-sm);
-  content: &quot;&quot;;
-  transform: translate(2px, -50%);
-  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
-}
-
-.form-switch .form-check-input:checked {
-  background: var(--primary);
-}
-
-.form-switch .form-check-input:checked::before {
-  transform: translate(14px, -50%);
-}
-
-.form-switch .form-check-input:focus-visible {
-  box-shadow: 0 0 0 2px var(--ring);
-}
-
-.form-range {
-  appearance: none;
-  display: block;
-  width: 100%;
-  height: 28px;
-  flex: 1;
-  margin: 0;
-  padding: 0;
-  outline: none;
-  border: 0;
-  accent-color: var(--primary);
-  background: linear-gradient(
-      color-mix(in srgb, var(--foreground) 7%, transparent),
-      color-mix(in srgb, var(--foreground) 7%, transparent)
-    )
-    center / 100% 2px no-repeat;
-}
-
-.form-range::-webkit-slider-runnable-track {
-  height: 28px;
-  background: transparent;
-}
-
-.form-range::-webkit-slider-thumb {
-  appearance: none;
-  width: 20px;
-  height: 20px;
-  margin-top: 4px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  background: light-dark(var(--primary-foreground), var(--foreground));
-}
-
-.form-range:focus-visible::-webkit-slider-thumb {
-  border-color: var(--ring);
-  box-shadow: inset 0 0 0 1px var(--ring);
-}
-
-.form-range::-moz-range-track {
-  height: 28px;
-  background: transparent;
-}
-
-.form-range::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  background: light-dark(var(--primary-foreground), var(--foreground));
-}
-
-.form-range:focus-visible::-moz-range-thumb {
-  border-color: var(--ring);
-  box-shadow: inset 0 0 0 1px var(--ring);
-}
-
-.form-range:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.btn:not(.btn-primary, .viz-tile):is(
-  [aria-pressed=&quot;true&quot;],
-  [aria-selected=&quot;true&quot;],
-  .is-selected
-) {
-  border-color: var(--primary);
-  color: var(--primary-foreground);
-  background: var(--primary);
-}
-
-.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
-  border-color: var(--primary);
-  box-shadow: inset 0 0 0 1px var(--primary);
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-@media (pointer: coarse) {
-  .btn,
-  .form-control,
-  .form-select {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .form-control,
-  .form-select {
-    font-size: max(16px, var(--font-size-normal));
-  }
-
-  .form-control[type=&quot;file&quot;]::file-selector-button {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .form-control-color[type=&quot;color&quot;] {
-    width: 44px;
-    height: 44px;
-  }
-
-  .form-control:is(
-    [type=&quot;date&quot;],
-    [type=&quot;datetime-local&quot;],
-    [type=&quot;month&quot;],
-    [type=&quot;time&quot;],
-    [type=&quot;week&quot;]
-  ) {
-    min-width: 0;
-    max-width: 100%;
-    padding-block: 8px;
-  }
-
-  .form-check {
-    min-height: 44px;
-    padding-inline: 15px;
-  }
-
-  .form-check-input {
-    position: relative;
-  }
-
-  .form-check-input::after {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 44px;
-    height: 44px;
-    content: &quot;&quot;;
-    transform: translate(-50%, -50%);
-  }
-
-  .form-check-label {
-    display: inline-flex;
-    min-width: 44px;
-    min-height: 44px;
-    align-items: center;
-  }
-
-  .form-range {
-    height: 44px;
-    touch-action: pan-y;
-  }
-
-  .form-range::-webkit-slider-runnable-track {
-    height: 44px;
-  }
-
-  .form-range::-moz-range-track {
-    height: 44px;
-  }
-
-  .form-range::-webkit-slider-thumb {
-    margin-top: 12px;
-  }
-}
-
-svg {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-#widget &gt; svg {
-  width: 100%;
-}
-
-/* Model-authored chart rules can otherwise stretch icons after these styles load. */
-svg.lucide {
-  display: block;
-  width: 16px !important;
-  height: 16px !important;
-  flex: none;
-  margin: 0 !important;
-  stroke-width: 1.6;
-}
-
-.text-warning,
-.text-destructive {
-  color: var(--destructive);
-}
-
-html&gt;body{padding:0}&lt;/style&gt;
-&lt;/head&gt;
-&lt;body&gt;
-&lt;section id=&quot;parcel-handoff-viz&quot; data-locale=&quot;ko&quot; aria-labelledby=&quot;parcel-title&quot;&gt;
-  &lt;style&gt;
-    #parcel-handoff-viz {
-      display: grid;
-      gap: 1rem;
-      color: var(--foreground);
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="generator" content="Hope Diagram">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <title>Parcel handoff diagram</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --paper: #faf9f6;
+      --panel: #ffffff;
+      --ink: #17212b;
+      --muted: #465564;
+      --rule: #778594;
+      --accent: #075985;
+      --accent-soft: #e0f2fe;
+      --focus: #c2410c;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
     }
-    #parcel-handoff-viz .parcel-heading {
-      display: grid;
-      gap: 0.25rem;
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #111820;
+        --panel: #17222d;
+        --ink: #f8fafc;
+        --muted: #c8d2dc;
+        --rule: #8b99a8;
+        --accent: #7dd3fc;
+        --accent-soft: #123c52;
+        --focus: #fdba74;
+      }
     }
-    #parcel-handoff-viz .parcel-heading-topline {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
+
+    * {
+      box-sizing: border-box;
     }
-    #parcel-handoff-viz .parcel-language {
-      display: flex;
-      flex: 0 0 auto;
-      gap: 0.25rem;
-    }
-    #parcel-handoff-viz .parcel-language button[aria-pressed=&quot;true&quot;] {
-      border-color: var(--primary);
-      color: var(--primary-foreground);
-    }
-    #parcel-handoff-viz .parcel-heading h2,
-    #parcel-handoff-viz .parcel-heading p {
+
+    html,
+    body {
       margin: 0;
+      min-width: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font);
     }
-    #parcel-handoff-viz .parcel-stages {
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 2;
+      top: 8px;
+      left: 8px;
+      padding: 10px 12px;
+      border: 2px solid var(--focus);
+      background: var(--panel);
+      color: var(--ink);
+      transform: translateY(-150%);
+    }
+
+    .skip-link:focus {
+      transform: none;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    #parcel-handoff-diagram {
+      width: min(100%, 1100px);
+      margin: 0 auto;
+      padding: 28px 24px 24px;
+    }
+
+    [data-lang] {
+      display: none;
+    }
+
+    [data-locale="en"] [data-lang="en"],
+    [data-locale="ko"] [data-lang="ko"] {
+      display: inline;
+    }
+
+    .diagram-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(26px, 4vw, 36px);
+      line-height: 1.18;
+      letter-spacing: -0.035em;
+    }
+
+    .deck {
+      max-width: 740px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .language {
+      display: flex;
+      gap: 8px;
+      padding: 0;
+      margin: 0;
+      border: 0;
+    }
+
+    .language label {
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      gap: 7px;
+      padding: 0 12px;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .language label:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .language input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    .stages {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0.75rem;
+      gap: 72px;
       padding: 0;
       margin: 0;
       list-style: none;
     }
-    #parcel-handoff-viz .parcel-stage {
+
+    .stage {
       position: relative;
-      display: grid;
       min-width: 0;
-      gap: 0.5rem;
     }
-    #parcel-handoff-viz .parcel-stage:not(:last-child)::after {
-      position: absolute;
-      top: 1.35rem;
-      left: calc(100% + 0.1rem);
-      width: 0.55rem;
-      border-top: 1px solid var(--border);
-      content: &quot;&quot;;
-    }
-    #parcel-handoff-viz .parcel-stage-copy {
+
+    .stage-button {
       display: grid;
-      gap: 0.2rem;
+      width: 100%;
+      min-height: 156px;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 8px;
+      padding: 15px;
+      border: 1px solid var(--rule);
+      border-top: 3px solid var(--rule);
+      border-radius: 4px;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
       text-align: left;
     }
-    #parcel-handoff-viz .parcel-stage-topline {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+
+    .stage-button:hover {
+      background: var(--accent-soft);
     }
-    #parcel-handoff-viz .parcel-index {
-      display: inline-grid;
-      width: 1.7rem;
-      height: 1.7rem;
-      place-items: center;
-      flex: 0 0 auto;
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      color: var(--muted-foreground);
+
+    .stage-button[aria-pressed="true"] {
+      border-top-color: var(--accent);
+      background: var(--accent-soft);
     }
-    #parcel-handoff-viz .parcel-stage button[aria-pressed=&quot;true&quot;] .parcel-index {
-      border-color: var(--primary);
-      background: var(--primary);
-      color: var(--primary-foreground);
+
+    .stage-index {
+      color: var(--accent);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      letter-spacing: 0.08em;
     }
-    #parcel-handoff-viz .parcel-handoff {
-      display: flex;
-      min-height: 1.5rem;
-      align-items: center;
-      justify-content: center;
-      gap: 0.35rem;
-      color: var(--muted-foreground);
+
+    .stage-owner {
+      font-size: 19px;
+      line-height: 1.25;
     }
-    #parcel-handoff-viz .parcel-handoff i {
-      color: var(--viz-series-1);
+
+    .stage-action {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
     }
-    #parcel-handoff-viz .parcel-selected {
+
+    .selected-marker {
+      min-height: 18px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      visibility: hidden;
+    }
+
+    .stage-button[aria-pressed="true"] .selected-marker {
+      visibility: visible;
+    }
+
+    .handoff {
+      position: absolute;
+      top: 66px;
+      left: 100%;
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      gap: 0.75rem;
+      width: 72px;
+      gap: 7px;
       align-items: center;
+      color: var(--muted);
+      text-align: center;
     }
-    #parcel-handoff-viz .parcel-selected-icon {
+
+    .handoff-line {
+      position: relative;
+      display: block;
+      height: 2px;
+      background: var(--rule);
+    }
+
+    .handoff-line::after {
+      position: absolute;
+      top: -4px;
+      right: 2px;
+      width: 8px;
+      height: 8px;
+      border-top: 2px solid var(--rule);
+      border-right: 2px solid var(--rule);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .handoff-label {
+      font-size: 11px;
+      font-weight: 650;
+      line-height: 1.3;
+    }
+
+    .selected-detail {
       display: grid;
-      width: 2.5rem;
-      height: 2.5rem;
-      place-items: center;
-      border-radius: 50%;
-      background: var(--accent);
-      color: var(--accent-foreground);
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      padding: 16px 18px;
+      margin-top: 24px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
     }
-    #parcel-handoff-viz .parcel-selected-copy {
-      display: grid;
-      gap: 0.2rem;
+
+    .detail-label {
+      margin: 2px 0 0;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
-    #parcel-handoff-viz .parcel-selected-copy p {
+
+    .detail-copy h2 {
       margin: 0;
+      font-size: 18px;
+      line-height: 1.35;
     }
-    #parcel-handoff-viz [data-lang] {
-      display: none;
+
+    .detail-copy p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
     }
-    #parcel-handoff-viz[data-locale=&quot;ko&quot;] [data-lang=&quot;ko&quot;],
-    #parcel-handoff-viz[data-locale=&quot;en&quot;] [data-lang=&quot;en&quot;] {
-      display: inline;
+
+    .scope-note {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
     }
-    @media (max-width: 560px) {
-      #parcel-handoff-viz .parcel-heading-topline {
-        align-items: stretch;
-        flex-direction: column;
+
+    @media (max-width: 760px) {
+      #parcel-handoff-diagram {
+        padding: 22px 16px 20px;
       }
-      #parcel-handoff-viz .parcel-language {
-        align-self: flex-start;
-      }
-      #parcel-handoff-viz .parcel-stages {
+
+      .diagram-header {
         grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 24px;
       }
-      #parcel-handoff-viz .parcel-stage:not(:last-child)::after {
-        top: calc(100% + 0.1rem);
-        left: 1.35rem;
-        width: 0;
-        height: 0.55rem;
-        border-top: 0;
-        border-left: 1px solid var(--border);
+
+      .language {
+        justify-self: start;
       }
-      #parcel-handoff-viz .parcel-handoff {
-        justify-content: flex-start;
-        padding-left: 0.4rem;
+
+      .stages {
+        grid-template-columns: 1fr;
+        gap: 72px;
       }
-      #parcel-handoff-viz .parcel-handoff i {
-        transform: rotate(90deg);
+
+      .stage-button {
+        min-height: 140px;
+      }
+
+      .handoff {
+        top: 100%;
+        left: 22px;
+        display: flex;
+        width: auto;
+        height: 72px;
+        gap: 12px;
+        text-align: left;
+      }
+
+      .handoff-line {
+        width: 2px;
+        height: 72px;
+        flex: 0 0 auto;
+      }
+
+      .handoff-line::after {
+        top: auto;
+        right: -4px;
+        bottom: 0;
+        transform: rotate(135deg);
+      }
+
+      .selected-detail {
+        grid-template-columns: 1fr;
+        gap: 5px;
       }
     }
-  &lt;/style&gt;
 
-  &lt;header class=&quot;parcel-heading&quot;&gt;
-    &lt;div class=&quot;parcel-heading-topline&quot;&gt;
-      &lt;h2 id=&quot;parcel-title&quot;&gt;
-        &lt;span data-lang=&quot;ko&quot;&gt;내 택배는 누구의 손을 거쳐 올까?&lt;/span&gt;
-        &lt;span data-lang=&quot;en&quot;&gt;Who handles my parcel before it arrives?&lt;/span&gt;
-      &lt;/h2&gt;
-      &lt;div class=&quot;parcel-language&quot; aria-label=&quot;Language&quot;&gt;
-        &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-locale-choice=&quot;ko&quot; aria-pressed=&quot;true&quot;&gt;한국어&lt;/button&gt;
-        &lt;button class=&quot;btn&quot; type=&quot;button&quot; data-locale-choice=&quot;en&quot; aria-pressed=&quot;false&quot;&gt;English&lt;/button&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-    &lt;p class=&quot;text-muted&quot;&gt;
-      &lt;span data-lang=&quot;ko&quot;&gt;주문부터 수령까지, 각 주체가 맡는 일과 넘겨주는 정보를 따라가세요.&lt;/span&gt;
-      &lt;span data-lang=&quot;en&quot;&gt;Follow each owner and the information handed off from order to delivery.&lt;/span&gt;
-    &lt;/p&gt;
-  &lt;/header&gt;
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+      }
+    }
 
-  &lt;ol class=&quot;parcel-stages&quot; aria-label=&quot;택배 전달 단계&quot;&gt;
-    &lt;li class=&quot;parcel-stage&quot;&gt;
-      &lt;button class=&quot;btn viz-tile&quot; type=&quot;button&quot; data-stage=&quot;0&quot; aria-pressed=&quot;false&quot;&gt;
-        &lt;span class=&quot;parcel-stage-copy&quot;&gt;
-          &lt;span class=&quot;parcel-stage-topline&quot;&gt;&lt;span class=&quot;parcel-index tabular-nums&quot;&gt;1&lt;/span&gt;&lt;i data-lucide=&quot;shopping-cart&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/span&gt;
-          &lt;strong&gt;&lt;span data-lang=&quot;ko&quot;&gt;쇼핑몰&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Store&lt;/span&gt;&lt;/strong&gt;
-          &lt;span class=&quot;text-small text-muted&quot;&gt;&lt;span data-lang=&quot;ko&quot;&gt;주문 접수&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Accepts order&lt;/span&gt;&lt;/span&gt;
-        &lt;/span&gt;
-      &lt;/button&gt;
-      &lt;div class=&quot;parcel-handoff text-small&quot; aria-hidden=&quot;true&quot;&gt;&lt;i data-lucide=&quot;arrow-right&quot;&gt;&lt;/i&gt;&lt;span data-lang=&quot;ko&quot;&gt;주문 정보&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Order details&lt;/span&gt;&lt;/div&gt;
-    &lt;/li&gt;
-    &lt;li class=&quot;parcel-stage&quot;&gt;
-      &lt;button class=&quot;btn viz-tile&quot; type=&quot;button&quot; data-stage=&quot;1&quot; aria-pressed=&quot;false&quot;&gt;
-        &lt;span class=&quot;parcel-stage-copy&quot;&gt;
-          &lt;span class=&quot;parcel-stage-topline&quot;&gt;&lt;span class=&quot;parcel-index tabular-nums&quot;&gt;2&lt;/span&gt;&lt;i data-lucide=&quot;package&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/span&gt;
-          &lt;strong&gt;&lt;span data-lang=&quot;ko&quot;&gt;물류센터&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Fulfillment&lt;/span&gt;&lt;/strong&gt;
-          &lt;span class=&quot;text-small text-muted&quot;&gt;&lt;span data-lang=&quot;ko&quot;&gt;상품 포장&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Packs parcel&lt;/span&gt;&lt;/span&gt;
-        &lt;/span&gt;
-      &lt;/button&gt;
-      &lt;div class=&quot;parcel-handoff text-small&quot; aria-hidden=&quot;true&quot;&gt;&lt;i data-lucide=&quot;arrow-right&quot;&gt;&lt;/i&gt;&lt;span data-lang=&quot;ko&quot;&gt;포장된 상품&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Packed parcel&lt;/span&gt;&lt;/div&gt;
-    &lt;/li&gt;
-    &lt;li class=&quot;parcel-stage&quot;&gt;
-      &lt;button class=&quot;btn viz-tile&quot; type=&quot;button&quot; data-stage=&quot;2&quot; aria-pressed=&quot;false&quot;&gt;
-        &lt;span class=&quot;parcel-stage-copy&quot;&gt;
-          &lt;span class=&quot;parcel-stage-topline&quot;&gt;&lt;span class=&quot;parcel-index tabular-nums&quot;&gt;3&lt;/span&gt;&lt;i data-lucide=&quot;truck&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/span&gt;
-          &lt;strong&gt;&lt;span data-lang=&quot;ko&quot;&gt;배송기사&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Courier&lt;/span&gt;&lt;/strong&gt;
-          &lt;span class=&quot;text-small text-muted&quot;&gt;&lt;span data-lang=&quot;ko&quot;&gt;동네까지 운송&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Moves it locally&lt;/span&gt;&lt;/span&gt;
-        &lt;/span&gt;
-      &lt;/button&gt;
-      &lt;div class=&quot;parcel-handoff text-small&quot; aria-hidden=&quot;true&quot;&gt;&lt;i data-lucide=&quot;arrow-right&quot;&gt;&lt;/i&gt;&lt;span data-lang=&quot;ko&quot;&gt;도착 알림&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Arrival notice&lt;/span&gt;&lt;/div&gt;
-    &lt;/li&gt;
-    &lt;li class=&quot;parcel-stage&quot;&gt;
-      &lt;button class=&quot;btn viz-tile&quot; type=&quot;button&quot; data-stage=&quot;3&quot; aria-pressed=&quot;true&quot;&gt;
-        &lt;span class=&quot;parcel-stage-copy&quot;&gt;
-          &lt;span class=&quot;parcel-stage-topline&quot;&gt;&lt;span class=&quot;parcel-index tabular-nums&quot;&gt;4&lt;/span&gt;&lt;i data-lucide=&quot;house&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/span&gt;
-          &lt;strong&gt;&lt;span data-lang=&quot;ko&quot;&gt;나&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Me&lt;/span&gt;&lt;/strong&gt;
-          &lt;span class=&quot;text-small text-muted&quot;&gt;&lt;span data-lang=&quot;ko&quot;&gt;문 앞에서 수령&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Receives at door&lt;/span&gt;&lt;/span&gt;
-        &lt;/span&gt;
-      &lt;/button&gt;
-    &lt;/li&gt;
-  &lt;/ol&gt;
-
-  &lt;div class=&quot;card parcel-selected&quot; aria-live=&quot;polite&quot;&gt;
-    &lt;span class=&quot;parcel-selected-icon&quot;&gt;&lt;i data-lucide=&quot;house&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/span&gt;
-    &lt;div class=&quot;parcel-selected-copy&quot;&gt;
-      &lt;strong data-selected-title&gt;&lt;span data-lang=&quot;ko&quot;&gt;문 앞 도착&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;At your door&lt;/span&gt;&lt;/strong&gt;
-      &lt;p class=&quot;text-muted&quot; data-selected-detail&gt;&lt;span data-lang=&quot;ko&quot;&gt;배송 사진을 확인하고 택배를 안전하게 수령합니다.&lt;/span&gt;&lt;span data-lang=&quot;en&quot;&gt;Check the delivery photo and safely collect the parcel.&lt;/span&gt;&lt;/p&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-
-  &lt;script&gt;
-    (() =&gt; {
-      const root = document.getElementById(&#x27;parcel-handoff-viz&#x27;);
-      const buttons = [...root.querySelectorAll(&#x27;[data-stage]&#x27;)];
-      const localeButtons = [...root.querySelectorAll(&#x27;[data-locale-choice]&#x27;)];
-      const icon = root.querySelector(&#x27;.parcel-selected-icon i&#x27;);
-      const title = root.querySelector(&#x27;[data-selected-title]&#x27;);
-      const detail = root.querySelector(&#x27;[data-selected-detail]&#x27;);
-      const stages = [
-        {
-          icon: &#x27;shopping-cart&#x27;,
-          ko: [&#x27;주문 접수&#x27;, &#x27;쇼핑몰이 주문번호를 만들고 결제 확인 정보를 물류센터로 보냅니다.&#x27;],
-          en: [&#x27;Order accepted&#x27;, &#x27;The store creates the order number and sends payment confirmation to fulfillment.&#x27;],
-        },
-        {
-          icon: &#x27;package&#x27;,
-          ko: [&#x27;상품 포장&#x27;, &#x27;물류센터가 상품을 찾아 포장하고 배송기사에게 넘깁니다.&#x27;],
-          en: [&#x27;Parcel packed&#x27;, &#x27;Fulfillment finds and packs the item, then hands it to the courier.&#x27;],
-        },
-        {
-          icon: &#x27;truck&#x27;,
-          ko: [&#x27;배송 중&#x27;, &#x27;배송기사가 택배를 우리 동네로 옮기고 도착 알림을 보냅니다.&#x27;],
-          en: [&#x27;Out for delivery&#x27;, &#x27;The courier moves the parcel through the neighborhood and sends an arrival notice.&#x27;],
-        },
-        {
-          icon: &#x27;house&#x27;,
-          ko: [&#x27;문 앞 도착&#x27;, &#x27;배송 사진을 확인하고 택배를 안전하게 수령합니다.&#x27;],
-          en: [&#x27;At your door&#x27;, &#x27;Check the delivery photo and safely collect the parcel.&#x27;],
-        },
-      ];
-
-      function localized(value) {
-        return value[root.dataset.locale === &#x27;en&#x27; ? &#x27;en&#x27; : &#x27;ko&#x27;];
+    @media (forced-colors: active) {
+      .stage-button[aria-pressed="true"],
+      .language label:has(input:checked),
+      .selected-detail {
+        border-color: Highlight;
       }
 
-      function update(index) {
-        const stage = stages[index];
-        buttons.forEach((button, buttonIndex) =&gt; {
-          button.setAttribute(&#x27;aria-pressed&#x27;, String(buttonIndex === index));
-        });
-        icon.setAttribute(&#x27;data-lucide&#x27;, stage.icon);
-        const [selectedTitle, selectedDetail] = localized(stage);
-        title.textContent = selectedTitle;
-        detail.textContent = selectedDetail;
-        if (window.lucide) window.lucide.createIcons({attrs: {width: 16, height: 16}});
+      .handoff-line,
+      .handoff-line::after {
+        border-color: CanvasText;
+        background: CanvasText;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#parcel-journey">
+    <span data-lang="en">Skip to diagram</span>
+    <span data-lang="ko">다이어그램으로 건너뛰기</span>
+  </a>
+
+  <main id="parcel-handoff-diagram" data-locale="en">
+    <header class="diagram-header">
+      <div>
+        <p class="eyebrow">
+          <span data-lang="en">Everyday handoff</span>
+          <span data-lang="ko">일상 속 인계</span>
+        </p>
+        <h1 id="parcel-title">
+          <span data-lang="en">How does my parcel reach the front door?</span>
+          <span data-lang="ko">주문한 택배는 어떻게 문 앞까지 올까?</span>
+        </h1>
+        <p class="deck">
+          <span data-lang="en">One parcel changes hands three times. Each handoff changes who is responsible and what moves next.</span>
+          <span data-lang="ko">하나의 택배가 세 번 인계됩니다. 인계할 때마다 책임자와 다음에 전달되는 것이 달라집니다.</span>
+        </p>
+      </div>
+
+      <fieldset class="language">
+        <legend class="sr-only">Language</legend>
+        <label><input id="locale-en" type="radio" name="locale" value="en" checked><span>English</span></label>
+        <label><input id="locale-ko" type="radio" name="locale" value="ko"><span>한국어</span></label>
+      </fieldset>
+    </header>
+
+    <section id="parcel-journey" aria-labelledby="journey-title">
+      <h2 id="journey-title" class="sr-only"><span data-lang="en">Parcel handoff sequence</span><span data-lang="ko">택배 인계 순서</span></h2>
+
+      <ol class="stages" aria-label="Parcel handoff sequence">
+        <li class="stage">
+          <button class="stage-button" type="button" data-stage="0" aria-pressed="false">
+            <span class="stage-index">01</span>
+            <strong class="stage-owner"><span data-lang="en">Store</span><span data-lang="ko">쇼핑몰</span></strong>
+            <span class="stage-action"><span data-lang="en">Accepts order · confirms payment</span><span data-lang="ko">주문 접수 · 결제 확인</span></span>
+            <span class="selected-marker"><span data-lang="en">Selected</span><span data-lang="ko">선택됨</span></span>
+          </button>
+          <div class="handoff" aria-hidden="true"><span class="handoff-line"></span><span class="handoff-label"><span data-lang="en">Order details</span><span data-lang="ko">주문 정보</span></span></div>
+        </li>
+
+        <li class="stage">
+          <button class="stage-button" type="button" data-stage="1" aria-pressed="true">
+            <span class="stage-index">02</span>
+            <strong class="stage-owner"><span data-lang="en">Fulfillment</span><span data-lang="ko">물류센터</span></strong>
+            <span class="stage-action"><span data-lang="en">Finds item · checks · packs</span><span data-lang="ko">상품 확인 · 포장</span></span>
+            <span class="selected-marker"><span data-lang="en">Selected</span><span data-lang="ko">선택됨</span></span>
+          </button>
+          <div class="handoff" aria-hidden="true"><span class="handoff-line"></span><span class="handoff-label"><span data-lang="en">Packed parcel</span><span data-lang="ko">포장된 택배</span></span></div>
+        </li>
+
+        <li class="stage">
+          <button class="stage-button" type="button" data-stage="2" aria-pressed="false">
+            <span class="stage-index">03</span>
+            <strong class="stage-owner"><span data-lang="en">Courier</span><span data-lang="ko">배송기사</span></strong>
+            <span class="stage-action"><span data-lang="en">Moves parcel on the local route</span><span data-lang="ko">지역 배송 · 운반</span></span>
+            <span class="selected-marker"><span data-lang="en">Selected</span><span data-lang="ko">선택됨</span></span>
+          </button>
+          <div class="handoff" aria-hidden="true"><span class="handoff-line"></span><span class="handoff-label"><span data-lang="en">Parcel + photo</span><span data-lang="ko">택배 + 사진</span></span></div>
+        </li>
+
+        <li class="stage">
+          <button class="stage-button" type="button" data-stage="3" aria-pressed="false">
+            <span class="stage-index">04</span>
+            <strong class="stage-owner"><span data-lang="en">You</span><span data-lang="ko">나</span></strong>
+            <span class="stage-action"><span data-lang="en">Checks photo · collects parcel</span><span data-lang="ko">배송 사진 확인 · 수령</span></span>
+            <span class="selected-marker"><span data-lang="en">Selected</span><span data-lang="ko">선택됨</span></span>
+          </button>
+        </li>
+      </ol>
+
+      <aside class="selected-detail" aria-live="polite">
+        <p class="detail-label"><span data-lang="en">Selected stage</span><span data-lang="ko">선택한 단계</span></p>
+        <div class="detail-copy">
+          <h2 data-selected-title>Parcel prepared</h2>
+          <p data-selected-detail>Fulfillment turns the order details into a labeled, packed parcel for the courier.</p>
+        </div>
+      </aside>
+
+      <p class="scope-note">
+        <span data-lang="en"><strong>Simplified example:</strong> real deliveries can include sellers, regional hubs, subcontractors, lockers, or returns. No carrier or order data is used.</span>
+        <span data-lang="ko"><strong>단순화한 예시:</strong> 실제 배송에는 판매자, 지역 허브, 협력사, 보관함, 반품 과정이 더해질 수 있습니다. 실제 택배사나 주문 데이터는 사용하지 않았습니다.</span>
+      </p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.getElementById("parcel-handoff-diagram");
+      const stages = [...root.querySelectorAll("[data-stage]")];
+      const localeInputs = [...root.querySelectorAll('input[name="locale"]')];
+      const selectedTitle = root.querySelector("[data-selected-title]");
+      const selectedDetail = root.querySelector("[data-selected-detail]");
+      const journey = root.querySelector(".stages");
+      let selectedStage = 1;
+
+      const copy = {
+        en: {
+          aria: "Parcel handoff sequence",
+          details: [
+            ["Order recorded", "The store creates the order number and sends the confirmed order details to fulfillment."],
+            ["Parcel prepared", "Fulfillment turns the order details into a labeled, packed parcel for the courier."],
+            ["Parcel on the move", "The courier becomes responsible for the physical parcel and records delivery at the door."],
+            ["Delivery completed", "You use the arrival notice or photo to find and collect the parcel."],
+          ],
+        },
+        ko: {
+          aria: "택배 인계 순서",
+          details: [
+            ["주문 기록", "쇼핑몰이 주문번호를 만들고 결제가 확인된 주문 정보를 물류센터에 보냅니다."],
+            ["택배 준비", "물류센터가 주문 정보를 배송기사가 운반할 수 있는 라벨이 붙은 택배로 바꿉니다."],
+            ["배송 중", "배송기사가 실제 택배를 책임지고 문 앞에 배송한 기록을 남깁니다."],
+            ["배송 완료", "도착 알림이나 사진을 확인해 택배를 찾아 수령합니다."],
+          ],
+        },
+      };
+
+      function updateStage(index) {
+        selectedStage = index;
+        stages.forEach((stage, stageIndex) => stage.setAttribute("aria-pressed", String(stageIndex === selectedStage)));
+        const [title, detail] = copy[root.dataset.locale].details[selectedStage];
+        selectedTitle.textContent = title;
+        selectedDetail.textContent = detail;
       }
 
-      function setLocale(locale) {
+      function updateLocale(locale) {
         root.dataset.locale = locale;
-        localeButtons.forEach((button) =&gt; {
-          button.setAttribute(&#x27;aria-pressed&#x27;, String(button.dataset.localeChoice === locale));
-        });
-        const selected = buttons.findIndex((button) =&gt; button.getAttribute(&#x27;aria-pressed&#x27;) === &#x27;true&#x27;);
-        update(selected &lt; 0 ? 3 : selected);
+        document.documentElement.lang = locale;
+        journey.setAttribute("aria-label", copy[locale].aria);
+        localeInputs.forEach((input) => { input.checked = input.value === locale; });
+        updateStage(selectedStage);
       }
 
-      buttons.forEach((button, index) =&gt; button.addEventListener(&#x27;click&#x27;, () =&gt; update(index)));
-      localeButtons.forEach((button) =&gt; button.addEventListener(&#x27;click&#x27;, () =&gt; setLocale(button.dataset.localeChoice)));
-      setLocale(navigator.language.toLowerCase().startsWith(&#x27;ko&#x27;) ? &#x27;ko&#x27; : &#x27;en&#x27;);
+      stages.forEach((stage, index) => stage.addEventListener("click", () => updateStage(index)));
+      localeInputs.forEach((input) => input.addEventListener("change", () => updateLocale(input.value)));
+      updateLocale(navigator.language.toLowerCase().startsWith("ko") ? "ko" : "en");
     })();
-  &lt;/script&gt;
-&lt;/section&gt;
-
-&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
-&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
-&lt;script&gt;
-(() =&gt; {
-  if (window.FloatingUIDOM == null) {
-    return;
-  }
-  const { autoUpdate, computePosition, flip, offset, shift, size } =
-    window.FloatingUIDOM;
-  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
-  const tooltipId = `codex-visualization-tooltip-${
-    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
-  }`;
-  const tooltipGap = 5;
-  const hoverDelay = 700;
-  const skipDelay = 300;
-  let activeTrigger = null;
-  let pendingTrigger = null;
-  let tooltip = null;
-  let openTimeout = null;
-  let autoUpdateCleanup = null;
-  let positionRequest = 0;
-  let skipDelayUntil = 0;
-  let lastPointerWasTouch = false;
-  let pinnedByTouch = false;
-
-  const getTrigger = (target) =&gt;
-    target?.nodeType === Node.ELEMENT_NODE
-      ? target.closest(&quot;[data-tooltip]&quot;)
-      : null;
-  const containsTarget = (trigger, target) =&gt;
-    target?.nodeType != null &amp;&amp; trigger.contains(target);
-  const getContent = (trigger) =&gt;
-    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
-  const getPlacement = (trigger) =&gt; {
-    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
-    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
-  };
-  const getTooltip = () =&gt; {
-    if (tooltip == null) {
-      tooltip = document.createElement(&quot;div&quot;);
-      tooltip.id = tooltipId;
-      tooltip.className = &quot;tooltip&quot;;
-      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
-    }
-    return tooltip;
-  };
-  const setDescribedBy = (trigger, described) =&gt; {
-    const ids = new Set(
-      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
-        .split(/\s+/)
-        .filter(Boolean),
-    );
-    if (described) {
-      ids.add(tooltipId);
-    } else {
-      ids.delete(tooltipId);
-    }
-    if (ids.size === 0) {
-      trigger.removeAttribute(&quot;aria-describedby&quot;);
-    } else {
-      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
-    }
-  };
-  const clearOpenTimeout = () =&gt; {
-    if (openTimeout != null) {
-      window.clearTimeout(openTimeout);
-      openTimeout = null;
-    }
-    pendingTrigger = null;
-  };
-  const closeTooltip = (activateSkipDelay = true) =&gt; {
-    clearOpenTimeout();
-    pinnedByTouch = false;
-    positionRequest += 1;
-    autoUpdateCleanup?.();
-    autoUpdateCleanup = null;
-    if (activeTrigger == null) {
-      return;
-    }
-    setDescribedBy(activeTrigger, false);
-    activeTrigger = null;
-    tooltip?.remove();
-    if (activateSkipDelay) {
-      skipDelayUntil = Date.now() + skipDelay;
-    }
-  };
-  const updatePosition = (trigger, floating) =&gt; {
-    const request = ++positionRequest;
-    void computePosition(trigger, floating, {
-      middleware: [
-        offset(tooltipGap),
-        flip({ padding: tooltipGap }),
-        shift({ padding: tooltipGap }),
-        size({
-          padding: tooltipGap,
-          apply({ availableHeight, availableWidth, elements }) {
-            elements.floating.style.setProperty(
-              &quot;--tooltip-available-width&quot;,
-              `${Math.max(0, availableWidth)}px`,
-            );
-            elements.floating.style.setProperty(
-              &quot;--tooltip-available-height&quot;,
-              `${Math.max(0, availableHeight)}px`,
-            );
-          },
-        }),
-      ],
-      placement: getPlacement(trigger),
-      strategy: &quot;fixed&quot;,
-    })
-      .then(({ x, y }) =&gt; {
-        if (activeTrigger !== trigger || request !== positionRequest) {
-          return;
-        }
-        const scale = window.devicePixelRatio || 1;
-        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
-        floating.style.visibility = &quot;visible&quot;;
-      })
-      .catch(() =&gt; {
-        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
-          closeTooltip(false);
-        }
-      });
-  };
-  const openTooltip = (trigger) =&gt; {
-    const content = getContent(trigger);
-    if (!trigger.isConnected || content.length === 0) {
-      return;
-    }
-    clearOpenTimeout();
-    if (activeTrigger === trigger) {
-      return;
-    }
-    closeTooltip();
-    const floating = getTooltip();
-    floating.textContent = content;
-    floating.style.visibility = &quot;hidden&quot;;
-    floating.style.transform = &quot;translate(0, 0)&quot;;
-    document.body.appendChild(floating);
-    activeTrigger = trigger;
-    setDescribedBy(trigger, true);
-    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
-      updatePosition(trigger, floating);
-    });
-  };
-  const requestOpen = (trigger, immediate = false) =&gt; {
-    if (
-      getContent(trigger).length === 0 ||
-      activeTrigger === trigger ||
-      pendingTrigger === trigger
-    ) {
-      return;
-    }
-    clearOpenTimeout();
-    pendingTrigger = trigger;
-    const delay =
-      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
-        ? 0
-        : hoverDelay;
-    if (delay === 0) {
-      openTooltip(trigger);
-      return;
-    }
-    openTimeout = window.setTimeout(() =&gt; {
-      openTimeout = null;
-      pendingTrigger = null;
-      openTooltip(trigger);
-    }, delay);
-  };
-  const handlePointerOpen = (event) =&gt; {
-    if (event.pointerType === &quot;touch&quot;) {
-      return;
-    }
-    const trigger = getTrigger(event.target);
-    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
-      return;
-    }
-    requestOpen(trigger);
-  };
-  const handlePointer = (event) =&gt; {
-    lastPointerWasTouch =
-      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
-  };
-  const handleTouchClick = (event) =&gt; {
-    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
-    lastPointerWasTouch = false;
-    if (!isTouch || event.detail === 0) {
-      return;
-    }
-    const trigger = getTrigger(event.target);
-    if (
-      trigger == null ||
-      !trigger.isConnected ||
-      getContent(trigger).length === 0 ||
-      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
-    ) {
-      if (pinnedByTouch) {
-        closeTooltip();
-      }
-      return;
-    }
-    openTooltip(trigger);
-    pinnedByTouch = activeTrigger === trigger;
-    window.setTimeout(() =&gt; {
-      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
-        closeTooltip(false);
-      }
-    }, 0);
-  };
-  const handleLeave = (event) =&gt; {
-    if (pinnedByTouch) {
-      return;
-    }
-    const trigger = getTrigger(event.target);
-    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
-      return;
-    }
-    if (activeTrigger === trigger || pendingTrigger === trigger) {
-      closeTooltip();
-    }
-  };
-  const handleFocusIn = (event) =&gt; {
-    const trigger = getTrigger(event.target);
-    if (trigger?.matches(&quot;:focus-visible&quot;)) {
-      requestOpen(trigger, true);
-    }
-  };
-  const handleKeyDown = (event) =&gt; {
-    if (event.key === &quot;Escape&quot;) {
-      closeTooltip();
-    }
-  };
-  const handleContextMenu = (event) =&gt; {
-    lastPointerWasTouch = false;
-    const trigger = getTrigger(event.target);
-    if (activeTrigger === trigger || pendingTrigger === trigger) {
-      closeTooltip();
-    }
-  };
-  const destroy = () =&gt; {
-    closeTooltip(false);
-    lastPointerWasTouch = false;
-    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
-    document.removeEventListener(&quot;pointerdown&quot;, handlePointer);
-    document.removeEventListener(&quot;pointercancel&quot;, handlePointer);
-    document.removeEventListener(&quot;click&quot;, handleTouchClick);
-    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
-    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
-    document.removeEventListener(&quot;focusout&quot;, handleLeave);
-    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
-    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
-    tooltip = null;
-  };
-
-  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
-  document.addEventListener(&quot;pointerdown&quot;, handlePointer);
-  document.addEventListener(&quot;pointercancel&quot;, handlePointer);
-  document.addEventListener(&quot;click&quot;, handleTouchClick);
-  document.addEventListener(&quot;pointerout&quot;, handleLeave);
-  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
-  document.addEventListener(&quot;focusout&quot;, handleLeave);
-  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
-  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
-  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
-})();
-&lt;/script&gt;
-&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
-&lt;script&gt;
-(() =&gt; {
-  const initialize = () =&gt; {
-    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
-  };
-  if (globalThis.lucide != null) {
-    initialize();
-    return;
-  }
-  document
-    .getElementById(&quot;codex-visualization-lucide&quot;)
-    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
-})();
-&lt;/script&gt;
-
-&lt;/body&gt;
-&lt;/html&gt;
-"></iframe>
+  </script>
 </body>
 </html>

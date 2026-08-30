@@ -14,7 +14,7 @@ const sharedWritingStandard = resolve(
 );
 const sharedDiagramStandard = resolve(
   skillsRoot,
-  "visualize/references/diagram-standard.md",
+  "diagram/references/diagram-standard.md",
 );
 const sharedCodeMaintenanceGuidance = resolve(
   pluginRoot,

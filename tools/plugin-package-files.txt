@@ -21,6 +21,11 @@ skills/align/scripts/cli.mjs
 skills/align/scripts/design/tokens.mjs
 skills/align/scripts/image.mjs
 skills/align/scripts/render.mjs
+skills/diagram/LICENSE.diagram-design
+skills/diagram/SKILL.md
+skills/diagram/agents/openai.yaml
+skills/diagram/references/chart-standard.md
+skills/diagram/references/diagram-standard.md
 skills/diff/SKILL.md
 skills/diff/agents/openai.yaml
 skills/diff/assets/hope-protected-light.png
@@ -65,11 +70,6 @@ skills/toxic-review/agents/openai.yaml
 skills/toxic-review/references/causal-review.md
 skills/toxic-review/references/red-review.md
 skills/toxic-review/references/verification.md
-skills/visualize/LICENSE.diagram-design
-skills/visualize/SKILL.md
-skills/visualize/agents/openai.yaml
-skills/visualize/references/chart-standard.md
-skills/visualize/references/diagram-standard.md
 skills/write/SKILL.md
 skills/write/agents/openai.yaml
 skills/write/assets/hope-protected-light.png

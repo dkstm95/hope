@@ -1,5 +1,0 @@
-interface:
-  display_name: "Hope Visualize"
-  short_description: "Make explanatory visuals clear and deliberate"
-  brand_color: "#087EA4"
-  default_prompt: "Use $hope:visualize to make this explanatory visual or data chart clear, faithful, and accessible."

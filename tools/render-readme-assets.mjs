@@ -38,7 +38,7 @@ const captureNames = [
   "diff-core",
   "diff-microworld",
   "diff-quiz",
-  "visualize",
+  "diagram",
 ];
 const generatedPaths = [
   ...examples.flatMap(({ suffix }) => [
@@ -157,21 +157,17 @@ async function captureMockup(page, locale, variant, fonts) {
   return { data: data.toString("base64"), height: 566, width: 850 };
 }
 
-async function captureVisualizeExample(page, locale, outputPath) {
+async function captureDiagramExample(page, locale, outputPath) {
   await page.setViewportSize({ height: 760, width: 1100 });
   await page.emulateMedia({ colorScheme: "light" });
   const language = locale === "ko-KR" ? "ko" : "en";
-  const visualizationPath = join(root, "docs", "visualizations", "parcel-handoff.html");
-  await page.goto(pathToFileURL(visualizationPath).href, { waitUntil: "load" });
-  const visualization = page.frameLocator("iframe").locator("#parcel-handoff-viz");
-  await visualization.waitFor({ state: "visible" });
-  await visualization.locator(`[data-locale-choice="${language}"]`).click();
-  const contentHeight = await page.frameLocator("iframe").locator("body").evaluate(
-    (body) => body.scrollHeight,
-  );
-  await page.locator("iframe").evaluate((frame, height) => {
-    frame.style.height = `${height}px`;
-  }, contentHeight);
+  const diagramPath = join(root, "docs", "visualizations", "parcel-handoff.html");
+  await page.goto(pathToFileURL(diagramPath).href, { waitUntil: "load" });
+  const diagram = page.locator("#parcel-handoff-diagram");
+  await diagram.waitFor({ state: "visible" });
+  await page.locator(`#locale-${language}`).check();
+  await page.locator('[data-stage="1"]').click();
+  await page.evaluate(async () => await document.fonts.ready);
   await page.locator("body").screenshot({
     animations: "disabled",
     path: outputPath,
@@ -351,10 +347,10 @@ async function captureReadmeAssets(browser, paths, outputDirectory, fonts) {
       await page.locator('.microworld-control[data-control-id="delay"][value="long"]').check();
       await captureElement(page, join(outputDirectory, `hope-diff-microworld-${suffix}.png`), ".microworld", { expandDetails: true });
       await captureElement(page, join(outputDirectory, `hope-diff-quiz-${suffix}.png`), "#quiz", { expandDetails: true });
-      await captureVisualizeExample(
+      await captureDiagramExample(
         page,
         locale,
-        join(outputDirectory, `hope-visualize-${suffix}.png`),
+        join(outputDirectory, `hope-diagram-${suffix}.png`),
       );
     } finally {
       await page.close();

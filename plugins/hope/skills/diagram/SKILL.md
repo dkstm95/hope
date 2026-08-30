@@ -1,22 +1,22 @@
 ---
-name: visualize
-description: Create, refine, or review an explanatory diagram or data chart when relationships, sequence, hierarchy, state, cause, or quantitative comparison become materially clearer visually. Use within another task without replacing its workflow or artifact; do not use for decorative illustration, simple lists or tables, or UI screen design.
+name: diagram
+description: Create, refine, or review an explanatory diagram or data chart when spatial relationships or quantitative shape make the meaning materially clearer. Use within another task without replacing its workflow or artifact; do not use for decorative illustration, simple lists or tables, or UI screen design.
 ---
 
-# Hope Visualize
+# Hope Diagram
 
 Use the active host session to create, refine, or review an explanatory visual.
 Read `references/diagram-standard.md` before doing any visual work. Also read
 `references/chart-standard.md` when position, length, area, width, angle, or
 another visual property represents a quantity.
 
-Visualize may own a standalone diagram request or accompany implementation and
+Diagram may own a standalone diagram request or accompany implementation and
 another Skill. When it accompanies other work, preserve that work's scope,
 authority, output format, and completion conditions. Improve the visual inside
 the existing artifact or result; do not create another workflow or file unless
 the request or active task requires one.
 
-The active task owns facts, evidence, artifact schema, and delivery. Visualize
+The active task owns facts, evidence, artifact schema, and delivery. Diagram
 owns whether a visual earns its place, the reading job, semantic model, visual
 grammar, composition, data honesty, accessibility, and rendered verification.
 When an artifact permits only named visual kinds or fields, choose within that
