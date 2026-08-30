@@ -944,6 +944,37 @@ test("visual routes expose endpoints and direction to the accessibility tree", a
   expect(narrowComponentTops[1]).toBeGreaterThan(narrowComponentTops[0]);
 });
 
+test("decision tables become labeled comparisons on narrow screens", async ({ page }) => {
+  await page.setViewportSize(viewports.desktop);
+  await page.goto(artifactUrl);
+  await expect(page.locator(".decision-table thead")).toBeVisible();
+  await expect(page.locator(".decision-table td").first()).toHaveCSS(
+    "display",
+    "table-cell",
+  );
+
+  await page.setViewportSize(viewports.mobile);
+  const table = page.locator(".decision-table");
+  const row = table.locator("tbody tr").first();
+  await expect(table.locator("thead")).toHaveCSS("position", "absolute");
+  await expect(table.locator("thead")).toHaveCSS("clip-path", "inset(50%)");
+  await expect(row.locator('th[scope="row"]')).toHaveAttribute("data-label", "상황");
+  expect(await row.locator("td").evaluateAll((items) => (
+    items.map((item) => item.getAttribute("data-label"))
+  ))).toEqual(["이전", "이후"]);
+  const cells = await row.locator('th[scope="row"], td').evaluateAll((items) => (
+    items.map((item) => ({
+      columns: getComputedStyle(item).gridTemplateColumns,
+      display: getComputedStyle(item).display,
+      width: item.getBoundingClientRect().width,
+    }))
+  ));
+  expect(cells.every(({ display }) => display === "grid")).toBe(true);
+  expect(cells.every(({ columns }) => columns.split(" ").length === 2)).toBe(true);
+  expect(cells.every(({ width }) => width === cells[0].width)).toBe(true);
+  await expectNoPageOverflow(page);
+});
+
 test("display and contents controls share one visual control family", async ({ page }) => {
   await openArtifact(page, viewports.breakpoint);
   const theme = page.locator("#theme-toggle");

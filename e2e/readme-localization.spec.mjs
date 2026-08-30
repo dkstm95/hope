@@ -7,8 +7,8 @@ const examples = [
     name: "Align",
   },
   {
-    english: "docs/diffs/ky-867-retry-extend.en.html",
-    korean: "docs/diffs/ky-867-retry-extend.ko.html",
+    english: "docs/diffs/ky-825-total-timeout.en.html",
+    korean: "docs/diffs/ky-825-total-timeout.ko.html",
     name: "Diff",
   },
 ];
@@ -171,4 +171,29 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
     themeHeight: 42,
     themeWidth: 42,
   });
+});
+
+test("Visualize README example switches language, responds to input, and fits narrow screens", async ({ page }) => {
+  await page.setViewportSize({ height: 760, width: 1100 });
+  await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
+  const visualization = page.frameLocator("iframe");
+  const root = visualization.locator("#parcel-handoff-viz");
+
+  await expect(root).toBeVisible();
+  await visualization.locator('[data-locale-choice="en"]').click();
+  await expect(root).toHaveAttribute("data-locale", "en");
+  await expect(visualization.locator("#parcel-title")).toContainText("Who handles my parcel");
+
+  await visualization.locator('[data-stage="1"]').click();
+  await expect(visualization.locator('[data-stage="1"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(visualization.locator("[data-selected-title]")).toHaveText("Parcel packed");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload();
+  await expect(visualization.locator("#parcel-handoff-viz")).toBeVisible();
+  const dimensions = await visualization.locator("html").evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 });

@@ -38,11 +38,12 @@ const captureNames = [
   "diff-core",
   "diff-microworld",
   "diff-quiz",
+  "visualize",
 ];
 const generatedPaths = [
   ...examples.flatMap(({ suffix }) => [
     `docs/alignments/rescene-fan-calendar.${suffix}.html`,
-    `docs/diffs/ky-867-retry-extend.${suffix}.html`,
+    `docs/diffs/ky-825-total-timeout.${suffix}.html`,
   ]),
   ...examples.flatMap(({ suffix }) => captureNames
     .map((name) => `assets/readme/hope-${name}-${suffix}.png`)),
@@ -154,6 +155,28 @@ async function captureMockup(page, locale, variant, fonts) {
   await page.evaluate(async () => await document.fonts.ready);
   const data = await page.screenshot({ animations: "disabled", type: "png" });
   return { data: data.toString("base64"), height: 566, width: 850 };
+}
+
+async function captureVisualizeExample(page, locale, outputPath) {
+  await page.setViewportSize({ height: 760, width: 1100 });
+  await page.emulateMedia({ colorScheme: "light" });
+  const language = locale === "ko-KR" ? "ko" : "en";
+  const visualizationPath = join(root, "docs", "visualizations", "parcel-handoff.html");
+  await page.goto(pathToFileURL(visualizationPath).href, { waitUntil: "load" });
+  const visualization = page.frameLocator("iframe").locator("#parcel-handoff-viz");
+  await visualization.waitFor({ state: "visible" });
+  await visualization.locator(`[data-locale-choice="${language}"]`).click();
+  const contentHeight = await page.frameLocator("iframe").locator("body").evaluate(
+    (body) => body.scrollHeight,
+  );
+  await page.locator("iframe").evaluate((frame, height) => {
+    frame.style.height = `${height}px`;
+  }, contentHeight);
+  await page.locator("body").screenshot({
+    animations: "disabled",
+    path: outputPath,
+    type: "png",
+  });
 }
 
 function generatedHtml(bytes) {
@@ -295,11 +318,11 @@ async function renderHtmlExamples(page, locations, fonts) {
     await writeFile(alignPath, sealAlignHtml(alignSource).bytes);
     await inspectAlignArtifact(alignPath);
 
-    const diffPath = join(locations.diffDirectory, `ky-867-retry-extend.${example.suffix}.html`);
+    const diffPath = join(locations.diffDirectory, `ky-825-total-timeout.${example.suffix}.html`);
     const snapshot = makeDiffSnapshot(example.locale);
-    const review = validateAnalysis(makeDiffAnalysis(snapshot), snapshot, { runId: "86786786786786786786786786786786" });
+    const review = validateAnalysis(makeDiffAnalysis(snapshot), snapshot, { runId: "82582582582582582582582582582582" });
     const rendered = await renderReview(review, {
-      alternateLocale: alternateLocale(example.alternateLocale, `ky-867-retry-extend.${example.alternateSuffix}.html`),
+      alternateLocale: alternateLocale(example.alternateLocale, `ky-825-total-timeout.${example.alternateSuffix}.html`),
     });
     await writeFile(diffPath, generatedHtml(rendered.bytes));
     paths[example.suffix] = { alignPath, diffPath };
@@ -307,8 +330,8 @@ async function renderHtmlExamples(page, locations, fonts) {
   return paths;
 }
 
-async function captureReadmeAssets(browser, paths, outputDirectory) {
-  for (const { suffix } of examples) {
+async function captureReadmeAssets(browser, paths, outputDirectory, fonts) {
+  for (const { locale, suffix } of examples) {
     const page = await browser.newPage();
     try {
       const { alignPath, diffPath } = paths[suffix];
@@ -321,13 +344,18 @@ async function captureReadmeAssets(browser, paths, outputDirectory) {
         height: 820,
       });
       await page.setViewportSize({ height: 900, width: 1440 });
-      await captureElement(page, join(outputDirectory, `hope-diff-core-${suffix}.png`), "#core-change");
+      await captureElement(page, join(outputDirectory, `hope-diff-core-${suffix}.png`), ".behavior-visual");
       await page.locator(".microworld-disclosure").evaluate((details) => {
         details.open = true;
       });
-      await page.locator('.microworld-control[data-control-id="child"][value="number"]').check();
+      await page.locator('.microworld-control[data-control-id="delay"][value="long"]').check();
       await captureElement(page, join(outputDirectory, `hope-diff-microworld-${suffix}.png`), ".microworld", { expandDetails: true });
       await captureElement(page, join(outputDirectory, `hope-diff-quiz-${suffix}.png`), "#quiz", { expandDetails: true });
+      await captureVisualizeExample(
+        page,
+        locale,
+        join(outputDirectory, `hope-visualize-${suffix}.png`),
+      );
     } finally {
       await page.close();
     }
@@ -349,7 +377,7 @@ async function generateExamples(destinationRoot) {
     } finally {
       await renderPage.close();
     }
-    await captureReadmeAssets(browser, paths, locations.outputDirectory);
+    await captureReadmeAssets(browser, paths, locations.outputDirectory, fonts);
   } finally {
     await browser?.close();
   }
@@ -454,7 +482,7 @@ async function checkExamples(generatedRoot) {
       });
     }
 
-    const diffPath = `docs/diffs/ky-867-retry-extend.${suffix}.html`;
+    const diffPath = `docs/diffs/ky-825-total-timeout.${suffix}.html`;
     const [committedDiff, generatedDiff] = await Promise.all([
       readFile(join(root, diffPath)),
       readFile(join(generatedRoot, diffPath)),

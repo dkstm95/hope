@@ -293,15 +293,16 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
       </li>`
     )).join("")}</ol>`;
   } else if (visual.kind === "decision-table") {
+    const caseLabel = label(dictionary, "visual.case");
     content = `<div class="table-scroll visual-table" role="region" aria-label="${html(visual.title)}" tabindex="0">
       <table class="decision-table">
         <thead><tr>
-          <th scope="col">${html(label(dictionary, "visual.case"))}</th>
+          <th scope="col">${html(caseLabel)}</th>
           ${visual.columns.map((column) => `<th scope="col">${userText(column)}</th>`).join("")}
         </tr></thead>
         <tbody>${visual.rows.map((row) => `<tr>
-          <th scope="row">${userText(row.case)}</th>
-          ${row.cells.map((cell) => `<td>${userText(cell)}</td>`).join("")}
+          <th scope="row" data-label="${htmlAttribute(caseLabel)}">${userText(row.case)}</th>
+          ${row.cells.map((cell, index) => `<td data-label="${htmlAttribute(visual.columns[index])}">${userText(cell)}</td>`).join("")}
         </tr>`).join("")}</tbody>
       </table>
     </div>`;
@@ -2867,6 +2868,56 @@ td:first-child {
   }
   .toc-mobile-panel ol {
     grid-template-columns: 1fr;
+  }
+  .visual-decision-table .visual-table {
+    border: 0;
+    overflow: visible;
+  }
+  .decision-table,
+  .decision-table tbody,
+  .decision-table tr,
+  .decision-table th[scope="row"],
+  .decision-table td {
+    display: block;
+    width: 100%;
+  }
+  .decision-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .decision-table tbody {
+    display: grid;
+    gap: ${space3}px;
+  }
+  .decision-table tr {
+    border: 1px solid var(--component-border);
+    background: var(--panel);
+  }
+  .decision-table th[scope="row"],
+  .decision-table td {
+    display: grid;
+    padding: ${space2}px ${space3}px;
+    grid-template-columns: minmax(88px, 1fr) minmax(0, 2fr);
+    gap: ${space3}px;
+    align-items: start;
+  }
+  .decision-table th[scope="row"]::before,
+  .decision-table td::before {
+    color: var(--muted);
+    content: attr(data-label);
+    font-size: ${TYPE.supporting.narrow.fontSize}px;
+    font-weight: 500;
+  }
+  .decision-table tbody tr:last-child > :last-child {
+    border-bottom: 0;
   }
 }
 

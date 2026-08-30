@@ -847,6 +847,9 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   );
   assert.match(html, /<table class="decision-table">/u);
   assert.match(html, />Case<\/th>/u);
+  assert.match(html, /<th scope="row" data-label="Case">/u);
+  assert.match(html, /<td data-label="Previous behavior">/u);
+  assert.match(html, /<td data-label="New behavior">/u);
   assert.match(html, /class="microworld" data-microworld/u);
   assert.match(html, /class="microworld-eyebrow">Try it<\/p>/u);
   assert.match(html, /<details class="microworld-disclosure">\s*<summary>Change the model<\/summary>/u);

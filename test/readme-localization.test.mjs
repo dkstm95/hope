@@ -13,12 +13,13 @@ const captureNames = [
   "diff-core",
   "diff-microworld",
   "diff-quiz",
+  "visualize",
 ];
 
 const read = (path) => readFile(new URL(path, root), "utf8");
 
 function readmeImages(source) {
-  return [...source.matchAll(/!\[[^\]]*\]\((assets\/readme\/hope-(?:align|diff)[^)]+\.png)\)/gu)]
+  return [...source.matchAll(/!\[[^\]]*\]\((assets\/readme\/hope-(?:align|diff|visualize)[^)]+\.png)\)/gu)]
     .map((match) => match[1]);
 }
 
@@ -46,9 +47,12 @@ test("README examples keep English and Korean assets separate", async () => {
     .map((path) => access(new URL(path, root))));
 
   assert.match(english, /docs\/alignments\/rescene-fan-calendar\.en\.html/u);
-  assert.match(english, /docs\/diffs\/ky-867-retry-extend\.en\.html/u);
+  assert.match(english, /docs\/diffs\/ky-825-total-timeout\.en\.html/u);
+  assert.match(english, /docs\/visualizations\/parcel-handoff\.html/u);
   assert.match(korean, /docs\/alignments\/rescene-fan-calendar\.ko\.html/u);
-  assert.match(korean, /docs\/diffs\/ky-867-retry-extend\.ko\.html/u);
+  assert.match(korean, /docs\/diffs\/ky-825-total-timeout\.ko\.html/u);
+  assert.match(korean, /docs\/visualizations\/parcel-handoff\.html/u);
+  await access(new URL("docs/visualizations/parcel-handoff.html", root));
 });
 
 test("README examples show overviews and collapse detailed captures by default", async () => {
@@ -61,7 +65,7 @@ test("README examples show overviews and collapse detailed captures by default",
     const images = expectedImages(suffix);
     assert.deepEqual(collapsedExampleImages(source), [
       images.slice(1, 3),
-      images.slice(4),
+      images.slice(4, 7),
     ]);
   }
 });
@@ -73,8 +77,8 @@ test("generated README HTML links each locale to its sibling", async () => {
       korean: "docs/alignments/rescene-fan-calendar.ko.html",
     },
     {
-      english: "docs/diffs/ky-867-retry-extend.en.html",
-      korean: "docs/diffs/ky-867-retry-extend.ko.html",
+      english: "docs/diffs/ky-825-total-timeout.en.html",
+      korean: "docs/diffs/ky-825-total-timeout.ko.html",
     },
   ];
 
@@ -111,42 +115,32 @@ test("the fixed Ky example preserves captured pull request provenance", () => {
     .map((source) => [source.id, source]));
 
   assert.deepEqual(snapshot.pullRequest, {
-    author: "chatman-media",
-    number: 867,
+    author: "sindresorhus",
+    number: 825,
     state: "closed",
-    title: "Fix `extend()` dropping numeric `retry` limit when merging with an object",
-    url: "https://github.com/sindresorhus/ky/pull/867",
+    title: "Fix timeout to apply to total operation including retries",
+    url: "https://github.com/sindresorhus/ky/pull/825",
   });
-  assert.equal(snapshot.capturedAt, "2026-08-17T06:08:16.951Z");
+  assert.equal(snapshot.capturedAt, "2026-08-30T05:43:00.000Z");
   assert.deepEqual(snapshot.snapshot, {
-    base: "61d6d66d27911001b9b4d57ab93139f9ad61384b",
-    head: "61b90ed1cab2756b095facc5b3c7ccac9bc5f487",
-    mergeBase: "61d6d66d27911001b9b4d57ab93139f9ad61384b",
+    base: "ecdd45eeaa48cbcbabaa53898dd4a39d1296a694",
+    head: "2a33b80dbcd0efb5a08b39d141c86ddd6ef90ae6",
+    mergeBase: "ecdd45eeaa48cbcbabaa53898dd4a39d1296a694",
   });
   assert.deepEqual(snapshot.files.map(({ additions, deletions, path }) => ({
     additions,
     deletions,
     path,
   })), [
-    { additions: 14, deletions: 2, path: "source/utils/merge.ts" },
-    { additions: 33, deletions: 0, path: "test/retry.ts" },
+    { additions: 75, deletions: 7, path: "source/core/Ky.ts" },
+    { additions: 148, deletions: 1, path: "test/hooks.ts" },
+    { additions: 10, deletions: 7, path: "test/http-error.ts" },
+    { additions: 191, deletions: 47, path: "test/retry.ts" },
   ]);
-  assert.deepEqual(snapshot.sources.map(({
-    id,
-    kind,
-    lineCount,
-    path,
-    revision,
-  }) => [id, kind, lineCount, path ?? null, revision ?? null]), [
-    ["source-1", "pull-request-title", 1, null, null],
-    ["source-2", "pull-request-description", 37, null, null],
-    ["source-3", "commit-title", 1, null, "61b90ed1cab2756b095facc5b3c7ccac9bc5f487"],
-    ["source-4", "patch", 35, "source/utils/merge.ts", "61b90ed1cab2756b095facc5b3c7ccac9bc5f487"],
-    ["source-5", "patch", 39, "test/retry.ts", "61b90ed1cab2756b095facc5b3c7ccac9bc5f487"],
-  ]);
-  assert.equal(sources["source-2"].lineCount, 37);
-  assert.match(sources["source-2"].text, /### Problem[\s\S]+### Cause[\s\S]+### Fix[\s\S]+### Test/u);
-  assert.equal(sources["source-3"].text, "Scope retry shorthand expansion to root options merge");
-  assert.match(sources["source-4"].text, /const deepMergeInternal = <T>\(isRoot: boolean/u);
-  assert.match(sources["source-5"].text, /retry - extending a numeric `retry` with an object keeps the limit/u);
+  assert.equal(sources["source-2"].lineCount, 3);
+  assert.match(sources["source-2"].text, /entire operation[\s\S]+Fixes #784/u);
+  assert.equal(sources["source-3"].text, "Fix timeout to apply to total operation including retries");
+  assert.match(sources["source-4"].text, /#getRemainingTimeout/u);
+  assert.match(sources["source-5"].text, /beforeRetry hook respects total timeout budget/u);
+  assert.match(sources["source-7"].text, /timeout: false does not throw TimeoutError during retries/u);
 });
