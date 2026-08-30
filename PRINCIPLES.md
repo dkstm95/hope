@@ -107,6 +107,22 @@ abstraction for a possible future need.
 
 Compatibility is a product choice, not a default cost.
 
+## Close material frontiers
+
+A material frontier contains unresolved decisions, questions, or claims that
+are ready to address and could change the intended result or prevent material
+harm. Resolve it before dependent work; revisit earlier decisions when new
+evidence or implementation invalidates them.
+
+Before acting, decide, deliberately exclude, or explicitly delegate material
+intent. After acting, support material claims with relevant evidence or state
+the limitation. Finish when no material item remains and one proportionate final
+pass exposes no new one.
+
+Use this as a decision rule, not a required artifact. Small, clear work may need
+nothing more. Add tracking or automation only when a handoff, record-keeping
+obligation, or deterministic boundary earns the cost.
+
 ## Prefer simple, direct design
 
 Keep only files, layers, copies, and checks that serve a clear present purpose.

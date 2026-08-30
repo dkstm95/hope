@@ -20,6 +20,9 @@ Do not edit files marked as generated.
 
 Change their editable source and run the documented build instead.
 
+Apply [Close material frontiers](PRINCIPLES.md#close-material-frontiers) around
+each change. Do not create a separate record for small, clear work.
+
 ## Work locally
 
 Use Node.js 22 or newer.
