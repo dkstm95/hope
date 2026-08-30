@@ -130,6 +130,27 @@ Sweep은 명시적으로 호출할 때만 시작하며, 근거가 있고 기존 
 
 ---
 
+### ◇ Visualize — 관계를 더 쉽게 이해할 수 있게 보여 줍니다
+
+Visualize는 위치, 연결, 순서, 계층, 상태, 수량의 형태가 글이나 작은 표보다
+의미를 더 분명하게 전달할 때 설명용 다이어그램과 차트를 만들고, 다듬고,
+검토합니다.
+
+독립적인 다이어그램 요청을 맡을 수도 있고, 다른 Hope 작업의 범위·산출물·완료
+조건을 바꾸지 않은 채 그 작업 안에서 함께 사용할 수도 있습니다. 하나의 주요 시각
+문법을 고르고, 글자를 줄이기 전에 세부 내용을 삭제하거나 묶으며, 강조 요소를
+제한하고, 연결선을 끝까지 추적할 수 있게 합니다. 출처의 불확실성을 보존하고 실제
+사용 크기로 렌더링한 뒤에야 검증됐다고 판단합니다. 다른 Hope 기능은 근거와 산출물
+계약을 계속 소유하면서 시각화 선택과 디자인에는 Visualize의 공통 기준을 사용합니다.
+
+디자인 기준은 Cathryn Lavery의
+[Diagram Design](https://github.com/cathrynlavery/diagram-design)을 MIT
+라이선스에 따라 각색했습니다. Hope에는 필요한
+[원본 고지](plugins/hope/skills/visualize/LICENSE.diagram-design)를 포함하지만,
+Diagram Design의 템플릿·스크립트·글꼴·갤러리·제3자 아이콘은 포함하지 않습니다.
+
+---
+
 ### ✍️ Write — 의미를 보존하며 명확하게 글을 작성합니다
 
 Hope는 구현과 다른 Skill을 포함한 작업 안에서도 Write를 사용합니다.
@@ -172,3 +193,7 @@ claude plugin install hope@hope
 ## 라이선스
 
 [MIT](LICENSE)
+
+Visualize에서 각색한 디자인 지침에는
+[Diagram Design MIT 고지](plugins/hope/skills/visualize/LICENSE.diagram-design)도
+적용됩니다.

@@ -65,6 +65,11 @@ skills/toxic-review/agents/openai.yaml
 skills/toxic-review/references/causal-review.md
 skills/toxic-review/references/red-review.md
 skills/toxic-review/references/verification.md
+skills/visualize/LICENSE.diagram-design
+skills/visualize/SKILL.md
+skills/visualize/agents/openai.yaml
+skills/visualize/references/chart-standard.md
+skills/visualize/references/diagram-standard.md
 skills/write/SKILL.md
 skills/write/agents/openai.yaml
 skills/write/assets/hope-protected-light.png

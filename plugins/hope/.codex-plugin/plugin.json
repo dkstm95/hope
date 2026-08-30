@@ -1,7 +1,7 @@
 {
   "name": "hope",
-  "version": "6.0.0",
-  "description": "Interview to align intent before implementation and optionally preserve it, sweep codebase maintenance, challenge work with evidence, understand pull requests, and improve writing. Requires Node.js 22 or newer.",
+  "version": "6.1.0",
+  "description": "Interview to align intent before implementation and optionally preserve it, sweep codebase maintenance, challenge work with evidence, understand pull requests, design clear explanatory visuals, and improve writing. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -9,12 +9,12 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["alignment", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "pull-request", "writing"],
+  "keywords": ["alignment", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "pull-request", "visualization", "diagram", "writing"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
     "shortDescription": "Practical ways for people and AI to work better together",
-    "longDescription": "Align finds important misunderstandings before implementation and preserves the person's intent without solution or implementation details. Explicitly invoked Sweep removes proven codebase waste while preserving customer-observed behavior. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can decide. Write improves language without changing its meaning.",
+    "longDescription": "Align finds important misunderstandings before implementation and preserves the person's intent without solution or implementation details. Explicitly invoked Sweep removes proven codebase waste while preserving customer-observed behavior. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can decide. Visualize makes explanatory diagrams and charts clear without taking over the active task. Write improves language without changing its meaning.",
     "developerName": "SeungIl",
     "category": "Engineering",
     "capabilities": ["Read", "Write", "Interactive"],
@@ -22,7 +22,8 @@
       "Use $hope:align to build a shared understanding before implementation.",
       "Use $hope:sweep to remove proven codebase waste without changing customer-observed behavior.",
       "Use $hope:toxic-review to challenge this plan.",
-      "Use $hope:diff to explain the current pull request."
+      "Use $hope:diff to explain the current pull request.",
+      "Use $hope:visualize to make this explanatory visual or data chart clear, faithful, and accessible."
     ],
     "brandColor": "#087EA4",
     "composerIcon": "./assets/hope-icon.png",

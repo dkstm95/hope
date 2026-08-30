@@ -21,17 +21,12 @@ the same. Do not copy the `before` trace into `after`.
 
 ## Visual
 
-Choose the visual by the teaching job:
-
-- `component-map` for fixed components, responsibilities, calls, or handoffs;
-- `decision-table` for meaningful conditions and outcomes;
-- `flow` for runtime data movement or control flow; and
-- `sequence` only when time order or ordered messages are the point.
-
-Do not add a visual for a short relationship that prose already explains, for
-a concept definition better handled by background or a primer, or for a
-presentation-only change with no relationship, branch, interaction, state
-transition, or prediction to show.
+For an included visual, read
+`../../visualize/references/diagram-standard.md` before authoring it. Visualize
+owns the selection and design standard. Diff still owns the evidence, teaching
+job, artifact schema, and delivery. The artifact accepts only `component-map`,
+`decision-table`, `flow`, or `sequence`; choose within those kinds and keep the
+exact schema required by the Diff workflow.
 
 Use concrete example values only when they clarify data movement or control
 flow. Ground each value, mark simplification or inference, and use the smallest

@@ -152,6 +152,28 @@ uncertain removals remain outside Sweep.
 
 ---
 
+### ◇ Visualize — Make relationships easier to see
+
+Visualize creates, refines, or reviews explanatory diagrams and charts when
+position, connection, sequence, hierarchy, state, or quantitative shape
+communicates more clearly than prose or a small table.
+
+It can own a standalone diagram request or work inside another Hope task without
+changing that task's scope, artifact, or completion conditions. It chooses one
+primary visual grammar, removes or groups detail before shrinking it, limits
+focal emphasis, keeps connectors traceable, preserves source uncertainty, and
+renders the result at its intended size before calling it verified. Other Hope
+features use Visualize's shared standard for visual selection and design while
+retaining ownership of their evidence and artifact contracts.
+
+The design standard is adapted from Cathryn Lavery's
+[Diagram Design](https://github.com/cathrynlavery/diagram-design) under the MIT
+License. Hope includes the required
+[upstream notice](plugins/hope/skills/visualize/LICENSE.diagram-design), but not
+Diagram Design's templates, scripts, fonts, gallery, or third-party icons.
+
+---
+
 ### ✍️ Write — Make language clearer without losing meaning
 
 Hope also uses Write within other tasks, including implementation and other
@@ -197,3 +219,7 @@ claude plugin install hope@hope
 ## License
 
 [MIT](LICENSE)
+
+Visualize also carries the
+[Diagram Design MIT notice](plugins/hope/skills/visualize/LICENSE.diagram-design)
+for its adapted design guidance.
