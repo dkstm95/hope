@@ -107,6 +107,24 @@ abstraction for a possible future need.
 
 Compatibility is a product choice, not a default cost.
 
+## Close material frontiers
+
+A material frontier is the unresolved decisions, questions, or claims whose
+prerequisites are settled and whose answers could change the intended result or
+prevent material harm. Work only the current frontier, and recompute it when an
+answer, evidence, or implementation change closes, splits, or reopens an item.
+A small, clear task may have an empty frontier from the start.
+
+Before implementation, close material intent items by deciding, deliberately
+excluding, or explicitly delegating them. After implementation, close material
+claims with relevant evidence or an explicit limitation. Finish when the
+frontier is empty and one proportionate final pass exposes no new material item.
+
+Do not turn frontier tracking into a product of its own. Do not require an
+artifact, ledger, schema, state machine, exhaustive inventory, or new runtime
+unless a real handoff, durable record, or deterministic boundary earns that
+cost. Each feature names its own frontier and closure evidence.
+
 ## Prefer simple, direct design
 
 Keep only files, layers, copies, and checks that serve a clear present purpose.

@@ -20,6 +20,22 @@ Do not edit files marked as generated.
 
 Change their editable source and run the documented build instead.
 
+## Close the change frontier
+
+Follow [Close material frontiers](PRINCIPLES.md#close-material-frontiers) without
+creating bookkeeping that the change does not need.
+
+Before editing, identify the material intended results and only the unresolved
+choices whose prerequisites are settled. Decide, exclude, or delegate those
+choices before implementing work that depends on them. A small, clear change
+needs no separate frontier record.
+
+After editing, connect each material intended result to relevant evidence.
+Reopen an earlier choice when the implementation or verification invalidates
+it. Finish when no material item remains and one proportionate final pass finds
+no new one. Keep a remaining limitation explicit instead of presenting it as
+verified.
+
 ## Work locally
 
 Use Node.js 22 or newer.
