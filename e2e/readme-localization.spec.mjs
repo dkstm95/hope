@@ -217,32 +217,35 @@ test("Diagram README example preserves readable geometry and contrast", async ({
       await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
       for (const locale of ["en", "ko"]) {
         await page.locator(`#locale-${locale}`).check();
-        await expectNoOverflow(page);
+        for (const stage of [0, 1, 2, 3]) {
+          await page.locator(`[data-stage="${stage}"]`).click();
+          await expectNoOverflow(page);
 
-        const geometry = await page.locator("#parcel-handoff-diagram").evaluate((root) => {
-          const visible = [...root.querySelectorAll(
-            ".diagram-header, .stage-button, .handoff, .selected-detail, .scope-note",
-          )].filter((element) => getComputedStyle(element).visibility !== "hidden");
-          const clipped = visible.filter((element) => (
-            element.scrollWidth > element.clientWidth + 1
-            || element.getBoundingClientRect().right > document.documentElement.clientWidth + 1
-            || element.getBoundingClientRect().left < -1
-          ));
-          const targets = [...root.querySelectorAll(".language label, .stage-button")]
-            .map((element) => element.getBoundingClientRect());
-          return {
-            clipped: clipped.map((element) => ({
-              className: element.className,
-              clientWidth: element.clientWidth,
-              left: element.getBoundingClientRect().left,
-              right: element.getBoundingClientRect().right,
-              scrollWidth: element.scrollWidth,
-            })),
-            minimumTargetHeight: Math.min(...targets.map((bounds) => bounds.height)),
-          };
-        });
-        expect(geometry.clipped).toEqual([]);
-        expect(geometry.minimumTargetHeight).toBeGreaterThanOrEqual(44);
+          const geometry = await page.locator("#parcel-handoff-diagram").evaluate((root) => {
+            const visible = [...root.querySelectorAll(
+              ".diagram-header, .stage-button, .handoff, .selected-detail, .scope-note",
+            )].filter((element) => getComputedStyle(element).visibility !== "hidden");
+            const clipped = visible.filter((element) => (
+              element.scrollWidth > element.clientWidth + 1
+              || element.getBoundingClientRect().right > document.documentElement.clientWidth + 1
+              || element.getBoundingClientRect().left < -1
+            ));
+            const targets = [...root.querySelectorAll(".language label, .stage-button")]
+              .map((element) => element.getBoundingClientRect());
+            return {
+              clipped: clipped.map((element) => ({
+                className: element.className,
+                clientWidth: element.clientWidth,
+                left: element.getBoundingClientRect().left,
+                right: element.getBoundingClientRect().right,
+                scrollWidth: element.scrollWidth,
+              })),
+              minimumTargetHeight: Math.min(...targets.map((bounds) => bounds.height)),
+            };
+          });
+          expect(geometry.clipped).toEqual([]);
+          expect(geometry.minimumTargetHeight).toBeGreaterThanOrEqual(44);
+        }
       }
     }
 
