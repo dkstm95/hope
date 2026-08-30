@@ -70,21 +70,21 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 > 없으면 저장소에서 사용자가 만든 최신 열린 PR을 선택합니다.
 > PR이 바뀌면 Diff를 다시 실행하세요.
 
-아래 이미지는 [Ky PR #867](https://github.com/sindresorhus/ky/pull/867)을 바탕으로
+아래 이미지는 [Ky PR #825](https://github.com/sindresorhus/ky/pull/825)을 바탕으로
 고정된 한국어 Diff 예시에서 만들었습니다.
 
-**전체 HTML 예시:** [Ky PR #867의 재시도 설정을 마이크로월드와 퀴즈로 설명한 한국어 Diff 결과물을 엽니다.](docs/diffs/ky-867-retry-extend.ko.html)
+**전체 HTML 예시:** [Ky PR #825의 전체 시간 제한을 결정표, 마이크로월드, 퀴즈로 설명한 한국어 Diff 결과물을 엽니다.](docs/diffs/ky-825-total-timeout.ko.html)
 
-![Ky PR 867의 목표, 이전과 이후 동작, 검증 항목을 보여 주는 한국어 Hope Diff 예시](assets/readme/hope-diff-ko.png)
+![Ky PR 825의 목표, 공유 시간 제한 동작, 검토 항목을 보여 주는 한국어 Hope Diff 예시](assets/readme/hope-diff-ko.png)
 
 <details>
 <summary>Diff 세부 이미지 보기</summary>
 
-| 핵심 변경 | 인터랙티브 마이크로월드 |
+| 시각 결정표 | 인터랙티브 마이크로월드 |
 | --- | --- |
-| [![한국어 Diff 문서의 재시도 설정 핵심 변경 설명](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![한국어 Diff 문서의 인터랙티브 재시도 설정 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
+| [![한국어 Diff 문서의 공유 시간 제한 결정표](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![한국어 Diff 문서의 인터랙티브 전체 시간 제한 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
 
-[![한국어 Diff 문서의 재시도 동작 이해 퀴즈](assets/readme/hope-diff-quiz-ko.png)](assets/readme/hope-diff-quiz-ko.png)
+[![한국어 Diff 문서의 공유 시간 제한과 재시도 이해 퀴즈](assets/readme/hope-diff-quiz-ko.png)](assets/readme/hope-diff-quiz-ko.png)
 
 </details>
 
@@ -130,6 +130,31 @@ Sweep은 명시적으로 호출할 때만 시작하며, 근거가 있고 기존 
 
 ---
 
+### ◇ Diagram — 관계를 더 쉽게 이해할 수 있게 보여 줍니다
+
+Diagram은 위치, 연결, 순서, 계층, 상태, 수량의 형태가 글이나 작은 표보다
+의미를 더 분명하게 전달할 때 설명용 다이어그램과 차트를 만들고, 다듬고,
+검토합니다.
+
+독립적인 다이어그램 요청을 맡을 수도 있고, 다른 Hope 작업의 범위·산출물·완료
+조건을 바꾸지 않은 채 그 작업 안에서 함께 사용할 수도 있습니다. 하나의 주요 시각
+문법을 고르고, 글자를 줄이기 전에 세부 내용을 삭제하거나 묶으며, 강조 요소를
+제한하고, 연결선을 끝까지 추적할 수 있게 합니다. 출처의 불확실성을 보존하고 실제
+사용 크기로 렌더링한 뒤에야 검증됐다고 판단합니다. 다른 Hope 기능은 근거와 산출물
+계약을 계속 소유하면서 시각화 선택과 디자인에는 Diagram의 공통 기준을 사용합니다.
+
+**전체 HTML 예시:** [Diagram이 만든 택배 인계 다이어그램을 엽니다.](docs/visualizations/parcel-handoff.html)
+
+![온라인 주문이 쇼핑몰, 물류센터, 배송기사, 수령자에게 인계되는 과정을 보여 주는 Diagram 예시](assets/readme/hope-diagram-ko.png)
+
+디자인 기준은 Cathryn Lavery의
+[Diagram Design](https://github.com/cathrynlavery/diagram-design)을 MIT
+라이선스에 따라 각색했습니다. Hope에는 필요한
+[원본 고지](plugins/hope/skills/diagram/LICENSE.diagram-design)를 포함하지만,
+Diagram Design의 템플릿·스크립트·글꼴·갤러리·제3자 아이콘은 포함하지 않습니다.
+
+---
+
 ### ✍️ Write — 의미를 보존하며 명확하게 글을 작성합니다
 
 Hope는 구현과 다른 Skill을 포함한 작업 안에서도 Write를 사용합니다.
@@ -172,3 +197,7 @@ claude plugin install hope@hope
 ## 라이선스
 
 [MIT](LICENSE)
+
+Diagram에서 각색한 디자인 지침에는
+[Diagram Design MIT 고지](plugins/hope/skills/diagram/LICENSE.diagram-design)도
+적용됩니다.

@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="generator" content="Hope Diagram">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <title>Parcel handoff diagram</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --paper: #faf9f6;
+      --panel: #ffffff;
+      --ink: #17212b;
+      --muted: #465564;
+      --rule: #778594;
+      --accent: #075985;
+      --accent-soft: #e0f2fe;
+      --focus: #c2410c;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #111820;
+        --panel: #17222d;
+        --ink: #f8fafc;
+        --muted: #c8d2dc;
+        --rule: #8b99a8;
+        --accent: #7dd3fc;
+        --accent-soft: #123c52;
+        --focus: #fdba74;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-width: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 2;
+      top: 8px;
+      left: 8px;
+      padding: 10px 12px;
+      border: 2px solid var(--focus);
+      background: var(--panel);
+      color: var(--ink);
+      transform: translateY(-150%);
+    }
+
+    .skip-link:focus {
+      transform: none;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    #parcel-handoff-diagram {
+      width: min(100%, 1100px);
+      margin: 0 auto;
+      padding: 28px 24px 24px;
+    }
+
+    [data-lang] {
+      display: none;
+    }
+
+    [data-locale="en"] [data-lang="en"],
+    [data-locale="ko"] [data-lang="ko"] {
+      display: inline;
+    }
+
+    .diagram-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(26px, 4vw, 36px);
+      line-height: 1.18;
+      letter-spacing: -0.035em;
+    }
+
+    .deck {
+      max-width: 740px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .language {
+      display: flex;
+      gap: 8px;
+      padding: 0;
+      margin: 0;
+      border: 0;
+    }
+
+    .language label {
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      gap: 7px;
+      padding: 0 12px;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .language label:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .language input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    .stages {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 72px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .stage {
+      position: relative;
+      min-width: 0;
+    }
+
+    .stage-button {
+      display: grid;
+      width: 100%;
+      min-height: 156px;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 8px;
+      padding: 15px;
+      border: 1px solid var(--rule);
+      border-top: 3px solid var(--rule);
+      border-radius: 4px;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .stage-button:hover {
+      background: var(--accent-soft);
+    }
+
+    .stage-button[aria-pressed="true"] {
+      border-top-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .stage-index {
+      color: var(--accent);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .stage-owner {
+      font-size: 19px;
+      line-height: 1.25;
+    }
+
+    .stage-action {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .selected-marker {
+      min-height: 18px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      visibility: hidden;
+    }
+
+    .stage-button[aria-pressed="true"] .selected-marker {
+      visibility: visible;
+    }
+
+    .handoff {
+      position: absolute;
+      top: 66px;
+      left: 100%;
+      display: grid;
+      width: 72px;
+      gap: 7px;
+      align-items: center;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .handoff-line {
+      position: relative;
+      display: block;
+      height: 2px;
+      background: var(--rule);
+    }
+
+    .handoff-line::after {
+      position: absolute;
+      top: -4px;
+      right: 2px;
+      width: 8px;
+      height: 8px;
+      border-top: 2px solid var(--rule);
+      border-right: 2px solid var(--rule);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .handoff-label {
+      font-size: 11px;
+      font-weight: 650;
+      line-height: 1.3;
+    }
+
+    .selected-detail {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      padding: 16px 18px;
+      margin-top: 24px;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .detail-label {
+      margin: 2px 0 0;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .detail-copy h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .detail-copy p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .scope-note {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 760px) {
+      #parcel-handoff-diagram {
+        padding: 22px 16px 20px;
+      }
+
+      .diagram-header {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .language {
+        justify-self: start;
+      }
+
+      .stages {
+        grid-template-columns: 1fr;
+        gap: 72px;
+      }
+
+      .stage-button {
+        min-height: 140px;
+      }
+
+      .handoff {
+        top: 100%;
+        left: 22px;
+        display: flex;
+        width: auto;
+        height: 72px;
+        gap: 12px;
+        text-align: left;
+      }
+
+      .handoff-line {
+        width: 2px;
+        height: 72px;
+        flex: 0 0 auto;
+      }
+
+      .handoff-line::after {
+        top: auto;
+        right: -4px;
+        bottom: 0;
+        transform: rotate(135deg);
+      }
+
+      .selected-detail {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+      }
+    }
+
+    @media (forced-colors: active) {
+      .stage-button[aria-pressed="true"],
+      .language label:has(input:checked),
+      .selected-detail {
+        border-color: Highlight;
+      }
+
+      .handoff-line,
+      .handoff-line::after {
+        border-color: CanvasText;
+        background: CanvasText;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#parcel-journey">
+    <span data-lang="en">Skip to diagram</span>
+    <span data-lang="ko">다이어그램으로 건너뛰기</span>
+  </a>
+
+  <main id="parcel-handoff-diagram" data-locale="en">
+    <header class="diagram-header">
+      <div>
+        <p class="eyebrow">
+          <span data-lang="en">Everyday handoff</span>
+          <span data-lang="ko">일상 속 인계</span>
+        </p>
+        <h1 id="parcel-title">
+          <span data-lang="en">How does my parcel reach the front door?</span>
+          <span data-lang="ko">주문한 택배는 어떻게 문 앞까지 올까?</span>
+        </h1>
+        <p class="deck">
+          <span data-lang="en">One parcel changes hands three times. Each handoff changes who is responsible and what moves next.</span>
+          <span data-lang="ko">하나의 택배가 세 번 인계됩니다. 인계할 때마다 책임자와 다음에 전달되는 것이 달라집니다.</span>
+        </p>
+      </div>
+
+      <fieldset class="language">
+        <legend class="sr-only">Language</legend>
+        <label><input id="locale-en" type="radio" name="locale" value="en" checked><span>English</span></label>
+        <label><input id="locale-ko" type="radio" name="locale" value="ko"><span>한국어</span></label>
+      </fieldset>
+    </header>
+
+    <section id="parcel-journey" aria-labelledby="journey-title">
+      <h2 id="journey-title" class="sr-only"><span data-lang="en">Parcel handoff sequence</span><span data-lang="ko">택배 인계 순서</span></h2>
+
+      <ol class="stages" aria-label="Parcel handoff sequence">
+        <li class="stage">
+          <button class="stage-button" type="button" data-stage="0" aria-pressed="false">
+            <span class="stage-index">01</span>
+            <strong class="stage-owner"><span data-lang="en">Store</span><span data-lang="ko">쇼핑몰</span></strong>
+            <span class="stage-action"><span data-lang="en">Accepts order · confirms payment</span><span data-lang="ko">주문 접수 · 결제 확인</span></span>
+            <span class="selected-marker"><span data-lang="en">Selected</span><span data-lang="ko">선택됨</span></span>
+          </button>
+          <div class="handoff" aria-hidden="true"><span class="handoff-line"></span><span class="handoff-label"><span data-lang="en">Order details</span><span data-lang="ko">주문 정보</span></span></div>
+        </li>
+
+        <li class="stage">
+          <button class="stage-button" type="button" data-stage="1" aria-pressed="true">
+            <span class="stage-index">02</span>
+            <strong class="stage-owner"><span data-lang="en">Fulfillment</span><span data-lang="ko">물류센터</span></strong>
+            <span class="stage-action"><span data-lang="en">Finds item · checks · packs</span><span data-lang="ko">상품 확인 · 포장</span></span>
+            <span class="selected-marker"><span data-lang="en">Selected</span><span data-lang="ko">선택됨</span></span>
+          </button>
+          <div class="handoff" aria-hidden="true"><span class="handoff-line"></span><span class="handoff-label"><span data-lang="en">Packed parcel</span><span data-lang="ko">포장된 택배</span></span></div>
+        </li>
+
+        <li class="stage">
+          <button class="stage-button" type="button" data-stage="2" aria-pressed="false">
+            <span class="stage-index">03</span>
+            <strong class="stage-owner"><span data-lang="en">Courier</span><span data-lang="ko">배송기사</span></strong>
+            <span class="stage-action"><span data-lang="en">Moves parcel on the local route</span><span data-lang="ko">지역 배송 · 운반</span></span>
+            <span class="selected-marker"><span data-lang="en">Selected</span><span data-lang="ko">선택됨</span></span>
+          </button>
+          <div class="handoff" aria-hidden="true"><span class="handoff-line"></span><span class="handoff-label"><span data-lang="en">Parcel + photo</span><span data-lang="ko">택배 + 사진</span></span></div>
+        </li>
+
+        <li class="stage">
+          <button class="stage-button" type="button" data-stage="3" aria-pressed="false">
+            <span class="stage-index">04</span>
+            <strong class="stage-owner"><span data-lang="en">You</span><span data-lang="ko">나</span></strong>
+            <span class="stage-action"><span data-lang="en">Checks photo · collects parcel</span><span data-lang="ko">배송 사진 확인 · 수령</span></span>
+            <span class="selected-marker"><span data-lang="en">Selected</span><span data-lang="ko">선택됨</span></span>
+          </button>
+        </li>
+      </ol>
+
+      <aside class="selected-detail" aria-live="polite">
+        <p class="detail-label"><span data-lang="en">Selected stage</span><span data-lang="ko">선택한 단계</span></p>
+        <div class="detail-copy">
+          <h2 data-selected-title>Parcel prepared</h2>
+          <p data-selected-detail>Fulfillment turns the order details into a labeled, packed parcel for the courier.</p>
+        </div>
+      </aside>
+
+      <p class="scope-note">
+        <span data-lang="en"><strong>Simplified example:</strong> real deliveries can include sellers, regional hubs, subcontractors, lockers, or returns. No carrier or order data is used.</span>
+        <span data-lang="ko"><strong>단순화한 예시:</strong> 실제 배송에는 판매자, 지역 허브, 협력사, 보관함, 반품 과정이 더해질 수 있습니다. 실제 택배사나 주문 데이터는 사용하지 않았습니다.</span>
+      </p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.getElementById("parcel-handoff-diagram");
+      const stages = [...root.querySelectorAll("[data-stage]")];
+      const localeInputs = [...root.querySelectorAll('input[name="locale"]')];
+      const selectedTitle = root.querySelector("[data-selected-title]");
+      const selectedDetail = root.querySelector("[data-selected-detail]");
+      const journey = root.querySelector(".stages");
+      let selectedStage = 1;
+
+      const copy = {
+        en: {
+          aria: "Parcel handoff sequence",
+          details: [
+            ["Order recorded", "The store creates the order number and sends the confirmed order details to fulfillment."],
+            ["Parcel prepared", "Fulfillment turns the order details into a labeled, packed parcel for the courier."],
+            ["Parcel on the move", "The courier becomes responsible for the physical parcel and records delivery at the door."],
+            ["Delivery completed", "You use the arrival notice or photo to find and collect the parcel."],
+          ],
+        },
+        ko: {
+          aria: "택배 인계 순서",
+          details: [
+            ["주문 기록", "쇼핑몰이 주문번호를 만들고 결제가 확인된 주문 정보를 물류센터에 보냅니다."],
+            ["택배 준비", "물류센터가 주문 정보를 배송기사가 운반할 수 있는 라벨이 붙은 택배로 바꿉니다."],
+            ["배송 중", "배송기사가 실제 택배를 책임지고 문 앞에 배송한 기록을 남깁니다."],
+            ["배송 완료", "도착 알림이나 사진을 확인해 택배를 찾아 수령합니다."],
+          ],
+        },
+      };
+
+      function updateStage(index) {
+        selectedStage = index;
+        stages.forEach((stage, stageIndex) => stage.setAttribute("aria-pressed", String(stageIndex === selectedStage)));
+        const [title, detail] = copy[root.dataset.locale].details[selectedStage];
+        selectedTitle.textContent = title;
+        selectedDetail.textContent = detail;
+      }
+
+      function updateLocale(locale) {
+        root.dataset.locale = locale;
+        document.documentElement.lang = locale;
+        journey.setAttribute("aria-label", copy[locale].aria);
+        localeInputs.forEach((input) => { input.checked = input.value === locale; });
+        updateStage(selectedStage);
+      }
+
+      stages.forEach((stage, index) => stage.addEventListener("click", () => updateStage(index)));
+      localeInputs.forEach((input) => input.addEventListener("change", () => updateLocale(input.value)));
+      updateLocale(navigator.language.toLowerCase().startsWith("ko") ? "ko" : "en");
+    })();
+  </script>
+</body>
+</html>

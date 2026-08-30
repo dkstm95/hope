@@ -21,6 +21,11 @@ skills/align/scripts/cli.mjs
 skills/align/scripts/design/tokens.mjs
 skills/align/scripts/image.mjs
 skills/align/scripts/render.mjs
+skills/diagram/LICENSE.diagram-design
+skills/diagram/SKILL.md
+skills/diagram/agents/openai.yaml
+skills/diagram/references/chart-standard.md
+skills/diagram/references/diagram-standard.md
 skills/diff/SKILL.md
 skills/diff/agents/openai.yaml
 skills/diff/assets/hope-protected-light.png

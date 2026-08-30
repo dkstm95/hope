@@ -12,12 +12,17 @@ const sharedWritingStandard = resolve(
   skillsRoot,
   "write/references/writing-standard.md",
 );
+const sharedDiagramStandard = resolve(
+  skillsRoot,
+  "diagram/references/diagram-standard.md",
+);
 const sharedCodeMaintenanceGuidance = resolve(
   pluginRoot,
   "references/code-maintenance.md",
 );
 const publishedSharedGuidance = new Set([
   sharedCodeMaintenanceGuidance,
+  sharedDiagramStandard,
   sharedWritingStandard,
 ]);
 const deliveryDependencyPattern =

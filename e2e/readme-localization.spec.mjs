@@ -7,8 +7,8 @@ const examples = [
     name: "Align",
   },
   {
-    english: "docs/diffs/ky-867-retry-extend.en.html",
-    korean: "docs/diffs/ky-867-retry-extend.ko.html",
+    english: "docs/diffs/ky-825-total-timeout.en.html",
+    korean: "docs/diffs/ky-825-total-timeout.ko.html",
     name: "Diff",
   },
 ];
@@ -171,4 +171,109 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
     themeHeight: 42,
     themeWidth: 42,
   });
+});
+
+test("Diagram README example switches language, responds to input, and fits narrow screens", async ({ page }) => {
+  await page.setViewportSize({ height: 760, width: 1100 });
+  await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
+  const root = page.locator("#parcel-handoff-diagram");
+
+  await expect(root).toBeVisible();
+  await expect(page.locator('meta[name="generator"]')).toHaveAttribute("content", "Hope Diagram");
+  await page.locator("#locale-en").check();
+  await expect(root).toHaveAttribute("data-locale", "en");
+  await expect(page.locator("#parcel-title")).toContainText("How does my parcel");
+
+  await page.locator('[data-stage="1"]').click();
+  await expect(page.locator('[data-stage="1"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[data-selected-title]")).toHaveText("Parcel prepared");
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.reload();
+  await expect(root).toBeVisible();
+  const dimensions = await page.locator("html").evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+});
+
+test("Diagram README example preserves readable geometry and contrast", async ({ page }) => {
+  const textPairs = [
+    [".deck", "body"],
+    ['[data-stage="0"] .stage-action', '[data-stage="0"]'],
+    ['[data-stage="1"] .stage-action', '[data-stage="1"]'],
+    [".handoff-label", "body"],
+    ['[data-stage="1"] .selected-marker', '[data-stage="1"]'],
+    [".detail-label", ".selected-detail"],
+    [".detail-copy p", ".selected-detail"],
+    [".scope-note", "body"],
+  ];
+
+  for (const colorScheme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme });
+    for (const width of [1100, 760, 390, 320]) {
+      await page.setViewportSize({ height: 900, width });
+      await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
+      for (const locale of ["en", "ko"]) {
+        await page.locator(`#locale-${locale}`).check();
+        for (const stage of [0, 1, 2, 3]) {
+          await page.locator(`[data-stage="${stage}"]`).click();
+          await expectNoOverflow(page);
+
+          const geometry = await page.locator("#parcel-handoff-diagram").evaluate((root) => {
+            const visible = [...root.querySelectorAll(
+              ".diagram-header, .stage-button, .handoff, .selected-detail, .scope-note",
+            )].filter((element) => getComputedStyle(element).visibility !== "hidden");
+            const clipped = visible.filter((element) => (
+              element.scrollWidth > element.clientWidth + 1
+              || element.getBoundingClientRect().right > document.documentElement.clientWidth + 1
+              || element.getBoundingClientRect().left < -1
+            ));
+            const targets = [...root.querySelectorAll(".language label, .stage-button")]
+              .map((element) => element.getBoundingClientRect());
+            return {
+              clipped: clipped.map((element) => ({
+                className: element.className,
+                clientWidth: element.clientWidth,
+                left: element.getBoundingClientRect().left,
+                right: element.getBoundingClientRect().right,
+                scrollWidth: element.scrollWidth,
+              })),
+              minimumTargetHeight: Math.min(...targets.map((bounds) => bounds.height)),
+            };
+          });
+          expect(geometry.clipped).toEqual([]);
+          expect(geometry.minimumTargetHeight).toBeGreaterThanOrEqual(44);
+        }
+      }
+    }
+
+    await page.setViewportSize({ height: 760, width: 1100 });
+    await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
+    const ratios = await page.evaluate((pairs) => {
+      function channels(value) {
+        return value.match(/[\d.]+/gu).slice(0, 3).map(Number);
+      }
+      function luminance(value) {
+        const components = channels(value).map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * components[0] + 0.7152 * components[1] + 0.0722 * components[2];
+      }
+      return pairs.map(([foregroundSelector, backgroundSelector]) => {
+        const foreground = getComputedStyle(document.querySelector(foregroundSelector)).color;
+        const background = getComputedStyle(document.querySelector(backgroundSelector)).backgroundColor;
+        const lighter = Math.max(luminance(foreground), luminance(background));
+        const darker = Math.min(luminance(foreground), luminance(background));
+        return { foregroundSelector, ratio: (lighter + 0.05) / (darker + 0.05) };
+      });
+    }, textPairs);
+    for (const { foregroundSelector, ratio } of ratios) {
+      expect(ratio, `${foregroundSelector} in ${colorScheme}`).toBeGreaterThanOrEqual(4.5);
+    }
+  }
 });

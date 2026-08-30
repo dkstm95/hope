@@ -88,21 +88,21 @@ understanding in follow-up decisions and work.
 > Run Diff again when the pull request changes.
 
 The captures below come from a fixed English Diff example based on
-[Ky PR #867](https://github.com/sindresorhus/ky/pull/867).
+[Ky PR #825](https://github.com/sindresorhus/ky/pull/825).
 
-**Complete example HTML:** [Open the English Diff artifact for Ky PR #867 with
-its retry-configuration microworld and quiz.](docs/diffs/ky-867-retry-extend.en.html)
+**Complete example HTML:** [Open the English Diff artifact for Ky PR #825 with
+its timeout map, microworld, and quiz.](docs/diffs/ky-825-total-timeout.en.html)
 
-![English Hope Diff example for Ky pull request 867 showing the goal, before and after behavior, and verification item](assets/readme/hope-diff-en.png)
+![English Hope Diff example for Ky pull request 825 showing its goal, shared timeout behavior, and review item](assets/readme/hope-diff-en.png)
 
 <details>
 <summary>View detailed Diff captures</summary>
 
-| Core change | Interactive microworld |
+| Visual decision table | Interactive microworld |
 | --- | --- |
-| [![The retry configuration change explained in an English Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![An interactive retry-configuration microworld in an English Diff artifact](assets/readme/hope-diff-microworld-en.png)](assets/readme/hope-diff-microworld-en.png) |
+| [![A shared timeout decision table in an English Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![An interactive total-timeout microworld in an English Diff artifact](assets/readme/hope-diff-microworld-en.png)](assets/readme/hope-diff-microworld-en.png) |
 
-[![An understanding quiz about retry behavior in an English Diff artifact](assets/readme/hope-diff-quiz-en.png)](assets/readme/hope-diff-quiz-en.png)
+[![An understanding quiz about shared timeout and retry behavior in an English Diff artifact](assets/readme/hope-diff-quiz-en.png)](assets/readme/hope-diff-quiz-en.png)
 
 </details>
 
@@ -152,6 +152,33 @@ uncertain removals remain outside Sweep.
 
 ---
 
+### ◇ Diagram — Make relationships easier to see
+
+Diagram creates, refines, or reviews explanatory diagrams and data charts when
+position, connection, sequence, hierarchy, state, or quantitative shape
+communicates more clearly than prose or a small table.
+
+It can own a standalone diagram request or work inside another Hope task without
+changing that task's scope, artifact, or completion conditions. It chooses one
+primary visual grammar, removes or groups detail before shrinking it, limits
+focal emphasis, keeps connectors traceable, preserves source uncertainty, and
+renders the result at its intended size before calling it verified. Other Hope
+features use Diagram's shared standard for visual selection and design while
+retaining ownership of their evidence and artifact contracts.
+
+**Complete example HTML:** [Open the parcel-handoff visualization created by
+Diagram.](docs/visualizations/parcel-handoff.html)
+
+![Diagram example showing an online order passing from a store to fulfillment, a courier, and the recipient](assets/readme/hope-diagram-en.png)
+
+The design standard is adapted from Cathryn Lavery's
+[Diagram Design](https://github.com/cathrynlavery/diagram-design) under the MIT
+License. Hope includes the required
+[upstream notice](plugins/hope/skills/diagram/LICENSE.diagram-design), but not
+Diagram Design's templates, scripts, fonts, gallery, or third-party icons.
+
+---
+
 ### ✍️ Write — Make language clearer without losing meaning
 
 Hope also uses Write within other tasks, including implementation and other
@@ -197,3 +224,7 @@ claude plugin install hope@hope
 ## License
 
 [MIT](LICENSE)
+
+Diagram also carries the
+[Diagram Design MIT notice](plugins/hope/skills/diagram/LICENSE.diagram-design)
+for its adapted design guidance.
