@@ -22,6 +22,23 @@ grammar, composition, data honesty, accessibility, and rendered verification.
 When an artifact permits only named visual kinds or fields, choose within that
 contract and do not extend its schema.
 
+## Work the visual frontier
+
+The visual frontier is every unresolved material visual decision whose
+prerequisites are settled. Work from whether a visual earns its place and what
+the reader must understand, through the source facts and semantic model, to the
+grammar, composition, fidelity, accessibility, and rendered result. Do not
+decide a downstream choice while an upstream answer could change it.
+
+Recompute the frontier after new evidence, each material edit, and target-size
+rendering. A rendered defect may reopen composition, grammar, the semantic
+model, or whether the visual should exist. Resolve the earliest invalid
+decision instead of polishing its downstream symptom.
+
+Finish when the frontier is empty and one target-size inspection exposes no new
+material fidelity, legibility, accessibility, or quantitative issue. Keep an
+unavailable required check as an explicit verification gap.
+
 ## Decide whether a visual earns its place
 
 Use a visual only when spatial position, connection, order, containment, state,
@@ -53,8 +70,8 @@ without a legend when possible.
 
 Render and inspect the result at its intended size. Check meaning, hierarchy,
 label fit, connector or mark tracing, contrast, quantitative integrity when
-applicable, and accessible text alternatives. Fix visible defects before
-returning.
+applicable, and accessible text alternatives. Feed material defects back into
+the visual frontier before returning.
 
 Lead with the finished artifact or changed result. Report material assumptions,
 merged or omitted content, and the verification performed. If a required render
