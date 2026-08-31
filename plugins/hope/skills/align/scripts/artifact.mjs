@@ -240,14 +240,21 @@ function intentItems(value, path) {
   return value.map((item, index) => {
     const itemPath = `${path}[${index}]`;
     if (!isRecord(item)) throw new TypeError(`${itemPath} must be an object`);
-    assertKeys(item, ["statement", "verify", "by", "reason"], itemPath);
+    assertKeys(item, ["statement", "verify", "by", "decidedBy", "reason"], itemPath);
     if (!["agent", "human"].includes(item.by)) {
       throw new TypeError(`${itemPath}.by must be agent or human`);
+    }
+    if (
+      item.decidedBy !== undefined
+      && !["user", "delegated"].includes(item.decidedBy)
+    ) {
+      throw new TypeError(`${itemPath}.decidedBy must be user or delegated`);
     }
     return Object.freeze({
       statement: citedText(item.statement, `${itemPath}.statement`),
       verify: text(item.verify, `${itemPath}.verify`),
       by: item.by,
+      ...(item.decidedBy === undefined ? {} : { decidedBy: item.decidedBy }),
       ...(item.reason === undefined
         ? {}
         : { reason: citedText(item.reason, `${itemPath}.reason`) }),

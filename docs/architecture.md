@@ -32,7 +32,8 @@ produce a deterministic result.
 
 Runtime source stays inside its feature boundary and does not depend on a
 sibling feature or repository support. It may depend on Hope-wide immutable
-assets.
+assets, including shared semantic artifact tokens with multiple feature
+consumers.
 
 Any other cross-feature source dependency requires an explicit shared contract
 and must satisfy the shared-source rule in

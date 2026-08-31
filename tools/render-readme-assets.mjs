@@ -157,9 +157,9 @@ async function captureMockup(page, locale, variant, fonts) {
   return { data: data.toString("base64"), height: 566, width: 850 };
 }
 
-async function captureDiagramExample(page, locale, outputPath) {
+async function captureDiagramExample(page, locale, outputPath, colorScheme = "dark") {
   await page.setViewportSize({ height: 760, width: 1100 });
-  await page.emulateMedia({ colorScheme: "light" });
+  await page.emulateMedia({ colorScheme });
   const language = locale === "ko-KR" ? "ko" : "en";
   const diagramPath = join(root, "docs", "visualizations", "parcel-handoff.html");
   await page.goto(pathToFileURL(diagramPath).href, { waitUntil: "load" });
@@ -179,9 +179,13 @@ function generatedHtml(bytes) {
   return Buffer.from(bytes.toString("utf8").replace(/^[\t ]+$/gmu, ""));
 }
 
-async function loadPage(page, htmlPath, { height = 900, width = 1440 } = {}) {
+async function loadPage(page, htmlPath, {
+  colorScheme = "light",
+  height = 900,
+  width = 1440,
+} = {}) {
   await page.setViewportSize({ height, width });
-  await page.emulateMedia({ colorScheme: "light" });
+  await page.emulateMedia({ colorScheme });
   await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load" });
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -253,11 +257,12 @@ async function assertPrimaryCaptureState(page, expectedTopSection) {
 
 async function capturePage(page, htmlPath, outputPath, options = {}) {
   const {
+    colorScheme = "light",
     expectedTopSection,
     height = 900,
     width = 1440,
   } = options;
-  await loadPage(page, htmlPath, { height, width });
+  await loadPage(page, htmlPath, { colorScheme, height, width });
   if (expectedTopSection) {
     await assertPrimaryCaptureState(page, expectedTopSection);
   }
@@ -331,21 +336,27 @@ async function captureReadmeAssets(browser, paths, outputDirectory, fonts) {
     const page = await browser.newPage();
     try {
       const { alignPath, diffPath } = paths[suffix];
-      await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`));
-      await captureElement(page, join(outputDirectory, `hope-align-directions-${suffix}.png`), "#design-directions");
+      await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`), {
+        colorScheme: "dark",
+      });
       await captureElement(page, join(outputDirectory, `hope-align-decisions-${suffix}.png`), "#intent");
+      await loadPage(page, alignPath, { colorScheme: "light" });
+      await captureElement(page, join(outputDirectory, `hope-align-directions-${suffix}.png`), "#design-directions");
 
       await capturePage(page, diffPath, join(outputDirectory, `hope-diff-${suffix}.png`), {
+        colorScheme: "dark",
         expectedTopSection: "#synopsis",
         height: 820,
       });
-      await page.setViewportSize({ height: 900, width: 1440 });
+      await loadPage(page, diffPath, { colorScheme: "light" });
       await captureElement(page, join(outputDirectory, `hope-diff-core-${suffix}.png`), ".behavior-visual");
+      await loadPage(page, diffPath, { colorScheme: "dark" });
       await page.locator(".microworld-disclosure").evaluate((details) => {
         details.open = true;
       });
       await page.locator('.microworld-control[data-control-id="delay"][value="long"]').check();
       await captureElement(page, join(outputDirectory, `hope-diff-microworld-${suffix}.png`), ".microworld", { expandDetails: true });
+      await loadPage(page, diffPath, { colorScheme: "light" });
       await captureElement(page, join(outputDirectory, `hope-diff-quiz-${suffix}.png`), "#quiz", { expandDetails: true });
       await captureDiagramExample(
         page,

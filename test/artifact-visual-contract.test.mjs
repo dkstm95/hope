@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ARTIFACT_COLORS,
+  ARTIFACT_LAYOUT,
+  ARTIFACT_SPACE,
+  ARTIFACT_TYPE,
+} from "../plugins/hope/assets/artifact-theme.mjs";
+
+import {
   COLORS as ALIGN_COLORS,
   LAYOUT as ALIGN_LAYOUT,
   SPACE as ALIGN_SPACE,
@@ -20,12 +27,14 @@ test("Align and Diff share the agreed artifact visual baseline", () => {
     "background",
     "border",
     "componentBorder",
+    "link",
     "muted",
     "panel",
     "text",
     "visited",
   ];
   for (const theme of ["light", "dark"]) {
+    assert.deepEqual(ALIGN_COLORS[theme], ARTIFACT_COLORS[theme]);
     assert.deepEqual(
       Object.fromEntries(sharedColors.map((key) => [key, DIFF_COLORS[theme][key]])),
       Object.fromEntries(sharedColors.map((key) => [key, ALIGN_COLORS[theme][key]])),
@@ -33,10 +42,10 @@ test("Align and Diff share the agreed artifact visual baseline", () => {
   }
 
   assert.deepEqual(DIFF_SPACE, ALIGN_SPACE);
+  assert.strictEqual(ALIGN_SPACE, ARTIFACT_SPACE);
   for (const role of [
     "brand",
     "body",
-    "goal",
     "menu",
     "micro",
     "pageTitle",
@@ -45,11 +54,13 @@ test("Align and Diff share the agreed artifact visual baseline", () => {
     "subsectionTitle",
   ]) {
     assert.deepEqual(DIFF_TYPE[role], ALIGN_TYPE[role]);
+    assert.deepEqual(ALIGN_TYPE[role], ARTIFACT_TYPE[role]);
   }
   for (const role of [
     "compactBreakpoint",
     "documentWidth",
     "narrowBreakpoint",
+    "proseWidth",
     "tableOfContentsWidth",
     "tocBreakpoint",
     "topbarHeight",
@@ -57,5 +68,6 @@ test("Align and Diff share the agreed artifact visual baseline", () => {
     "topbarWideGutter",
   ]) {
     assert.equal(DIFF_LAYOUT[role], ALIGN_LAYOUT[role]);
+    assert.equal(ALIGN_LAYOUT[role], ARTIFACT_LAYOUT[role]);
   }
 });

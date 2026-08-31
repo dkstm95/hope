@@ -90,7 +90,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
   ]);
   assert.equal(first.rendererVersion, 19);
-  assert.equal(first.designVersion, 15);
+  assert.equal(first.designVersion, 16);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -106,7 +106,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<link rel="icon" type="image\/png" sizes="128x128" href="data:image\/png;base64,iVBOR/u,
   );
   assert.match(html, /<img class="brand-icon" src="data:image\/png;base64,iVBOR/u);
-  assert.match(html, /<span>HOPE<\/span><span class="brand-product">· DIFF<\/span>/u);
+  assert.match(html, /<span>HOPE<\/span><span class="brand-product">\/ DIFF<\/span>/u);
   assert.match(
     html,
     /<h2 class="toc-heading"><span>Contents<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,

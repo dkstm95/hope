@@ -45,6 +45,12 @@ When type, size, audience, or material omissions remain undecided, state the
 assumption in one short update and continue unless a wrong choice would change
 the requested result materially. Let the person redirect when they are present.
 
+Inside a Hope HTML artifact, inherit its Technical Record tokens, typography,
+theme behavior, and responsive shell. A standalone Hope Diagram HTML uses that
+same dual-mode technical-record language and keeps the visual as its main
+reading block. Read `../../assets/artifact-theme.mjs` for the exact common
+roles and embed their current values in the standalone file.
+
 Build for the intended viewing size. Remove, merge, group, or split content
 before shrinking labels or crowding connections. Keep the main path readable
 without a legend when possible.

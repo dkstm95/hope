@@ -99,6 +99,8 @@ detail view.
 
 Use semantic roles from the active project's design system. When none exists,
 derive a small set: `paper`, `ink`, `muted`, `rule`, `accent`, and `link`.
+Within a Hope Technical Record, map these roles to the record's current theme
+and use its regular and monospaced type roles.
 Meet WCAG AA contrast: at least 4.5:1 for ordinary text, 3:1 for large text,
 and 3:1 for meaning-bearing graphical objects against adjacent colors unless
 the same meaning is available through visible text. Follow a stricter active
