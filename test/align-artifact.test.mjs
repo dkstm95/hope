@@ -109,6 +109,32 @@ async function inputFile(root, name, value) {
   return path;
 }
 
+test("repository display exposes bidirectional controls from remotes and local names", async () => {
+  const remoteRoot = await repository("git@github.com:acme/storage\u202Ename.git");
+  const localParent = await createTestTemporaryDirectory("hope-align-repository-label-");
+  const localRoot = join(localParent, "storage\u202Ename");
+  await mkdir(localRoot);
+  await execFileAsync("git", ["init", "-q", localRoot]);
+
+  for (const [root, expected] of [
+    [remoteRoot, "acme/storage\\u202Ename"],
+    [localRoot, "storage\\u202Ename"],
+  ]) {
+    const inputPath = await inputFile(root, "align-input.json", makeAlignInput());
+    const outputPath = join(root, "docs", "alignments", "repository-label.html");
+    const result = await createAlignArtifact({ inputPath, outputPath, root }, {
+      now: () => now,
+      randomUUID: () => "77777777-7777-4777-8777-777777777777",
+    });
+    const html = await readFile(outputPath, "utf8");
+    const visibleHtml = html.split('<script id="hope-align-data"')[0];
+
+    assert.equal(result.repository, expected);
+    assert.equal(visibleHtml.includes(expected), true);
+    assert.equal(visibleHtml.includes("\u202E"), false);
+  }
+});
+
 test("Align input keeps optional detail conditional and rejects unknown fields", () => {
   const minimal = makeAlignInput({
     flow: undefined,
@@ -636,30 +662,35 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   const second = renderAlignArtifact(data, options);
 
   assert.equal(first, second);
-  assert.match(first, /<img class="brand-icon" src="data:image\/png;base64,/u);
-  assert.match(first, /<span>HOPE<\/span><span class="brand-product">\/ ALIGN<\/span>/u);
+  assert.match(first, /<span class="brand-product">ALIGN<\/span><span class="brand-separator">\/<\/span><span class="brand-record">SPEC-001<\/span>/u);
+  assert.match(
+    first,
+    /<header class="print-identity">[\s\S]*?<strong>ALIGN \/ SPEC-001<\/strong>[\s\S]*?<span><bdi dir="auto">acme\/storage<\/bdi><\/span>[\s\S]*?<span>v1 · 현재 합의 · <time datetime="2026-08-14T00:00:00\.000Z">2026-08-14<\/time><\/span>[\s\S]*?<\/header>/u,
+  );
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
   assert.match(first, /font-family: "Hope Code"/u);
   assert.equal((first.match(/@font-face/gu) ?? []).length, 3);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="25"/u);
+  assert.match(first, /name="hope-align-design-version" content="32"/u);
   assert.match(
     first,
-    /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
+    /<h2 class="toc-heading"><span>문서 목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
   );
   assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
   assert.match(first, /aria-label="다크 모드로 전환"/u);
-  assert.match(first, /class="outcome-mark" aria-hidden="true">×</u);
-  assert.match(first, />기대 결과</u);
-  assert.match(first, /<ol class="decision-list intent-list">/u);
-  assert.match(first, /<details class="decision-disclosure intent-reason">/u);
+  assert.match(first, /<ul class="decision-list intent-list">/u);
+  assert.match(first, /<div class="decision-reason">/u);
   assert.match(first, /<span class="decision-source">사용자가 선택함<\/span>/u);
   assert.match(
     first,
-    /id="intent-title"><span class="section-number">\d{2}<\/span><span>공유된 이해<\/span><\/h2>/u,
+    /id="intent-title"><span class="section-number">01<\/span><span>의도<\/span><\/h2>/u,
+  );
+  assert.match(
+    first,
+    /id="decisions-title"><span class="section-number">02<\/span><span>결정<\/span><\/h2>/u,
   );
   assert.doesNotMatch(first, /id="intent-history"/u);
   assert.doesNotMatch(first, /id="goal-history"/u);
@@ -671,10 +702,10 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.doesNotMatch(first, /class="goal(?:-label)?"/u);
   assert.match(
     first,
-    /<header class="document-head">\s*<h1 id="artifact-title">[\s\S]*?<\/h1>\s*<\/header><section class="overview document-section" id="overview" aria-labelledby="overview-title">\s*<h2 class="section-title" id="overview-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u,
+    /<header class="document-head">\s*<h1 id="artifact-title">[\s\S]*?<\/h1>\s*<p class="document-state">[\s\S]*?<\/p>\s*<\/header><section class="overview document-section" id="intent" aria-labelledby="intent-title">\s*<h2 class="section-title" id="intent-title"><span class="section-number">01<\/span><span>의도<\/span><\/h2>/u,
   );
   assert.doesNotMatch(first, /artifact-title-line/u);
-  assert.match(first, />공유된 이해</u);
+  assert.match(first, />결정</u);
   assert.doesNotMatch(first, />미결정 의도</u);
   assert.match(first, />AI 판단 가능</u);
   assert.match(first, />사용자 판단</u);
@@ -687,7 +718,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /class="reference-marker verification-marker"[^>]*>\[유저\]<\/a>/u);
   assert.match(first, /<details class="intent-group section-disclosure intent-verification" id="verification">/u);
   assert.doesNotMatch(first, /<details class="check-verification">/u);
-  assert.match(first, /<details class="body-section document-section section-disclosure" id="evidence">/u);
+  assert.match(first, /<details class="intent-group section-disclosure" id="evidence">/u);
   assert.doesNotMatch(first, /class="check-list"/u);
   assert.doesNotMatch(first, /list-style: decimal-leading-zero/u);
   assert.match(first, /prefers-color-scheme: dark/u);
@@ -713,7 +744,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
     [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
     ["01", "02", "03"],
   );
-  const toc = first.match(/<nav class="toc"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
+  const toc = first.match(/<nav class="toc toc-desktop"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
   assert.deepEqual(
     [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
     ["01", "02", "03"],
@@ -798,8 +829,9 @@ test("renderer omits empty optional sections instead of filling the screen", () 
   const html = renderAlignArtifact(data, { digest: "0".repeat(64) });
   assert.doesNotMatch(html, /id="flow"|id="evidence"/u);
   assert.match(html, /id="intent"/u);
+  assert.match(html, /id="decisions"/u);
   assert.match(html, /id="verification"/u);
-  assert.doesNotMatch(html, /class="toc"/u);
+  assert.match(html, /class="toc toc-desktop"/u);
   assert.doesNotMatch(html, />미결정 의도</u);
 });
 

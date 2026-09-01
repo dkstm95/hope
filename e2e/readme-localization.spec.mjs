@@ -53,7 +53,7 @@ for (const example of examples) {
     await page.goto(localUrl(example.english));
 
     await expect(page.locator("html")).toHaveAttribute("lang", "en-US");
-    await expect(page.locator(".brand-icon")).toBeVisible();
+    await expect(page.locator(".brand-product")).toHaveText(example.name.toUpperCase());
     await page.locator(".locale-menu > summary").click();
     await expect(page.locator(".locale-option")).toHaveText("한국어");
     await expect(page.locator(".locale-option")).toHaveAttribute(
@@ -69,7 +69,7 @@ for (const example of examples) {
     await page.locator(".locale-option").click();
     await expect(page).toHaveURL(localUrl(example.korean));
     await expect(page.locator("html")).toHaveAttribute("lang", "ko-KR");
-    await expect(page.locator(".brand-icon")).toBeVisible();
+    await expect(page.locator(".brand-product")).toHaveText(example.name.toUpperCase());
     await page.locator(".locale-menu > summary").click();
     await expect(page.locator(".locale-option")).toHaveText("English");
     await expect(page.locator(".locale-option")).toHaveAttribute(
@@ -81,13 +81,13 @@ for (const example of examples) {
   });
 }
 
-test("Align and Diff share product-bar and numbered contents geometry", async ({ page }) => {
+test("Align and Diff share document-rail and numbered contents geometry", async ({ page }) => {
   await page.setViewportSize({ height: 1000, width: 1440 });
   const metrics = [];
   for (const example of examples) {
     await page.goto(localUrl(example.english));
-    const repositorySelector = example.name === "Align" ? ".repository" : ".top-context";
-    const tocSelector = example.name === "Align" ? ".rail .toc" : ".toc-desktop";
+    const repositorySelector = example.name === "Align" ? ".rail-footer .repository" : ".rail-footer .top-context";
+    const tocSelector = ".toc-desktop";
     const product = await page.locator(repositorySelector).evaluate((element) => {
       const style = getComputedStyle(element);
       const icon = element.querySelector(".repository-icon");
@@ -101,11 +101,14 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
     });
     const controls = await page.locator(".display-controls").evaluate((element) => {
       const style = getComputedStyle(element);
+      const locale = element.querySelector(".locale-menu > summary");
       const theme = element.querySelector(".theme-button");
       return {
-        borderRadius: style.borderRadius,
         borderWidth: style.borderTopWidth,
         height: element.getBoundingClientRect().height,
+        localeBorderWidth: getComputedStyle(locale).borderTopWidth,
+        localeHeight: locale?.getBoundingClientRect().height,
+        themeBorderWidth: getComputedStyle(theme).borderTopWidth,
         themeHeight: theme?.getBoundingClientRect().height,
         themeWidth: theme?.getBoundingClientRect().width,
       };
@@ -137,10 +140,10 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
     expect(tocEntries.map((entry) => entry.number)).toEqual(
       tocEntries.map((_, index) => String(index + 1).padStart(2, "0")),
     );
-    expect(tocEntries[0].title).toBe("Summary");
+    expect(tocEntries[0].title).toBe(example.name === "Align" ? "Intent" : "Summary");
     const titleSelector = example.name === "Align" ? ".document-head > h1" : ".document-title > h1";
-    const firstSectionSelector = example.name === "Align" ? "#overview" : "#synopsis";
-    const firstHeadingSelector = example.name === "Align" ? "#overview-title" : "#synopsis-title";
+    const firstSectionSelector = example.name === "Align" ? "#intent" : "#synopsis";
+    const firstHeadingSelector = example.name === "Align" ? "#intent-title" : "#synopsis-title";
     await expect(page.locator(titleSelector)).toBeVisible();
     await expect(page.locator(`${titleSelector} .section-number`)).toHaveCount(0);
     const readingRhythm = await page.evaluate(({ firstHeadingSelector, firstSectionSelector, titleSelector }) => {
@@ -148,9 +151,15 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
       const heading = document.querySelector(firstHeadingSelector);
       const number = heading.querySelector(".section-number");
       const label = heading.querySelector("span:last-child");
+      const numberedSections = [...document.querySelectorAll(".main > [id]")].filter(
+        (section) => section.querySelector(":scope > .section-title .section-number, :scope > .section-heading .section-number, :scope > summary .section-number"),
+      );
+      const laterSection = numberedSections[1];
       return {
         border: getComputedStyle(firstSection).borderTopWidth,
         labelFontSize: getComputedStyle(label).fontSize,
+        laterMargin: getComputedStyle(laterSection).marginTop,
+        laterPadding: getComputedStyle(laterSection).paddingTop,
         margin: getComputedStyle(firstSection).marginTop,
         numberFontSize: getComputedStyle(number).fontSize,
         padding: getComputedStyle(firstSection).paddingTop,
@@ -159,17 +168,20 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
     }, { firstHeadingSelector, firstSectionSelector, titleSelector });
     expect(readingRhythm).toMatchObject({
       border: "0px",
-      labelFontSize: "18px",
+      labelFontSize: "15px",
+      laterMargin: "32px",
+      laterPadding: "16px",
       margin: "24px",
-      numberFontSize: "18px",
+      numberFontSize: "15px",
       padding: "16px",
-      titleLeft: 40,
+      titleLeft: 304,
     });
     await expect(page.locator(".display-controls > .locale-menu")).toHaveCount(1);
     await expect(page.locator(".display-controls > .theme-button")).toHaveCount(1);
     if (example.name === "Diff") {
       await expect(page.locator(".display-controls .pull-request-link")).toHaveCount(0);
-      await expect(page.locator(".topbar-actions > .pull-request-link")).toHaveCount(1);
+      await expect(page.locator(".rail-footer > .pull-request-link")).toHaveCount(1);
+      await expect(page.locator(".topbar-actions > .mobile-pull-request-link")).toHaveCount(1);
     }
     metrics.push({ controls, product, readingRhythm, toc });
   }
@@ -178,11 +190,13 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
   expect(metrics[0].readingRhythm).toEqual(metrics[1].readingRhythm);
   expect(metrics[0].toc).toEqual(metrics[1].toc);
   expect(metrics[0].controls).toMatchObject({
-    borderRadius: "6px",
-    borderWidth: "1px",
+    borderWidth: "0px",
     height: 44,
-    themeHeight: 42,
-    themeWidth: 42,
+    localeBorderWidth: "1px",
+    localeHeight: 44,
+    themeBorderWidth: "1px",
+    themeHeight: 44,
+    themeWidth: 44,
   });
 });
 
@@ -193,9 +207,8 @@ test("Diagram README example switches language, responds to input, and fits narr
   const root = page.locator("#parcel-handoff-diagram");
 
   await expect(root).toBeVisible();
-  await expect(page.locator(".topbar .brand")).toContainText("HOPE");
-  await expect(page.locator(".topbar .brand-product")).toHaveText("/ DIAGRAM");
-  await expect(page.locator(".brand-icon")).toBeVisible();
+  await expect(page.locator(".topbar .brand")).toHaveText("DIAGRAM/FLOW-001");
+  await expect(page.locator(".topbar .brand-product")).toHaveText("DIAGRAM");
   await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
   await expect(page.locator("body")).toHaveCSS(
     "font-size",
@@ -215,10 +228,9 @@ test("Diagram README example switches language, responds to input, and fits narr
   );
   const displayControls = await page.locator(".display-controls").boundingBox();
   expect(displayControls.height).toBe(44);
-  await expect(page.locator(".topbar")).toHaveCSS(
-    "min-height",
-    `${ARTIFACT_LAYOUT.topbarHeight}px`,
-  );
+  const rail = await page.locator(".topbar").boundingBox();
+  expect(rail.width).toBe(ARTIFACT_LAYOUT.tableOfContentsWidth);
+  expect(rail.height).toBe(760);
   await expect(page.locator(".handoff").first()).not.toHaveAttribute("aria-hidden", "true");
   await expect(page.locator(".handoff-line").first()).toHaveAttribute("aria-hidden", "true");
   await expect(page.getByText("Order details", { exact: true })).toBeVisible();

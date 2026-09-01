@@ -124,7 +124,7 @@
       "properties": {
         "summary": {
           "$ref": "#/$defs/claim",
-          "description": "A summary of the represented behavior."
+          "description": "The distinct condition, state, or relationship that makes the behavior model useful."
         },
         "steps": {
           "type": "array",
@@ -273,7 +273,7 @@
       "description": "User-facing plain text rendered without Markdown or HTML interpretation.",
       "minLength": 1,
       "maxLength": 32768,
-      "pattern": "^[\\s\\S]*\\S[\\s\\S]*$"
+      "pattern": "^(?=[\\s\\S]*\\S)[^`\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]+$"
     },
     "evidence": {
       "type": "object",

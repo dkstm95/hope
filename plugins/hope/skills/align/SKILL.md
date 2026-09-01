@@ -64,7 +64,7 @@ enough evidence to decide or delegate it.
 ## Confirm shared understanding
 
 When the frontier is empty, teach back the shared goal and problem model, the
-intended outcomes and recognition methods, the consequential decisions and
+detailed goals and recognition methods, the consequential decisions and
 their effects, and every exclusion, delegation, or assumption that shaped them.
 Ask the person to confirm this understanding. Their confirmation completes
 Align. Ask whether implementation may begin as a separate choice; explicit

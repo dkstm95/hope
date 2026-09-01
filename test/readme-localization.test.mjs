@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { makeDiffSnapshot } from "../tools/readme-examples.mjs";
+import {
+  makeDiffAnalysis,
+  makeDiffSnapshot,
+} from "../tools/readme-examples.mjs";
 
 const root = new URL("../", import.meta.url);
 const captureNames = [
@@ -111,6 +114,7 @@ test("generated README HTML links each locale to its sibling", async () => {
 
 test("the fixed Ky example preserves captured pull request provenance", () => {
   const snapshot = makeDiffSnapshot("en-US");
+  const analysis = makeDiffAnalysis(snapshot);
   const sources = Object.fromEntries(snapshot.sources
     .map((source) => [source.id, source]));
 
@@ -142,5 +146,24 @@ test("the fixed Ky example preserves captured pull request provenance", () => {
   assert.equal(sources["source-3"].text, "Fix timeout to apply to total operation including retries");
   assert.match(sources["source-4"].text, /#getRemainingTimeout/u);
   assert.match(sources["source-5"].text, /beforeRetry hook respects total timeout budget/u);
+  assert.match(sources["source-6"].text, /never-ending error response body still respects/u);
   assert.match(sources["source-7"].text, /timeout: false does not throw TimeoutError during retries/u);
+  assert.equal(analysis.coreChange.details.length, 4);
+  assert.deepEqual(
+    analysis.behavior.visual.rows.map((row) => row.case),
+    [
+      "Operation starts",
+      "beforeRequest hook",
+      "Before retry wait",
+      "After retry wait",
+      "beforeRetry hook",
+      "afterResponse forced retry",
+      "Error response body",
+      "Next request",
+    ],
+  );
+  assert.equal(analysis.reviewItems[0].kind, "verify");
+  assert.equal(analysis.reviewItems[0].importance, "medium");
+  assert.match(analysis.reviewItems[0].nextStep, /public timeout and hook-lifecycle contract/u);
+  assert.equal(analysis.quiz.length, 3);
 });

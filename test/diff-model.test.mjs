@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { digestJson } from "../plugins/hope/skills/diff/scripts/hash.mjs";
@@ -780,6 +781,27 @@ test("analysis rejects bidirectional controls in user-facing prose", () => {
     () => validateAnalysis(analysis, snapshot, { runId }),
     /bidirectional control character/u,
   );
+});
+
+test("the published analysis schema matches runtime lexical rules", async () => {
+  const schema = JSON.parse(await readFile(new URL(
+    "../plugins/hope/skills/diff/scripts/analysis-v3.schema.json",
+    import.meta.url,
+  ), "utf8"));
+  const pattern = new RegExp(schema.$defs.text.pattern, "u");
+  const snapshot = makeSnapshot();
+
+  assert.equal(pattern.test("Two plain-text lines\nremain valid."), true);
+  for (const value of [
+    "Use `--profile-directory` when Chrome starts.",
+    "Safe text \u0001 hidden control",
+    "Safe text \u202E disguised text",
+  ]) {
+    assert.equal(pattern.test(value), false);
+    const analysis = makeAnalysis(snapshot, runId);
+    analysis.purpose.text = value;
+    assert.throws(() => validateAnalysis(analysis, snapshot, { runId }));
+  }
 });
 
 test("generated prose rejects Markdown backticks while source excerpts keep them", () => {

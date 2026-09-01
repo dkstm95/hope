@@ -27,7 +27,7 @@ test("Diff owns its locale sources and packaged locale paths", () => {
 
 test("the supported locale dictionaries have identical keys", async () => {
   const keys = await checkLocaleParity();
-  assert.ok(keys.includes("section.core"));
+  assert.ok(keys.includes("section.explore"));
   assert.ok(keys.includes("section.teachingAids"));
   assert.ok(keys.includes("theme.system"));
 });

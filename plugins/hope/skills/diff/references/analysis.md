@@ -67,8 +67,15 @@ material actions grounded in the captured change.
   mechanics and implementation sequence in collapsed `codeSteps`.
 - Use one to four `coreChange.details` for distinct observable outcomes or
   preserved conditions. Do not turn them into a file or identifier inventory.
+- Connect every material behavior-bearing changed surface to a visible claim,
+  review item, material limit, or explicit nonmaterial disposition. A file
+  disposition records the file's role but does not account for a distinct
+  behavior by itself.
 - Use `behavior` only when a flow, condition, state, comparison, or small
   experiment helps the reader predict an outcome. Do not repeat `codeSteps`.
+- Let `behavior.summary` introduce the distinct condition, state, or
+  relationship that makes the model useful. Keep it distinct from
+  `coreChange.details`.
 - When runtime behavior is unchanged, explain the real maintenance, build,
   documentation, dependency, development, or test effect.
 - Give each included file exactly one `explained`, `supporting`, or `mechanical`

@@ -70,7 +70,9 @@ async function loadMockupFonts() {
   return Object.fromEntries(await Promise.all(
     Object.entries(mockupFontFiles).map(async ([weight, filename]) => [
       weight,
-      (await readFile(join(root, "plugins", "hope", "assets", "fonts", filename))).toString("base64"),
+      (await readFile(weight === "light"
+        ? join(root, "assets", "fonts", filename)
+        : join(root, "plugins", "hope", "assets", "fonts", filename))).toString("base64"),
     ]),
   ));
 }
@@ -339,7 +341,7 @@ async function captureReadmeAssets(browser, paths, outputDirectory, fonts) {
       await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`), {
         colorScheme: "dark",
       });
-      await captureElement(page, join(outputDirectory, `hope-align-decisions-${suffix}.png`), "#intent");
+      await captureElement(page, join(outputDirectory, `hope-align-decisions-${suffix}.png`), "#decisions");
       await loadPage(page, alignPath, { colorScheme: "light" });
       await captureElement(page, join(outputDirectory, `hope-align-directions-${suffix}.png`), "#design-directions");
 

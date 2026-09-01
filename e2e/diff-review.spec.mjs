@@ -245,7 +245,9 @@ test.beforeAll(async () => {
     visual: true,
   });
   const review = validateAnalysis(analysis, snapshot, { runId });
-  const rendered = await renderReview(review);
+  const rendered = await renderReview(review, {
+    alternateLocale: { href: "hope-review.en.html", locale: "en-US" },
+  });
   const artifactPath = join(artifactDirectory, "hope-review.html");
   await writeFile(artifactPath, rendered.bytes);
   artifactUrl = pathToFileURL(artifactPath).href;
@@ -337,9 +339,9 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     "padding-top",
     "2px",
   );
-  await expect(page.locator("header .top-context")).toHaveText("example/hope");
-  await expect(page.locator("header .brand-icon")).toBeVisible();
-  const pullRequestLink = page.locator("header .pull-request-link");
+  await expect(page.locator(".rail-footer .top-context")).toHaveText("example/hope");
+  await expect(page.locator(".brand")).toHaveText("DIFF/PR-142");
+  const pullRequestLink = page.locator(".rail-footer .pull-request-link");
   await expect(pullRequestLink).toHaveText("PR #142");
   await expect(pullRequestLink).toHaveAttribute(
     "href",
@@ -350,8 +352,8 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator(".document-title")).not.toContainText(
     "example/hope · PR #142",
   );
-  await expect(page.locator("header .commit-status")).toHaveText("bbbbbbbb");
-  await expect(page.locator("header .commit-status")).toHaveAttribute(
+  await expect(page.locator(".rail-footer .commit-status")).toHaveText("bbbbbbbb");
+  await expect(page.locator(".rail-footer .commit-status")).toHaveAttribute(
     "title",
     `검토 커밋 ${"b".repeat(40)}`,
   );
@@ -359,7 +361,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(synopsisPurpose.locator(":scope > h3")).toHaveText("목표");
   await expect(synopsisPurpose).toContainText("Return the final error after all retries fail.");
   const stackedSummaryLabels = page.locator("#synopsis .summary-label-stacked");
-  await expect(stackedSummaryLabels).toHaveText(["검토 결과", "검토 제한"]);
+  await expect(stackedSummaryLabels).toHaveText(["검토 제한"]);
   const stackedSummaryLabelTops = await stackedSummaryLabels.evaluateAll(
     (labels) => labels.map((summaryLabel) => [...summaryLabel.children].map(
       (line) => line.getBoundingClientRect().top,
@@ -416,21 +418,18 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
       review: {
         display: getComputedStyle(review).display,
         columns: getComputedStyle(review).gridTemplateColumns,
+        border: getComputedStyle(review).borderTopWidth,
+        paddingLeft: getComputedStyle(review).paddingLeft,
       },
-      firstItemTop: document.querySelector(
-        ".review-items-compact > li:first-child .item-head",
-      ).getBoundingClientRect().top,
       itemBorders: items.map((item) => getComputedStyle(item).borderBottomWidth),
-      labelTop: document.querySelector(
-        ".synopsis-review > h3",
-      ).getBoundingClientRect().top,
     };
   });
   expect(synopsisLayouts.purpose).toEqual(synopsisLayouts.impact);
-  expect(synopsisLayouts.review).toEqual(synopsisLayouts.purpose);
-  expect(Math.abs(synopsisLayouts.labelTop - synopsisLayouts.firstItemTop)).toBeLessThanOrEqual(
-    1,
-  );
+  expect(synopsisLayouts.review.display).toBe("grid");
+  expect(synopsisLayouts.review.columns.split(" ")).toHaveLength(1);
+  expect(synopsisLayouts.review.border).toBe("1px");
+  expect(synopsisLayouts.review.paddingLeft).toBe("24px");
+  await expect(page.locator(".synopsis-review > h3")).toHaveCount(0);
   expect(synopsisLayouts.itemBorders.every((width) => width === "0px")).toBe(true);
   const changeShift = await page.locator("#synopsis .change-shift").evaluate(
     (element) => {
@@ -458,10 +457,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
         beforeValueTop: beforeValue.top,
         columns: getComputedStyle(element).gridTemplateColumns,
         display: getComputedStyle(element).display,
-        pseudoContent: getComputedStyle(
-          element.querySelector(".shift-now"),
-          "::before",
-        ).content,
+        pseudoContent: getComputedStyle(element, "::after").content,
       };
     },
   );
@@ -472,7 +468,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   expect(changeShift.afterTitleLeft).toBe(changeShift.afterContentLeft);
   expect(changeShift.beforeValueTop).toBeGreaterThan(changeShift.beforeTitleBottom);
   expect(changeShift.afterValueTop).toBeGreaterThan(changeShift.afterTitleBottom);
-  expect(changeShift.pseudoContent).toBe("none");
+  expect(changeShift.pseudoContent).toBe('"→"');
   await expect(page.locator("#synopsis .shift-arrow")).toHaveCount(0);
   await expect(page.locator("#synopsis .change-shift")).toHaveAccessibleName(
     "AS-IS TO-BE",
@@ -480,7 +476,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator(".topbar")).toHaveCSS("position", "sticky");
   await expect(page.locator("body")).toHaveCSS("font-size", "14px");
   await expect(page.locator("body")).toHaveCSS("font-weight", "500");
-  await expect(page.locator("#review-title")).toHaveCSS("font-size", "32px");
+  await expect(page.locator("#review-title")).toHaveCSS("font-size", "28px");
   await expect(page.locator(".synopsis-purpose > h3")).toHaveCSS(
     "font-size",
     await page.locator(".synopsis-impact > h3").evaluate(
@@ -489,17 +485,13 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   );
   await expect(page.locator(".section-heading h2").first()).toHaveCSS(
     "font-size",
-    "18px",
+    "15px",
   );
   const baselineGeometry = await page.evaluate(() => ({
-    brandRepositoryGap: document.querySelector(".top-context").getBoundingClientRect().left
-      - document.querySelector(".brand").getBoundingClientRect().right,
     firstSectionBorder: getComputedStyle(document.querySelector("#synopsis")).borderTopWidth,
     firstSectionMargin: getComputedStyle(document.querySelector("#synopsis")).marginTop,
     firstSectionPadding: getComputedStyle(document.querySelector("#synopsis")).paddingTop,
     railLeft: document.querySelector(".toc-desktop").getBoundingClientRect().left,
-    repositoryCommitGap: document.querySelector(".commit-status").getBoundingClientRect().left
-      - document.querySelector(".top-context").getBoundingClientRect().right,
     summaryLabelFontSize: getComputedStyle(document.querySelector("#synopsis-title > span:last-child")).fontSize,
     summaryLabelLeft: document.querySelector("#synopsis-title > span:last-child").getBoundingClientRect().left,
     summaryNumberFontSize: getComputedStyle(document.querySelector("#synopsis-title > .section-number")).fontSize,
@@ -508,18 +500,16 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
   expect(baselineGeometry).toEqual({
-    brandRepositoryGap: 24,
     firstSectionBorder: "0px",
     firstSectionMargin: "24px",
     firstSectionPadding: "16px",
-    railLeft: 1204,
-    repositoryCommitGap: 24,
-    summaryLabelFontSize: "18px",
-    summaryLabelLeft: 76,
-    summaryNumberFontSize: "18px",
-    summaryNumberLeft: 40,
-    titleLeft: 40,
-    topbarHeight: 58,
+    railLeft: 32,
+    summaryLabelFontSize: "15px",
+    summaryLabelLeft: 348,
+    summaryNumberFontSize: "15px",
+    summaryNumberLeft: 304,
+    titleLeft: 304,
+    topbarHeight: 900,
   });
   await expect(
     page.locator('.toc-desktop a[href="#synopsis"]'),
@@ -536,7 +526,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#review-title")).toContainText(
     "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
   );
-  await expect(page.locator("#review-title .evidence-marker")).toHaveText("[1]");
+  await expect(page.locator(".document-title-meta .title-evidence .evidence-marker")).toHaveText("[1]");
   const judge = page.locator("#judge");
   await expect(judge).not.toHaveAttribute("open", "");
   await expect(judge.locator(".section-content")).not.toBeVisible();
@@ -561,10 +551,12 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#core-change")).not.toContainText(
     "Return the final error after all retries fail.",
   );
-  await expect(page.locator("#behavior-flow > .subsection-heading > h3")).toHaveText(
-    "적용 조건과 흐름",
+  await expect(page.locator("#change-overview > .subsection-heading h3")).toHaveText(
+    "변경 개요",
   );
-  await expect(page.locator("#behavior-flow")).toContainText(
+  await expect(page.locator("#core-change > .subsection-heading")).toHaveCount(0);
+  await expect(page.locator("#behavior-flow > .subsection-heading")).toHaveCount(0);
+  await expect(page.locator("#change-overview > .change-overview-content > .behavior-summary")).toContainText(
     "네 단계로 이어지는 변경 동작입니다.",
   );
   await expect(page.locator("#core-change")).not.toContainText(
@@ -573,15 +565,35 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   const behaviorSectionOrder = await page.locator("#explore").evaluate((section) => ({
     behaviorTop: section.querySelector("#behavior-flow").getBoundingClientRect().top,
     coreBottom: section.querySelector("#core-change").getBoundingClientRect().bottom,
-    headingTop: section.querySelector("#behavior-flow h3").getBoundingClientRect().top,
-    summaryTop: section.querySelector("#behavior-flow .behavior-summary").getBoundingClientRect().top,
+    coreTop: section.querySelector("#core-change").getBoundingClientRect().top,
+    summaryBottom: section.querySelector(".behavior-summary").getBoundingClientRect().bottom,
   }));
+  expect(behaviorSectionOrder.coreTop).toBeGreaterThanOrEqual(
+    behaviorSectionOrder.summaryBottom,
+  );
   expect(behaviorSectionOrder.behaviorTop).toBeGreaterThanOrEqual(
     behaviorSectionOrder.coreBottom,
   );
-  expect(behaviorSectionOrder.summaryTop).toBeGreaterThan(
-    behaviorSectionOrder.headingTop,
+  const overviewType = await page.locator("#change-overview").evaluate((overview) => ({
+    detail: getComputedStyle(overview.querySelector(".core-detail p")).fontSize,
+    summary: getComputedStyle(overview.querySelector(".behavior-summary p")).fontSize,
+  }));
+  expect(overviewType.summary).toBe(overviewType.detail);
+  const evidenceType = await page.locator(".evidence-markers").evaluateAll((groups) => {
+    const group = groups.find((candidate) => candidate.children.length > 1);
+    const marker = group?.querySelector(".evidence-marker");
+    return {
+      bodySize: getComputedStyle(document.body).fontSize,
+      gap: group ? getComputedStyle(group).columnGap : "0px",
+      markerSize: marker ? getComputedStyle(marker).fontSize : "0px",
+      markerWeight: marker ? getComputedStyle(marker).fontWeight : "0",
+    };
+  });
+  expect(Number.parseFloat(evidenceType.gap)).toBeGreaterThan(0);
+  expect(Number.parseFloat(evidenceType.markerSize)).toBeLessThan(
+    Number.parseFloat(evidenceType.bodySize),
   );
+  expect(Number.parseInt(evidenceType.markerWeight, 10)).toBeLessThanOrEqual(500);
   await expect(page.locator("#synopsis .synopsis-state")).toHaveCount(0);
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
   await expect(page.locator("#explore .flow")).toHaveCount(1);
@@ -636,7 +648,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   expect(flowTops[2]).toBeGreaterThan(flowTops[1]);
 
   await page.setViewportSize(viewports.mobile);
-  await expect(page.locator("#review-title")).toHaveCSS("font-size", "28px");
+  await expect(page.locator("#review-title")).toHaveCSS("font-size", "24px");
   await expect(page.locator(".synopsis-purpose > h3")).toHaveCSS(
     "font-size",
     await page.locator(".synopsis-impact > h3").evaluate(
@@ -645,7 +657,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   );
   await expect(page.locator(".section-heading h2").first()).toHaveCSS(
     "font-size",
-    "16px",
+    "15px",
   );
   await expect(page.locator(".synopsis-row > h3").first()).toHaveCSS(
     "padding-top",
@@ -680,6 +692,9 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#beginner-primer .beginner-primer-content")).toBeVisible();
   await expect(page.locator("#judge .section-content")).toBeVisible();
   await expect(page.locator(".microworld-content")).toBeVisible();
+  await expect(page.locator(".artifact-details .evidence-group-content")).toBeVisible();
+  await expect(page.locator(".artifact-details")).toContainText("PR-142");
+  await expect(page.locator(".artifact-details")).toContainText("example/hope");
   await page.emulateMedia({ media: "screen" });
 
   for (const viewport of [
@@ -693,7 +708,7 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await page.locator("#review-title").evaluate((element) => {
     element.textContent = "LongUnbrokenPullRequestTitle".repeat(24);
   });
-  await page.locator(".behavior-visual > header > p").evaluate((element) => {
+  await page.locator(".behavior-visual > figcaption > p").evaluate((element) => {
     element.textContent = "LongUnbrokenTeachingAidCaption".repeat(80);
   });
   await page.locator(".synopsis-purpose .claim p bdi").evaluate((element) => {
@@ -736,16 +751,13 @@ test("contents tracks the current section and keeps sticky navigation clear", as
   await expect(currentLinks).toHaveAttribute("href", "#judge");
   await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("3 / 4");
   const currentStyle = await currentLinks.evaluate((element) => ({
-    backgroundColor: getComputedStyle(element).backgroundColor,
     borderLeftWidth: getComputedStyle(element).borderLeftWidth,
   }));
-  expect(currentStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(currentStyle.borderLeftWidth).toBe("4px");
+  expect(currentStyle.borderLeftWidth).toBe("3px");
   const clearance = await page.evaluate(() => ({
-    headerBottom: document.querySelector(".topbar").getBoundingClientRect().bottom,
     targetTop: document.querySelector("#judge").getBoundingClientRect().top,
   }));
-  expect(clearance.targetTop).toBeGreaterThanOrEqual(clearance.headerBottom);
+  expect(clearance.targetTop).toBeGreaterThanOrEqual(0);
 });
 
 test("the microworld switches fixed scenarios with accessible native controls", async ({
@@ -850,6 +862,7 @@ test("the microworld switches fixed scenarios with accessible native controls", 
 test("the artifact explains every teaching-aid omission", async ({ page }) => {
   await page.setViewportSize(viewports.desktop);
   await page.goto(omittedArtifactUrl);
+  await page.locator("#evidence-and-scope > summary").click();
 
   const section = page.locator("#teaching-aids");
   await expect(section).toBeVisible();
@@ -887,6 +900,7 @@ test("the artifact explains every teaching-aid omission", async ({ page }) => {
 test("the artifact distinguishes mixed teaching-aid decisions", async ({ page }) => {
   await page.setViewportSize(viewports.mobile);
   await page.goto(visualArtifactUrls.sequence);
+  await page.locator("#evidence-and-scope > summary").click();
 
   const section = page.locator("#teaching-aids");
   await section.locator(":scope > summary").click();
@@ -979,23 +993,29 @@ test("display and contents controls share one visual control family", async ({ p
   await openArtifact(page, viewports.breakpoint);
   const theme = page.locator("#theme-toggle");
   const display = page.locator(".display-controls");
+  const locale = page.locator(".locale-menu > summary");
   const contents = page.locator(".toc-mobile > summary");
-  const [themeBox, displayBox, contentsBox] = await Promise.all([
+  const [themeBox, displayBox, localeBox, contentsBox] = await Promise.all([
     theme.boundingBox(),
     display.boundingBox(),
+    locale.boundingBox(),
     contents.boundingBox(),
   ]);
 
   expect(themeBox).not.toBeNull();
   expect(displayBox).not.toBeNull();
+  expect(localeBox).not.toBeNull();
   expect(contentsBox).not.toBeNull();
-  expect(themeBox.height).toBe(42);
+  expect(themeBox.height).toBe(44);
+  expect(localeBox.height).toBe(44);
   expect(displayBox.height).toBe(44);
   expect(contentsBox.height).toBe(44);
   expect(contentsBox.x - (displayBox.x + displayBox.width)).toBe(8);
 
   const styles = await page.evaluate(() => {
     const displayControl = document.querySelector(".display-controls");
+    const localeControl = document.querySelector(".locale-menu > summary");
+    const themeControl = document.querySelector(".theme-button");
     const contentsControl = document.querySelector(".toc-mobile > summary");
     const topbar = document.querySelector(".topbar-inner");
     return {
@@ -1005,15 +1025,38 @@ test("display and contents controls share one visual control family", async ({ p
         borderWidth: getComputedStyle(contentsControl).borderWidth,
       },
       display: {
-        borderRadius: getComputedStyle(displayControl).borderRadius,
-        borderStyle: getComputedStyle(displayControl).borderStyle,
         borderWidth: getComputedStyle(displayControl).borderWidth,
+      },
+      locale: {
+        borderRadius: getComputedStyle(localeControl).borderRadius,
+        borderStyle: getComputedStyle(localeControl).borderStyle,
+        borderWidth: getComputedStyle(localeControl).borderWidth,
+      },
+      theme: {
+        borderRadius: getComputedStyle(themeControl).borderRadius,
+        borderStyle: getComputedStyle(themeControl).borderStyle,
+        borderWidth: getComputedStyle(themeControl).borderWidth,
       },
       topbarGap: getComputedStyle(topbar).columnGap,
     };
   });
-  expect(styles.display).toEqual(styles.contents);
-  expect(styles.topbarGap).toBe("24px");
+  expect(styles.display.borderWidth).toBe("0px");
+  expect(styles.locale).toEqual({
+    borderRadius: "6px 0px 0px 6px",
+    borderStyle: "solid",
+    borderWidth: "1px",
+  });
+  expect(styles.theme).toEqual({
+    borderRadius: "0px 6px 6px 0px",
+    borderStyle: "solid",
+    borderWidth: "1px",
+  });
+  expect(styles.contents).toEqual({
+    borderRadius: "6px",
+    borderStyle: "solid",
+    borderWidth: "1px",
+  });
+  expect(styles.topbarGap).toBe("12px");
 });
 
 test("the theme control works from the keyboard and describes its next action", async ({
@@ -1040,7 +1083,7 @@ test("mobile evidence markers open a bounded preview", async ({
   page,
 }) => {
   await openArtifact(page, viewports.mobile);
-  const pullRequestLink = page.locator("header .pull-request-link");
+  const pullRequestLink = page.locator(".mobile-pull-request-link");
   await expect(pullRequestLink).toBeVisible();
   await expect(pullRequestLink).toHaveAttribute("aria-label", "PR #142 열기");
   const pullRequestLinkBox = await pullRequestLink.boundingBox();
@@ -1091,7 +1134,7 @@ test("mobile evidence markers open a bounded preview", async ({
 
   const mobileToc = page.locator(".toc-mobile");
   const mobileTocSummary = mobileToc.locator(":scope > summary");
-  await expect(mobileToc.locator("xpath=ancestor::header[1]")).toHaveCount(1);
+  await expect(mobileToc.locator("xpath=ancestor::aside[1]")).toHaveCount(1);
   const { contentTop, synopsisTop, titleBottom, titleTop } = await page.evaluate(() => {
     const main = document.querySelector("main");
     const synopsis = document.querySelector("#synopsis");
@@ -1174,7 +1217,7 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
     borderLeftWidth: getComputedStyle(element).borderLeftWidth,
     fontWeight: getComputedStyle(element).fontWeight,
   }));
-  expect(currentStyle.borderLeftWidth).toBe("4px");
+  expect(currentStyle.borderLeftWidth).toBe("3px");
   expect(Number(currentStyle.fontWeight)).toBeGreaterThanOrEqual(700);
 
   await page.keyboard.press("Escape");
@@ -1190,16 +1233,17 @@ test("the mobile contents panel remains bounded, scrollable, and visibly current
   await expectNoPageOverflow(page);
 });
 
-test("mobile product-bar actions fit without hiding the pull request", async ({ page }) => {
+test("mobile document actions fit without hiding the pull request", async ({ page }) => {
   await openArtifact(page, { height: 568, width: 320 });
 
   const selectors = [
-    ".brand-icon",
-    ".pull-request-link",
+    ".brand-product",
+    ".mobile-pull-request-link",
     "#theme-toggle",
     ".toc-mobile > summary",
   ];
-  await expect(page.locator(".brand-product")).toBeHidden();
+  await expect(page.locator(".brand-product")).toBeVisible();
+  await expect(page.locator(".brand-record")).toBeHidden();
   const boxes = [];
   for (const selector of selectors) {
     const locator = page.locator(selector);
@@ -1301,16 +1345,13 @@ test("closed disclosures stay compact", async ({
 }) => {
   await openArtifact(page, viewports.desktop);
 
-  expect(await page.locator("#evidence-references > summary").evaluate(
-    (summary) => summary.getBoundingClientRect().height,
-  )).toBeGreaterThanOrEqual(44);
-
   for (const selector of [
     "#judge",
     ".microworld-disclosure",
     "#teaching-aids",
     ".quiz-question:first-child",
     ".artifact-details",
+    "#evidence-and-scope",
   ]) {
     const disclosure = page.locator(selector);
     await expect(disclosure).not.toHaveAttribute("open", "");
@@ -1335,38 +1376,25 @@ test("closed disclosures stay compact", async ({
   await expect(artifactDetails).toHaveClass(/evidence-group/u);
   await expect(artifactDetails.locator(":scope > summary > h3")).toHaveText("리뷰 정보");
 
-  const endGap = await page.locator("#evidence-and-scope").evaluate((section) => {
+  const evidence = page.locator("#evidence-and-scope");
+  await evidence.locator(":scope > summary").click();
+  await expect(evidence).toHaveAttribute("open", "");
+  expect(await page.locator("#evidence-references > summary").evaluate(
+    (summary) => summary.getBoundingClientRect().height,
+  )).toBeGreaterThanOrEqual(44);
+  const endGap = await evidence.evaluate((section) => {
     const summary = section.querySelector("#evidence-references > summary");
     return section.getBoundingClientRect().bottom - summary.getBoundingClientRect().bottom;
   });
   expect(endGap).toBeLessThanOrEqual(32);
-
-  const evidence = page.locator("#evidence-and-scope");
-  await evidence.locator(":scope > summary").click();
-  const collapsedDimensions = await evidence.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return {
-      chrome: [
-        style.borderTopWidth,
-        style.borderBottomWidth,
-        style.paddingTop,
-        style.paddingBottom,
-      ].reduce((total, value) => total + Number.parseFloat(value), 0),
-      disclosure: element.getBoundingClientRect().height,
-      summary: element.querySelector(":scope > summary").getBoundingClientRect().height,
-    };
-  });
-  expect(Math.abs(
-    collapsedDimensions.disclosure - collapsedDimensions.summary - collapsedDimensions.chrome,
-  )).toBeLessThanOrEqual(1);
 });
 
-test("the evidence appendix starts open while its groups and evidence list stay closed", async ({
+test("the evidence appendix and its groups start closed", async ({
   page,
 }) => {
   await openArtifact(page, viewports.desktop);
   const section = page.locator("details#evidence-and-scope");
-  await expect(section).toHaveAttribute("open", "");
+  await expect(section).not.toHaveAttribute("open", "");
 
   const nested = section.locator(
     "details.evidence-group, details.context-check, details.scope-limit, "
@@ -1379,6 +1407,9 @@ test("the evidence appendix starts open while its groups and evidence list stay 
   const references = page.locator("#evidence-references");
   await expect(references).not.toHaveAttribute("open", "");
   await expect(references.locator(".evidence-footnote-list")).not.toBeVisible();
+
+  await section.locator(":scope > summary").click();
+  await expect(section).toHaveAttribute("open", "");
 
   const sourceGroup = section.locator("details.evidence-group").filter({
     has: page.getByRole("heading", {
@@ -1457,12 +1488,9 @@ test("fragment navigation opens details that contain the target", async ({ page 
   );
   await expect(page.locator(`#${targetId}`)).toBeFocused();
   const evidenceClearance = await page.evaluate((id) => ({
-    headerBottom: document.querySelector(".topbar").getBoundingClientRect().bottom,
     targetTop: document.getElementById(id).getBoundingClientRect().top,
   }), targetId);
-  expect(evidenceClearance.targetTop).toBeGreaterThanOrEqual(
-    evidenceClearance.headerBottom,
-  );
+  expect(evidenceClearance.targetTop).toBeGreaterThanOrEqual(0);
 
   const scopeReference = page.locator('a[href="#scope-limit-1"]').first();
   await scopeReference.click();
@@ -1470,10 +1498,9 @@ test("fragment navigation opens details that contain the target", async ({ page 
   await expect(page.locator("#scope-limit-1")).toHaveAttribute("open", "");
   await expect(page.locator("#scope-limit-1")).toBeFocused();
   const scopeClearance = await page.evaluate(() => ({
-    headerBottom: document.querySelector(".topbar").getBoundingClientRect().bottom,
     targetTop: document.querySelector("#scope-limit-1").getBoundingClientRect().top,
   }));
-  expect(scopeClearance.targetTop).toBeGreaterThanOrEqual(scopeClearance.headerBottom);
+  expect(scopeClearance.targetTop).toBeGreaterThanOrEqual(0);
 });
 
 test("the offline artifact remains readable without JavaScript", async ({ browser }) => {
@@ -1497,6 +1524,8 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await primer.locator(":scope > summary").click();
     await expect(primer.locator(".beginner-primer-content")).toBeVisible();
     const evidenceSection = page.locator("#evidence-and-scope");
+    await expect(evidenceSection).not.toHaveAttribute("open", "");
+    await evidenceSection.locator(":scope > summary").click();
     await expect(evidenceSection).toHaveAttribute("open", "");
     const sourceGroup = evidenceSection.locator("details.evidence-group").filter({
       has: page.getByRole("heading", {

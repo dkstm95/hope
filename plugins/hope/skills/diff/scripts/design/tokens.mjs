@@ -5,7 +5,7 @@ import {
   ARTIFACT_TYPE,
 } from "../../../../assets/artifact-theme.mjs";
 
-export const DESIGN_VERSION = 16;
+export const DESIGN_VERSION = 24;
 
 export const COLORS = Object.freeze({
   dark: Object.freeze({
@@ -47,8 +47,8 @@ export const SPACE = ARTIFACT_SPACE;
 export const TYPE = Object.freeze({
   ...ARTIFACT_TYPE,
   code: Object.freeze({
-    narrow: Object.freeze({ fontSize: 14, lineHeight: 1.35 }),
-    wide: Object.freeze({ fontSize: 13, lineHeight: 1.35 }),
+    narrow: Object.freeze({ fontSize: 13, lineHeight: 1.35 }),
+    wide: Object.freeze({ fontSize: 12, lineHeight: 1.35 }),
   }),
 });
 
