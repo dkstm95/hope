@@ -10,6 +10,7 @@ import {
 } from "./design/tokens.mjs";
 
 const fontUrls = Object.freeze({
+  code: new URL("../../../assets/fonts/HopeCode.woff2", import.meta.url),
   sansBold: new URL("../../../assets/fonts/HopeSansBold.woff2", import.meta.url),
   sansMedium: new URL("../../../assets/fonts/HopeSansMedium.woff2", import.meta.url),
 });
@@ -17,16 +18,16 @@ const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
 
 const dictionaries = Object.freeze({
   "en-US": Object.freeze({
-    behavior: "User flow",
+    behavior: "Relevant flow",
     boundary: "Boundary",
     cancelOutcome: "cancel",
     checkedByAgent: "Agent assessment",
     checkedByHuman: "Person judgment",
     completeOutcome: "complete",
-    currentAgreement: "Current intent",
+    currentAgreement: "Current understanding",
     decidedByDelegated: "AI choice delegated by the person",
     decidedByUser: "Selected by the person",
-    decidedIntent: "Decided intent",
+    decidedIntent: "Shared understanding",
     designDirections: "Design directions",
     earlierRevisions: "earlier versions",
     evidence: "Basis",
@@ -48,7 +49,7 @@ const dictionaries = Object.freeze({
     recommended: "Recommended",
     references: "References",
     revisionDetails: "View changes",
-    skip: "Skip to decided intent",
+    skip: "Skip to shared understanding",
     selected: "Selected",
     selection: "Selection",
     strengths: "Strengths",
@@ -62,16 +63,16 @@ const dictionaries = Object.freeze({
     verificationViewList: "View in the judgment list",
   }),
   "ko-KR": Object.freeze({
-    behavior: "사용 흐름",
+    behavior: "관련 흐름",
     boundary: "경계",
     cancelOutcome: "취소",
     checkedByAgent: "AI 판단 가능",
     checkedByHuman: "사용자 판단",
     completeOutcome: "완료",
-    currentAgreement: "현재 의도",
+    currentAgreement: "현재 합의",
     decidedByDelegated: "사용자가 AI에 선택을 위임함",
     decidedByUser: "사용자가 선택함",
-    decidedIntent: "결정된 의도",
+    decidedIntent: "공유된 이해",
     designDirections: "디자인 시안",
     earlierRevisions: "개의 이전 버전",
     evidence: "근거",
@@ -93,7 +94,7 @@ const dictionaries = Object.freeze({
     recommended: "추천",
     references: "참고 자료",
     revisionDetails: "변경 내용 보기",
-    skip: "결정된 의도로 건너뛰기",
+    skip: "공유된 이해로 건너뛰기",
     selected: "선택",
     selection: "선택 결과",
     strengths: "장점",
@@ -301,13 +302,19 @@ function intentList(content, dictionary, catalog, verification) {
     const statement = catalog
       ? citedInline(item.statement, catalog, dictionary)
       : authoredText(citedValue(item.statement));
+    const decisionSource = item.decidedBy === undefined
+      ? ""
+      : `<span class="decision-source">${escapeHtml(label(
+        dictionary,
+        item.decidedBy === "user" ? "decidedByUser" : "decidedByDelegated",
+      ))}</span>`;
     const reason = item.reason === undefined ? "" : `<details class="decision-disclosure intent-reason">
-      <summary><span>${statement}${marker}${compactVerification}</span></summary>
+      <summary><span>${statement}${marker}${compactVerification}${decisionSource}</span></summary>
       <div class="decision-reason">${catalog
         ? citedParagraphs(item.reason, catalog, dictionary)
         : authoredParagraphs(citedValue(item.reason))}</div>
     </details>`;
-    return `<li><span class="decision-number" aria-hidden="true">${String(intentIndex + 1).padStart(2, "0")}</span>${reason || `<span class="intent-statement">${statement}${marker}${compactVerification}</span>`}</li>`;
+    return `<li><span class="decision-number" aria-hidden="true">${String(intentIndex + 1).padStart(2, "0")}</span>${reason || `<span class="intent-statement">${statement}${marker}${compactVerification}${decisionSource}</span>`}</li>`;
   }).join("")}</ol>`;
 }
 
@@ -564,6 +571,7 @@ function themeVariables(colors) {
     `--bg:${colors.background}`,
     `--border:${colors.border}`,
     `--component-border:${colors.componentBorder}`,
+    `--link:${colors.link}`,
     `--muted:${colors.muted}`,
     `--panel:${colors.panel}`,
     `--text:${colors.text}`,
@@ -578,6 +586,13 @@ function css(fontBase64) {
   src: url(data:font/woff2;base64,${fontBase64.sansMedium}) format("woff2");
   font-style: normal;
   font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Hope Code";
+  src: url(data:font/woff2;base64,${fontBase64.code}) format("woff2");
+  font-style: normal;
+  font-weight: 400;
   font-display: swap;
 }
 @font-face {
@@ -612,23 +627,23 @@ body {
 }
 h1, h2, h3, strong { font-weight: 700; }
 p, ul, ol, dl { margin-block: 0; }
-a { color: var(--accent); text-underline-offset: .2em; }
+a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: .2em; }
 a:visited { color: var(--visited); }
-code { font: 500 .92em/1.5 "Hope Sans", sans-serif; overflow-wrap: anywhere; }
+code { font: 400 .92em/1.5 "Hope Code", ui-monospace, monospace; overflow-wrap: anywhere; }
 button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 [id]:target { scroll-margin-top: 76px; }
 [id]:focus { outline: 2px solid var(--accent); outline-offset: ${space1}px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .skip { position: fixed; z-index: 20; top: ${space2}px; left: ${space2}px; transform: translateY(-200%); padding: ${space2}px ${space3}px; background: var(--text); color: var(--bg); }
 .skip:focus { transform: none; }
-.topbar { position: sticky; z-index: 10; top: 0; border-bottom: 1px solid var(--border); background: var(--bg); }
+.topbar { position: sticky; z-index: 10; top: 0; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 94%, var(--panel)); }
 .topbar-inner { max-width: ${LAYOUT.documentWidth}px; height: ${LAYOUT.topbarInnerHeight}px; margin: 0 auto; padding: 0 ${LAYOUT.topbarWideGutter}px; display: flex; align-items: center; gap: ${space5}px; }
 .brand { flex: none; display: flex; align-items: center; gap: ${space2}px; font-size: ${TYPE.brand.wide.fontSize}px; line-height: ${TYPE.brand.wide.lineHeight}; font-weight: 700; letter-spacing: -.025em; white-space: nowrap; }
 .brand-icon { flex: none; width: 24px; height: 24px; border-radius: 6px; }
 .repository, .mobile-repository { min-width: 0; display: flex; align-items: center; gap: ${space2}px; color: var(--text); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 500; }
 .repository > span, .mobile-repository > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repository-icon { flex: none; width: 16px; height: 16px; stroke: var(--muted); }
-.status { flex: none; padding: ${space1}px ${space2}px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)); border-radius: 4px; background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
+.status { flex: none; padding: ${space1}px ${space2}px; border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border)); border-radius: 3px; background: color-mix(in srgb, var(--accent) 7%, transparent); color: var(--accent); font: 400 ${TYPE.micro.compactFontSize}px/1.45 "Hope Code", ui-monospace, monospace; }
 .top-actions { margin-left: auto; display: flex; align-items: center; gap: ${space2}px; }
 .display-controls { flex: none; display: flex; align-items: center; height: 44px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
 .locale-menu { position: relative; }
@@ -665,7 +680,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .toc-list { display: grid; gap: 2px; }
 .toc-link { min-height: 36px; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: center; padding: ${space1}px ${space2}px; border-left: 4px solid transparent; color: var(--muted); font-size: ${TYPE.body.wide.fontSize}px; font-weight: 500; text-decoration: none; }
 .toc-link:visited { color: var(--muted); }
-.toc-number { color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.toc-number { color: var(--muted); font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
 .toc-link[aria-current="location"], .toc-link[aria-current="location"]:visited { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); font-weight: 700; }
 .toc-link[aria-current="location"] .toc-number { color: var(--accent); }
 .toc-link:hover, .toc-link:focus-visible { background: var(--panel); color: var(--text); }
@@ -686,11 +701,11 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .revision-popup .design-direction { padding-inline: ${space2}px; }
 .revision-popup .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
 .older-history > ol { list-style: none; padding: ${space3}px 0 0; }
-.document-head { max-width: 78ch; }
+.document-head { max-width: ${LAYOUT.proseWidth}; }
 .document-head + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
 .document-section + .document-section { margin-top: ${space6}px; padding-top: ${space4}px; }
-.section-title { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: baseline; }
-.section-number { color: var(--accent); font-size: inherit; line-height: inherit; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.section-title { width: 100%; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: baseline; margin: 0 0 ${space4}px; padding-bottom: ${space3}px; border-bottom: 1px solid var(--component-border); color: var(--text); font-size: ${TYPE.sectionTitle.wide.fontSize}px; line-height: ${TYPE.sectionTitle.wide.lineHeight}; }
+.section-number { color: var(--accent); font-family: "Hope Code", ui-monospace, monospace; font-size: inherit; font-weight: 400; line-height: inherit; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
 .document-head h1 { margin: 0; font-size: ${TYPE.pageTitle.wide.fontSize}px; line-height: ${TYPE.pageTitle.wide.lineHeight}; letter-spacing: -.04em; overflow-wrap: anywhere; }
 .synopsis dd p + p { margin-top: ${space2}px; }
 .synopsis > div { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: ${space5}px; padding: ${space3}px ${space2}px; border-bottom: 1px solid var(--border); }
@@ -698,7 +713,6 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .summary-label-stacked { display: inline-flex; flex-direction: column; align-items: flex-start; }
 .synopsis dd { margin: 0; }
 .compact-check-verification { margin-left: ${space2}px; color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; }
-.section-title { width: 100%; margin: 0 0 ${space4}px; padding-bottom: ${space3}px; border-bottom: 2px solid var(--component-border); color: var(--text); font-size: ${TYPE.sectionTitle.wide.fontSize}px; }
 .plain-list { padding-left: ${space4}px; display: grid; gap: ${space2}px; }
 .empty { color: var(--muted); }
 .design-direction-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -707,7 +721,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .design-direction + .design-direction { border-left: 1px solid var(--border); }
 .direction-head { min-height: ${space6}px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: ${space2}px; align-items: start; }
 .direction-head h3 { margin: 0; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
-.direction-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
+.direction-number { color: var(--accent); font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace; }
 .direction-title-line { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: ${space1}px ${space2}px; }
 .direction-statuses { display: flex; flex-wrap: wrap; gap: ${space1}px; }
 .direction-status { padding: 2px ${space2}px; border: 1px solid var(--component-border); border-radius: 999px; font-size: ${TYPE.micro.compactFontSize}px; font-weight: 700; }
@@ -744,7 +758,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 }
 .behavior-steps { list-style: none; padding: 0; display: grid; }
 .behavior-steps li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: ${space3}px; min-width: 0; min-height: 56px; padding-bottom: ${space4}px; }
-.step-number { position: relative; z-index: 1; display: block; width: 28px; background: var(--bg); color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.step-number { position: relative; z-index: 1; display: block; width: 28px; background: var(--bg); color: var(--accent); font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 .behavior-steps strong, .behavior-outcomes strong { display: block; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .behavior-steps p { grid-column: 2; margin-top: ${space1}px; }
 .behavior-steps p + p, .behavior-outcomes p + p, .decision-list p + p { margin-top: ${space2}px; }
@@ -764,9 +778,10 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .subheading { margin: 0 0 ${space3}px; color: var(--accent); font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
 .decision-list { list-style: none; padding: 0; }
 .decision-list li { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space1}px ${space4}px; padding: ${space2}px 0; border-top: 1px solid var(--border); }
-.decision-number { color: var(--accent); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
+.decision-number { color: var(--accent); font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace; }
 .decision-list li:first-child { border-top: 0; }
 .intent-statement { display: block; min-width: 0; padding-block: ${space2}px; font-size: ${TYPE.subsectionTitle.wide.fontSize}px; }
+.decision-source { display: block; margin-top: ${space1}px; color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 500; line-height: ${TYPE.micro.lineHeight}; }
 .decision-disclosure { min-width: 0; }
 .decision-disclosure > summary { min-height: 32px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: ${space2}px; cursor: pointer; list-style: none; }
 .decision-disclosure > summary::-webkit-details-marker { display: none; }
@@ -794,7 +809,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .verification-marker:visited { color: var(--text); }
 .evidence-list { margin: 0; padding: 0; list-style: none; }
 .evidence-list > li { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: ${space3}px; padding: ${space4}px ${space2}px; border-top: 1px solid var(--border); }
-.evidence-number { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.evidence-number { color: var(--accent); font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 .evidence-entry-title { display: block; }
 .evidence-entry-location { margin-top: ${space1}px; overflow-wrap: anywhere; }
 .verification-list { margin: 0; padding: 0; list-style: none; }
@@ -843,6 +858,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
   .document-head + .document-section,
   .document-section + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
   .document-head h1 { font-size: ${TYPE.pageTitle.narrow.fontSize}px; line-height: ${TYPE.pageTitle.narrow.lineHeight}; }
+  .section-title { font-size: ${TYPE.sectionTitle.narrow.fontSize}px; line-height: ${TYPE.sectionTitle.narrow.lineHeight}; }
   .direction-references > summary, .decision-disclosure > summary { min-height: 44px; }
   .exclusion-list { grid-template-columns: 1fr; }
   .design-direction-list, .design-direction-list.design-direction-count-3 { grid-template-columns: 1fr; }
@@ -1013,7 +1029,7 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
   <a class="skip" href="#overview">${escapeHtml(label(dictionary, "skip"))}</a>
   <header class="topbar">
     <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
-      <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· ALIGN</span></div>
+      <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">/ ALIGN</span></div>
       ${repositoryMark(data.repository, "repository")}
       <span class="status">v${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))}</span>
       <div class="top-actions">

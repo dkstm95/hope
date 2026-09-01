@@ -53,7 +53,7 @@ export function nextAfterCheckpoint(
       }),
       Object.freeze({
         ...ledger,
-        when: "No pending request is needed for the material review frontier",
+        when: "No pending request is needed for the material understanding frontier",
       }),
     ]),
   });

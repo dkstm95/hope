@@ -141,6 +141,17 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
     /by must be agent or human/u,
   );
   assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      intent: [{
+        statement: "완료",
+        verify: "테스트한다.",
+        by: "agent",
+        decidedBy: "model",
+      }],
+    })),
+    /decidedBy must be user or delegated/u,
+  );
+  assert.throws(
     () => validateAlignInput(makeLegacyAlignInputV2()),
     /schemaVersion must be 3/u,
   );
@@ -174,10 +185,11 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
   );
 });
 
-test("Align accepts only the canonical v3 intent model", () => {
+test("Align accepts the v3 shared-understanding model", () => {
   const current = validateAlignInput(makeAlignInput());
   assert.equal(current.schemaVersion, 3);
-  assert.equal(current.intent.length, 3);
+  assert.equal(current.intent.length, 4);
+  assert.equal(current.intent[3].decidedBy, "user");
   assert.equal(current.intent[0].reason, "중단된 작업을 처음부터 반복하지 않고도 데이터 손실을 피해야 한다.");
   assert.equal(current.flow.steps.length, 3);
   assert.equal(current.exclusions.length, 3);
@@ -625,16 +637,18 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
 
   assert.equal(first, second);
   assert.match(first, /<img class="brand-icon" src="data:image\/png;base64,/u);
-  assert.match(first, /<span>HOPE<\/span><span class="brand-product">· ALIGN<\/span>/u);
+  assert.match(first, /<span>HOPE<\/span><span class="brand-product">\/ ALIGN<\/span>/u);
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
   assert.match(first, /font-family: "Hope Sans"/u);
+  assert.match(first, /font-family: "Hope Code"/u);
+  assert.equal((first.match(/@font-face/gu) ?? []).length, 3);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="22"/u);
+  assert.match(first, /name="hope-align-design-version" content="25"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
   );
-  assert.match(first, /v1 · 현재 의도/u);
+  assert.match(first, /v1 · 현재 합의/u);
   assert.match(first, />버전 이력</u);
   assert.doesNotMatch(first, /의도 이력/u);
   assert.match(first, /aria-label="다크 모드로 전환"/u);
@@ -642,9 +656,10 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, />기대 결과</u);
   assert.match(first, /<ol class="decision-list intent-list">/u);
   assert.match(first, /<details class="decision-disclosure intent-reason">/u);
+  assert.match(first, /<span class="decision-source">사용자가 선택함<\/span>/u);
   assert.match(
     first,
-    /id="intent-title"><span class="section-number">\d{2}<\/span><span>결정된 의도<\/span><\/h2>/u,
+    /id="intent-title"><span class="section-number">\d{2}<\/span><span>공유된 이해<\/span><\/h2>/u,
   );
   assert.doesNotMatch(first, /id="intent-history"/u);
   assert.doesNotMatch(first, /id="goal-history"/u);
@@ -659,11 +674,12 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
     /<header class="document-head">\s*<h1 id="artifact-title">[\s\S]*?<\/h1>\s*<\/header><section class="overview document-section" id="overview" aria-labelledby="overview-title">\s*<h2 class="section-title" id="overview-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u,
   );
   assert.doesNotMatch(first, /artifact-title-line/u);
-  assert.match(first, />결정된 의도</u);
+  assert.match(first, />공유된 이해</u);
   assert.doesNotMatch(first, />미결정 의도</u);
   assert.match(first, />AI 판단 가능</u);
   assert.match(first, />사용자 판단</u);
   assert.match(first, /<span class="intent-statement">/u);
+  assert.match(first, /각 원본 업로드에는 하나의 복구 기록이 연결되고/u);
   assert.match(first, /class="reference-marker evidence-marker" href="#evidence-upload-service"/u);
   assert.match(first, /<ol class="evidence-list"><li id="evidence-upload-service" data-evidence-entry>/u);
   assert.match(first, /id="reference-popover" popover="auto" role="dialog"/u);
@@ -805,7 +821,7 @@ test("create publishes one owned project artifact without replacing a path", asy
   const inspected = await inspectAlignArtifact(outputPath);
   assert.equal(inspected.digest, result.digest);
   assert.equal(inspected.content.title, "실패한 업로드 복구");
-  assert.equal(inspected.content.intent.length, 3);
+  assert.equal(inspected.content.intent.length, 4);
   assert.equal(inspected.content.exclusions.length, 3);
   assert.deepEqual(inspected.history, [{
     agreedAt: now.toISOString(),
@@ -820,7 +836,7 @@ test("create publishes one owned project artifact without replacing a path", asy
   assert.equal(await readFile(outputPath, "utf8"), html);
 });
 
-test("revise appends a current intent record to a legacy artifact", async () => {
+test("revise appends a current shared-understanding record to a legacy artifact", async () => {
   const root = await repository();
   const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
   const created = await writeLegacyAlignArtifact({
@@ -874,7 +890,7 @@ test("revise appends a current intent record to a legacy artifact", async () => 
   assert.match(inspected.content.exclusions.at(-1), /24시간/u);
   assert.equal(inspected.history.length, 2);
   const html = await readFile(outputPath, "utf8");
-  assert.match(html, /v2 · 현재 의도/u);
+  assert.match(html, /v2 · 현재 합의/u);
   assert.match(html, /<strong>v1<\/strong>/u);
   assert.equal((html.match(/<p><bdi dir="auto">최초 합의<\/bdi><\/p>/gu) ?? []).length, 2);
   assert.match(html, /id="revision-1"/u);

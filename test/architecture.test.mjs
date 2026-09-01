@@ -8,6 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const pluginRoot = resolve(root, "plugins/hope");
 const skillsRoot = resolve(pluginRoot, "skills");
 const sharedAssetsRoot = resolve(pluginRoot, "assets");
+const sharedArtifactTheme = resolve(sharedAssetsRoot, "artifact-theme.mjs");
 const sharedWritingStandard = resolve(
   skillsRoot,
   "write/references/writing-standard.md",
@@ -20,11 +21,13 @@ const sharedCodeMaintenanceGuidance = resolve(
   pluginRoot,
   "references/code-maintenance.md",
 );
-const publishedSharedGuidance = new Set([
+const publishedCrossFeatureReferences = new Set([
+  sharedArtifactTheme,
   sharedCodeMaintenanceGuidance,
   sharedDiagramStandard,
   sharedWritingStandard,
 ]);
+const publishedSharedModules = new Set([sharedArtifactTheme]);
 const deliveryDependencyPattern =
   /(?:CLAUDE_)?PLUGIN_ROOT|plugins\/hope|\.codex-plugin|\.claude-plugin|marketplace/u;
 
@@ -101,7 +104,10 @@ function scriptBoundaryIssues(source, path, featureRoot) {
   for (const specifier of moduleSpecifiers(source)) {
     if (!specifier.startsWith(".")) continue;
     const dependency = resolve(dirname(path), specifier);
-    if (!isInside(featureRoot, dependency)) {
+    if (
+      !isInside(featureRoot, dependency)
+      && !publishedSharedModules.has(dependency)
+    ) {
       issues.push(`imports outside its Skill: ${specifier}`);
     }
   }
@@ -140,7 +146,7 @@ function guidanceBoundaryIssues(source, path, featureRoot) {
     const dependency = resolve(dirname(path), reference.split("#", 1)[0]);
     if (
       !isInside(featureRoot, dependency)
-      && !publishedSharedGuidance.has(dependency)
+      && !publishedCrossFeatureReferences.has(dependency)
     ) {
       issues.push(
         `references guidance outside its Skill without a published shared contract: ${reference}`,
@@ -177,9 +183,9 @@ test("feature script dependencies stay within their allowed boundaries", async (
   assert.deepEqual(issues, []);
 });
 
-test("feature documents use only published cross-feature guidance", async () => {
-  for (const guidance of publishedSharedGuidance) {
-    assert.equal(await exists(guidance), true);
+test("feature documents use only published cross-feature contracts", async () => {
+  for (const reference of publishedCrossFeatureReferences) {
+    assert.equal(await exists(reference), true);
   }
   const issues = [];
   for (const feature of await discoverFeatures()) {
@@ -214,6 +220,19 @@ test("architecture checks distinguish allowed and forbidden source edges", () =>
       resources: ["../../../.codex-plugin/plugin.json"],
     },
   );
+  assert.deepEqual(
+    scriptBoundaryIssues(
+      'import { ARTIFACT_COLORS } from "../../../assets/artifact-theme.mjs";',
+      script,
+      featureRoot,
+    ),
+    [],
+  );
+  assert.ok(scriptBoundaryIssues(
+    'import "../../../assets/private-helper.mjs";',
+    script,
+    featureRoot,
+  ).some((issue) => issue.includes("outside its Skill")));
   assert.deepEqual(
     scriptBoundaryIssues(
       'const icon = new URL("../../../assets/hope-icon.png", import.meta.url);',

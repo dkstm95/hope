@@ -20,34 +20,28 @@
 
 ## 기능
 
-### 🤝 Align — 구현 전 작업 이해를 맞추고 `의도 부채`를 방지합니다
+### 🤝 Align — 구현 전에 의도와 중요한 결정을 함께 이해합니다
 
-Align은 확인 가능한 근거로 요청을 검토하고, 결과를 바꿀 수 있는 모든 중요한 의도 결정을 구조화한 뒤 의존 관계에 맞춰 라운드별로 인터뷰합니다. 답변할 때마다 남은 질문을 다시 계산하며, 중요한 결정이 하나도 남지 않고 전체 의도를 되가르친 내용에 사용자가 확인해야 끝납니다.
+Align은 대화, 관련 코드, 프로젝트의 아키텍처·스키마·정책·디자인 권위에서 시작합니다. AI가 결정 트리를 만들고 사실을 조사하며 최선의 방향을 추천한 뒤, 의존 관계가 준비된 질문 전체를 한 라운드에 묻습니다. 사용자는 결과를 이해할 가치가 있는 선택을 직접 결정하거나 AI에 위임합니다.
 
-후속 작업이나 검토에서 합의한 의도를 다시 확인할 기록이 필요하거나 사용자가
-산출물을 요청하면, Align은 프로젝트 안에 하나의 HTML 기록을 만듭니다. 현재
-세션에서 계속 진행할 작고 명확한 일은 파일을 만들지 않고 합의를 대화에 남길 수
-있습니다.
+데이터 모델링과 아키텍처가 목표, 장기 제약, 미래 선택지, 중요한 위험을 바꾸는 순간 Align의 대화에 들어옵니다. 되돌리기 쉬운 코드 메커니즘은 구현 AI가 맡습니다. 사용자가 되가르친 이해를 확인하면 Align이 끝나고, 별도의 선택으로 지금 구현을 시작하거나 이후로 남겨 둡니다.
 
-이 기록에는 합의한 목표 하나, 관찰 가능한 의도 충족 조건, 제외한 작업, 필요한
-사용자 흐름이 담깁니다. 내부 설계, 구현 세부 사항, 현재 구현 상태, 완료 결과는 담지
-않습니다. 후속 작업은 의도의 근거로 참고할 수 있지만 구현 계약이나 현재 시스템
-명세로 취급하지 않습니다.
+그 이해를 오래 보존할 가치가 있으면 Align은 프로젝트 안에 하나의 독립형 HTML 산출물을 만듭니다. 산출물에는 목표와 문제, 의도한 결과, 중요한 결정, 제외·위임한 결정, 관련 흐름이 담깁니다. 구현은 사용자가 확인한 수준을 기준으로 삼고 실행과 완료 근거를 이어서 소유합니다.
 
-중요한 시각 선택을 대화만으로 정직하게 결정할 수 없을 때만 프로젝트를 먼저 살피고, 그 선택을 위한 증거로 2~3개의 이미지 시안을 제시합니다. 모든 UI 작업을 디자인 탐색으로 만들지는 않습니다.
+중요한 시각 선택에는 프로젝트를 바탕으로 만든 2~3개의 이미지 방향을 근거로 제시합니다. 같은 결정 frontier가 이 탐색의 가치를 판단합니다.
 
 > [!IMPORTANT]
-> 생성된 Align 문서는 프로젝트 문서입니다. 사용자가 제외하지 않는 한 관련
-> 변경과 함께 버전 관리에 포함합니다.
+> 생성된 Align 문서는 프로젝트 문서입니다. 관련 변경과 함께 버전 관리에
+> 포함하는 방식을 기본으로 삼습니다.
 
 **전체 HTML 예시:** [출처 충돌·변경·취소와 판단 책임을 합의한 한국어 팬 일정 Align 기록을 엽니다.](docs/alignments/rescene-fan-calendar.ko.html)
 
-![신뢰 가능한 팬 일정의 목표, 의도 충족 조건, 경계를 보여 주는 한국어 Hope Align 예시](assets/readme/hope-align-ko.png)
+![신뢰 가능한 팬 일정의 목표와 공유된 이해를 보여 주는 다크 Hope Align 기술 기록](assets/readme/hope-align-ko.png)
 
 <details>
 <summary>Align 세부 이미지 보기</summary>
 
-| 비교한 디자인 시안 | 출처와 데이터 운영 결정 |
+| 라이트 시각 시안 | 다크 공유 이해와 판단 기준 |
 | --- | --- |
 | [![한국어 Align 문서에서 비교한 신뢰 가능한 팬 일정 UI 두 가지](assets/readme/hope-align-directions-ko.png)](assets/readme/hope-align-directions-ko.png) | [![한국어 Align 문서의 출처 우선순위, 충돌, 최신성, 취소 결정](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
 
@@ -55,15 +49,15 @@ Align은 확인 가능한 근거로 요청을 검토하고, 결과를 바꿀 수
 
 ---
 
-### 🔎 Diff — 무엇이 바뀌었고 어떻게 판단할지 이해하여 `인지 부채`를 방지합니다
+### 🔎 Diff — 코드 변경을 이해하고 다음 작업을 발견합니다
 
-코드는 바뀌었지만 담당자가 동작을 예측하거나 설명하고 판단하지 못한다면 그 간극은 인지 부채로 남습니다.
+AI는 큰 코드 변경을 빠르게 만들 수 있습니다. Diff는 엔지니어가 그 결과의 동작, 조건, 경계, 근거를 간결하게 이해하도록 돕습니다.
 
 Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명하고 중요한 주장에 근거를 연결합니다.
 
 능동적인 이해를 돕기 위해 시각 자료, 마이크로월드, 퀴즈를 활용하기도 합니다.
 
-이를 통해 변경을 이해하고 판단한 뒤 그 이해를 후속 결정과 작업에 활용하도록 돕습니다.
+이를 통해 변경의 작동 모델을 세우고 후속 질문, 결정, 작업 아이디어로 이어 갑니다.
 
 > [!NOTE]
 > URL 없이 실행하면 먼저 현재 브랜치의 PR을 찾습니다.
@@ -75,16 +69,16 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 
 **전체 HTML 예시:** [Ky PR #825의 전체 시간 제한을 결정표, 마이크로월드, 퀴즈로 설명한 한국어 Diff 결과물을 엽니다.](docs/diffs/ky-825-total-timeout.ko.html)
 
-![Ky PR 825의 목표, 공유 시간 제한 동작, 검토 항목을 보여 주는 한국어 Hope Diff 예시](assets/readme/hope-diff-ko.png)
+![Ky PR 825의 목표, 공유 시간 제한 동작, 검토 항목을 보여 주는 다크 Hope Diff 기술 기록](assets/readme/hope-diff-ko.png)
 
 <details>
 <summary>Diff 세부 이미지 보기</summary>
 
-| 시각 결정표 | 인터랙티브 마이크로월드 |
+| 라이트 결정표 | 다크 인터랙티브 마이크로월드 |
 | --- | --- |
 | [![한국어 Diff 문서의 공유 시간 제한 결정표](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![한국어 Diff 문서의 인터랙티브 전체 시간 제한 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
 
-[![한국어 Diff 문서의 공유 시간 제한과 재시도 이해 퀴즈](assets/readme/hope-diff-quiz-ko.png)](assets/readme/hope-diff-quiz-ko.png)
+[![한국어 Diff 라이트 문서의 공유 시간 제한과 재시도 이해 퀴즈](assets/readme/hope-diff-quiz-ko.png)](assets/readme/hope-diff-quiz-ko.png)
 
 </details>
 
@@ -145,7 +139,7 @@ Diagram은 위치, 연결, 순서, 계층, 상태, 수량의 형태가 글이나
 
 **전체 HTML 예시:** [Diagram이 만든 택배 인계 다이어그램을 엽니다.](docs/visualizations/parcel-handoff.html)
 
-![온라인 주문이 쇼핑몰, 물류센터, 배송기사, 수령자에게 인계되는 과정을 보여 주는 Diagram 예시](assets/readme/hope-diagram-ko.png)
+![온라인 주문이 쇼핑몰, 물류센터, 배송기사, 수령자에게 인계되는 과정을 보여 주는 다크 Hope Diagram 기술 기록](assets/readme/hope-diagram-ko.png)
 
 디자인 기준은 Cathryn Lavery의
 [Diagram Design](https://github.com/cathrynlavery/diagram-design)을 MIT

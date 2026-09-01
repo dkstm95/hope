@@ -1,99 +1,83 @@
 ---
 name: align
-description: Interview the person before implementation when requirements, scope, expected behavior, design, or an important assumption needs shared agreement.
+description: Explore a task before implementation when intent, expected behavior, architecture, data modeling, scope, or an important assumption needs shared understanding.
 ---
 
 # Hope Align
 
-Inspect the task and interview the person until every material intent decision
-is explicit and shared. Align does not implement the task.
-
-Do not start or manage a host goal, implementation loop, retry state, progress,
-or completion evidence.
+Use the strongest available reasoning to inspect the task and lead the
+conversation until the person and AI share the intent and consequential
+decisions. Align owns inquiry, decisions, and confirmation. Implementation
+starts with the person's explicit authorization.
 
 Read `../write/references/writing-standard.md` before drafting user-facing
-language. Apply it without changing the agreement, evidence distinctions,
-confirmation conditions, or artifact contract.
+language. Preserve the agreement, evidence distinctions, confirmation
+conditions, and artifact contract.
 
-## Inspect the task
+## Build understanding from evidence
 
-Read available repository, document, and conversation evidence before asking a
-question. Facts belong to the evidence; intent decisions belong to the person.
-Do not ask the person to repeat a fact that the evidence can answer.
+Start with the conversation, relevant code, and the project's governing
+sources. Find architecture authorities, decision records, schemas, data
+policies, design systems, and local conventions when they exist. Follow their
+actual authority and surface conflicts that affect the task.
 
-Keep facts, user decisions, AI proposals, assumptions, material questions, and
-research or implementation uncertainty distinct.
+Facts, research, system analysis, and recommendations belong to the AI. Intent
+and choices with consequences worth human understanding belong to the person,
+who may decide or explicitly delegate them. Keep facts, user decisions, AI
+proposals, assumptions, material questions, and uncertainty distinct.
 
-Test whether the requested work is likely to achieve the goal. Surface only an
-omission, contradiction, risk, unsupported assumption, edge case, or materially
-simpler path that could change the intended result or prevent material harm. For
-each concern, explain the issue, impact, evidence, and uncertainty. Do not invent
-concerns, treat taste as a defect, or widen the task because another product
-could be better.
+Build a decision tree from choices that could materially change the goal,
+observable result, future decision space, or risk of harm. Include data
+modeling and architecture when they shape those consequences or create a
+long-lived constraint. Give reversible code mechanics to the implementation
+AI.
 
-If the person supplies an Align artifact path, read `references/artifact.md`
-and inspect it as evidence. Do not search for a repository-wide latest artifact.
+For every possible branch, ask:
 
-## Work the intent tree
+> Is this choice worth the person's understanding and a decision or explicit
+> delegation before implementation?
 
-Map the task as an intent tree. A branch is material when different answers
-could change any of these:
+Use model judgment to answer that routing question. Surface an omission,
+contradiction, risk, unsupported assumption, edge case, or simpler structure when
+it could change a material branch. Explain the issue, impact, evidence, and
+uncertainty, then recommend the best path.
 
-- the observable outcome;
-- deliberately excluded work;
-- a person-visible or domain-visible flow;
-- who can judge the result; or
-- the risk of material harm.
+When the person supplies an Align artifact path, read `references/artifact.md`
+and inspect that exact artifact as evidence.
 
-The frontier is every unresolved material decision whose prerequisites are
-settled. Ask the whole frontier in one round. Number the questions, explain why
-each answer matters, and offer realistic options with a recommended default
-when one is sensible. Do not ask a dependent question in the same round as its
-prerequisite.
+## Work the decision frontier
 
-Wait for the person's answers, update the intent tree, and recompute the
-frontier. An answer may add, remove, split, or reopen branches. When a changed
-decision invalidates a dependent answer, reopen it explicitly.
+The frontier contains every unresolved material branch whose prerequisites are
+settled. Ask the whole frontier in one round. Number each question, explain its
+consequence, and give a recommendation with realistic alternatives. Questions
+carry decisions; the AI supplies the surrounding facts and reasoning.
 
-Treat a reversible, low-impact improvement as an AI proposal. Close it when the
-person accepts, declines, or delegates it; do not let it block alignment.
+After each answer, update the decision tree and recompute the frontier. Reopen a
+dependent choice when new evidence or an earlier decision changes it. Close a
+branch through a decision, deliberate exclusion, or explicit delegation.
 
-“I don't know” is a valid answer. Research a missing fact when evidence can
-settle it. When a person-facing choice needs reaction evidence rather than more
-prose, obtain a probe. For a material visual choice, read
-`references/design-directions.md`. Keep the branch open until the person has
-seen the evidence and decided or explicitly delegated the choice.
+Uncertainty is a valid answer. It invites the AI to research, obtain a useful
+probe, or recommend a path. For a material visual choice, read
+`references/design-directions.md`. Keep the branch active until the person has
+enough evidence to decide or delegate it.
 
-Leave research and implementation checks to the work only when their result
-cannot change the agreed intent.
+## Confirm shared understanding
 
-## Confirm shared intent
+When the frontier is empty, teach back the shared goal and problem model, the
+intended outcomes and recognition methods, the consequential decisions and
+their effects, and every exclusion, delegation, or assumption that shaped them.
+Ask the person to confirm this understanding. Their confirmation completes
+Align. Ask whether implementation may begin as a separate choice; explicit
+authorization starts implementation, and the person may leave it for later.
 
-The frontier is empty only when every material branch is decided, deliberately
-excluded, or explicitly delegated. A small, clear task may have an empty
-frontier after inspection.
+## Preserve confirmed understanding
 
-Teach back:
+After confirmation, read `references/artifact.md` when an existing artifact
+continues, the understanding needs a durable record, or another session or
+worker will rely on it. The active conversation is sufficient for the rest.
 
-- the goal;
-- each observable outcome, how to recognize it, and whether an agent or person
-  judges it;
-- deliberately excluded work;
-- any important person-visible or domain-visible flow; and
-- settled assumptions that affect the result.
-
-Ask the person to confirm this shared intent. Model confidence is not approval.
-Do not implement the task or create or revise an artifact before confirmation.
-
-## Continue after confirmation
-
-After the person confirms, read `references/artifact.md` when an existing
-artifact must be retained or revised, the agreement needs a durable record, or
-the task will pass to another session or worker. Otherwise keep the agreement
-in the active conversation.
-
-When `references/artifact.md` calls for the private adapter, run it through the
-active host.
+Run the private adapter through the active host when the artifact reference
+calls for it.
 
 Claude Code:
 
@@ -110,10 +94,11 @@ node <skill-dir>/scripts/cli.mjs
 For Codex, replace `<skill-dir>` with the absolute directory containing this
 file.
 
-Report that alignment is ready and where the agreement remains. Wait for
-explicit implementation approval.
+Report where the confirmed understanding remains. For a handoff, pass the
+artifact path and revision from `references/artifact.md`; the receiving AI uses
+it as the authority for confirmed intent and decisions, inspects the current
+project, and owns the remaining implementation reasoning.
 
-When another session or worker will implement the task, pass the artifact path
-and revision required by `references/artifact.md`. The receiver must inspect the
-artifact as the intent authority, inspect the current project separately, and
-choose implementation details through the ordinary project workflow.
+Align's decision-tree and frontier interview is informed by Matt Pocock's
+[grill-me](https://github.com/mattpocock/skills/blob/main/docs/productivity/grill-me.md)
+skill.

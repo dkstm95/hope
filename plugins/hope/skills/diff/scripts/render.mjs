@@ -1217,6 +1217,7 @@ function themeVariables(colors) {
     `--border:${colors.border}`,
     `--component-border:${colors.componentBorder}`,
     `--decide:${colors.decide}`,
+    `--link:${colors.link}`,
     `--muted:${colors.muted}`,
     `--panel:${colors.panel}`,
     `--resolve:${colors.resolve}`,
@@ -1316,7 +1317,8 @@ pre {
   font-weight: 400;
 }
 a {
-  color: var(--accent);
+  color: var(--link);
+  text-decoration-thickness: 1px;
   text-underline-offset: .2em;
 }
 a:visited { color: var(--visited); }
@@ -1374,7 +1376,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   z-index: 30;
   top: 0;
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 94%, var(--panel));
 }
 .topbar-inner {
   display: flex;
@@ -1418,12 +1420,11 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .commit-status {
   flex: 0 0 auto;
   padding: ${space1}px ${space2}px;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
   color: var(--accent);
-  font-size: ${TYPE.micro.compactFontSize}px;
-  font-weight: 700;
+  font: 400 ${TYPE.micro.compactFontSize}px/1.45 "Hope Code", ui-monospace, monospace;
 }
 .commit-status code {
   font: inherit;
@@ -1616,10 +1617,9 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .toc-link:visited { color: var(--muted); }
 .toc-number {
   color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 700;
+  font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  letter-spacing: .02em;
+  letter-spacing: .04em;
 }
 .toc-link[aria-current="location"],
 .toc-link[aria-current="location"]:visited {
@@ -1638,11 +1638,9 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .synopsis { margin: 0; }
 .section-number {
   color: var(--accent);
-  font-size: inherit;
-  line-height: inherit;
-  font-weight: 700;
+  font: 400 1em/1.4 "Hope Code", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  letter-spacing: .02em;
+  letter-spacing: .04em;
 }
 .document-title h1 {
   min-width: 0;
@@ -2182,8 +2180,9 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .visual-flow > li,
 .visual-sequence > li {
   position: relative;
-  padding: ${space3}px ${space3}px ${space3}px 44px;
-  border: 1px solid var(--border);
+  min-height: 56px;
+  padding: ${space3}px 0 ${space4}px 44px;
+  border-bottom: 1px solid var(--border);
   counter-increment: visual-step;
 }
 .visual-flow > li::before,
@@ -2194,6 +2193,16 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   color: var(--muted);
   content: counter(visual-step, decimal-leading-zero);
   font: 400 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Code", ui-monospace, monospace;
+}
+.visual-flow > li:not(:last-child)::after,
+.visual-sequence > li:not(:last-child)::after {
+  position: absolute;
+  top: 34px;
+  bottom: -1px;
+  left: 15px;
+  width: 1px;
+  background: var(--component-border);
+  content: "";
 }
 .visual-flow p,
 .visual-sequence p {
@@ -2238,8 +2247,8 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   gap: ${space2}px;
 }
 .visual-components article {
-  padding: ${space3}px;
-  border: 1px solid var(--border);
+  padding: ${space3}px 0 ${space3}px ${space3}px;
+  border-left: 2px solid var(--component-border);
 }
 .visual-components h4,
 .visual-connections h4 {
@@ -3186,7 +3195,7 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
   <a class="skip" href="#review">${html(label(dictionary, "common.skip"))}</a>
   <header class="topbar">
     <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
-      <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">· DIFF</span></div>
+      <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">/ DIFF</span></div>
       <div class="top-context">
         <svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>

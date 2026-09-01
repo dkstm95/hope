@@ -1,6 +1,6 @@
 ---
 name: diff
-description: Use when someone asks to explain or review a GitHub pull request as an evidence-linked, self-contained offline HTML review.
+description: Explain a GitHub pull request as an evidence-linked, self-contained offline HTML record so an engineer can understand the change and discover follow-up work; also supports full review.
 ---
 
 # Hope Diff
@@ -9,8 +9,8 @@ Use the active host session to confirm one exact GitHub pull request and its
 display options, start one fresh analysis worker, and report the resulting
 artifact.
 
-The active session coordinates the review. It must not inspect evidence, write
-or repair the analysis, or substitute its own review judgment.
+The active session coordinates the artifact. The fresh analysis worker owns
+evidence inspection, analysis writing and repair, and review judgment.
 
 ## Decide whether Diff applies
 
@@ -83,10 +83,11 @@ imply that private pull-request content remains on the local machine.
 
 ## Report the result
 
-On success, report the reviewed pull request, exact head, result scope, and
+On success, report the explained pull request, exact head, result scope, and
 absolute HTML path.
 
-Never open, publish, merge, comment on, or change the pull request.
+Diff ends by reporting the artifact. Pull-request browsing, publishing,
+merging, commenting, and code changes stay outside this workflow.
 
 `references/runtime.md` records the scripts' deterministic security and
 publication contract for maintainers. It is not worker guidance.

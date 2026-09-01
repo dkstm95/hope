@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  ARTIFACT_COLORS,
+  ARTIFACT_LAYOUT,
+  ARTIFACT_TYPE,
+} from "../plugins/hope/assets/artifact-theme.mjs";
+
 const examples = [
   {
     english: "docs/alignments/rescene-fan-calendar.en.html",
@@ -15,6 +21,13 @@ const examples = [
 
 function localUrl(path) {
   return new URL(`../${path}`, import.meta.url).href;
+}
+
+function rgb(hex) {
+  const value = hex.slice(1);
+  return `rgb(${[0, 2, 4].map((offset) => (
+    Number.parseInt(value.slice(offset, offset + 2), 16)
+  )).join(", ")})`;
 }
 
 async function expectNoOverflow(page) {
@@ -174,11 +187,41 @@ test("Align and Diff share product-bar and numbered contents geometry", async ({
 });
 
 test("Diagram README example switches language, responds to input, and fits narrow screens", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
   await page.setViewportSize({ height: 760, width: 1100 });
   await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
   const root = page.locator("#parcel-handoff-diagram");
 
   await expect(root).toBeVisible();
+  await expect(page.locator(".topbar .brand")).toContainText("HOPE");
+  await expect(page.locator(".topbar .brand-product")).toHaveText("/ DIAGRAM");
+  await expect(page.locator(".brand-icon")).toBeVisible();
+  await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
+  await expect(page.locator("body")).toHaveCSS(
+    "font-size",
+    `${ARTIFACT_TYPE.body.wide.fontSize}px`,
+  );
+  await expect(page.locator(".brand")).toHaveCSS(
+    "font-size",
+    `${ARTIFACT_TYPE.brand.wide.fontSize}px`,
+  );
+  await expect(page.locator("h1")).toHaveCSS(
+    "font-size",
+    `${ARTIFACT_TYPE.pageTitle.wide.fontSize}px`,
+  );
+  await expect(page.locator(".section-title")).toHaveCSS(
+    "font-size",
+    `${ARTIFACT_TYPE.sectionTitle.wide.fontSize}px`,
+  );
+  const displayControls = await page.locator(".display-controls").boundingBox();
+  expect(displayControls.height).toBe(44);
+  await expect(page.locator(".topbar")).toHaveCSS(
+    "min-height",
+    `${ARTIFACT_LAYOUT.topbarHeight}px`,
+  );
+  await expect(page.locator(".handoff").first()).not.toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator(".handoff-line").first()).toHaveAttribute("aria-hidden", "true");
+  await expect(page.getByText("Order details", { exact: true })).toBeVisible();
   await expect(page.locator('meta[name="generator"]')).toHaveAttribute("content", "Hope Diagram");
   await page.locator("#locale-en").check();
   await expect(root).toHaveAttribute("data-locale", "en");
@@ -188,9 +231,48 @@ test("Diagram README example switches language, responds to input, and fits narr
   await expect(page.locator('[data-stage="1"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("[data-selected-title]")).toHaveText("Parcel prepared");
 
+  await page.locator("#theme-toggle").click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("#theme-toggle")).toHaveAttribute(
+    "aria-label",
+    "Switch to light theme",
+  );
+  await page.locator("#theme-toggle").click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator("#theme-toggle")).toHaveAttribute(
+    "aria-label",
+    "Switch to dark theme",
+  );
+
   await page.setViewportSize({ height: 844, width: 390 });
   await page.reload();
   await expect(root).toBeVisible();
+  await expect(page.locator(".brand")).toHaveCSS(
+    "font-size",
+    `${ARTIFACT_TYPE.brand.narrow.fontSize}px`,
+  );
+  await expect(page.locator("h1")).toHaveCSS(
+    "font-size",
+    `${ARTIFACT_TYPE.pageTitle.narrow.fontSize}px`,
+  );
+  await expect(page.locator(".section-title")).toHaveCSS(
+    "font-size",
+    `${ARTIFACT_TYPE.sectionTitle.narrow.fontSize}px`,
+  );
+  const narrowSectionType = await page.locator(".section-title").evaluate((heading) => ({
+    labelLineHeight: getComputedStyle(heading).lineHeight,
+    numberFontSize: getComputedStyle(heading.querySelector(".section-number")).fontSize,
+    numberLineHeight: getComputedStyle(heading.querySelector(".section-number")).lineHeight,
+  }));
+  const narrowSectionLineHeight = `${
+    ARTIFACT_TYPE.sectionTitle.narrow.fontSize
+    * ARTIFACT_TYPE.sectionTitle.narrow.lineHeight
+  }px`;
+  expect(narrowSectionType).toEqual({
+    labelLineHeight: narrowSectionLineHeight,
+    numberFontSize: `${ARTIFACT_TYPE.sectionTitle.narrow.fontSize}px`,
+    numberLineHeight: narrowSectionLineHeight,
+  });
   const dimensions = await page.locator("html").evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -230,7 +312,7 @@ test("Diagram README example preserves readable geometry and contrast", async ({
               || element.getBoundingClientRect().right > document.documentElement.clientWidth + 1
               || element.getBoundingClientRect().left < -1
             ));
-            const targets = [...root.querySelectorAll(".language label, .stage-button")]
+            const targets = [...document.querySelectorAll(".language label, .theme-button, .stage-button")]
               .map((element) => element.getBoundingClientRect());
             return {
               clipped: clipped.map((element) => ({
@@ -251,6 +333,17 @@ test("Diagram README example preserves readable geometry and contrast", async ({
 
     await page.setViewportSize({ height: 760, width: 1100 });
     await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
+    const technicalRecordColors = await page.evaluate(() => ({
+      accent: getComputedStyle(document.querySelector(".section-number")).color,
+      ink: getComputedStyle(document.body).color,
+      paper: getComputedStyle(document.body).backgroundColor,
+    }));
+    const colors = ARTIFACT_COLORS[colorScheme];
+    expect(technicalRecordColors).toEqual({
+      accent: rgb(colors.accent),
+      ink: rgb(colors.text),
+      paper: rgb(colors.background),
+    });
     const ratios = await page.evaluate((pairs) => {
       function channels(value) {
         return value.match(/[\d.]+/gu).slice(0, 3).map(Number);
@@ -276,4 +369,22 @@ test("Diagram README example preserves readable geometry and contrast", async ({
       expect(ratio, `${foregroundSelector} in ${colorScheme}`).toBeGreaterThanOrEqual(4.5);
     }
   }
+});
+
+test("Diagram README example keeps a useful static frame without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
+  await expect(page.locator("#parcel-handoff-diagram")).toBeVisible();
+  await expect(page.locator(".topbar-actions")).toBeHidden();
+  await expect(page.locator(".stage-button").first()).toBeDisabled();
+  await expect(page.getByText("Order details", { exact: true })).toBeVisible();
+  await context.close();
+});
+
+test("Diagram README example prints on a light surface from a dark system theme", async ({ page }) => {
+  await page.goto(localUrl("docs/visualizations/parcel-handoff.html"));
+  await page.emulateMedia({ colorScheme: "dark", media: "print" });
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(page.locator(".topbar-actions")).toBeHidden();
 });

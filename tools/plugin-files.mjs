@@ -10,6 +10,7 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/.codex-plugin/plugin.json",
   "plugins/hope/assets/hope-protected-light.png",
   "plugins/hope/assets/hope-icon.png",
+  "plugins/hope/assets/artifact-theme.mjs",
   "plugins/hope/assets/fonts/HopeCode.woff2",
   "plugins/hope/assets/fonts/HopeSansBold.woff2",
   "plugins/hope/assets/fonts/HopeSansLight.woff2",

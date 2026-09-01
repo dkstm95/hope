@@ -87,17 +87,18 @@ export function makeAlignArtifactData(locale, images) {
       },
       {
         statement: local(
-          "Source conflicts, schedule changes, and cancellations remain visible until an authoritative source resolves them.",
-          "출처 충돌, 일정 변경, 취소는 권위 있는 출처가 해소할 때까지 화면에 남는다.",
+          "Each source observation keeps its value and checked time; source priority selects the displayed schedule while unresolved conflicts, changes, and cancellations remain visible.",
+          "각 출처 관측값은 값과 확인 시각을 함께 보존하고, 출처 우선순위가 표시 일정을 정하며 해결 중인 충돌, 변경, 취소를 계속 보여 준다.",
         ),
         verify: local(
-          "Review conflict, change, and cancellation examples and compare the visible state, source order, and available actions.",
-          "충돌, 변경, 취소 예시에서 표시 상태, 출처 순서, 가능한 행동을 비교한다.",
+          "Inspect representative event records and screens, then compare retained observations, the resolved display value, visible conflicts, and available actions.",
+          "대표 일정 기록과 화면에서 보존된 관측값, 결정된 표시값, 보이는 충돌, 가능한 행동을 비교한다.",
         ),
         by: "agent",
+        decidedBy: "user",
         reason: local(
-          "Visible uncertainty is safer than presenting one disputed value as final.",
-          "충돌을 보이는 편이 하나의 불확실한 값을 확정 정보로 제시하는 것보다 안전하다.",
+          "Preserving source observations keeps provenance and later corrections available while fans receive one usable schedule.",
+          "출처 관측값을 보존하면 팬에게 하나의 유용한 일정을 제공하면서도 출처 이력과 이후 정정을 이어 갈 수 있다.",
         ),
       },
       {
@@ -113,6 +114,7 @@ export function makeAlignArtifactData(locale, images) {
           "대표 충돌과 행동 마감을 화면의 출처 순서와 마지막 확인 시각에 대조한다.",
         ),
         by: "agent",
+        decidedBy: "user",
         reason: local(
           "These sources can confirm changes directly, while voting and application deadlines can change within hours.",
           "이 출처들은 변경을 직접 확정할 수 있고 투표와 신청 마감은 몇 시간 안에도 바뀔 수 있다.",

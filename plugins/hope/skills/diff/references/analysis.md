@@ -3,13 +3,13 @@
 Use these rules with the complete analysis schema and the shared Hope Write
 standard.
 
-## Work the review frontier
+## Work the understanding frontier
 
 Start with the material claims and questions needed to explain or judge the
 pull request: its observable core before and after, purpose and significance,
 changed-file accounting, and any material risk or uncertainty.
 
-The review frontier is the unresolved subset whose prerequisites have been
+The understanding frontier is the unresolved subset whose prerequisites have been
 inspected. Close a claim with the smallest captured evidence that proves it.
 Close a question with evidence, an explicit material limit, or a verification
 item that names what would resolve it. New evidence may split or reopen a claim.
@@ -50,6 +50,10 @@ request title, lead with an identifier, or introduce separate evidence.
 Let the visible explanation answer: what changed, why it matters, how old and
 new behavior differ, when the outcome changes, what the review found, and how
 it knows.
+
+Give the engineer a working model they can use to recognize consequences and
+form follow-up questions, decisions, or work ideas. Reserve review items for
+material actions grounded in the captured change.
 
 - State `purpose` as the goal, without an “aims to” wrapper. Use `stated`,
   `inferred`, or `unknown`; code is not itself a purpose statement.
@@ -119,7 +123,7 @@ and 12 code steps; do not fill maxima for their own sake.
 
 ## Decide teaching aids
 
-Consider teaching aids after the core review frontier is closed. Do not open an
+Consider teaching aids after the core understanding frontier is closed. Do not open an
 aid branch during evidence inspection.
 
 Record one decision for each `visual`, `microworld`, and `quiz`:

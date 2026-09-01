@@ -1,23 +1,25 @@
 # Hope design
 
-This document defines Hope's project-wide GUI guidance and the visual contracts
-of the current Align and Diff HTML artifacts.
+This document defines Hope's project-wide GUI guidance and the Hope Technical
+Record used by Align, Diff, and standalone Diagram HTML artifacts.
 
 The Project GUI layout and Project GUI widgets sections apply whenever a Hope
 feature introduces or changes a matching layout, control, or interaction.
 
 Feature-named sections apply only to that artifact. Sections named for Hope
-artifacts apply to both.
+artifacts apply to every Technical Record.
 
-The Align and Diff Skills own their feature judgment and prose.
+The Align, Diff, and Diagram Skills own their feature judgment and prose.
 
-Align defines the shared artifact visual baseline. Diff matches that baseline
-for common color, type, spacing, product-bar, document, and navigation roles.
-Each feature still owns its visual tokens and renderer, and neither imports the
-other at runtime.
+The Technical Record is a compact, dual-mode technical memo. One shared token
+source defines its common color, type, spacing, product-bar, document, and
+navigation roles. Align and Diff compose those roles through their own
+renderers. Diagram inherits them inside another record and embeds their current
+values in a standalone HTML visual.
 
-Do not introduce a shared artifact framework until two real consumers need the
-same invariant.
+`plugins/hope/assets/artifact-theme.mjs` owns the exact common token values.
+Feature-local tokens add roles such as Diff status and code colors. Feature
+renderers continue to own content structure, interaction, and publication.
 
 ## Project GUI layout
 
@@ -71,7 +73,7 @@ the same number beside each area title and table-of-contents link. Number
 conditional areas in rendered order and leave no gap when one is omitted. Keep
 each section number the same type size and line height as its title.
 
-Give every numbered area a blue section number, text-colored title, and one
+Give every numbered area an accent section number, text-colored title, and one
 clear divider directly below its title. Do not add a second rule above the
 area. Use 40 pixels between the document title and Summary, then 48 pixels
 between later areas on a wide screen and 40 pixels on a narrow screen. Use the
@@ -116,12 +118,10 @@ Use familiar words, short sentences, and one clear reading path.
 
 Prefer useful content over decoration.
 
-Use the current Align artifact as the primary reference for common visual
-roles.
+Use the Technical Record roles for the shared visual language.
 
-The Diff feature's `scripts/design/tokens.mjs` is the code source of truth for
-its values. Common roles match the corresponding Align values without importing
-Align code. Diff-only code and status roles remain local to Diff.
+The Diff feature's `scripts/design/tokens.mjs` consumes the shared tokens and
+owns Diff-only code and status roles.
 
 The Diff renderer must read those tokens instead of copying their values.
 
@@ -224,77 +224,95 @@ find than prose
 
 ## Align artifact direction
 
-The Align artifact should feel like a compact intent record: direct, quiet,
-easy to scan, and complete enough to preserve what the person meant without
-describing the solution or implemented result.
+The Align artifact should feel like a compact shared-understanding record:
+direct, quiet, easy to scan, and complete enough to preserve the intent and
+consequential decisions the person confirmed.
 
-The Align feature's `scripts/design/tokens.mjs` owns its exact visual values.
-Diff rendering, Diff tokens, and removed Align implementations do not constrain
-it.
+The Align feature's `scripts/design/tokens.mjs` is the sole authority for its
+design version and consumes the shared Technical Record tokens.
 
 ## Align artifact structure
 
-The artifact is the current agreed intent. It is not a solution design,
-implementation contract, current-system description, or progress tracker.
+The artifact is the current shared understanding. It guides implementation at
+the level of intent and decisions that the person confirmed. Implementation owns
+reversible code mechanics, current-system analysis, progress, and completion
+evidence.
 
 Show each fact once, in this order:
 
 1. title, then a summary containing only the one-sentence goal and problem;
-2. decided intent as the canonical observable outcome statements, followed by
-   an optional person-visible or domain-visible flow and a compact list of what
-   is not included;
+2. shared understanding as the canonical outcome and consequential-choice
+   statements, followed by an optional relevant flow and a compact list of
+   deliberately excluded work;
 3. compared design directions and the selected option, only when the
    person-facing experience needed visual agreement;
 4. supporting evidence, only when it adds a source that matters.
 
-Positive intent statements define what is included. Do not repeat them in a
-scope list, expected-behavior section, boundary section, or decision section.
-Attach a material reason to the statement it explains. Show a flow only when
-sequence or branching adds information that the statements do not already
-carry. Put deferred product work in **Not included**.
+Positive statements define the agreement. Give each statement one home and
+attach a material reason to the statement it explains. A flow earns its place
+when sequence or branching adds meaning. Put deferred product work in **Not
+included**.
 
-Do not show unresolved intent in a ready artifact. A material unresolved intent
-means alignment is not ready. Put deliberately deferred work in **Not
-included**, and leave research or implementation uncertainty in the work that
-owns it. Earlier artifact versions may retain their historical fields, but the
-current record follows this structure.
+A ready artifact contains settled, deliberately excluded, or explicitly
+delegated material branches. Research and implementation uncertainty remain
+with the work that owns them. Earlier artifact versions retain their historical
+fields while the current record follows this structure.
 
-Keep earlier versions in the secondary version history navigation. Do not
-repeat version history at the bottom of the agreement.
+Keep earlier versions in the secondary version history navigation. Label the
+current version **current understanding** and keep the record as the single
+authority for confirmed intent and decisions.
 
-Label the current version **current intent**, not with language that implies an
-external approval workflow or current implementation state. Do not repeat the
-record in a separate contract or implementation summary.
-
-Keep decided outcomes, exclusions, and any necessary user flow visible. Fold
-judgment methods, intent reasons, option references, and the
+Keep outcomes, consequential choices, exclusions, and relevant flow visible.
+Fold judgment methods, reasons, option references, and the
 supporting-evidence section. Put `[n]` after a claim only when its structured
 value names a validated evidence ID. Reuse that number throughout the current
-intent, show a bounded preview popover when it is activated, and keep the
+understanding, show a bounded preview popover when it is activated, and keep the
 complete numbered evidence list in the final folded section. Unreferenced
-supporting evidence stays in that list without an invented claim link. Use
-these information roles directly; do not add length or item-count thresholds
-that make the same field change layout unpredictably.
+supporting evidence stays in that list, and claim links represent actual
+references. Use these information roles directly and keep a consistent layout
+across lengths and item counts.
 
-Show each decided intent item as one visible observable condition. Put `[AI]` after a
-condition an AI agent can assess and `[User]` or the locale's equally compact
-user label after one that needs a person's judgment. Activating the marker
+Show each shared-understanding item as one visible outcome or consequential condition.
+For a consequential choice, add a quiet line that says whether the person
+selected it or delegated it to the AI. An intended outcome carries no selection
+source.
+Put `[AI]` after a condition an AI agent can assess and `[User]` or the locale's
+equally compact user label after one that needs a person's judgment. Activating the marker
 opens the way to recognize the condition in a bounded popover anchored to that
 marker. Keep the complete judgment methods in one folded list at the end of the
-decided-intent section so fragment navigation and print preserve them. Do not turn them into progress
-controls or store their results in the artifact. Keep each inline marker at
+shared-understanding section so fragment navigation and print preserve them.
+Judgment methods serve as recognition guidance while implementation owns their
+results. Keep each inline marker at
 least 24 pixels and use a 44-pixel close target.
 
-Number every decided intent item in reading order with `01`, `02`, `03`, even when the
-list is short. Use body prose weight for each observable condition, reserve
+Number every shared-understanding item in reading order with `01`, `02`, `03`,
+even when the list is short. Use body prose weight for each condition, reserve
 stronger emphasis for the number and marker, and keep the expanded judgment
-source label quiet and secondary. When a statement has a reason, keep it in a
-native disclosure attached to that statement.
+source label quiet and secondary. A native disclosure attaches a reason to its
+statement.
 
-Do not show architecture, modules, algorithms, tools, files, protocols, data
-structures, implementation order, test commands, implementation progress,
-completion controls, work owners, comments, changed files, test status, or
-model and interview metrics.
+Show data meaning, ownership, lifecycle, architecture boundaries, system
+relationships, and experience choices when the confirmed decisions include
+them. Implementation records hold algorithms, tools, files, protocols,
+execution order, commands, progress, work ownership, changed files, test
+status, and completion results.
+
+## Diagram artifact direction
+
+Diagram uses the Technical Record as its host language. A diagram inside Align
+or Diff inherits that artifact's surface, type, spacing, accent, links, and
+status roles. Its own composition carries only the relationships or quantities
+that earned the visual.
+
+A standalone Diagram HTML uses the same compact product bar, document title,
+semantic color roles, theme control, and responsive behavior. Present the main
+visual first, then its conclusion, scope, uncertainty, source, or exact-value
+table when those details contribute meaning.
+
+Use ordinary prose type for human-readable labels and Hope Code for technical
+identifiers. Let `paper`, `ink`, `muted`, `rule`, `accent`, and `link` map to
+the active Technical Record tokens. Status uses text and shape together with
+its semantic color.
 
 ## Project GUI widgets
 
@@ -517,46 +535,45 @@ in Hope's language.
 
 ## Align artifact layout
 
-Give the current intent most of the page and keep version history secondary. In
+Give the current understanding most of the page and keep version history secondary. In
 the wide-screen rail, show the current version and at most one prior version
 summary. Open earlier detail from that history instead of repeating it in the
-document. When the rail does not fit, include the history in the common
-navigation panel opened by one 44-pixel control to the right of the theme
-control.
+document. On narrower layouts, include the history in the common navigation
+panel opened by one 44-pixel control to the right of the theme control.
 
-Keep the positive intent statements in one reading column. Present **Not
+Keep the positive agreement statements in one reading column. Present **Not
 included** as one compact list in two columns on a wide screen and one column on
-a narrow screen. Do not create a matching included-scope column.
+a narrow screen. The positive agreement statements already serve the included
+scope.
 
 Nest an optional flow below the intent statements. Stack outcomes after its
-sequence in their original order. Do not invent phase groups or branches that
-the artifact data does not contain.
+sequence in their original order. Phase groups and branches reflect artifact
+data directly.
 
-Number decided intent items in reading order and keep their reasons directly
-attached. Do not create another decision list.
+Number shared-understanding items in reading order and keep their reasons
+directly attached. One list carries the complete agreement.
 
 Show two or three person-facing design directions together in one
 comparison section. Keep the same option order. Keep recommendation and
-selection labels beside the option title so they do not create a separate
-comparison row. On a wide screen, compare each option's title, image,
+selection labels beside the option title within the same comparison row. On a
+wide screen, compare each option's title, image,
 brief summary, strengths, and trade-offs in parallel; align those shared rows
 across the options and stack each complete option on a narrow screen. Inside
 each option, put strengths and trade-offs before recommendation and selection
 reasons, then put folded references last. Keep the reasons and references
-inside the option they explain. Do not repeat these details in a full-width
-group below the comparison. Put only context shared by all options below the
+inside the option they explain. Put context shared by all options below the
 comparison in one reading column. Pair every image with useful alt text, and
 mark recommendation and selection with words rather than color alone.
 
-Align embeds Hope Sans so it uses the same Hope type family as Diff across
-supported hosts. Its palette, spacing, type sizes, and layout values still come
-only from Align's own tokens.
+Align embeds Hope Sans and Hope Code so it uses the same Hope type families as
+Diff across supported hosts. Its shared palette, spacing, type sizes, and
+layout values come from the Technical Record tokens.
 
 ## Hope artifact branding
 
-Align and Diff embed the fixed Hope Sans files and Hope product icon under
-`plugins/hope/assets/`. Diff also embeds Hope Code from the same asset folder.
-Each feature still owns how those assets are applied in its renderer.
+Align and Diff embed the fixed Hope Sans, Hope Code, and Hope product icon under
+`plugins/hope/assets/`. Each feature owns how those assets are applied in its
+renderer.
 
 Put the Hope icon immediately before **HOPE** in both product bars. Keep the
 visible wordmark as the accessible name; the icon is decorative.
@@ -699,25 +716,28 @@ themes. The initial theme comes from the artifact input or resolved display opti
 it does not write host configuration or browser storage. Reload restores the
 generated initial theme, and print uses the light surface.
 
+The light view uses a near-white canvas, a white reading surface, charcoal
+text, quiet neutral rules, and deep teal emphasis. The dark view uses graphite
+paper, a slightly brighter reading surface, warm white text, quiet gray rules,
+and mint emphasis. Blue identifies links in both views. Print uses the light
+surface.
+
+Exact shared values live in `plugins/hope/assets/artifact-theme.mjs`.
+
 ## Align artifact color
 
-The light view uses a warm near-white document surface, near-black text, thin
-neutral dividers, and blue for navigation and agreement state. The dark view
-uses a near-black surface, off-white text, quiet gray dividers, and a brighter
-blue accent.
-
-Exact Align values live only in
-`plugins/hope/skills/align/scripts/design/tokens.mjs`.
+Align uses the shared surface, text, rule, accent, link, and visited roles.
 
 ## Diff artifact color
 
-The official light palette is `Sand Paper`: the same warm near-white page and
-slightly brighter reading surface used by Align.
+The official light palette is `Technical Paper`: the same near-white canvas and
+white reading surface used by Align.
 
-It should feel softer than pure white without looking beige or gray.
+It should feel clean, bright, and calm, with enough surface separation to
+preserve the document hierarchy.
 
-Exact Hope surface values live only in the Diff feature's
-`scripts/design/tokens.mjs`.
+Shared Hope surface values come from the Technical Record tokens. Diff's
+`scripts/design/tokens.mjs` owns its status and code roles.
 
 Code is a separate visual surface with fixed Hope light and dark colors. A theme
 change switches the code surface with the artifact without replacing the Hope
@@ -843,8 +863,9 @@ Align may embed raster design-direction images only after its runtime verifies
 their supported signature, dimensions, and size. It never treats an authored
 data URL or SVG as a design-direction image.
 
-Design code may contain feature-local tokens, fixed assets, and small helpers.
+Design code may contain shared Technical Record tokens, feature-local tokens,
+fixed assets, and small helpers.
 
-Each feature owns its concrete HTML, tokens, and publication boundary. Keep
-Align and Diff rendering, state, and design sources separate until another
-exact invariant earns shared implementation.
+Each feature owns its concrete HTML, state, and publication boundary. Shared
+implementation stays focused on the exact visual tokens used by multiple
+features.

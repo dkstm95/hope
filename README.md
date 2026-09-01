@@ -21,28 +21,29 @@
 
 ## Features
 
-### 🤝 Align — Reach shared understanding before implementation and prevent `intent debt`
+### 🤝 Align — Share intent and consequential decisions before implementation
 
-Align reviews the request against verifiable evidence, maps every material
-intent decision, and interviews the person in dependency-aware rounds. Each
-answer reshapes the remaining questions; Align finishes only after no material
-decision remains and the person confirms the complete intent in a teach-back.
+Align starts from the conversation, relevant code, and the project's governing
+architecture, schemas, policies, and visual sources. The AI builds a decision
+tree, researches facts, recommends the best path, and asks the whole
+dependency-ready frontier in each round. The person decides or delegates the
+choices whose consequences are worth understanding.
 
-When the agreed intent needs a durable record for later work or review, or the
-person asks for an artifact, Align writes one self-contained HTML record inside
-the project. A small, clear task that will continue in the current session can
-stay in the conversation without creating a file.
+Data modeling and architecture enter the conversation when they shape the
+goal, long-lived constraints, future decision space, or material risk.
+Reversible code mechanics remain with the implementation AI. Align finishes
+when the person confirms its teach-back of the shared understanding. A separate
+choice authorizes implementation, which may begin now or remain for later.
 
-The record preserves one agreed goal and problem, the observable outcomes that
-define the decided intent, deliberately excluded work, and any user flow that
-needs sequence. It excludes
-solution design, implementation details, current implementation state, and
-completion results. Later work may consult it as evidence of intent, but it is
-not an implementation contract or current-system specification.
+When that understanding needs a durable record, Align writes one
+self-contained HTML artifact inside the project. The artifact preserves the
+goal and problem, intended outcomes, consequential choices, exclusions,
+delegations, and relevant flow. It guides implementation at the level the
+person confirmed, while implementation owns execution and completion evidence.
 
-When a material visual choice cannot be settled honestly through conversation,
-Align checks the project first and presents two or three image mockups as
-evidence for that choice. It does not turn every UI task into a design exercise.
+For a material visual choice, Align checks the project and presents two or
+three image directions as evidence. The same decision frontier decides whether
+that probe contributes value.
 
 > [!IMPORTANT]
 > Generated Align records are project documentation. Later version-control work
@@ -52,15 +53,15 @@ evidence for that choice. It does not turn every UI task into a design exercise.
 makes source conflicts, changes, cancellations, and judgment responsibility
 explicit.](docs/alignments/rescene-fan-calendar.en.html)
 
-The captures below come from this example. It uses sample data and does not
-represent the live `rescene.fan` interface.
+The captures below come from this example. It uses sample data solely as an
+illustrative `rescene.fan` concept.
 
-![English Hope Align example showing the trusted fan-schedule goal and decided intent](assets/readme/hope-align-en.png)
+![Dark Hope Align technical record showing the trusted fan-schedule goal and shared understanding](assets/readme/hope-align-en.png)
 
 <details>
 <summary>View detailed Align captures</summary>
 
-| Compared design directions | Decided intent and judgment markers |
+| Light visual directions | Dark shared understanding and judgment markers |
 | --- | --- |
 | [![Two design directions for the trusted fan schedule in an English Align artifact](assets/readme/hope-align-directions-en.png)](assets/readme/hope-align-directions-en.png) | [![Decided outcomes, user flow, exclusions, and judgment markers in an English Align artifact](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
 
@@ -68,10 +69,10 @@ represent the live `rescene.fan` interface.
 
 ---
 
-### 🔎 Diff — Understand what changed and how to judge it to prevent `cognitive debt`
+### 🔎 Diff — Understand code changes and discover what to do next
 
-A code change can be complete while its owner still cannot predict, explain, or
-judge it, and that gap is cognitive debt.
+AI can produce a large code change quickly. Diff gives the engineer a compact
+way to understand the resulting behavior, conditions, boundaries, and evidence.
 
 Diff creates one HTML artifact that explains behavior before code and links
 important claims to evidence.
@@ -79,8 +80,8 @@ important claims to evidence.
 It may use visuals, a microworld, or a quiz to help the reader explore the
 change.
 
-The artifact helps the reader understand and judge the change, then use that
-understanding in follow-up decisions and work.
+The artifact helps the reader build a working mental model of the change and
+turn that understanding into follow-up questions, decisions, and work ideas.
 
 > [!NOTE]
 > With no URL, Diff first looks for the current branch's pull request.
@@ -93,16 +94,16 @@ The captures below come from a fixed English Diff example based on
 **Complete example HTML:** [Open the English Diff artifact for Ky PR #825 with
 its timeout map, microworld, and quiz.](docs/diffs/ky-825-total-timeout.en.html)
 
-![English Hope Diff example for Ky pull request 825 showing its goal, shared timeout behavior, and review item](assets/readme/hope-diff-en.png)
+![Dark Hope Diff technical record for Ky pull request 825 showing its goal, shared timeout behavior, and review item](assets/readme/hope-diff-en.png)
 
 <details>
 <summary>View detailed Diff captures</summary>
 
-| Visual decision table | Interactive microworld |
+| Light decision table | Dark interactive microworld |
 | --- | --- |
 | [![A shared timeout decision table in an English Diff artifact](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![An interactive total-timeout microworld in an English Diff artifact](assets/readme/hope-diff-microworld-en.png)](assets/readme/hope-diff-microworld-en.png) |
 
-[![An understanding quiz about shared timeout and retry behavior in an English Diff artifact](assets/readme/hope-diff-quiz-en.png)](assets/readme/hope-diff-quiz-en.png)
+[![A light understanding quiz about shared timeout and retry behavior in an English Diff artifact](assets/readme/hope-diff-quiz-en.png)](assets/readme/hope-diff-quiz-en.png)
 
 </details>
 
@@ -169,7 +170,7 @@ retaining ownership of their evidence and artifact contracts.
 **Complete example HTML:** [Open the parcel-handoff visualization created by
 Diagram.](docs/visualizations/parcel-handoff.html)
 
-![Diagram example showing an online order passing from a store to fulfillment, a courier, and the recipient](assets/readme/hope-diagram-en.png)
+![Dark Hope Diagram technical record showing an online order passing from a store to fulfillment, a courier, and the recipient](assets/readme/hope-diagram-en.png)
 
 The design standard is adapted from Cathryn Lavery's
 [Diagram Design](https://github.com/cathrynlavery/diagram-design) under the MIT
