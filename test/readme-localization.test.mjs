@@ -18,6 +18,11 @@ const captureNames = [
   "diff-quiz",
   "diagram",
 ];
+const detailCaptureNames = captureNames.filter((name) => ![
+  "align",
+  "diff",
+  "diagram",
+].includes(name));
 
 const read = (path) => readFile(new URL(path, root), "utf8");
 
@@ -34,6 +39,15 @@ function collapsedExampleImages(source) {
 
 function expectedImages(suffix) {
   return captureNames.map((name) => `assets/readme/hope-${name}-${suffix}.png`);
+}
+
+async function pngDimensions(path) {
+  const bytes = await readFile(new URL(path, root));
+  assert.equal(bytes.subarray(1, 4).toString("ascii"), "PNG", path);
+  return {
+    height: bytes.readUInt32BE(20),
+    width: bytes.readUInt32BE(16),
+  };
 }
 
 test("README examples keep English and Korean assets separate", async () => {
@@ -70,6 +84,17 @@ test("README examples show overviews and collapse detailed captures by default",
       images.slice(1, 3),
       images.slice(4, 7),
     ]);
+  }
+});
+
+test("README detail captures preserve a readable wide layout", async () => {
+  for (const suffix of ["en", "ko"]) {
+    for (const name of detailCaptureNames) {
+      const path = `assets/readme/hope-${name}-${suffix}.png`;
+      const { height, width } = await pngDimensions(path);
+      assert.ok(width >= 720, `${path}: ${width}px wide`);
+      assert.ok(height <= width * 2, `${path}: ${width}x${height}`);
+    }
   }
 });
 
