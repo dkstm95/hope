@@ -38,15 +38,15 @@ Read the complete `../scripts/align-input-v3.schema.json` before writing input.
 - each `intent` item records one material part of the shared understanding,
   its recognition method, and its `agent` or `human` judge;
 - `exclusions` names deliberately deferred work;
-- `flow` records a person, domain, data, or system sequence when its order or
-  branching adds meaning; and
+- `flow` records a core person, domain, data, or system sequence and its final
+  branches when the order or branching adds meaning; and
 - `designDirections` and `evidence` remain optional.
 
-The `intent` field keeps its stable format while holding both intended outcomes
+The `intent` field keeps its stable format while holding both detailed goals
 and consequential choices. A reason adds the consequence or constraint that
 made the item worth confirming. Add `decidedBy: user` when the person selected
 a consequential choice and `decidedBy: delegated` when the person delegated
-that choice to the AI. Intended outcomes omit this field. Positive statements
+that choice to the AI. Detailed goals omit this field. Positive statements
 define the agreement, and each fact has one home.
 
 Record the decisions at the level the person understood and confirmed. Data
@@ -57,9 +57,11 @@ progress, and completion evidence.
 
 A ready artifact records every material branch as decided, deliberately
 excluded, or explicitly delegated. Settled assumptions live with the item they
-affect. Compare sibling items, reasons, and flow so each prose value contributes
-distinct meaning. Use one decisive result for the title, one direct statement
-for the goal, and the main consequence for a reason.
+affect and name themselves as assumptions in that statement or reason. This
+keeps them distinct from evidence-backed facts and confirmed intent. Compare
+sibling items, reasons, and flow so each prose value contributes distinct
+meaning. Use one decisive result for the title, one direct statement for the
+goal, and the main consequence for a reason.
 
 When visual directions contributed to the agreement, also follow **Preserve
 the selection** in `design-directions.md`.

@@ -133,54 +133,54 @@ test("Align presents one compact shared understanding with secondary history", a
   await page.goto(artifactUrl);
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("실패한 업로드 복구");
-  await expect(page.locator("#overview-title")).toHaveText("01요약");
+  await expect(page.locator("#intent-title")).toHaveText("01의도");
   const goalRow = page.locator(".overview .synopsis > div").first();
   await expect(goalRow.locator("dt")).toHaveText("목표");
   await expect(goalRow.locator("dd")).toContainText("중단된 업로드를 감지해");
   await expect(page.locator(".overview .synopsis > div")).toHaveCount(2);
   await expect(page.locator(".goal, .goal-label")).toHaveCount(0);
-  await expect(page.locator("#intent-title > span:last-child")).toHaveText("공유된 이해");
-  await expect(page.locator("#intent .intent-list > li")).toHaveCount(4);
-  await expect(page.locator("#intent .decision-source")).toHaveText("사용자가 선택함");
-  const verificationMarkers = page.locator("#intent .verification-marker");
+  await expect(page.locator("#intent .detailed-goal-list > .subheading")).toHaveText("상세 목표");
+  await expect(page.locator("#flow > .behavior-steps + .flow-branches")).toHaveCount(1);
+  await expect(page.locator("#flow > .flow-branches")).toHaveAttribute("aria-label", "흐름 결과");
+  await expect(page.locator("#decisions-title > span:last-child")).toHaveText("결정");
+  await expect(page.locator("#intent .intent-list > li")).toHaveCount(3);
+  await expect(page.locator("#decisions .intent-list > li")).toHaveCount(1);
+  await expect(page.locator("#decisions .decision-source")).toHaveText("사용자가 선택함");
+  const verificationMarkers = page.locator("#intent .verification-marker, #decisions .verification-marker");
   await expect(verificationMarkers).toHaveText(["[AI]", "[AI]", "[유저]", "[AI]"]);
   await expect(verificationMarkers.first()).toHaveAttribute(
     "aria-label",
     /AI 판단 가능/u,
   );
   await expect(verificationMarkers.nth(2)).toHaveAttribute("aria-label", /사용자 판단/u);
-  await expect(page.locator("#intent .compact-check-verification")).toHaveCount(0);
-  await expect(page.locator("#intent .intent-list")).not.toContainText(
-    "원본과 같은 파일을 받을 수 있는지",
-  );
-  await expect(page.locator("#intent .intent-list")).not.toContainText(
-    "관련 없는 업로드 항목과 파일이 그대로 남는지",
-  );
-  await expect(page.locator(".brand-icon")).toBeVisible();
-  await expect(page.locator(".status")).toHaveText("v2 · 현재 합의");
+  await expect(page.locator("#intent .compact-check-verification, #decisions .compact-check-verification")).toHaveCount(0);
+  const intentTexts = await page.locator("#intent .intent-list, #decisions .intent-list")
+    .allTextContents();
+  expect(intentTexts.every((text) => !text.includes("원본과 같은 파일을 받을 수 있는지")))
+    .toBe(true);
+  expect(intentTexts.every((text) => !text.includes("관련 없는 업로드 항목과 파일이 그대로 남는지")))
+    .toBe(true);
+  await expect(page.locator(".brand")).toHaveText("ALIGN/SPEC-002");
+  await expect(page.locator(".document-state")).toHaveText("현재 합의");
   await expect(page.locator(".rail")).toBeVisible();
-  await expect(page.locator(".rail .toc-progress")).toHaveText("1 / 4");
-  const currentOverviewLink = page.locator('.rail .toc-link[href="#overview"]');
+  await expect(page.locator(".rail-navigation .toc-progress")).toHaveText("1 / 4");
+  const currentOverviewLink = page.locator('.rail-navigation .toc-link[href="#intent"]');
   await expect(currentOverviewLink).toHaveAttribute("aria-current", "location");
   const currentOverviewStyle = await currentOverviewLink.evaluate((element) => ({
-    backgroundColor: getComputedStyle(element).backgroundColor,
     borderLeftWidth: getComputedStyle(element).borderLeftWidth,
   }));
-  expect(currentOverviewStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(currentOverviewStyle.borderLeftWidth).toBe("4px");
-  await expect(page.locator(".rail .rail-history h2")).toHaveText("버전 이력");
-  await expect(page.locator(".rail .rail-history .current .revision-head strong"))
+  expect(currentOverviewStyle.borderLeftWidth).toBe("3px");
+  await expect(page.locator(".rail-navigation .rail-history h2")).toHaveText("버전 이력");
+  await expect(page.locator(".rail-navigation .rail-history .current .revision-head strong"))
     .toHaveText(/^v2 · 현재 합의/u);
-  await expect(page.locator(".rail .rail-history .past .revision-head strong"))
+  await expect(page.locator(".rail-navigation .rail-history .past .revision-head strong"))
     .toHaveText("v1");
-  await expect(page.locator(".rail .rail-history .current")).toContainText("복구 의도와 근거를 명확히 함");
+  await expect(page.locator(".rail-navigation .rail-history .current")).toContainText("복구 의도와 근거를 명확히 함");
   await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#intent")).toContainText("중단 지점부터 이어서 완료할 수 있다");
-  await expect(page.locator("#intent")).toContainText("각 원본 업로드에는 하나의 복구 기록이 연결되고");
-  await expect(page.locator("#intent")).toContainText("포함하지 않음");
-  await expect(page.locator("#intent")).not.toContainText("미결정 의도");
-  await expect(page.locator("#intent .decision-disclosure").first()).not.toHaveAttribute("open", "");
-  await expect(page.locator("#intent .decision-reason").first()).not.toBeVisible();
+  await expect(page.locator("#decisions")).toContainText("각 원본 업로드에는 하나의 복구 기록이 연결되고");
+  await expect(page.locator("#boundary-evidence")).toContainText("범위 밖");
+  await expect(page.locator("#intent .decision-reason").first()).toBeVisible();
   await expect(page.locator("#evidence")).not.toHaveAttribute("open", "");
   await expect(page.locator("#evidence .section-disclosure-content")).not.toBeVisible();
   await expect(page.locator(".evidence-marker")).toHaveCount(3);
@@ -319,7 +319,7 @@ test("Align presents one compact shared understanding with secondary history", a
       && item.parentClass.includes("design-direction")
   ))).toBe(true);
   const sectionBoundaryWidths = await page.evaluate(() => ({
-    agreementContentTop: getComputedStyle(document.querySelector(".intent-groups")).borderTopWidth,
+    agreementContentTop: getComputedStyle(document.querySelector("#intent .intent-groups")).borderTopWidth,
     agreementTitleBottom: getComputedStyle(document.querySelector("#intent-title")).borderBottomWidth,
     directionContentTop: getComputedStyle(document.querySelector(".design-direction-list")).borderTopWidth,
     directionTitleBottom: getComputedStyle(document.querySelector("#design-directions-title")).borderBottomWidth,
@@ -335,18 +335,17 @@ test("Align presents one compact shared understanding with secondary history", a
   );
   expect(behaviorTops[1]).toBeGreaterThan(behaviorTops[0]);
   expect(behaviorTops[2]).toBeGreaterThan(behaviorTops[1]);
-  const outcomeTops = await page.locator(".behavior-outcomes > li").evaluateAll(
+  const outcomeTops = await page.locator(".flow-branches > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(outcomeTops[1]).toBeGreaterThan(outcomeTops[0]);
-  const agreementTops = await page.locator(".intent-groups > .intent-group").evaluateAll(
+  const agreementTops = await page.locator("#intent .intent-groups > .intent-group").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(agreementTops[1]).toBeGreaterThan(agreementTops[0]);
   const firstDecision = page.locator("#intent .decision-list > li").first();
-  await firstDecision.locator(".decision-disclosure > summary").click();
   const proseOrder = await firstDecision.evaluate((item) => {
-    const title = item.querySelector("summary > span").getBoundingClientRect();
+    const title = item.querySelector(".intent-statement").getBoundingClientRect();
     const reason = item.querySelector("p").getBoundingClientRect();
     return {
       reasonLeft: reason.left,
@@ -358,39 +357,32 @@ test("Align presents one compact shared understanding with secondary history", a
   expect(proseOrder.reasonLeft).toBe(proseOrder.titleLeft);
   expect(proseOrder.reasonTop).toBeGreaterThanOrEqual(proseOrder.titleBottom);
   const geometry = await page.evaluate(() => ({
-    brandRepositoryGap: document.querySelector(".repository").getBoundingClientRect().left
-      - document.querySelector(".brand").getBoundingClientRect().right,
-    firstSectionBorder: getComputedStyle(document.querySelector("#overview")).borderTopWidth,
-    firstSectionMargin: getComputedStyle(document.querySelector("#overview")).marginTop,
-    firstSectionPadding: getComputedStyle(document.querySelector("#overview")).paddingTop,
+    firstSectionBorder: getComputedStyle(document.querySelector("#intent")).borderTopWidth,
+    firstSectionMargin: getComputedStyle(document.querySelector("#intent")).marginTop,
+    firstSectionPadding: getComputedStyle(document.querySelector("#intent")).paddingTop,
     railLeft: document.querySelector(".rail").getBoundingClientRect().left,
-    repositoryStatusGap: document.querySelector(".status").getBoundingClientRect().left
-      - document.querySelector(".repository").getBoundingClientRect().right,
-    summaryLabelFontSize: getComputedStyle(document.querySelector("#overview-title > span:last-child")).fontSize,
-    summaryLabelLineHeight: getComputedStyle(document.querySelector("#overview-title > span:last-child")).lineHeight,
-    summaryLabelLeft: document.querySelector("#overview-title > span:last-child").getBoundingClientRect().left,
-    summaryNumberFontSize: getComputedStyle(document.querySelector("#overview-title > .section-number")).fontSize,
-    summaryNumberLineHeight: getComputedStyle(document.querySelector("#overview-title > .section-number")).lineHeight,
-    summaryNumberLeft: document.querySelector("#overview-title > .section-number").getBoundingClientRect().left,
+    summaryLabelFontSize: getComputedStyle(document.querySelector("#intent-title > span:last-child")).fontSize,
+    summaryLabelLineHeight: getComputedStyle(document.querySelector("#intent-title > span:last-child")).lineHeight,
+    summaryLabelLeft: document.querySelector("#intent-title > span:last-child").getBoundingClientRect().left,
+    summaryNumberFontSize: getComputedStyle(document.querySelector("#intent-title > .section-number")).fontSize,
+    summaryNumberLineHeight: getComputedStyle(document.querySelector("#intent-title > .section-number")).lineHeight,
+    summaryNumberLeft: document.querySelector("#intent-title > .section-number").getBoundingClientRect().left,
     titleLeft: document.querySelector("h1").getBoundingClientRect().left,
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
-  expect(geometry.brandRepositoryGap).toBe(24);
-  expect(geometry.repositoryStatusGap).toBe(24);
-  expect(geometry.railLeft).toBe(932);
-  expect(geometry.titleLeft).toBe(40);
-  expect(geometry.summaryNumberLeft).toBe(40);
-  expect(geometry.summaryLabelLeft).toBe(76);
+  expect(geometry.railLeft).toBe(0);
+  expect(geometry.titleLeft).toBe(304);
+  expect(geometry.summaryNumberLeft).toBe(304);
+  expect(geometry.summaryLabelLeft).toBe(348);
   expect(geometry.summaryNumberFontSize).toBe(geometry.summaryLabelFontSize);
   expect(geometry.summaryNumberLineHeight).toBe(geometry.summaryLabelLineHeight);
-  expect(geometry.summaryLabelLineHeight).toBe("25.2px");
+  expect(geometry.summaryLabelLineHeight).toBe("21.75px");
   expect(geometry.firstSectionBorder).toBe("0px");
   expect(geometry.firstSectionMargin).toBe("24px");
   expect(geometry.firstSectionPadding).toBe("16px");
-  expect(geometry.topbarHeight).toBe(58);
+  expect(geometry.topbarHeight).toBe(900);
   await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
   await expect(page.locator("body")).toHaveCSS("font-weight", "500");
-  await expect(page.locator("#intent > .intent-groups > .intent-record .decision-number")).toHaveText(["01", "02", "03", "04"]);
   await page.locator("#verification > summary").click();
   await expect(page.locator("#verification .section-disclosure-content")).toBeVisible();
   await page.locator("#evidence > summary").click();
@@ -403,9 +395,9 @@ test("Align presents one compact shared understanding with secondary history", a
   await expect(page.locator("#revision-1 .design-direction")).toHaveCount(2);
   await expect(page.locator("#revision-1 .direction-image img")).toHaveCount(2);
   await expect(page.locator("#revision-1")).toContainText("복구 선택을 첫 화면의 주 행동으로 배치했다");
-  await page.locator('.rail .toc-link[href="#intent"]').click();
-  await expect(page.locator(".rail .toc-progress")).toHaveText("2 / 4");
-  await expect(page.locator('.rail .toc-link[href="#intent"]')).toHaveAttribute(
+  await page.locator('.rail-navigation .toc-link[href="#decisions"]').click();
+  await expect(page.locator(".rail-navigation .toc-progress")).toHaveText("2 / 4");
+  await expect(page.locator('.rail-navigation .toc-link[href="#decisions"]')).toHaveAttribute(
     "aria-current",
     "location",
   );
@@ -419,8 +411,8 @@ test("Align theme action is keyboard reachable and updates its label", async ({ 
 
   await expect(theme).toHaveAttribute("aria-label", "다크 모드로 전환");
   const box = await theme.boundingBox();
-  expect(box.height).toBe(42);
-  expect(box.width).toBe(42);
+  expect(box.height).toBe(44);
+  expect(box.width).toBe(44);
   const displayBox = await page.locator(".display-controls").boundingBox();
   expect(displayBox.height).toBe(44);
   await theme.focus();
@@ -436,13 +428,14 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
   await page.setViewportSize({ height: 568, width: 320 });
   await page.goto(artifactUrl);
 
-  await expect(page.locator(".rail")).toBeHidden();
+  await expect(page.locator(".rail")).toBeVisible();
+  await expect(page.locator(".rail-navigation")).toBeHidden();
   await expect(page.locator(".repository")).toBeHidden();
-  await expect(page.locator(".brand-icon")).toBeVisible();
-  await expect(page.locator(".brand-product")).toBeHidden();
-  await expect(page.locator(".status")).toBeVisible();
+  await expect(page.locator(".brand-product")).toBeVisible();
+  await expect(page.locator(".brand-record")).toBeHidden();
+  await expect(page.locator(".document-state")).toBeVisible();
   await expect(page.locator("#theme-toggle")).toBeVisible();
-  const narrowSectionType = await page.locator("#overview-title").evaluate((heading) => {
+  const narrowSectionType = await page.locator("#intent-title").evaluate((heading) => {
     const label = heading.querySelector("span:last-child");
     const number = heading.querySelector(".section-number");
     return {
@@ -453,10 +446,10 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
     };
   });
   expect(narrowSectionType).toEqual({
-    labelFontSize: "16px",
-    labelLineHeight: "22.4px",
-    numberFontSize: "16px",
-    numberLineHeight: "22.4px",
+    labelFontSize: "15px",
+    labelLineHeight: "21px",
+    numberFontSize: "15px",
+    numberLineHeight: "21px",
   });
   const navigation = page.locator(".mobile-navigation");
   await expect(navigation).toBeVisible();
@@ -469,14 +462,14 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
   await expect(navigation.locator(".mobile-repository")).toBeVisible();
   await expect(navigation.locator(".mobile-repository")).toContainText("acme/storage");
   await expect(navigation.locator(".rail-history")).toContainText("버전 이력");
-  await navigation.locator('a[href="#intent"]').click();
+  await navigation.locator('a[href="#decisions"]').click();
   await expect(navigation).not.toHaveAttribute("open", "");
-  await expect(page.locator("#intent")).toBeFocused();
+  await expect(page.locator("#decisions")).toBeFocused();
   const behaviorTops = await page.locator(".behavior-steps > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(behaviorTops[1]).toBeGreaterThan(behaviorTops[0]);
-  const outcomeTops = await page.locator(".behavior-outcomes > li").evaluateAll(
+  const outcomeTops = await page.locator(".flow-branches > li").evaluateAll(
     (items) => items.map((item) => item.getBoundingClientRect().top),
   );
   expect(outcomeTops[1]).toBeGreaterThan(outcomeTops[0]);
@@ -486,11 +479,33 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
   expect(directionTops[1]).toBeGreaterThan(directionTops[0]);
   await expect(page.locator("#design-directions .direction-rationales")).toHaveCount(1);
   await expect(page.locator("#design-directions > .direction-rationales")).toHaveCount(0);
+  await expect(page.locator("#decisions .decision-source").first()).toHaveCSS("font-size", "12px");
+  await expect(page.locator(".reference-markers").first()).toHaveCSS("font-size", "12px");
   const disclosureHeights = await page.locator(".main").locator(
-    ".direction-references > summary, .decision-disclosure > summary",
+    ".direction-references > summary",
   ).evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
   expect(disclosureHeights.every((height) => height >= 44)).toBe(true);
   await expectNoOverflow(page);
+});
+
+test("Align mobile navigation contains its scroll", async ({ page }) => {
+  await page.setViewportSize({ height: 240, width: 320 });
+  await page.goto(artifactUrl);
+  await page.evaluate(() => window.scrollTo({ behavior: "instant", top: 500 }));
+  const before = await page.evaluate(() => window.scrollY);
+  const navigation = page.locator(".mobile-navigation");
+  await navigation.locator(":scope > summary").click();
+  const panel = navigation.locator(".mobile-navigation-panel");
+  await panel.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const box = await panel.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 300);
+
+  await expect(navigation).toHaveAttribute("open", "");
+  await expect(panel).toHaveCSS("overscroll-behavior", "contain");
+  expect(await page.evaluate(() => window.scrollY)).toBe(before);
 });
 
 test("Align remains useful without JavaScript", async ({ browser }) => {
@@ -499,6 +514,7 @@ test("Align remains useful without JavaScript", async ({ browser }) => {
   await page.goto(artifactUrl);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.locator("#intent")).toBeVisible();
+  await expect(page.locator("#decisions")).toBeVisible();
   await expect(page.locator("#flow")).toBeVisible();
   await expect(page.locator("#design-directions")).toBeVisible();
   await expect(page.locator("#design-directions .direction-image img")).toHaveCount(2);
@@ -506,9 +522,7 @@ test("Align remains useful without JavaScript", async ({ browser }) => {
   const reference = page.locator("#design-directions .direction-references");
   await reference.locator(":scope > summary").click();
   await expect(reference.locator(".direction-reference-content")).toBeVisible();
-  const decision = page.locator("#intent .decision-disclosure").first();
-  await decision.locator(":scope > summary").click();
-  await expect(decision.locator(".decision-reason")).toBeVisible();
+  await expect(page.locator("#intent .decision-reason").first()).toBeVisible();
   const verification = page.locator('#intent .verification-marker[href="#verification-1"]');
   await verification.evaluate((element) => element.click());
   await expect(page).toHaveURL(/#verification-1$/u);
@@ -533,6 +547,10 @@ test("Align print uses the light surface and omits navigation", async ({ page })
   expect(styles.background).toBe(cssRgb(ARTIFACT_COLORS.light.background));
   expect(styles.rail).toBe("none");
   expect(styles.topbar).toBe("none");
+  await expect(page.locator(".print-identity")).toBeVisible();
+  await expect(page.locator(".print-identity")).toContainText("ALIGN / SPEC-002");
+  await expect(page.locator(".print-identity")).toContainText("acme/storage");
+  await expect(page.locator(".print-identity")).toContainText("v2 · 현재 합의 · 2026-08-15");
   await expect(page.locator("#verification .section-disclosure-content")).toBeVisible();
   await expect(page.locator("#design-directions .direction-reference-content").first()).toBeVisible();
   await expect(page.locator("#intent .decision-reason").first()).toBeVisible();

@@ -340,13 +340,13 @@ function visualBlock(visual, dictionary, review, codeRenderer) {
         </li>`).join("")}</ul>
       </div>`;
   }
-  return `<article class="behavior-visual visual-${html(visual.kind)}">
-    <header>
-      <h3>${userText(visual.title)}</h3>
+  return `<figure class="behavior-visual visual-${html(visual.kind)}">
+    <figcaption>
+      <strong class="visual-title">${userText(visual.title)}</strong>
       ${userParagraphs(visual.caption, evidenceSuffix)}
-    </header>
+    </figcaption>
     ${content}
-  </article>`;
+  </figure>`;
 }
 
 function microworldTrace(trace, title, dictionary) {
@@ -524,7 +524,7 @@ function sectionOrdinal(number) {
 }
 
 function tocHeading(dictionary, count) {
-  return `<h2 class="toc-heading"><span>${html(label(dictionary, "common.menu"))}</span><span class="toc-progress"><span data-toc-current>1</span> / ${count}</span></h2>`;
+  return `<h2 class="toc-heading"><span>${html(label(dictionary, "common.index"))}</span><span class="toc-progress"><span data-toc-current>1</span> / ${count}</span></h2>`;
 }
 
 function sectionHeading(title, number, id = "") {
@@ -541,7 +541,11 @@ function documentTitle(claim, dictionary, review, codeRenderer) {
     { context: claim.text },
   );
   return `<header class="document-title">
-    <h1 id="review-title">${userText(claim.text)}${markers}</h1>
+    <h1 id="review-title">${userText(claim.text)}</h1>
+    <div class="document-title-meta">
+      <p class="document-state"><span class="document-state-dot" aria-hidden="true"></span>PR #${review.snapshot.pullRequest.number} · <code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></p>
+      ${markers === "" ? "" : `<span class="title-evidence">${markers}</span>`}
+    </div>
   </header>`;
 }
 
@@ -561,15 +565,6 @@ function subsection({ id, title, content }) {
     </div>
     ${content}
   </section>`;
-}
-
-function collapsibleSubsection({ id, title, content }) {
-  return `<details class="review-subsection review-subsection-collapsible" id="${html(id)}">
-    <summary class="subsection-heading">
-      <h3>${html(title)}</h3>
-    </summary>
-    <div class="subsection-content">${content}</div>
-  </details>`;
 }
 
 function collapsibleSection({ id, title, content, number, initiallyOpen = false }) {
@@ -628,15 +623,14 @@ function teachingAidChoices(review, dictionary) {
       </article>
     </li>`;
   }).join("");
-  return collapsibleSubsection({
-    content: `<p class="teaching-aid-summary">${html(label(
+  return `<details class="evidence-group teaching-aid-record" id="teaching-aids">
+    <summary><h3>${html(label(dictionary, "section.teachingAids"))}</h3></summary>
+    <div class="evidence-group-content"><p class="teaching-aid-summary">${html(label(
       dictionary,
       "teachingAid.summary",
     ))}</p>
-      <ul class="teaching-aid-choices">${choices}</ul>`,
-    id: "teaching-aids",
-    title: label(dictionary, "section.teachingAids"),
-  });
+      <ul class="teaching-aid-choices">${choices}</ul></div>
+  </details>`;
 }
 
 function limitText(limit, dictionary) {
@@ -743,7 +737,6 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
           false,
         )}</div>
       </div>
-      ${background}
       <div class="before-after change-shift" role="group" aria-labelledby="synopsis-before-title synopsis-now-title">
         <div class="synopsis-row shift-card shift-before">
           <h3 id="synopsis-before-title">${html(label(dictionary, "synopsis.before"))}</h3>
@@ -782,8 +775,8 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
           false,
         )}</div>
       </div>
-      <div class="synopsis-row synopsis-review">
-        ${summaryLabelElement(label(dictionary, "synopsis.items"))}
+      ${background}
+      <div class="synopsis-row synopsis-review${review.reviewItems.length === 0 ? " synopsis-review-empty" : ""}">
         <div class="synopsis-value synopsis-review-value">
           ${review.reviewItems.length === 0
             ? `<p class="review-empty">${html(label(dictionary, "review.noItems"))}</p>`
@@ -1008,6 +1001,7 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
   return collapsibleSection({
     content: `
       ${implementationDetails}
+      ${teachingAidChoices(review, dictionary)}
       <details class="evidence-group">
         <summary><h3>${html(label(dictionary, "evidence.sources"))}</h3></summary>
         <div class="evidence-group-content">
@@ -1060,6 +1054,7 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
         <summary><h3>${html(label(dictionary, "artifact.details"))}</h3></summary>
         <div class="evidence-group-content">
           <dl>
+            <div><dt>${html(label(dictionary, "artifact.pullRequest"))}</dt><dd>PR-${review.snapshot.pullRequest.number}</dd></div>
             ${baseRows}
             <div><dt>${html(label(dictionary, "artifact.head"))}</dt><dd><code>${html(snapshot.snapshot.head)}</code></dd></div>
             <div><dt>${html(label(dictionary, "artifact.capturedAt"))}</dt><dd><time datetime="${html(snapshot.capturedAt)}" title="${html(snapshot.capturedAt)}">${html(formatTimestamp(snapshot.capturedAt))}</time></dd></div>
@@ -1073,7 +1068,6 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
       </details>
       ${evidenceFootnotes(review, dictionary, codeRenderer)}`,
     id: "evidence-and-scope",
-    initiallyOpen: true,
     number,
     title: label(dictionary, "section.evidence"),
   });
@@ -1084,27 +1078,26 @@ function buildSections(review, dictionary, codeRenderer) {
   const coreDetails = review.coreChange.details.map(
     (item) => claimBlock(item, dictionary, review, codeRenderer, "core-detail"),
   );
-  const coreChange = subsection({
-    content: `<div class="core-details">${
+  const coreChange = `<div class="core-change" id="core-change">
+    <div class="core-details">${
       coreDetails.length > 1
         ? `<ul class="claim-list core-detail-list">${coreDetails.map(
           (detail) => `<li>${detail}</li>`,
         ).join("")}</ul>`
         : coreDetails.join("")
-    }</div>`,
-    id: "core-change",
-    title: label(dictionary, "section.core"),
-  });
-  let behavior = "";
+    }</div>
+  </div>`;
+  let behaviorLead = "";
+  let behaviorModel = "";
   if (review.behavior) {
-    behavior = subsection({
-      content: `<div class="behavior-model"><div class="behavior-summary">${claimBlock(
-        review.behavior.summary,
-        dictionary,
-        review,
-        codeRenderer,
-      )}</div>
-        ${review.behavior.visual
+    behaviorLead = `<div class="behavior-summary">${claimBlock(
+      review.behavior.summary,
+      dictionary,
+      review,
+      codeRenderer,
+    )}</div>`;
+    behaviorModel = `<div class="behavior-model" id="behavior-flow">
+      ${review.behavior.visual
           ? visualBlock(
             review.behavior.visual,
             dictionary,
@@ -1127,11 +1120,18 @@ function buildSections(review, dictionary, codeRenderer) {
             review,
             codeRenderer,
           )
-          : ""}</div>`,
-      id: "behavior-flow",
-      title: label(dictionary, "section.behavior"),
-    });
+          : ""}
+    </div>`;
   }
+  const changeOverview = subsection({
+    content: `<div class="change-overview-content">
+      ${behaviorLead}
+      ${coreChange}
+      ${behaviorModel}
+    </div>`,
+    id: "change-overview",
+    title: label(dictionary, "section.changeOverview"),
+  });
   const quiz = review.quiz.length === 0
     ? ""
     : subsection({
@@ -1167,10 +1167,7 @@ function buildSections(review, dictionary, codeRenderer) {
   let number = 2;
   sections.push({
     html: section({
-      content: `${coreChange}${behavior}${quiz}${teachingAidChoices(
-        review,
-        dictionary,
-      )}`,
+      content: `${changeOverview}${quiz}`,
       id: "explore",
       number,
       title: label(dictionary, "section.explore"),
@@ -1220,6 +1217,7 @@ function themeVariables(colors) {
     `--link:${colors.link}`,
     `--muted:${colors.muted}`,
     `--panel:${colors.panel}`,
+    `--rail:${colors.rail}`,
     `--resolve:${colors.resolve}`,
     `--scope:${colors.scope}`,
     `--text:${colors.text}`,
@@ -1322,7 +1320,7 @@ a {
   text-underline-offset: .2em;
 }
 a:visited { color: var(--visited); }
-[id]:target { scroll-margin-top: 76px; }
+[id]:target { scroll-margin-top: 24px; }
 .evidence-item:target,
 .scope-limit:target,
 .scope-limit-item:target {
@@ -1363,7 +1361,7 @@ select { color: inherit; }
 }
 bdi[dir="auto"] { overflow-wrap: anywhere; }
 .claim > p + p,
-.behavior-visual header > p + p,
+.behavior-visual figcaption > p + p,
 .microworld header > p + p,
 .review-item > p + p,
 .teaching-aid-choice dd > p + p,
@@ -1375,33 +1373,34 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   position: sticky;
   z-index: 30;
   top: 0;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 94%, var(--panel));
+  height: 100vh;
+  border-right: 1px solid var(--border);
+  background: var(--rail);
 }
 .topbar-inner {
   display: flex;
   position: relative;
-  max-width: ${LAYOUT.documentWidth}px;
-  height: ${LAYOUT.topbarInnerHeight}px;
-  margin: 0 auto;
-  padding: 0 ${LAYOUT.topbarWideGutter}px;
-  align-items: center;
-  gap: ${space5}px;
+  height: 100vh;
+  padding: ${space7}px ${space6}px ${space5}px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
 }
 .brand {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: ${space2}px;
-  font: 700 ${TYPE.brand.wide.fontSize}px/${TYPE.brand.wide.lineHeight} "Hope Sans", sans-serif;
-  letter-spacing: -.025em;
+  color: var(--muted);
+  font: 400 ${TYPE.brand.wide.fontSize}px/${TYPE.brand.wide.lineHeight} "Hope Code", ui-monospace, monospace;
+  letter-spacing: .06em;
   white-space: nowrap;
 }
-.brand-icon {
-  width: 24px;
-  height: 24px;
-  flex: 0 0 auto;
-  border-radius: 6px;
-}
+.brand-product { color: var(--accent); }
+.brand-separator { color: var(--muted); }
+.brand-record { color: var(--text); }
+.rail-divider { height: 1px; margin: ${space6}px 0 ${space5}px; background: var(--border); }
+.rail-navigation { min-height: 0; overflow-y: auto; }
+.rail-footer { display: grid; margin-top: auto; padding-top: ${space5}px; gap: ${space2}px; border-top: 1px solid var(--border); }
 .top-context {
   display: flex;
   min-width: 0;
@@ -1418,12 +1417,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   stroke: var(--muted);
 }
 .commit-status {
-  flex: 0 0 auto;
-  padding: ${space1}px ${space2}px;
-  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--accent) 7%, transparent);
-  color: var(--accent);
+  color: var(--muted);
   font: 400 ${TYPE.micro.compactFontSize}px/1.45 "Hope Code", ui-monospace, monospace;
 }
 .commit-status code {
@@ -1431,14 +1425,14 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .topbar-actions {
   display: flex;
-  margin-left: auto;
+  margin-top: ${space3}px;
   align-items: center;
   gap: ${space2}px;
 }
 .pull-request-link {
   display: inline-flex;
-  min-height: 44px;
-  padding: 0 ${space1}px;
+  min-height: 32px;
+  padding: 0;
   align-items: center;
   gap: ${space1}px;
   color: var(--accent);
@@ -1450,6 +1444,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .pull-request-link:hover,
 .pull-request-link:focus-visible { color: var(--text); }
+.mobile-pull-request-link { display: none; }
 .external-link-icon {
   width: 16px;
   height: 16px;
@@ -1461,19 +1456,21 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   height: 44px;
   flex: 0 0 auto;
   align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  border: 0;
+  background: transparent;
 }
 .locale-menu { position: relative; }
 .locale-menu > summary {
   display: flex;
-  height: 42px;
+  height: 44px;
   min-width: 80px;
   padding: 0 ${space2}px 0 ${space3}px;
   align-items: center;
   justify-content: space-between;
   gap: ${space2}px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
   color: var(--text);
   cursor: pointer;
   font-size: ${TYPE.supporting.wide.fontSize}px;
@@ -1491,8 +1488,8 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .locale-options {
   position: absolute;
   z-index: 32;
-  top: calc(100% + ${space1}px);
   right: 0;
+  bottom: calc(100% + ${space1}px);
   display: grid;
   min-width: 124px;
   margin: 0;
@@ -1522,19 +1519,20 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .locale-option:focus-visible { background: var(--bg); }
 .theme-button {
   display: inline-grid;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   padding: ${space1}px;
   place-items: center;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
   cursor: pointer;
 }
 .display-controls.has-locale-menu .theme-button {
-  border-left: 1px solid var(--border);
-  border-radius: 0 5px 5px 0;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 0;
 }
+.display-controls.has-locale-menu .locale-menu > summary { border-radius: 6px 0 0 6px; }
 .theme-button:hover { background: var(--panel); }
 .theme-icon {
   width: 20px;
@@ -1551,14 +1549,17 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .layout {
   display: grid;
   max-width: ${LAYOUT.documentWidth}px;
+  min-height: 100vh;
   margin: auto;
-  grid-template-columns: minmax(0, 1fr) ${LAYOUT.tableOfContentsWidth}px;
+  grid-template-columns: ${LAYOUT.tableOfContentsWidth}px minmax(0, 1fr);
   gap: 0;
 }
 .main {
   width: 100%;
   min-width: 0;
-  padding: ${space7}px ${space7}px 80px;
+  min-height: 100vh;
+  padding: ${space7}px ${space8}px 80px;
+  background: var(--panel);
 }
 .locale-warning {
   margin: 0 0 ${space4}px;
@@ -1568,19 +1569,14 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   background: var(--panel);
 }
 .toc-desktop {
-  position: sticky;
-  top: ${LAYOUT.topbarHeight}px;
-  align-self: start;
-  min-height: calc(100vh - ${LAYOUT.topbarHeight}px);
-  padding: ${space7}px ${space5}px;
-  border-left: 1px solid var(--border);
+  display: block;
 }
 .toc-desktop h2,
 .toc-mobile-panel h2 {
   margin: 0 0 ${space4}px;
-  font-size: ${TYPE.menu.fontSize}px;
-  line-height: ${TYPE.menu.lineHeight};
-  font-weight: 700;
+  font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 .toc-heading {
   display: flex;
@@ -1589,6 +1585,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   gap: ${space2}px;
 }
 .toc-progress {
+  display: none;
   color: var(--muted);
   font-size: ${TYPE.micro.fontSize}px;
   font-weight: 500;
@@ -1603,12 +1600,13 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .toc-link {
   display: grid;
-  min-height: 36px;
+  min-height: 46px;
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   gap: ${space2}px;
-  padding: ${space1}px ${space2}px;
-  border-left: 4px solid transparent;
+  margin-left: -${space5}px;
+  padding: ${space2}px ${space2}px ${space2}px ${space5}px;
+  border-left: 3px solid transparent;
   color: var(--muted);
   font-size: ${TYPE.body.wide.fontSize}px;
   font-weight: 500;
@@ -1624,8 +1622,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .toc-link[aria-current="location"],
 .toc-link[aria-current="location"]:visited {
   border-left-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--accent);
+  color: var(--text);
   font-weight: 700;
 }
 .toc-link[aria-current="location"] .toc-number { color: var(--accent); }
@@ -1633,7 +1630,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .toc-link:focus { background: var(--panel); color: var(--text); }
 .toc-mobile { display: none; }
 
-.document-title { max-width: ${LAYOUT.proseWidth}; }
+.document-title { max-width: ${LAYOUT.proseWidth}; padding-top: ${space1}px; }
 .document-title + .synopsis { margin-top: ${space5}px; padding-top: ${space4}px; }
 .synopsis { margin: 0; }
 .section-number {
@@ -1650,6 +1647,11 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   letter-spacing: -.04em;
   overflow-wrap: anywhere;
 }
+.document-title-meta { display: flex; align-items: center; justify-content: space-between; gap: ${space3}px; margin-top: ${space3}px; }
+.document-state { display: flex; align-items: center; gap: ${space2}px; margin: 0; color: var(--accent); }
+.document-state code { color: inherit; font-size: .9em; }
+.document-state-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.title-evidence { flex: none; }
 .synopsis-grid > div > h3,
 .synopsis-background > h3,
 .synopsis-review-head > h3,
@@ -1689,31 +1691,43 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   gap: 0;
 }
 .change-shift {
+  position: relative;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   border-bottom: 1px solid var(--border);
+}
+.change-shift::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: ${space1}px;
+  background: var(--panel);
+  color: var(--muted);
+  content: "→";
+  font: 400 ${TYPE.subsectionTitle.wide.fontSize}px/1 "Hope Code", ui-monospace, monospace;
+  transform: translate(-50%, -50%);
 }
 .change-shift > .shift-card {
   display: block;
   padding: ${space4}px ${space2}px ${space5}px;
 }
-.change-shift > .shift-card > h3 { margin-bottom: ${space2}px; }
+.change-shift > .shift-card > h3 { margin-bottom: ${space2}px; color: var(--accent); }
 .change-shift > .shift-card + .shift-card {
   padding-left: ${space5}px;
   border-left: 1px solid var(--border);
 }
 .synopsis-row {
   display: grid;
-  grid-template-columns: 80px minmax(0, 1fr);
-  gap: ${space5}px;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: ${space4}px;
   align-items: start;
   padding: ${space3}px ${space2}px;
   border-bottom: 1px solid var(--border);
 }
 .synopsis-background {
   display: grid;
-  grid-template-columns: 80px minmax(0, 1fr);
-  gap: ${space5}px;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: ${space4}px;
   padding: ${space3}px ${space2}px;
   border-bottom: 1px solid var(--border);
 }
@@ -1753,8 +1767,9 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   font-weight: 500;
 }
 
-.evidence-markers { display: inline-flex; margin-left: ${space1}px; white-space: nowrap; font-size: .78em; line-height: 1; vertical-align: .4em; }
-.evidence-marker { display: inline-grid; min-width: 24px; min-height: 24px; place-items: center; margin-block: -6px; color: var(--accent); font-weight: 700; text-decoration: none; }
+.evidence-markers { display: inline-flex; gap: 2px; margin-left: ${space1}px; white-space: nowrap; font-size: .78em; line-height: 1; vertical-align: .3em; }
+.title-evidence .evidence-markers { margin-left: 0; font-size: ${TYPE.supporting.wide.fontSize}px; vertical-align: 0; }
+.evidence-marker { display: inline-grid; min-width: 24px; min-height: 24px; place-items: center; margin-block: -6px; color: var(--accent); font-weight: 500; text-decoration: none; }
 .evidence-marker:visited { color: var(--accent); }
 .evidence-marker:hover { text-decoration: underline; }
 .evidence-footnote-list { margin: 0; padding: 0; list-style: none; }
@@ -1908,7 +1923,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   position: relative;
   margin-bottom: ${space4}px;
   padding-bottom: ${space3}px;
-  border-bottom: 2px solid var(--component-border);
+  border-bottom: 1px solid var(--component-border);
   align-items: center;
   gap: ${space2}px;
 }
@@ -1917,11 +1932,12 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   width: 100%;
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: baseline;
-  gap: ${space2}px;
+  gap: ${space4}px;
   margin: 0;
   color: var(--text);
-  font-size: ${wideSection.fontSize}px;
-  line-height: ${wideSection.lineHeight};
+  font: 400 ${wideSection.fontSize}px/${wideSection.lineHeight} "Hope Code", ui-monospace, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 .review-subsection {
   margin-top: ${space5}px;
@@ -1968,6 +1984,8 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   padding-top: ${space2}px;
 }
 .explanation-step + .explanation-step { margin-top: ${space4}px; }
+.behavior-summary + .core-change { margin-top: ${space3}px; }
+.core-change + .behavior-model { margin-top: ${space4}px; }
 .core-details { margin: 0; }
 .claim-list,
 .code-step-list,
@@ -2102,7 +2120,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .behavior-summary {
   max-width: ${LAYOUT.proseWidth};
-  font-size: 1.08em;
 }
 .teaching-aid-summary {
   max-width: ${LAYOUT.proseWidth};
@@ -2157,13 +2174,18 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .teaching-aid-choice dd {
   margin: ${space1}px 0 0;
 }
-.behavior-visual > header h3,
+.behavior-visual > figcaption .visual-title,
 .microworld > header h3 {
+  display: block;
   margin: 0;
+  font-size: ${wide.fontSize}px;
+  line-height: ${wide.lineHeight};
+}
+.microworld > header h3 {
   font-size: ${wideSubsection.fontSize}px;
   line-height: ${wideSubsection.lineHeight};
 }
-.behavior-visual > header p,
+.behavior-visual > figcaption p,
 .microworld > header > p {
   max-width: ${LAYOUT.proseWidth};
   margin: ${space2}px 0 0;
@@ -2476,7 +2498,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   font-weight: 500;
 }
 .review-item-compact h4 a {
-  color: var(--accent);
+  color: var(--verify);
   text-decoration: underline;
 }
 .review-item-compact h4 a:hover,
@@ -2484,6 +2506,18 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   color: var(--text);
 }
 .review-item-compact > p { display: none; }
+.synopsis-review {
+  grid-template-columns: 1fr;
+  margin-top: ${space4}px;
+  padding: ${space4}px ${space5}px;
+  border: 1px solid color-mix(in srgb, var(--verify) 70%, var(--border));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--verify) 5%, var(--panel));
+}
+.synopsis-review-empty {
+  border-color: var(--border);
+  background: transparent;
+}
 .item-actions {
   display: grid;
   margin: ${space3}px 0;
@@ -2734,8 +2768,14 @@ td:first-child {
   .layout {
     display: block;
   }
+  [id]:target { scroll-margin-top: 76px; }
+  .topbar { position: sticky; height: ${LAYOUT.topbarHeight}px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .topbar-inner { height: ${LAYOUT.topbarInnerHeight}px; padding: 0 ${space4}px; flex-direction: row; align-items: center; gap: ${space3}px; }
+  .rail-divider, .rail-navigation, .rail-footer { display: none; }
+  .locale-options { top: calc(100% + ${space1}px); bottom: auto; }
+  .topbar-actions { margin: 0 0 0 auto; }
+  .mobile-pull-request-link { display: inline-flex; min-height: 44px; }
   .main { padding: ${space7}px ${space7}px 80px; }
-  .toc-desktop { display: none; }
   .toc-mobile {
     display: block;
     position: relative;
@@ -2811,10 +2851,12 @@ td:first-child {
     font-size: ${narrowPageTitle.fontSize}px;
     line-height: ${narrowPageTitle.lineHeight};
   }
+  .document-title-meta { align-items: flex-start; flex-direction: column; }
   .main { padding: ${space8}px ${space4}px ${space9}px; }
   .document-title + .synopsis,
   .synopsis + .review-section,
   .review-section + .review-section { margin-top: ${space5}px; padding-top: ${space4}px; }
+  .evidence-markers { font-size: ${TYPE.micro.compactFontSize}px; }
   .synopsis-grid > div > h3,
   .synopsis-background > h3,
   .before-after > div > h3 {
@@ -2864,6 +2906,7 @@ td:first-child {
     border-top: 1px solid var(--border);
     border-left: 0;
   }
+  .change-shift::after { display: none; }
   .teaching-aid-choice { padding: ${space3}px 0; }
   .teaching-aid-choices > li + li {
     border-top: 1px solid var(--border);
@@ -2938,27 +2981,11 @@ td:first-child {
     gap: ${space2}px;
   }
   .brand { gap: ${space1}px; }
-  .brand-icon {
-    width: 20px;
-    height: 20px;
-    border-radius: 5px;
-  }
-  .brand-product { display: none; }
-  .topbar-inner.has-locale-switch .commit-status { display: none; }
-  .commit-status {
-    max-width: 82px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 12px;
-  }
+  .brand-record { display: none; }
   .status,
   .importance,
   .claim-basis,
   .item-basis { font-size: ${TYPE.micro.compactFontSize}px; }
-  .top-context {
-    display: none;
-  }
   .synopsis-row,
   .synopsis-background { grid-template-columns: 1fr; gap: ${space1}px; }
   .synopsis-row > h3 { padding-top: 0; }
@@ -2971,9 +2998,6 @@ td:first-child {
     gap: ${space1}px;
   }
   .topbar-actions { gap: ${space1}px; }
-  .commit-status { padding: 2px ${space1}px; }
-  .pull-request-link { padding-inline: 0; }
-  .pull-request-link .external-link-icon { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3014,6 +3038,7 @@ td:first-child {
     --panel: #fff;
     --text: #000;
   }
+  .topbar,
   .toc-desktop,
   .toc-mobile,
   .theme-button,
@@ -3049,7 +3074,8 @@ td:first-child {
   }
   .review-section-collapsible::details-content,
   .microworld-disclosure::details-content,
-  .review-subsection-collapsible::details-content {
+  .review-subsection-collapsible::details-content,
+  .evidence-group::details-content {
     content-visibility: visible;
   }
   .quiz-question > .quiz-workspace,
@@ -3166,6 +3192,14 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
     + `/pull/${review.snapshot.pullRequest.number}`;
   const openPullRequestLabel = label(dictionary, "artifact.openPullRequest")
     .replace("{number}", String(review.snapshot.pullRequest.number));
+  const pullRequestLink = (className = "") => `<a class="pull-request-link${className}" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
+          <span>PR #${review.snapshot.pullRequest.number}</span>
+          <svg class="external-link-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M14 5h5v5"></path>
+            <path d="M19 5l-8 8"></path>
+            <path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>
+          </svg>
+        </a>`;
   const localeWarning = review.snapshot.settings.localeSource === "default"
     ? `<aside class="locale-warning" role="note">${html(
       label(dictionary, "locale.fallbackWarning"),
@@ -3193,26 +3227,28 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
 </head>
 <body>
   <a class="skip" href="#review">${html(label(dictionary, "common.skip"))}</a>
-  <header class="topbar">
+  <div class="layout">
+    <aside class="rail topbar">
     <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
-      <div class="brand"><img class="brand-icon" src="${iconDataUrl}" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">/ DIFF</span></div>
-      <div class="top-context">
-        <svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <path d="M3 9.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"></path>
-        </svg>
-        <span>${html(owner)}/${html(name)}</span>
-      </div>
-      <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(review.snapshot.snapshot.head)}"><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></span>
-      <div class="topbar-actions">
-        <a class="pull-request-link" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
-          <span>PR #${review.snapshot.pullRequest.number}</span>
-          <svg class="external-link-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-            <path d="M14 5h5v5"></path>
-            <path d="M19 5l-8 8"></path>
-            <path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>
+      <div class="brand"><span class="brand-product">DIFF</span><span class="brand-separator">/</span><span class="brand-record">PR-${review.snapshot.pullRequest.number}</span></div>
+      <div class="rail-divider" aria-hidden="true"></div>
+      <nav class="toc-desktop rail-navigation" aria-label="${html(label(dictionary, "common.menu"))}">
+        ${tocHeading(dictionary, tocItems.length)}
+        ${toc}
+      </nav>
+      <div class="rail-footer">
+        <div class="top-context">
+          <svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <path d="M3 9.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"></path>
           </svg>
-        </a>
+          <span>${html(owner)}/${html(name)}</span>
+        </div>
+        <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(review.snapshot.snapshot.head)}"><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></span>
+        ${pullRequestLink()}
+      </div>
+      <div class="topbar-actions">
+        ${pullRequestLink(" mobile-pull-request-link")}
         <div class="display-controls${locale === "" ? "" : " has-locale-menu"}">
 ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-button" id="theme-toggle" type="button" aria-label="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}" title="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}">
           <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${theme === "dark" ? " hidden" : ""}>
@@ -3238,18 +3274,13 @@ ${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-bu
         </details>
       </div>
     </div>
-  </header>
-  <div class="layout">
+    </aside>
     <main class="main" id="review">
       ${localeWarning}
       ${documentTitleHtml}
       ${synopsisHtml}
       ${sections.map((item) => item.html).join("")}
     </main>
-    <nav class="toc-desktop" aria-label="${html(label(dictionary, "common.menu"))}">
-      ${tocHeading(dictionary, tocItems.length)}
-      ${toc}
-    </nav>
   </div>
   ${codeRenderer.evidenceRecords.size === 0 ? "" : evidencePopover(dictionary)}
   <script>${script}</script>

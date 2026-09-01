@@ -7,8 +7,9 @@ font.
 
 ## Hope Sans
 
-`HopeSansLight.woff2`, `HopeSansMedium.woff2`, and `HopeSansBold.woff2` are
-full-glyph WOFF2 conversions of Gmarket Sans TTF Light, Medium, and Bold.
+`HopeSansMedium.woff2` and `HopeSansBold.woff2` are packaged full-glyph WOFF2
+conversions of Gmarket Sans TTF Medium and Bold. The repository keeps
+`assets/fonts/HopeSansLight.woff2` for README interface mockups.
 
 Source:
 
@@ -65,8 +66,8 @@ fonttools ttLib.woff2 compress D2Coding-Ver1.3.2-20180524.ttf
   -o HopeCode.woff2
 ```
 
-After all four WOFF2 files exist, replace their primary family, full, unique,
-PostScript, and typographic names:
+After the four WOFF2 files exist in their documented repository locations,
+replace their primary family, full, unique, PostScript, and typographic names:
 
 ```text
 python3 tools/rename-hope-fonts.py

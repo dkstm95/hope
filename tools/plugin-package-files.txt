@@ -4,7 +4,6 @@ LICENSE
 assets/artifact-theme.mjs
 assets/fonts/HopeCode.woff2
 assets/fonts/HopeSansBold.woff2
-assets/fonts/HopeSansLight.woff2
 assets/fonts/HopeSansMedium.woff2
 assets/fonts/OFL-D2Coding.txt
 assets/fonts/OFL-Gmarket.txt

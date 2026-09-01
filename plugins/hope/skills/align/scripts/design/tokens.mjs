@@ -5,4 +5,4 @@ export {
   ARTIFACT_TYPE as TYPE,
 } from "../../../../assets/artifact-theme.mjs";
 
-export const ALIGN_DESIGN_VERSION = 25;
+export const ALIGN_DESIGN_VERSION = 32;

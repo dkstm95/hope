@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-locale="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -37,6 +37,7 @@
       color-scheme: light dark;
       --paper: #fafafa;
       --panel: #ffffff;
+      --rail: #f3f5f4;
       --ink: #171a19;
       --muted: #5d6663;
       --rule: #e1e4e2;
@@ -50,26 +51,28 @@
 
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --paper: #0e1112;
-        --panel: #15191a;
-        --ink: #f1f4f2;
-        --muted: #a5afab;
-        --rule: #303735;
-        --component-rule: #68736f;
-        --accent: #79d6b0;
+        --paper: #0c1115;
+        --panel: #12181d;
+        --rail: #0c0f11;
+        --ink: #f2f4f5;
+        --muted: #a8b1b8;
+        --rule: #2b343b;
+        --component-rule: #68757e;
+        --accent: #79ddb1;
         --accent-soft: #17352b;
         --link: #8bc9ff;
       }
     }
 
     :root[data-theme="dark"] {
-      --paper: #0e1112;
-      --panel: #15191a;
-      --ink: #f1f4f2;
-      --muted: #a5afab;
-      --rule: #303735;
-      --component-rule: #68736f;
-      --accent: #79d6b0;
+      --paper: #0c1115;
+      --panel: #12181d;
+      --rail: #0c0f11;
+      --ink: #f2f4f5;
+      --muted: #a8b1b8;
+      --rule: #2b343b;
+      --component-rule: #68757e;
+      --accent: #79ddb1;
       --accent-soft: #17352b;
       --link: #8bc9ff;
     }
@@ -118,35 +121,86 @@
       border: 0;
     }
 
+    .layout {
+      display: grid;
+      width: min(100%, 1536px);
+      min-height: 100vh;
+      grid-template-columns: 256px minmax(0, 1fr);
+      margin: 0 auto;
+    }
+
     .topbar {
       position: sticky;
       z-index: 2;
       top: 0;
+      height: 100vh;
+      border-right: 1px solid var(--rule);
+      background: var(--rail);
+    }
+
+    .topbar-inner {
       display: flex;
-      min-height: 58px;
-      align-items: center;
-      gap: 16px;
-      padding: 4px max(16px, calc((100vw - 1100px) / 2 + 24px));
-      border-bottom: 1px solid var(--rule);
-      background: color-mix(in srgb, var(--paper) 94%, var(--panel));
+      height: 100vh;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 40px 32px 24px;
     }
 
     .brand {
       flex: 0 0 auto;
       display: flex;
-      align-items: center;
+      align-items: baseline;
       gap: 8px;
-      color: var(--ink);
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.025em;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 400;
+      letter-spacing: 0.06em;
       line-height: 1;
       white-space: nowrap;
     }
 
-    .brand-icon { width: 24px; height: 24px; border-radius: 6px; }
+    .brand-product { color: var(--accent); }
+    .brand-record { color: var(--ink); }
 
-    .brand-product,
+    .rail-divider {
+      height: 1px;
+      margin: 32px 0 24px;
+      background: var(--rule);
+    }
+
+    .rail-navigation h2 {
+      margin: 0 0 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .toc-list { padding: 0; margin: 0; list-style: none; }
+    .toc-link {
+      display: grid;
+      min-height: 46px;
+      grid-template-columns: 28px minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+      margin-left: -24px;
+      padding: 8px 8px 8px 24px;
+      border-left: 3px solid var(--accent);
+      color: var(--ink);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .toc-link:visited { color: var(--ink); }
+    .toc-number { color: var(--accent); font-family: var(--mono); font-weight: 400; }
+
+    .rail-footer {
+      padding-top: 20px;
+      margin-top: auto;
+      border-top: 1px solid var(--rule);
+    }
+
     .context { color: var(--muted); }
 
     .context {
@@ -162,9 +216,8 @@
       display: none;
       flex: 0 0 auto;
       align-items: center;
-      margin-left: auto;
+      margin-top: 12px;
     }
-
     .js .topbar-actions { display: flex; }
 
     .display-controls {
@@ -242,35 +295,25 @@
     }
 
     #parcel-handoff-diagram {
-      width: min(100%, 1100px);
-      margin: 0 auto;
-      padding: 30px 24px 28px;
+      min-width: 0;
+      padding: 40px 56px 80px;
+      background: var(--panel);
     }
 
     [data-lang] { display: none; }
 
-    [data-locale="en"] [data-lang="en"],
-    [data-locale="ko"] [data-lang="ko"] { display: inline; }
+    html[data-locale="en"] [data-lang="en"],
+    html[data-locale="ko"] [data-lang="ko"] { display: inline; }
 
     .diagram-header {
-      max-width: 78ch;
+      max-width: 72ch;
       margin-bottom: 32px;
-    }
-
-    .eyebrow {
-      margin: 0 0 8px;
-      color: var(--accent);
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
     }
 
     h1 {
       margin: 0;
-      font-size: 32px;
-      line-height: 1.2;
+      font-size: 28px;
+      line-height: 1.16;
       letter-spacing: -0.035em;
     }
 
@@ -278,7 +321,7 @@
       max-width: 68ch;
       margin: 12px 0 0;
       color: var(--muted);
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.6;
     }
 
@@ -289,8 +332,12 @@
       padding-bottom: 12px;
       margin: 0 0 20px;
       border-bottom: 1px solid var(--rule);
-      font-size: 18px;
-      line-height: 1.4;
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      line-height: 1.45;
+      text-transform: uppercase;
     }
 
     .section-number {
@@ -429,7 +476,7 @@
     }
 
     .scope-note {
-      max-width: 78ch;
+      max-width: 72ch;
       padding-top: 14px;
       margin: 18px 0 0;
       border-top: 1px solid var(--rule);
@@ -438,12 +485,16 @@
       line-height: 1.5;
     }
 
-    @media (max-width: 840px) {
-      .context { display: none; }
+    @media (max-width: 1099px) {
+      .layout { display: block; }
+      .topbar { height: 58px; border-right: 0; border-bottom: 1px solid var(--rule); }
+      .topbar-inner { height: 58px; flex-direction: row; align-items: center; gap: 12px; padding: 0 16px; }
+      .rail-divider, .rail-navigation, .rail-footer { display: none; }
+      .topbar-actions { margin: 0 0 0 auto; }
       #parcel-handoff-diagram { padding: 24px 16px; }
       .diagram-header { margin-bottom: 28px; }
-      h1 { font-size: 28px; }
-      .section-title { font-size: 16px; line-height: 1.4; }
+      h1 { font-size: 24px; }
+      .section-title { font-size: 15px; line-height: 1.4; }
       .stages { grid-template-columns: 1fr; gap: 56px; }
       .stage-button { min-height: 132px; }
 
@@ -474,10 +525,9 @@
     }
 
     @media (max-width: 520px) {
-      .topbar { gap: 8px; padding-inline: 12px; }
-      .brand { gap: 4px; font-size: 14px; }
-      .brand-icon { width: 20px; height: 20px; border-radius: 5px; }
-      .brand-product { display: none; }
+      .topbar-inner { gap: 8px; padding-inline: 12px; }
+      .brand { gap: 4px; font-size: 13px; }
+      .brand-record { display: none; }
       .language label { min-width: 42px; padding-inline: 8px; }
       .language-long { display: none; }
       .language-short { display: inline; }
@@ -498,6 +548,7 @@
       :root[data-theme="dark"] {
         --paper: #ffffff;
         --panel: #ffffff;
+        --rail: #ffffff;
         --ink: #111111;
         --muted: #4d4d4d;
         --rule: #cccccc;
@@ -507,7 +558,9 @@
         --link: #005d99;
       }
 
-      .topbar-actions { display: none !important; }
+      .topbar { display: none !important; }
+      .layout { display: block; }
+      #parcel-handoff-diagram { padding: 0; }
     }
 
     @media (forced-colors: active) {
@@ -529,9 +582,16 @@
     <span data-lang="ko">다이어그램으로 건너뛰기</span>
   </a>
 
-  <header class="topbar">
-    <div class="brand"><img class="brand-icon" src="../../plugins/hope/assets/hope-icon.png" alt="" width="24" height="24"><span>HOPE</span><span class="brand-product">/ DIAGRAM</span></div>
-    <div class="context">PARCEL-001 · HANDOFF</div>
+  <div class="layout">
+  <aside class="topbar rail">
+    <div class="topbar-inner">
+    <div class="brand"><span class="brand-product">DIAGRAM</span><span>/</span><span class="brand-record">FLOW-001</span></div>
+    <div class="rail-divider" aria-hidden="true"></div>
+    <nav class="rail-navigation" aria-label="Document index">
+      <h2><span data-lang="en">Document index</span><span data-lang="ko">문서 목차</span></h2>
+      <ol class="toc-list"><li><a class="toc-link" href="#parcel-journey" aria-current="location"><span class="toc-number">01</span><span data-lang="en">Handoff sequence</span><span data-lang="ko">인계 순서</span></a></li></ol>
+    </nav>
+    <div class="rail-footer"><div class="context">PARCEL-001 · HANDOFF</div></div>
     <div class="topbar-actions">
       <div class="display-controls">
         <fieldset class="language">
@@ -550,11 +610,11 @@
         </button>
       </div>
     </div>
-  </header>
+    </div>
+  </aside>
 
   <main id="parcel-handoff-diagram" data-locale="en">
     <header class="diagram-header">
-      <p class="eyebrow">DIAGRAM · HANDOFF-01</p>
       <h1 id="parcel-title">
         <span data-lang="en">How does my parcel reach the front door?</span>
         <span data-lang="ko">주문한 택배는 어떻게 문 앞까지 올까?</span>
@@ -626,6 +686,7 @@
       </p>
     </section>
   </main>
+  </div>
 
   <script>
     (() => {
@@ -674,6 +735,7 @@
       function updateLocale(locale) {
         root.dataset.locale = locale;
         document.documentElement.lang = locale;
+        document.documentElement.dataset.locale = locale;
         journey.setAttribute("aria-label", copy[locale].aria);
         localeInputs.forEach((input) => { input.checked = input.value === locale; });
         updateStage(selectedStage);

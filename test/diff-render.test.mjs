@@ -48,7 +48,7 @@ function withLocaleSource(snapshot, localeSource) {
 
 function teachingAidCards(html) {
   const section = html.match(
-    /<details class="review-subsection review-subsection-collapsible" id="teaching-aids">[\s\S]*?<\/details>/u,
+    /<details class="evidence-group teaching-aid-record" id="teaching-aids">[\s\S]*?<\/details>/u,
   )?.[0] ?? "";
   const cards = [...section.matchAll(
     /<article class="teaching-aid-choice decision-([^"]+)">([\s\S]*?)<\/article>/gu,
@@ -90,7 +90,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
   ]);
   assert.equal(first.rendererVersion, 19);
-  assert.equal(first.designVersion, 16);
+  assert.equal(first.designVersion, 24);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -105,11 +105,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     html,
     /<link rel="icon" type="image\/png" sizes="128x128" href="data:image\/png;base64,iVBOR/u,
   );
-  assert.match(html, /<img class="brand-icon" src="data:image\/png;base64,iVBOR/u);
-  assert.match(html, /<span>HOPE<\/span><span class="brand-product">\/ DIFF<\/span>/u);
+  assert.match(html, /<span class="brand-product">DIFF<\/span><span class="brand-separator">\/<\/span><span class="brand-record">PR-142<\/span>/u);
   assert.match(
     html,
-    /<h2 class="toc-heading"><span>Contents<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
+    /<h2 class="toc-heading"><span>Document index<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
   );
   assert.match(html, /data:font\/woff2;base64/u);
   assert.match(html, /font-family: "Hope Sans"/u);
@@ -120,7 +119,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /data-copy-section/u);
   assert.doesNotMatch(html, /class="copy-link"/u);
   assert.doesNotMatch(html, />Change theme</u);
-  const header = html.match(/<header class="topbar">[\s\S]*?<\/header>/u)?.[0] ?? "";
+  const header = html.match(/<aside class="rail topbar">[\s\S]*?<\/aside>/u)?.[0] ?? "";
   assert.doesNotMatch(html, /class="pr-hero"/u);
   assert.match(
     html,
@@ -148,7 +147,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   const localizedHeader = (await renderReview(review, {
     alternateLocale: { href: "retry.ko.html", locale: "ko-KR" },
   })).bytes.toString("utf8").match(
-    /<header class="topbar">[\s\S]*?<\/header>/u,
+    /<aside class="rail topbar">[\s\S]*?<\/aside>/u,
   )?.[0] ?? "";
   assert.match(
     localizedHeader,
@@ -168,8 +167,9 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(documentTitleHtml, /pull-request-link|https?:\/\//u);
   assert.match(
     documentTitleHtml,
-    /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><sup class="evidence-markers">/u,
+    /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><\/h1>/u,
   );
+  assert.match(documentTitleHtml, /<span class="title-evidence"><sup class="evidence-markers">/u);
   assert.doesNotMatch(documentTitleHtml, /&lt;script|Goal|<dl>|<dt>|Captured|Commit/u);
   const synopsisHtml = html.match(
     /<section class="synopsis" id="synopsis"[\s\S]*?<\/section>/u,
@@ -210,7 +210,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
     ["01", "02", "03", "04"],
   );
-  const toc = html.match(/<nav class="toc-desktop"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
+  const toc = html.match(/<nav class="toc-desktop rail-navigation"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
   assert.deepEqual(
     [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
     ["01", "02", "03", "04"],
@@ -224,6 +224,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<details class="evidence-group artifact-details">[\s\S]*?<\/details>/u,
   )?.[0] ?? "";
   assert.match(artifactDetails, /<summary><h3>Review info<\/h3><\/summary>/u);
+  assert.match(
+    artifactDetails,
+    /<dt>Pull request<\/dt><dd>PR-142<\/dd>/u,
+  );
   assert.match(
     artifactDetails,
     /<dt>Pull request title<\/dt><dd><bdi dir="auto">&lt;\/title&gt;&lt;script/u,
@@ -268,10 +272,10 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(compactItem, /<span class="importance">Medium<\/span>/u);
   assert.match(
     html,
-    /<div class="synopsis-row synopsis-review">\s*<h3>Review result<\/h3>\s*<div class="synopsis-value synopsis-review-value">/u,
+    /<div class="synopsis-row synopsis-review">\s*<div class="synopsis-value synopsis-review-value">/u,
   );
   const coreChange = html.match(
-    /<section class="review-subsection" id="core-change">[\s\S]*?<\/section>/u,
+    /<div class="core-change" id="core-change">[\s\S]*?<\/div>\s*<\/div>/u,
   )?.[0] ?? "";
   assert.doesNotMatch(coreChange, /class="core-narrative"/u);
   assert.doesNotMatch(coreChange, />Goal<\/bdi>|>AS-IS<\/bdi>|>TO-BE<\/bdi>|>Impact<\/bdi>/u);
@@ -289,7 +293,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<details class="scope-limit" id="scope-limit-1">/u);
   assert.match(
     html,
-    /<details class="review-section review-section-collapsible" id="evidence-and-scope" open>/u,
+    /<details class="review-section review-section-collapsible" id="evidence-and-scope">/u,
   );
   assert.doesNotMatch(
     html,
@@ -424,7 +428,8 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   const rendered = await renderReview(review);
   const html = rendered.bytes.toString("utf8");
   assert.match(html, /<html lang="ko-KR" data-theme="dark">/u);
-  assert.match(html, /핵심 변경/u);
+  assert.match(html, /<h3>변경 개요<\/h3>/u);
+  assert.doesNotMatch(html, /핵심 변경|변경 후 동작/u);
   assert.equal((html.match(/>요약</gu) ?? []).length, 3);
   assert.match(html, /<h2 id="synopsis-title"><span class="section-number">01<\/span><span>요약<\/span><\/h2>/u);
   assert.match(html, />목표</u);
@@ -440,10 +445,7 @@ test("Korean and dark theme are reflected without a header language badge", asyn
     html,
     /<div class="synopsis-row synopsis-purpose">\s*<h3>목표<\/h3>\s*<div class="synopsis-value">/u,
   );
-  assert.match(
-    html,
-    /<h3><span class="summary-label-stacked"><span>검토<\/span> <span>결과<\/span><\/span><\/h3>/u,
-  );
+  assert.match(html, /<div class="synopsis-row synopsis-review">/u);
   assert.match(html, /<dt>커밋<\/dt><dd><code>b{40}<\/code><\/dd>/u);
   assert.match(html, /<dt>수집 시각<\/dt><dd><time[^>]+>2026-07-23 00:00 UTC<\/time><\/dd>/u);
   assert.doesNotMatch(html, /class="review-result/u);
@@ -512,7 +514,7 @@ test("the artifact shows every teaching-aid decision when all aids are omitted",
   const review = validateAnalysis(analysis, snapshot, { runId });
   const html = (await renderReview(review)).bytes.toString("utf8");
   const section = html.match(
-    /<details class="review-subsection review-subsection-collapsible" id="teaching-aids">[\s\S]*?<\/details>/u,
+    /<details class="evidence-group teaching-aid-record" id="teaching-aids">[\s\S]*?<\/details>/u,
   )?.[0] ?? "";
 
   assert.match(section, /<h3>Teaching aid choices<\/h3>/u);
@@ -791,11 +793,11 @@ test("behavior steps keep one vertical numbered flow regardless of count or leng
   const shortHtml = (await renderReview(shortReview)).bytes.toString("utf8");
   assert.match(
     shortHtml,
-    /<section class="review-subsection" id="behavior-flow">\s*<div class="subsection-heading">\s*<h3>Conditions and flow<\/h3>\s*<\/div>\s*<div class="behavior-model">/u,
+    /<section class="review-subsection" id="change-overview">[\s\S]*?<h3>Change overview<\/h3>[\s\S]*?<div class="behavior-summary">/u,
   );
   assert.match(
     shortHtml,
-    /<section class="review-subsection" id="core-change">[\s\S]*?<\/section>\s*<section class="review-subsection" id="behavior-flow">/u,
+    /<div class="behavior-summary">[\s\S]*?<div class="core-change" id="core-change">[\s\S]*?<div class="behavior-model" id="behavior-flow">/u,
   );
   assert.match(shortHtml, /<ol class="flow">/u);
   assert.doesNotMatch(shortHtml, /flow-short/u);
@@ -843,8 +845,13 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
 
   assert.match(
     html,
-    /id="explore"[\s\S]*?class="behavior-visual visual-decision-table"/u,
+    /id="explore"[\s\S]*?<figure class="behavior-visual visual-decision-table">/u,
   );
+  const visualFigure = html.match(
+    /<figure class="behavior-visual visual-decision-table">[\s\S]*?<\/figure>/u,
+  )?.[0] ?? "";
+  assert.match(visualFigure, /<figcaption>\s*<strong class="visual-title">/u);
+  assert.doesNotMatch(visualFigure, /<h3>/u);
   assert.match(html, /<table class="decision-table">/u);
   assert.match(html, />Case<\/th>/u);
   assert.match(html, /<th scope="row" data-label="Case">/u);

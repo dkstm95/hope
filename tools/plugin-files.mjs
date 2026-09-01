@@ -13,7 +13,6 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/assets/artifact-theme.mjs",
   "plugins/hope/assets/fonts/HopeCode.woff2",
   "plugins/hope/assets/fonts/HopeSansBold.woff2",
-  "plugins/hope/assets/fonts/HopeSansLight.woff2",
   "plugins/hope/assets/fonts/HopeSansMedium.woff2",
   "plugins/hope/assets/fonts/OFL-D2Coding.txt",
   "plugins/hope/assets/fonts/OFL-Gmarket.txt",

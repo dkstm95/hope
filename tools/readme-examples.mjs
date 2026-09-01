@@ -228,12 +228,11 @@ export function makeAlignArtifactData(locale, images) {
         { title: local("Choose a view", "보기 선택"), detail: local("Choose today, week, or month and filter event types.", "오늘, 주, 월 보기를 고르고 일정 종류를 필터링한다.") },
         { title: local("Compare time and urgency", "시각과 긴급도 비교"), detail: local("Scan the monthly rhythm together with deadlines, changes, and cancellations.", "월간 흐름과 함께 마감, 변경, 취소를 살핀다.") },
         { title: local("Check the source", "출처 확인"), detail: local("Open an event to compare its primary source, other values, and last check.", "일정을 열어 우선 출처, 다른 값, 마지막 확인 시각을 비교한다.") },
-        { title: local("Act at the original", "원본에서 행동"), detail: local("Follow a verified official link or wait when a conflict is unresolved.", "확인된 공식 링크로 이동하거나 충돌이 해결되지 않았으면 기다린다.") },
+        { title: local("Act at the original", "원본에서 행동"), detail: local("Follow a verified official link or wait for a source correction when a conflict remains.", "확인된 공식 링크로 이동하거나 충돌이 남으면 출처 정정까지 기다린다.") },
       ],
       outcomes: [
-        { title: local("Reliable schedule", "신뢰 가능한 일정"), detail: local("The fan understands the event, source, and freshness.", "팬이 일정, 출처, 최신성을 이해한다."), kind: "complete" },
-        { title: local("Safe action", "안전한 행동"), detail: local("The fan continues at the verified official source.", "팬이 확인된 공식 원본에서 계속한다."), kind: "complete" },
-        { title: local("Action held", "행동 보류"), detail: local("An unresolved conflict remains visible and blocks an unsafe action.", "해결되지 않은 충돌이 보이고 안전하지 않은 행동을 막는다."), kind: "cancel" },
+        { title: local("Official source opened", "공식 원본으로 이동"), detail: local("The fan continues at the recently verified official source.", "팬이 최근 확인된 공식 원본에서 계속한다."), kind: "complete" },
+        { title: local("Source correction pending", "출처 정정 대기"), detail: local("The source conflict stays visible while the fan waits for a correction.", "출처 충돌을 계속 보여 주고 팬은 정정까지 기다린다."), kind: "cancel" },
       ],
     },
     evidence: [
@@ -1046,6 +1045,25 @@ export function makeDiffAnalysis(snapshot) {
   ];
   const hookEvidence = [sourceReference(snapshot, "source-4", "remainingTimeoutAfterBeforeRetryHooks", "throw new TimeoutError")];
   const retryEvidence = [sourceReference(snapshot, "source-7", "timeout: false does not", "t.is(requestCount, 2)")];
+  const beforeRequestEvidence = [
+    sourceReference(snapshot, "source-5", "beforeRequest hook on initial request cannot bypass"),
+    sourceReference(snapshot, "source-5", "beforeRequest hook on retry cannot bypass"),
+  ];
+  const forcedRetryEvidence = [sourceReference(
+    snapshot,
+    "source-5",
+    "afterResponse forced retry respects total timeout budget",
+  )];
+  const errorBodyEvidence = [
+    sourceReference(snapshot, "source-6", "never-ending error response body still respects"),
+    sourceReference(snapshot, "source-6", "t.is(error?.name", "t.is(requestCount, 1)"),
+  ];
+  const boundaryTestEvidence = [
+    ...beforeRequestEvidence,
+    ...forcedRetryEvidence,
+    ...errorBodyEvidence,
+  ];
+  const boundaryEvidence = [...budgetEvidence, ...boundaryTestEvidence];
   return {
     schemaVersion: 3,
     runId: DIFF_RUN_ID,
@@ -1066,10 +1084,12 @@ export function makeDiffAnalysis(snapshot) {
       details: [
         claim(locale, "A delay that consumes the remaining budget ends at the deadline without a new request.", "재시도 대기가 남은 예산을 모두 쓰면 새 요청 없이 마감 시각에 끝난다.", budgetEvidence),
         claim(locale, "Disabling timeout still permits the configured retry.", "시간 제한을 끄면 설정한 재시도를 계속 허용한다.", retryEvidence),
+        claim(locale, "Focused tests place initial and retry beforeRequest hooks and afterResponse forced retries under the shared budget.", "집중 테스트는 최초·재시도 beforeRequest 훅과 afterResponse 강제 재시도에 공유 예산을 적용한다.", [...beforeRequestEvidence, ...forcedRetryEvidence]),
+        claim(locale, "A never-ending error response body now ends with TimeoutError after one request.", "끝나지 않는 오류 응답 본문은 한 번의 요청 뒤 TimeoutError로 끝난다.", errorBodyEvidence),
       ],
     },
     behavior: {
-      summary: claim(locale, "Every retry boundary recalculates the time left from the original call.", "각 재시도 경계에서 최초 호출부터 남은 시간을 다시 계산한다.", budgetEvidence),
+      summary: claim(locale, "The remaining budget is recalculated at different points across hooks, waits, forced retries, and error-body handling.", "훅, 대기, 강제 재시도, 오류 본문 처리 경로마다 남은 예산을 다시 계산하는 시점이 다르다.", boundaryEvidence),
       steps: [
         claim(locale, "A numeric timeout records the operation start once.", "숫자 시간 제한이면 작업 시작 시각을 한 번 기록한다.", [sourceReference(snapshot, "source-4", "Track start time", "Date.now")]),
         claim(locale, "Retry delay is compared with the remaining time.", "재시도 대기를 남은 시간과 비교한다.", budgetEvidence),
@@ -1077,8 +1097,8 @@ export function makeDiffAnalysis(snapshot) {
       ],
       visual: {
         basis: "code",
-        evidence: budgetEvidence,
-        caption: text(locale, "The shared budget is checked at every boundary before another request.", "다음 요청 전에 각 경계에서 공유 예산을 확인한다."),
+        evidence: boundaryEvidence,
+        caption: text(locale, "The shared budget reaches every material path that can delay or start another request.", "공유 예산이 다음 요청을 늦추거나 시작할 수 있는 모든 주요 경로에 적용된다."),
         columns: [
           text(locale, "When the budget is checked", "예산을 확인하는 때"),
           text(locale, "When the budget is zero", "예산이 0이면"),
@@ -1086,9 +1106,12 @@ export function makeDiffAnalysis(snapshot) {
         kind: "decision-table",
         rows: [
           { case: text(locale, "Operation starts", "호출 시작"), cells: [text(locale, "Record the start once for numeric timeout", "숫자 timeout이면 시작 시각을 한 번 기록"), text(locale, "Calculate time left before the first request", "첫 요청 전에 남은 시간을 계산")] },
+          { case: "beforeRequest hook", cells: [text(locale, "Recalculate after the initial or retry hook returns", "최초·재시도 훅이 반환된 뒤 다시 계산"), text(locale, "TimeoutError before another fetch", "다음 fetch 전에 TimeoutError")] },
           { case: text(locale, "Before retry wait", "재시도 대기 전"), cells: [text(locale, "Compare requested delay with time left", "요청된 지연과 남은 시간을 비교"), text(locale, "TimeoutError without a new request", "새 요청 없이 TimeoutError")] },
           { case: text(locale, "After retry wait", "재시도 대기 후"), cells: [text(locale, "Recalculate after elapsed time", "경과 시간을 반영해 다시 계산"), text(locale, "TimeoutError without a new request", "새 요청 없이 TimeoutError")] },
           { case: "beforeRetry hook", cells: [text(locale, "Recalculate only after the hook returns", "hook이 반환된 뒤에만 다시 계산"), text(locale, "Cannot end the call before it returns", "반환 전에는 호출을 끝내지 못함")] },
+          { case: text(locale, "afterResponse forced retry", "afterResponse 강제 재시도"), cells: [text(locale, "Apply its requested delay to the shared budget", "요청한 대기에 공유 예산을 적용"), text(locale, "TimeoutError before another request", "다음 요청 전에 TimeoutError")] },
+          { case: text(locale, "Error response body", "오류 응답 본문"), cells: [text(locale, "Keep body handling under the operation deadline", "본문 처리를 작업 마감 시각 안에 포함"), text(locale, "TimeoutError after one request", "한 번의 요청 뒤 TimeoutError")] },
           { case: text(locale, "Next request", "다음 요청"), cells: [text(locale, "Pass only remaining timeout to the request timer", "남은 timeout만 요청 타이머에 전달"), text(locale, "Do not start the request", "요청을 시작하지 않고 TimeoutError")] },
         ],
         title: text(locale, "Where the shared timeout budget is checked", "공통 시간 예산을 확인하는 지점"),
@@ -1100,8 +1123,8 @@ export function makeDiffAnalysis(snapshot) {
         subject: text(locale, "Shared timeout boundaries", "공유 시간 제한 경계"),
         status: "checked",
         basis: "code",
-        explanation: text(locale, "The core path and focused retry tests cover delays, disabled timeout, exhausted budget, and a successful retry.", "핵심 경로와 집중 재시도 테스트가 대기, 시간 제한 해제, 예산 소진, 성공하는 재시도를 확인한다."),
-        evidence: [...budgetEvidence, ...retryEvidence],
+        explanation: text(locale, "The core path and focused tests cover delays, disabled timeout, hooks, forced retries, error-body handling, exhausted budget, and a successful retry.", "핵심 경로와 집중 테스트가 대기, 시간 제한 해제, 훅, 강제 재시도, 오류 본문 처리, 예산 소진, 성공하는 재시도를 확인한다."),
+        evidence: boundaryEvidence,
         limitIds: [],
       },
       {
@@ -1116,17 +1139,17 @@ export function makeDiffAnalysis(snapshot) {
     codeSteps: [
       { title: text(locale, "Record one operation start", "작업 시작을 한 번 기록"), text: text(locale, "Store the start time when timeout is numeric.", "시간 제한이 숫자이면 시작 시각을 저장한다."), basis: "code", evidence: [sourceReference(snapshot, "source-4", "Track start time", "Date.now")] },
       { title: text(locale, "Spend the remaining budget", "남은 예산 사용"), text: text(locale, "Cap waits and later request timers by the time left.", "대기와 다음 요청 타이머를 남은 시간으로 제한한다."), basis: "code", evidence: budgetEvidence },
-      { title: text(locale, "Cover the timing branches", "시간 분기 확인"), text: text(locale, "Focused tests cover disabled, exhausted, sufficient, and Retry-After budgets.", "집중 테스트가 해제, 소진, 충분한 예산과 Retry-After를 확인한다."), basis: "code", evidence: retryEvidence },
+      { title: text(locale, "Cover the timing branches", "시간 분기 확인"), text: text(locale, "Focused tests cover hooks, forced retries, error bodies, disabled timeout, exhausted budget, sufficient budget, and Retry-After.", "집중 테스트가 훅, 강제 재시도, 오류 본문, 시간 제한 해제, 소진·충분한 예산, Retry-After를 확인한다."), basis: "code", evidence: [...boundaryTestEvidence, ...retryEvidence] },
     ],
     reviewItems: [{
-      kind: "resolve",
-      importance: "high",
+      kind: "verify",
+      importance: "medium",
       basis: "inferred",
-      title: text(locale, "Apply the real deadline while asynchronous hooks run", "비동기 hook에도 실제 마감 시각을 적용해야 한다"),
-      explanation: text(locale, "The code checks the budget only after beforeRetry returns, so a slow hook can outlive the timeout.", "beforeRetry가 반환된 뒤에만 예산을 확인하므로 느린 훅이 시간 제한보다 오래 실행될 수 있다."),
-      effect: text(locale, "The operation can still exceed the timeout promised to the caller.", "작업이 호출자에게 약속한 시간 제한을 여전히 넘길 수 있다."),
-      nextStep: text(locale, "Race hook execution against the remaining deadline or pass a cancellation signal the hook must honor.", "훅 실행과 남은 마감 시간을 경쟁시키거나 훅이 따라야 할 취소 신호를 전달한다."),
-      doneWhen: text(locale, "A hook that exceeds the remaining budget stops near the deadline without another request.", "남은 예산을 넘긴 훅이 마감 시각 근처에서 끝나고 새 요청을 만들지 않는다."),
+      title: text(locale, "Verify the timeout and hook-completion contract", "시간 제한과 훅 작업의 종료 계약을 확인해야 한다"),
+      explanation: text(locale, "The captured code checks the budget only after beforeRetry returns. Ending the caller's wait and cancelling hook work are different contracts.", "현재 근거는 beforeRetry 반환 뒤 예산을 확인하는 동작만 보여 준다. 호출자의 대기 종료와 훅 작업 취소는 서로 다른 계약이다."),
+      effect: text(locale, "The contract determines whether racing the await, cooperative cancellation, or the current behavior is correct.", "공개 계약이 대기 경합, 협력적 취소, 현재 동작 가운데 맞는 선택을 결정한다."),
+      nextStep: text(locale, "Capture the public timeout and hook-lifecycle contract, then compare the current behavior with it.", "공개 시간 제한과 훅 수명주기 계약을 수집하고 현재 동작과 비교한다."),
+      doneWhen: text(locale, "The contract names caller-wait and hook-cancellation responsibilities and the review records any behavioral gap.", "계약이 호출자의 대기 종료와 훅 작업 취소 책임을 밝히고 리뷰가 현재 동작과의 차이를 기록한다."),
       evidence: [...hookEvidence, sourceReference(snapshot, "source-5", "beforeRetry hook respects", "await delay(2000)")],
       limitIds: [],
     }],
@@ -1150,12 +1173,12 @@ export function makeDiffAnalysis(snapshot) {
       },
       {
         question: text(locale, "If the first request uses the whole budget, can retryOnTimeout start another request?", "첫 요청이 예산을 모두 쓰면 retryOnTimeout이 다음 요청을 시작할 수 있는가?"),
-        answer: text(locale, "No. The exhausted operation budget wins over the retry setting.", "아니다. 소진된 작업 예산이 재시도 설정보다 우선한다."),
+        answer: text(locale, "The exhausted operation budget takes precedence and the call ends with TimeoutError before another request.", "소진된 작업 예산이 우선하며 호출은 다음 요청 전에 TimeoutError로 끝난다."),
         evidence: [sourceReference(snapshot, "source-7", "retryOnTimeout: true does not exceed", "t.is(requestCount, 1)")],
       },
       {
-        question: text(locale, "Does the shared deadline block every retry?", "공유 마감 시각이 모든 재시도를 막는가?"),
-        answer: text(locale, "No. A quick failure can retry when enough time remains.", "아니다. 빠르게 실패하고 시간이 충분히 남으면 재시도할 수 있다."),
+        question: text(locale, "When can a retry start under the shared deadline?", "공유 마감 시각 아래에서 재시도가 시작되는 조건은 무엇인가?"),
+        answer: text(locale, "A quick failure can retry when enough time remains.", "빠른 실패 뒤 시간이 충분하면 재시도를 시작한다."),
         evidence: [sourceReference(snapshot, "source-7", "timeout budget allows retry when enough", "t.is(requestCount, 2)")],
       },
     ],
