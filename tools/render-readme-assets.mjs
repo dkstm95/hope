@@ -272,9 +272,6 @@ async function capturePage(page, htmlPath, outputPath, options = {}) {
 }
 
 async function captureElement(page, outputPath, selector, { capturePadding = 16, expandDetails = false } = {}) {
-  await page.locator(".topbar").evaluate((topbar) => {
-    topbar.style.position = "absolute";
-  });
   await page.locator(".skip").evaluate((skipLink) => {
     skipLink.style.display = "none";
   });
@@ -297,6 +294,12 @@ async function captureElement(page, outputPath, selector, { capturePadding = 16,
     }
   }, capturePadding);
   try {
+    const bounds = await element.boundingBox();
+    assert.ok(bounds, `README capture target must have bounds: ${selector}`);
+    assert.ok(
+      bounds.width >= 720 && bounds.height <= bounds.width * 2,
+      `README detail capture must preserve a readable wide layout: ${selector} (${bounds.width}x${bounds.height})`,
+    );
     await element.screenshot({ animations: "disabled", path: outputPath, type: "png" });
   } finally {
     await element.evaluate((target, style) => {
