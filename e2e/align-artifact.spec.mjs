@@ -13,6 +13,7 @@ import { promisify } from "node:util";
 import {
   reviseAlignArtifact,
 } from "../plugins/hope/skills/align/scripts/artifact.mjs";
+import { ARTIFACT_COLORS } from "../plugins/hope/assets/artifact-theme.mjs";
 import {
   makeAlignInput,
   makeLegacyAlignInputV2,
@@ -27,6 +28,12 @@ const directionImages = [
   fileURLToPath(new URL("../assets/readme/hope-align-ko.png", import.meta.url)),
   fileURLToPath(new URL("../assets/readme/hope-align-decisions-ko.png", import.meta.url)),
 ];
+
+function cssRgb(hex) {
+  const [red, green, blue] = hex.match(/[\dA-F]{2}/giu)
+    .map((channel) => Number.parseInt(channel, 16));
+  return `rgb(${red}, ${green}, ${blue})`;
+}
 
 async function writeInput(name, value) {
   const path = join(temporaryRoot, name);
@@ -523,7 +530,7 @@ test("Align print uses the light surface and omits navigation", async ({ page })
     rail: getComputedStyle(document.querySelector(".rail")).display,
     topbar: getComputedStyle(document.querySelector(".topbar")).display,
   }));
-  expect(styles.background).toBe("rgb(245, 244, 239)");
+  expect(styles.background).toBe(cssRgb(ARTIFACT_COLORS.light.background));
   expect(styles.rail).toBe("none");
   expect(styles.topbar).toBe("none");
   await expect(page.locator("#verification .section-disclosure-content")).toBeVisible();

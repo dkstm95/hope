@@ -716,8 +716,8 @@ themes. The initial theme comes from the artifact input or resolved display opti
 it does not write host configuration or browser storage. Reload restores the
 generated initial theme, and print uses the light surface.
 
-The light view uses warm paper, a brighter reading surface, charcoal text,
-quiet neutral rules, and deep teal emphasis. The dark view uses graphite
+The light view uses a near-white canvas, a white reading surface, charcoal
+text, quiet neutral rules, and deep teal emphasis. The dark view uses graphite
 paper, a slightly brighter reading surface, warm white text, quiet gray rules,
 and mint emphasis. Blue identifies links in both views. Print uses the light
 surface.
@@ -730,10 +730,11 @@ Align uses the shared surface, text, rule, accent, link, and visited roles.
 
 ## Diff artifact color
 
-The official light palette is `Technical Paper`: the same warm paper and
-slightly brighter reading surface used by Align.
+The official light palette is `Technical Paper`: the same near-white canvas and
+white reading surface used by Align.
 
-It should feel softer than pure white without looking beige or gray.
+It should feel clean, bright, and calm, with enough surface separation to
+preserve the document hierarchy.
 
 Shared Hope surface values come from the Technical Record tokens. Diff's
 `scripts/design/tokens.mjs` owns its status and code roles.
