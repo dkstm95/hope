@@ -1,104 +1,64 @@
 ---
 name: align
-description: Explore a task before implementation when intent, expected behavior, architecture, data modeling, scope, or an important assumption needs shared understanding.
+description: Resolve intent, scope, consequential design choices, or important assumptions that need shared understanding before implementation. Use when requested or when an unresolved choice would materially change the result.
 ---
 
 # Hope Align
 
-Use the strongest available reasoning to inspect the task and lead the
-conversation until the person and AI share the intent and consequential
-decisions. Align owns inquiry, decisions, and confirmation. Implementation
-starts with the person's explicit authorization.
+Build shared understanding of the goal and consequential decisions. Use the
+conversation's existing decisions, delegation, and implementation authorization.
+Do not turn clear, authorized work into a new approval process.
 
-Read `../write/references/writing-standard.md` before drafting user-facing
-language. Preserve the agreement, evidence distinctions, confirmation
-conditions, and artifact contract.
+Read `../write/references/writing-standard.md` for user-facing language.
 
-## Build understanding from evidence
+## Resolve consequential choices
 
-Start with the conversation, relevant code, and the project's governing
-sources. Find architecture authorities, decision records, schemas, data
-policies, design systems, and local conventions when they exist. Follow their
-actual authority and surface conflicts that affect the task.
+Start from the conversation, relevant code, and governing project sources.
+Research facts and recommend a path. Keep evidence, user decisions, AI
+proposals, assumptions, and uncertainty distinct.
 
-Facts, research, system analysis, and recommendations belong to the AI. Intent
-and choices with consequences worth human understanding belong to the person,
-who may decide or explicitly delegate them. Keep facts, user decisions, AI
-proposals, assumptions, material questions, and uncertainty distinct.
+Track choices that could change the goal, observable result, future options,
+long-lived constraints, or material risk. Include architecture and data modeling
+when they have those effects. Leave routine, reversible mechanics to
+implementation. Surface omissions, contradictions, unsupported assumptions,
+and simpler approaches when they could change a consequential choice.
 
-Build a decision tree from choices that could materially change the goal,
-observable result, future decision space, or risk of harm. Include data
-modeling and architecture when they shape those consequences or create a
-long-lived constraint. Give reversible code mechanics to the implementation
-AI.
+Ask related, ready questions together in a manageable round. Explain the
+consequences, recommend a path, and offer realistic alternatives. Research what
+the AI can determine instead of asking the person for facts. Continue
+independent authorized work while answers are pending.
 
-For every possible branch, ask:
+Close a choice through a decision, deliberate exclusion, or delegation. Reopen
+it only when evidence changes its basis. If the person is uncertain, gather
+useful evidence or recommend a probe. Read `references/design-directions.md`
+when a material visual choice needs comparison images.
 
-> Is this choice worth the person's understanding and a decision or explicit
-> delegation before implementation?
+## Confirm and continue
 
-Use model judgment to answer that routing question. Surface an omission,
-contradiction, risk, unsupported assumption, edge case, or simpler structure when
-it could change a material branch. Explain the issue, impact, evidence, and
-uncertainty, then recommend the best path.
+Once the material choices are settled, summarize the goal, how success will be
+recognized, consequential decisions, and relevant exclusions or assumptions.
+Ask for confirmation of new shared understanding; do not ask the person to
+reconfirm an unchanged agreement.
 
-When the person supplies an Align artifact path, read `references/artifact.md`
-and inspect that exact artifact as evidence.
+Confirmation of understanding and permission to implement are distinct. Use
+implementation authorization already given, including a request to align and
+then build. If none exists, leave implementation for the person's decision.
+An alignment-only request ends with the confirmed understanding.
 
-## Work the decision frontier
+## Preserve understanding when needed
 
-The frontier contains every unresolved material branch whose prerequisites are
-settled. Ask the whole frontier in one round. Number each question, explain its
-consequence, and give a recommendation with realistic alternatives. Questions
-carry decisions; the AI supplies the surrounding facts and reasoning.
+Read `references/artifact.md` when the person supplies an Align artifact, asks
+for a durable record, or another session or worker will rely on the agreement.
+Also use it when a material agreement or later human observation must survive
+the conversation. Otherwise the conversation is sufficient.
 
-After each answer, update the decision tree and recompute the frontier. Reopen a
-dependent choice when new evidence or an earlier decision changes it. Close a
-branch through a decision, deliberate exclusion, or explicit delegation.
+The reference owns artifact authoring, revision, and handoff. Run its commands
+through `node "<skill-dir>/scripts/cli.mjs"`, replacing `<skill-dir>` with the
+absolute directory containing this file. In Claude Code it is
+`${CLAUDE_PLUGIN_ROOT}/skills/align`.
 
-Uncertainty is a valid answer. It invites the AI to research, obtain a useful
-probe, or recommend a path. For a material visual choice, read
-`references/design-directions.md`. Keep the branch active until the person has
-enough evidence to decide or delegate it.
+Report where the confirmed understanding remains. A receiving implementation
+AI inspects the current project and uses the agreement for intent and decisions.
 
-## Confirm shared understanding
-
-When the frontier is empty, teach back the shared goal and problem model, the
-detailed goals and recognition methods, the consequential decisions and
-their effects, and every exclusion, delegation, or assumption that shaped them.
-Ask the person to confirm this understanding. Their confirmation completes
-Align. Ask whether implementation may begin as a separate choice; explicit
-authorization starts implementation, and the person may leave it for later.
-
-## Preserve confirmed understanding
-
-After confirmation, read `references/artifact.md` when an existing artifact
-continues, the understanding needs a durable record, or another session or
-worker will rely on it. The active conversation is sufficient for the rest.
-
-Run the private adapter through the active host when the artifact reference
-calls for it.
-
-Claude Code:
-
-```text
-node "${CLAUDE_PLUGIN_ROOT}/skills/align/scripts/cli.mjs"
-```
-
-Codex:
-
-```text
-node <skill-dir>/scripts/cli.mjs
-```
-
-For Codex, replace `<skill-dir>` with the absolute directory containing this
-file.
-
-Report where the confirmed understanding remains. For a handoff, pass the
-artifact path and revision from `references/artifact.md`; the receiving AI uses
-it as the authority for confirmed intent and decisions, inspects the current
-project, and owns the remaining implementation reasoning.
-
-Align's decision-tree and frontier interview is informed by Matt Pocock's
-[grill-me](https://github.com/mattpocock/skills/blob/main/docs/productivity/grill-me.md)
-skill.
+The decision interview is informed by Matt Pocock's
+[grill-me](https://github.com/mattpocock/skills/blob/main/docs/productivity/grill-me.md).

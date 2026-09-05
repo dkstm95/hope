@@ -8,8 +8,8 @@ identity, revision judgment, and commands.
 ## Inspect supplied evidence
 
 When the person supplies an artifact path, inspect that exact path. Use its
-current content as evidence and ask for current confirmation through the Align
-conversation.
+content as evidence and follow `SKILL.md` to confirm new or changed understanding.
+Honor an unchanged agreement and authorization already given in the conversation.
 
 Retain the artifact when inspection verifies the same goal and the confirmed
 understanding is unchanged. Revise it when material intent, decisions, exclusions,
@@ -26,8 +26,7 @@ After confirmation, create or revise an artifact when:
   conversation; or
 - later human observation or approval forms part of the agreement.
 
-For other work, keep the understanding in the conversation. Ask the person
-about a durable record when its value is itself material or uncertain.
+For other work, keep the understanding in the conversation.
 
 ## Author the current understanding
 

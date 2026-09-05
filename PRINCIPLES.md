@@ -1,209 +1,104 @@
 # Hope principles
 
 Hope helps people work with AI while staying able to see, understand, and
-control the work.
-
-These principles guide the whole project.
-
-A feature, interface, or outside reference may support them, but does not define
-Hope by itself.
+control the work. These principles guide the product; outside references and
+delivery tools support them.
 
 ## Keep delivery secondary
 
-Hope is a set of focused features for working with AI.
-
-Their user goals, behavior, safety boundaries, and results define the product.
-
-This repository currently delivers those features as Skills in one plugin for
-Codex and Claude Code.
-
-Plugins, marketplaces, manifests, hosts, CLIs, and harnesses are delivery
-mechanisms.
-
-They may expose Hope, but they must not define feature behavior.
-
-The current distribution does not include an independent CLI or harness.
-
-Add another delivery path only after a real user need justifies its product and
-maintenance cost.
+User goals, behavior, safety boundaries, and results define Hope's features.
+The current distribution delivers Skills in one plugin for Codex and Claude
+Code, with no independent CLI or harness. Add another delivery path only when
+a real user need earns its product and maintenance cost.
 
 ## Start with instructions
 
-In the current Skill-based delivery, put model judgment, conversation flow, and
-writing guidance in a short `SKILL.md`.
-
-Move detailed guidance to a reference that the Skill reads only when needed.
-
-Use code only when Hope must control external state or produce a deterministic
-result.
-
-Examples include exact Git revisions, bounded input, source citations, safe file
-publication, and self-contained HTML.
-
-Do not wrap prose in JavaScript merely to return it to the model.
+Put model judgment, conversation flow, and writing guidance in a short
+`SKILL.md`. Load detailed references only when needed. Use code for external
+state or deterministic guarantees, such as exact Git revisions, bounded input,
+validated citations, safe publication, and self-contained HTML. Do not wrap
+prose in code merely to return it to the model.
 
 ## Keep each feature close together
 
-A feature is the default unit of product behavior and ownership.
-
-While the plugin is the only supported delivery, keep its editable
-implementation in one Skill directory.
-
-Keep the feature's instructions, references, scripts, and private assets
-together.
-
-Do not make feature behavior depend on a manifest, marketplace, installed-cache
-path, or host brand.
-
-Shared code needs two real consumers with the same invariant.
-
-Generated package files must name their editable source and must never be edited
-by hand.
+Keep a feature's editable instructions, references, scripts, and private assets
+inside its Skill directory. Feature behavior must not depend on a manifest,
+marketplace, installed-cache path, or host brand. Shared code needs two real
+consumers with the same invariant. Generated files must name their editable
+source and must not be edited by hand.
 
 ## Keep the person in control
 
-Hope can automate work, but must not hide important choices, state, or results.
-
-The person should be able to understand what Hope did, guide what happens next,
-and stop or clean up the work safely.
-
-Show the reason and evidence when they matter.
-
-Do not present a generated claim as a verified fact.
+Make important choices, state, and results visible so the person can understand,
+guide, stop, or clean up the work. Show reasons and evidence when they matter;
+do not present generated claims as verified facts.
 
 ## Follow explicit agreements
 
-When a person explicitly approves the intended result, scope, or design of a
-task, use that agreement as the basis for implementation.
-
-Existing code, removed implementations, and conventions from another feature
-do not override it.
-
-If implementation must differ materially, explain why and agree on the change
-before continuing.
+An explicitly approved result, scope, or design governs implementation.
+Existing code, removed implementations, and another feature's conventions do
+not override it. Honor decisions and delegation already given. If the work
+must differ materially, explain why and agree on that change before dependent
+work continues.
 
 ## Own what Hope creates
 
-Hope records the files or private state it creates.
-
-It never guesses ownership from a name or prefix.
-
-Destructive work needs a clear target, the person's authority, and a final
-identity check.
-
-When Hope is uncertain, it leaves the item in place.
-
-Hope never treats an existing artifact as safe to replace merely because it
-created a similar one.
+Record the files and private state Hope creates; never infer ownership from a
+name or prefix. Destructive work requires a clear target, authority, and a
+final identity check. Preserve uncertain items. Creating a similar artifact
+does not authorize replacing an existing one.
 
 ## Build from real work
 
-Start with a clear user goal and the smallest useful feature.
-
-Use the feature, learn from it, and then improve it.
-
-Do not add a state machine, compatibility layer, evaluation framework, or
-abstraction for a possible future need.
-
-Compatibility is a product choice, not a default cost.
+Start with a clear user goal and the smallest useful feature. Improve it through
+use. Add no state machine, compatibility layer, evaluation framework, or
+abstraction for a hypothetical need. Compatibility is a product choice.
 
 ## Close material frontiers
 
-A material frontier contains unresolved decisions, questions, or claims that
-are ready to address and could change the intended result or prevent material
-harm. Resolve it before dependent work; revisit earlier decisions when new
-evidence or implementation invalidates them.
+Resolve ready questions or decisions that could change the result or prevent
+material harm before dependent work. Use evidence, a decision, deliberate
+exclusion, or explicit delegation; revisit only when new evidence changes the
+basis. Routine implementation choices need no separate approval.
 
-Before acting, decide, deliberately exclude, or explicitly delegate material
-intent. After acting, support material claims with relevant evidence or state
-the limitation. Finish when no material item remains and one proportionate final
-pass exposes no new one.
-
-Use this as a decision rule, not a required artifact. Small, clear work may need
-nothing more. Add tracking or automation only when a handoff, record-keeping
-obligation, or deterministic boundary earns the cost.
+Support material claims with evidence or state the limitation. Finish when no
+material issue remains and one proportionate pass finds no new one. This is a
+decision rule, not a required tree, checklist, artifact, or automation.
 
 ## Prefer simple, direct design
 
-Keep only files, layers, copies, and checks that serve a clear present purpose.
+Keep only parts that define behavior, serve a real consumer, meet an obligation,
+or preserve information needed to reproduce the work. Prefer a direct path
+from editable source to consumer.
 
-Every part must define behavior, serve a real consumer, meet an obligation, or
-preserve information needed to reproduce the work.
+Keep one authoritative statement and link to it. Another description needs a
+distinct contract, consumer, or obligation demonstrated by its actual content
+and use. A different folder or audience alone does not justify a copy.
 
-Prefer a direct path from the editable source to its consumer.
-
-A different audience or folder does not by itself justify another description
-of the same behavior.
-
-Keep one authoritative statement and link to it unless another file owns a
-distinct contract, consumer, or obligation.
-
-Verify that distinction from the actual content and use, not from a document's
-name or intended audience.
-
-When removing something, remove the generation, packaging, documentation, and
-tests that existed only to support it.
-
-Do not confuse fewer files with simpler design.
-
-Keep separate parts when they make ownership, behavior, or an independent
-distribution easier to understand.
+Remove obsolete behavior with its dedicated generation, packaging,
+documentation, assets, and tests. Fewer files are not inherently simpler; keep
+separate parts when they clarify ownership, behavior, or independent delivery.
 
 ## Test the remaining risks
 
-Test feature behavior with representative prompts.
+Verify feature behavior with representative prompts and deterministic boundaries
+with relevant tests. Use browser tests for relationships only a browser can
+verify. Test the promised behavior rather than freezing wording, file names,
+screenshots, or CSS values as a proxy for judgment.
 
-Test Skill discovery as a contract of the current delivery.
-
-Test deterministic code at the boundaries it promises to enforce.
-
-Use browser tests for behavior or visual relationships that only a browser can
-verify.
-
-Test the required relationship directly instead of freezing a screenshot or
-CSS value as a proxy.
-
-Add a deterministic check only when it detects a concrete failure without
-rejecting a valid design.
-
-Do not freeze wording, file names, or implementation shape as a proxy for a
-judgment the check cannot make.
-
-Leave meaning and design trade-offs to review when no reliable machine boundary
-exists.
-
-Do not preserve implementation complexity only because tests already exist.
-
-Remove obsolete behavior and its tests together.
+Add checks only for concrete failures they can reliably detect without
+rejecting valid designs. Skill discovery tests verify delivery, not behavior.
+Remove obsolete tests with the implementation they supported. Once relevant
+checks pass, expand or repeat them only for new evidence or changes.
 
 ## Use plain language and clear boundaries
 
-Use short sentences and familiar words in code, commands, and documents.
-
-Name a thing after the job it does or the data it holds.
-
-Keep facts, user decisions, AI proposals, assumptions, and uncertainty distinct.
-
-## Test a new decision
-
-Before adding a feature or layer, ask:
-
-- What clear user goal does it serve?
-- Can instructions handle it honestly?
-- What external state or deterministic result requires code?
-- Can the person see and control important choices?
-- Does Hope know exactly what it created and may clean up?
-- What smallest test would catch a real failure?
-- Has the complexity earned its place through use?
-- Does the feature remain understandable without its current delivery adapter?
+Use familiar words and name things by their job or data. Keep facts, user
+decisions, AI proposals, assumptions, and uncertainty distinct. Apply the
+[writing standard](plugins/hope/skills/write/references/writing-standard.md).
 
 ## Learn without copying
 
-Hope may learn from research, tools, videos, and other projects.
-
-Record useful sources near the feature or decision they influenced.
-
-An outside source is context, not Hope's authority.
-
-Hope owns these principles and changes them only when the direction of the whole
-project changes.
+Record useful sources near the feature or decision they influenced. Outside
+work informs Hope but does not govern it. Change these principles only when
+the whole project's direction changes.

@@ -1,55 +1,23 @@
 # AI work instructions
 
-Before changing Hope:
+Follow [CONTRIBUTING.md](CONTRIBUTING.md) for required reading, verification,
+release preparation, and submission.
 
-- Read [PRINCIPLES.md](PRINCIPLES.md).
-- Follow the workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
-- Read [docs/architecture.md](docs/architecture.md) before changing
-  implementation dependencies, shared code or assets, a main folder, a build
-  boundary, or delivery structure.
-- Read the matching `plugins/hope/skills/<feature>/SKILL.md` before changing
-  feature behavior.
-- Read [docs/design.md](docs/design.md) before changing a Hope GUI.
+Carry an action request through to its intended result. Use the conversation's
+existing decisions and authorization; choose routine, reversible details
+without asking again. Ask only when missing information changes the result or
+an action needs authority the person has not given. Continue independent,
+authorized work while an answer is pending.
 
-## Writing
+Explicit user instructions take precedence over Skill guidance. If a Skill
+would pause or redirect authorized work, first check whether that rule applies.
+When it does, quote and link the exact instruction and explain the remaining
+decision. Prepare the authorized work so any needed approval concerns a
+concrete, reviewable result.
 
-Use the Hope Write Skill whenever clearer language would improve the work.
+Use [Hope Write](plugins/hope/skills/write/SKILL.md) wherever clearer language
+helps. Keep updates and results concise; report the change, relevant evidence,
+and any verification gap.
 
-Write applies the shared
-[writing standard](plugins/hope/skills/write/references/writing-standard.md)
-inside the active task.
-
-When implementation or another Skill owns the task, Write remains
-cross-cutting. It does not create another workflow, worker, result, scope, or
-completion condition.
-
-## Completion
-
-Before finishing, review the full changed scope against
-[Prefer simple, direct design](PRINCIPLES.md#prefer-simple-direct-design).
-
-Remove support files, generation, packaging, documentation, and tests that no
-longer serve the remaining product.
-
-Link to one authority instead of keeping parallel behavior descriptions unless
-another file owns a distinct contract or obligation.
-
-Verify changed product behavior.
-
-Skill discovery and manifest validity alone are not evidence that behavior
-works.
-
-Run the relevant checks from [CONTRIBUTING.md](CONTRIBUTING.md) and report any
-remaining verification gap.
-
-Before completing any file-changing task, follow the release decision and
-preparation steps in [docs/release.md](docs/release.md), then run
-`npm run check`.
-
-Before committing or opening a pull request, choose one final title that follows
-[the contribution rule](CONTRIBUTING.md#record-and-submit-the-change). Validate
-it with `npm run check:title -- "<title>"`, then use it for both the commit and
-pull request.
-
-Do not finish while `npm run check` fails. Do not commit, open a pull request,
-or push while the selected title fails `npm run check:title -- "<title>"`.
+These collaboration rules draw on the
+[GPT-6 Astra prompting guide](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra#prompting-best-practices).

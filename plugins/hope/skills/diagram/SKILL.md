@@ -1,70 +1,31 @@
 ---
 name: diagram
-description: Create, refine, or review an explanatory diagram or data chart when spatial relationships or quantitative shape make the meaning materially clearer. Use within another task without replacing its workflow or artifact; do not use for decorative illustration, simple lists or tables, or UI screen design.
+description: Create, refine, or review explanatory diagrams and data charts when relationships or quantitative shape communicate better than prose or a small table. Excludes decorative illustration and UI screen design.
 ---
 
 # Hope Diagram
 
-Use the active host session to create, refine, or review an explanatory visual.
-Read `references/diagram-standard.md` before doing any visual work. Also read
-`references/chart-standard.md` when position, length, area, width, angle, or
-another visual property represents a quantity.
+Make the relationship or quantitative claim easier to understand. When working
+inside another task, preserve its scope, facts, evidence, artifact schema,
+visual system, and completion conditions. Improve the existing result; create
+another file only when the task needs one.
 
-Diagram may own a standalone diagram request or accompany implementation and
-another Skill. When it accompanies other work, preserve that work's scope,
-authority, output format, and completion conditions. Improve the visual inside
-the existing artifact or result; do not create another workflow or file unless
-the request or active task requires one.
+Read `references/diagram-standard.md` for visual selection, composition,
+accessibility, and rendered verification. Also read `references/chart-standard.md`
+when position, length, area, width, angle, or another visual property encodes a
+quantity.
 
-The active task owns facts, evidence, artifact schema, and delivery. Diagram
-owns whether a visual earns its place, the reading job, semantic model, visual
-grammar, composition, data honesty, accessibility, and rendered verification.
-When an artifact permits only named visual kinds or fields, choose within that
-contract and do not extend its schema.
+Use the smallest suitable format the host can render and the person can inspect.
+Respect a requested format or an artifact's allowed visual kinds. Resolve
+routine presentation choices from context and continue; ask only when the
+choice would materially change the requested result.
 
-## Decide whether a visual earns its place
+Inside a Hope HTML artifact, inherit its Technical Record theme, typography,
+and responsive shell. A standalone HTML visual uses the same dual-mode
+language; read `../../assets/artifact-theme.mjs` and embed its current roles.
 
-Use a visual only when spatial position, connection, order, containment, state,
-or quantitative shape teaches something that prose or a small table would hide.
-Use prose, bullets, or a table when they communicate the same meaning more
-directly.
-
-Identify the reader, destination, intended viewing size, one main message, and
-source facts before drawing. Preserve the source vocabulary and uncertainty.
-Never invent a node, relationship, value, or business meaning to make the
-composition look complete.
-
-## Design the visual
-
-Model the meaning before arranging shapes. Choose one primary semantic job and
-one primary visual grammar from the standard. If the request fixes the format
-or an active artifact already owns a visual system, keep it. Otherwise use the
-smallest suitable output that the host can render and the person can inspect.
-
-When type, size, audience, or material omissions remain undecided, state the
-assumption in one short update and continue unless a wrong choice would change
-the requested result materially. Let the person redirect when they are present.
-
-Inside a Hope HTML artifact, inherit its Technical Record tokens, typography,
-theme behavior, and responsive shell. A standalone Hope Diagram HTML uses that
-same dual-mode technical-record language and keeps the visual as its main
-reading block. Read `../../assets/artifact-theme.mjs` for the exact common
-roles and embed their current values in the standalone file.
-
-Build for the intended viewing size. Remove, merge, group, or split content
-before shrinking labels or crowding connections. Keep the main path readable
-without a legend when possible.
-
-## Verify and return
-
-Render and inspect the result at its intended size. Check meaning, hierarchy,
-label fit, connector or mark tracing, contrast, quantitative integrity when
-applicable, and accessible text alternatives. Let a rendered defect reopen
-composition, visual grammar, the semantic model, or whether the visual should
-exist. Fix the earliest invalid decision, then inspect again. Return when a
-fresh target-size inspection reveals no new material issue.
-
-Lead with the finished artifact or changed result. Report material assumptions,
-merged or omitted content, and the verification performed. If a required render
-or interaction check was unavailable, state that gap rather than presenting the
-visual as verified.
+Inspect the result at its intended size using the standard. Fix material
+defects and recheck affected relationships; stop when the relevant checks pass.
+Return the finished artifact or review findings with material assumptions,
+omissions, and verification gaps. A review request alone does not authorize
+editing its target.

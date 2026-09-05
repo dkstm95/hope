@@ -13,7 +13,7 @@ import {
   resolveContextRequestIds,
 } from "./checkpoint.mjs";
 import { collectGitHubContext } from "./context.mjs";
-import { finalizeReview, preflightReviewOutput } from "./finalize.mjs";
+import { finalizeReview, preflightReviewOutput } from "./artifact.mjs";
 import {
   collectGitHubPullRequest,
   isRetryableGitHubAccessError,
@@ -71,14 +71,6 @@ export async function resolveDiffTarget({
   return await (dependencies.discoverTarget ?? discoverGitHubPullRequest)(
     dependencies.targetOptions,
   );
-}
-
-async function readAnalysis(path, options = {}) {
-  return await readBoundedJson(path, {
-    maximumBytes: LIMITS.modelBytes,
-    ...options,
-    label: "Hope diff analysis",
-  });
 }
 
 function assertAnalysisReady(run) {
@@ -144,17 +136,24 @@ function snapshotWithContext(snapshot, candidates) {
 }
 
 async function validateRunAnalysis(run, dependencies = {}) {
-  const analysis = await readAnalysis(run.analysisPath, {
-    maximumBytes: LIMITS.modelBytes,
-  });
-  return (dependencies.validate ?? validateAnalysis)(
-    analysis.value,
-    run.snapshot,
-    {
-      analysisFileBytes: analysis.fileBytes,
-      runId: run.manifest.runId,
-    },
-  );
+  try {
+    const analysis = await readBoundedJson(run.analysisPath, {
+      label: "Hope diff analysis",
+      maximumBytes: LIMITS.modelBytes,
+    });
+    return await (dependencies.validate ?? validateAnalysis)(
+      analysis.value,
+      run.snapshot,
+      {
+        analysisFileBytes: analysis.fileBytes,
+        runId: run.manifest.runId,
+      },
+    );
+  } catch (error) {
+    error.code = "HOPE_ANALYSIS_INVALID";
+    error.canRetry = true;
+    throw error;
+  }
 }
 
 async function renderValidatedAnalysis(validated, dependencies = {}) {
@@ -163,83 +162,54 @@ async function renderValidatedAnalysis(validated, dependencies = {}) {
   return await module.renderReview(validated);
 }
 
+function withSecondaryFailure(original, message, details, fields) {
+  const combined = new Error(message, { cause: original });
+  combined.name = original.name;
+  for (const key of fields) {
+    if (original[key] !== undefined) combined[key] = original[key];
+  }
+  for (const [key, value] of Object.entries(details)) {
+    Object.defineProperty(combined, key, { value });
+  }
+  return combined;
+}
+
+const failureFields = [
+  "code", "canRetry", "command", "outputPath", "preservedPath", "runPath",
+];
+
 function withCleanupFailure(error, cleanupError) {
   const original = error instanceof Error ? error : new Error(String(error));
-  if (cleanupError?.code === "HOPE_DIFF_RUN_REPLACED") {
-    const combined = new Error(
-      `${original.message} Hope did not remove a replaced private run directory. `
-        + `It remains at ${cleanupError.preservedPath}. Inspect it before removing it.`,
-      { cause: original },
-    );
-    combined.name = original.name;
-    if (original.code !== undefined) combined.code = original.code;
-    if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
-    if (original.command !== undefined) combined.command = original.command;
-    if (original.runPath !== undefined) combined.runPath = original.runPath;
-    combined.preservedPath = cleanupError.preservedPath;
-    Object.defineProperty(combined, "cleanupError", {
-      configurable: false,
-      enumerable: false,
-      value: cleanupError,
-      writable: false,
-    });
-    return combined;
-  }
-  const combined = new Error(
-    `${original.message} Hope could not remove its private review data after this failure. `
-      + "It remains in restricted temporary storage and a later Hope run will retry expiry cleanup.",
-    { cause: original },
+  const replaced = cleanupError?.code === "HOPE_DIFF_RUN_REPLACED";
+  const message = replaced
+    ? `${original.message} Hope did not remove a replaced private run directory. `
+      + `It remains at ${cleanupError.preservedPath}. Inspect it before removing it.`
+    : `${original.message} Hope could not remove its private review data after this failure. `
+      + "It remains in restricted temporary storage and a later Hope run will retry expiry cleanup.";
+  const combined = withSecondaryFailure(
+    original,
+    message,
+    { cleanupError },
+    replaced ? ["code", "canRetry", "command", "runPath"] : failureFields,
   );
-  combined.name = original.name;
-  if (original.code !== undefined) combined.code = original.code;
-  if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
-  if (original.command !== undefined) combined.command = original.command;
-  if (original.outputPath !== undefined) combined.outputPath = original.outputPath;
-  if (original.preservedPath !== undefined) {
-    combined.preservedPath = original.preservedPath;
-  }
-  if (original.runPath !== undefined) combined.runPath = original.runPath;
-  combined.cleanupPending = true;
-  Object.defineProperty(combined, "cleanupError", {
-    configurable: false,
-    enumerable: false,
-    value: cleanupError,
-    writable: false,
-  });
+  if (replaced) combined.preservedPath = cleanupError.preservedPath;
+  else combined.cleanupPending = true;
   return combined;
 }
 
 function withMutationReleaseFailure(error, releaseError) {
   const original = error instanceof Error ? error : new Error(String(error));
-  const combined = new Error(
+  const combined = withSecondaryFailure(
+    original,
     `${original.message} Hope also could not release its private run lock. `
       + "A later Hope run will retry expiry cleanup.",
-    { cause: original },
+    {
+      ...(original.cleanupError === undefined ? {} : { cleanupError: original.cleanupError }),
+      releaseError,
+    },
+    failureFields,
   );
-  combined.name = original.name;
-  if (original.code !== undefined) combined.code = original.code;
-  if (original.canRetry !== undefined) combined.canRetry = original.canRetry;
-  if (original.command !== undefined) combined.command = original.command;
-  if (original.outputPath !== undefined) combined.outputPath = original.outputPath;
-  if (original.preservedPath !== undefined) {
-    combined.preservedPath = original.preservedPath;
-  }
-  if (original.runPath !== undefined) combined.runPath = original.runPath;
   combined.cleanupPending = true;
-  if (original.cleanupError !== undefined) {
-    Object.defineProperty(combined, "cleanupError", {
-      configurable: false,
-      enumerable: false,
-      value: original.cleanupError,
-      writable: false,
-    });
-  }
-  Object.defineProperty(combined, "releaseError", {
-    configurable: false,
-    enumerable: false,
-    value: releaseError,
-    writable: false,
-  });
   return combined;
 }
 
@@ -574,14 +544,7 @@ export async function validateDiff(runPath, dependencies = {}) {
     temporaryRoot: dependencies.temporaryRoot,
   });
   assertAnalysisReady(run);
-  let validated;
-  try {
-    validated = await validateRunAnalysis(run, dependencies);
-  } catch (error) {
-    error.code = "HOPE_ANALYSIS_INVALID";
-    error.canRetry = true;
-    throw error;
-  }
+  const validated = await validateRunAnalysis(run, dependencies);
   return Object.freeze({
     next: nextAfterValidation(runPath),
     runId: run.manifest.runId,
@@ -613,14 +576,7 @@ export async function finishDiff(runPath, dependencies = {}) {
   try {
     assertAnalysisReady(run);
 
-    let validated;
-    try {
-      validated = await validateRunAnalysis(run, dependencies);
-    } catch (error) {
-      error.code = "HOPE_ANALYSIS_INVALID";
-      error.canRetry = true;
-      throw error;
-    }
+    const validated = await validateRunAnalysis(run, dependencies);
 
     let preserveRun = false;
     try {

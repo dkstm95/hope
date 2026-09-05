@@ -18,7 +18,6 @@ const root = new URL("../", import.meta.url);
 const fromRoot = (path) => new URL(path, root);
 
 export const normalizeLineEndings = (content) => content.replace(/\r\n?/gu, "\n");
-export const pluginBuildEntries = generatedPluginFiles;
 
 export async function expectedPluginFile(entry) {
   return normalizeLineEndings(
@@ -27,7 +26,7 @@ export async function expectedPluginFile(entry) {
 }
 
 export async function buildPlugin() {
-  for (const entry of pluginBuildEntries) {
+  for (const entry of generatedPluginFiles) {
     const destination = fileURLToPath(fromRoot(entry.destination));
     await mkdir(dirname(destination), { recursive: true });
     await writeFile(destination, await expectedPluginFile(entry), "utf8");

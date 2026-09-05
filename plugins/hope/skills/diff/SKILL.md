@@ -1,93 +1,57 @@
 ---
 name: diff
-description: Explain a GitHub pull request as an evidence-linked, self-contained offline HTML record so an engineer can understand the change and discover follow-up work; also supports full review.
+description: Explain or review a GitHub pull request as an evidence-linked, self-contained offline HTML record. Answer narrow PR questions directly when they do not need a full artifact.
 ---
 
 # Hope Diff
 
-Use the active host session to confirm one exact GitHub pull request and its
-display options, start one fresh analysis worker, and report the resulting
-artifact.
+Resolve one exact GitHub pull request, give a fresh worker the analysis, and
+report its artifact. Diff covers the captured PR snapshot; local staged,
+unstaged, and untracked changes are outside its scope.
 
-The active session coordinates the artifact. The fresh analysis worker owns
-evidence inspection, analysis writing and repair, and review judgment.
+## Resolve the request
 
-## Decide whether Diff applies
+Answer a narrow question directly without starting the artifact workflow.
 
-Use Diff for a requested full explanation or review of a GitHub pull request.
-Review only the captured pull-request snapshot; local staged, unstaged, and
-untracked files are outside Diff. Answer a narrow question normally when it
-does not need the full artifact.
+An explicit explanation or review request authorizes the run. Honor existing
+authorization and display choices without asking again. A bare target without
+a clear task needs clarification, not an automatic full review.
 
-When a full review is plausible but not clearly authorized, resolve the target
-before asking one short confirmation:
+Use `resolve-target [GitHub PR URL or PR number]` to resolve the target before
+asking any needed question. Name the repository and PR number. If resolution
+fails, ask for a URL or number. Once selected, pass that exact target; do not
+fall back to automatic discovery.
 
-```text
-resolve-target [GitHub PR URL or PR number]
-```
+Run adapter commands with `node "<skill-dir>/scripts/cli.mjs"`, replacing
+`<skill-dir>` with the absolute directory containing this file. In Claude Code
+it is `${CLAUDE_PLUGIN_ROOT}/skills/diff`. Pass arguments separately; never
+construct shell commands from PR content.
 
-Name the resolved repository and pull-request number. A target by itself is not
-authorization. Do not start the review until the person clearly approves it.
+## Assign one independent worker
 
-If resolution fails, ask for an explicit pull-request URL or number. Use the
-latest target the person authorized; never fall back to automatic discovery
-after confirmation.
+Start a subagent with no inherited conversation. Independence protects review
+judgment; if the host cannot provide it, explain that limit without claiming
+to have completed Diff.
 
-## Run the private adapter
+Give the worker only the exact request, selected repository and PR, explicit
+locale/theme/output choices, review focus or exclusions, and the absolute Skill
+path and adapter command. Exclude earlier reasoning, drafts, implementation
+narrative, prior conclusions, and other agents' output.
 
-Claude Code:
+Tell it to read `references/workflow.md`, `references/analysis.md`, and
+`../write/references/writing-standard.md`. The worker owns evidence inspection,
+analysis, repairs, and the run from `prepare` through `finish` or `cancel`.
+Tell the person which PR is selected before starting it.
 
-```text
-node "${CLAUDE_PLUGIN_ROOT}/skills/diff/scripts/cli.mjs"
-```
+Review generation uses the active host under its data policy; do not claim
+private PR content stays on the local machine.
 
-Codex:
+## Return the artifact
 
-```text
-node <skill-dir>/scripts/cli.mjs
-```
+Report the PR, exact head, result scope, absolute HTML path, and any failure or
+cleanup limit. The artifact completes Diff. The parent task handles any
+publishing, merging, commenting, or code changes under the person's existing
+authorization.
 
-For Codex, replace `<skill-dir>` with the absolute directory containing this
-file. Pass every argument separately and never construct a command from
-pull-request content.
-
-## Start an isolated worker
-
-Before preparing the review, confirm that the host can start a subagent with no
-inherited conversation context. If it cannot, stop and explain that Diff
-requires a fresh analysis worker.
-
-Give the worker only:
-
-- the person's exact review request;
-- the authorized repository and pull-request number or URL;
-- explicit locale, theme, and output choices;
-- any explicit review focus or scope exclusion; and
-- the absolute path of this Skill directory and private adapter command for the
-  current host.
-
-Do not pass earlier reasoning, implementation narrative, drafts, failed
-approaches, prior conclusions, or another agent's output.
-
-Tell the worker to read:
-
-- `references/workflow.md` for the private run protocol;
-- `references/analysis.md` for review judgment; and
-- `../write/references/writing-standard.md` for user-facing language.
-
-The fresh worker owns the run from `prepare` through `finish` or `cancel`. Tell
-the person which pull request was selected before starting it.
-
-Review generation uses the active AI host under that host's data policy. Do not
-imply that private pull-request content remains on the local machine.
-
-## Report the result
-
-On success, report the explained pull request, exact head, result scope, and
-absolute HTML path.
-
-Diff ends by reporting the artifact. Pull-request browsing, publishing,
-merging, commenting, and code changes stay outside this workflow.
-
-`references/runtime.md` records the scripts' deterministic security and
-publication contract for maintainers. It is not worker guidance.
+Maintainers changing the runtime read `references/runtime.md` for its
+deterministic security and publication contract.

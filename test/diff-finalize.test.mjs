@@ -6,14 +6,15 @@ import {
   mkdir,
   readFile,
   realpath,
+  rename,
   symlink,
   unlink,
   writeFile,
 } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import test, { after } from "node:test";
 
-import { finalizeReview } from "../plugins/hope/skills/diff/scripts/finalize.mjs";
+import { finalizeReview } from "../plugins/hope/skills/diff/scripts/artifact.mjs";
 import {
   registerTestTemporaryDirectoryCleanup,
 } from "../test-support/temporary-directory.mjs";
@@ -146,4 +147,34 @@ test("review finalization rejects a replaced publication identity", async () => 
   assert.equal(await readFile(outputPath, "utf8"), "replacement");
   const info = await lstat(outputPath);
   assert.equal(info.nlink, 1);
+});
+
+test("artifact failure cleanup never removes a replaced directory", async () => {
+  const root = await createTestTemporaryDirectory("hope-artifact-cleanup-");
+  let replacementDirectory;
+  let ownedDirectory;
+  await assert.rejects(
+    finalizeReview(Buffer.from("review"), {
+      temporaryRoot: root,
+      linkFile: async (source) => {
+        replacementDirectory = dirname(source);
+        ownedDirectory = `${replacementDirectory}-moved`;
+        await rename(replacementDirectory, ownedDirectory);
+        await mkdir(replacementDirectory);
+        await writeFile(
+          join(replacementDirectory, "unrelated.txt"),
+          "keep me",
+          "utf8",
+        );
+        throw new Error("publication failed after a directory swap");
+      },
+    }),
+    /publication failed after a directory swap/u,
+  );
+
+  assert.equal(
+    await readFile(join(replacementDirectory, "unrelated.txt"), "utf8"),
+    "keep me",
+  );
+  await access(ownedDirectory);
 });

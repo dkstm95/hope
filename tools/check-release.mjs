@@ -6,9 +6,8 @@ import { readFile } from "node:fs/promises";
 import {
   expectedPluginFile,
   normalizeLineEndings,
-  pluginBuildEntries,
 } from "./build-plugin.mjs";
-import { pluginPackageFiles } from "./plugin-files.mjs";
+import { generatedPluginFiles, pluginPackageFiles } from "./plugin-files.mjs";
 
 const root = new URL("../", import.meta.url);
 const fromRoot = (path) => new URL(path, root);
@@ -22,7 +21,7 @@ await Promise.all(pluginPackageFiles.map(
   async (path) => await readBytes(`plugins/hope/${path}`),
 ));
 
-for (const entry of pluginBuildEntries) {
+for (const entry of generatedPluginFiles) {
   const expected = await expectedPluginFile(entry);
   assert.equal(
     normalizeLineEndings(await read(entry.destination)),
@@ -46,7 +45,6 @@ const [
     readJson("package-lock.json"),
   ]);
 
-assert.equal(packageJson.version, currentVersion);
 assert.equal(packageLock.version, currentVersion);
 assert.equal(packageLock.packages[""].version, currentVersion);
 assert.equal(packageJson.bin, undefined);

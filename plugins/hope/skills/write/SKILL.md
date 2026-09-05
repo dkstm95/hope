@@ -1,42 +1,21 @@
 ---
 name: write
-description: Use as the cross-cutting language standard whenever clearer language would improve any task, including standalone drafts, edits, and reviews and language within implementation or another Skill; preserve meaning, facts, uncertainty, citations, exact text, and voice.
+description: Draft, edit, or review language for clarity while preserving meaning and voice. Apply within implementation and other Skills wherever clearer language helps.
 ---
 
 # Hope Write
 
-Use the active host session to draft, edit, review, or improve language. Read
-`references/writing-standard.md` before doing the work.
+Read `references/writing-standard.md` and apply it to the requested text.
+Infer drafting, editing, or review from the request. A review reports problems
+without editing; an edit makes the authorized change.
 
-Write may own a standalone language task or accompany another task or Skill.
-When it accompanies other work, preserve that work's scope, authority, process,
-and completion conditions. Apply the standard to its language-bearing parts in
-the same session; do not create a separate Write workflow, result, or worker.
+Within another task, preserve its scope, authority, workflow, output, and
+completion conditions. Improve its language in the same session without a
+separate workflow, worker, or artifact.
 
-## Choose the language action
+Use the current language unless the person or project chooses another. Read
+translated text for naturalness, then compare versions for meaning drift.
 
-- `draft` creates new prose.
-- `edit` changes existing prose or files.
-- `review` reports material clarity, meaning, or flow problems without changing
-  the target.
-
-Infer the action when the request already makes it clear. It describes the
-language work, not the surrounding task: implementation, feature changes,
-architecture migrations, and broad restructuring remain ordinary work.
-
-## Return the requested result
-
-For a draft, lead with the requested text and only its necessary context. For an
-edit, make the authorized change and report the result. For a review, report
-material findings without editing the target.
-
-Use the current language unless the person or project chooses another. For
-translated or parallel text, first read the target version for naturalness,
-then compare versions for meaning drift.
-
-Do not copy the writing standard or its checklist into the response.
-
-Return when the requested language action is complete and meaning, facts,
-uncertainty, citations, exact text, and voice remain preserved. Correct a
-clarity or preservation problem introduced by Write, but do not continue
-polishing beyond the requested result.
+Lead with the requested text, edit result, or material review findings. Preserve
+meaning, facts, uncertainty, citations, exact text, and voice. Correct problems
+introduced by the edit, then stop; do not return the standard or a checklist.

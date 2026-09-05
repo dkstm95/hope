@@ -23,27 +23,18 @@
 
 ### 🤝 Align — Share intent and consequential decisions before implementation
 
-Align starts from the conversation, relevant code, and the project's governing
-architecture, schemas, policies, and visual sources. The AI builds a decision
-tree, researches facts, recommends the best path, and asks the whole
-dependency-ready frontier in each round. The person decides or delegates the
-choices whose consequences are worth understanding.
+Align resolves choices that could materially change the result, using the
+conversation and project evidence. The AI researches and recommends; the person
+decides or delegates. Routine implementation details stay with implementation.
 
-Data modeling and architecture enter the conversation when they shape the
-goal, long-lived constraints, future decision space, or material risk.
-Reversible code mechanics remain with the implementation AI. Align finishes
-when the person confirms its teach-back of the shared understanding. A separate
-choice authorizes implementation, which may begin now or remain for later.
+It confirms new shared understanding and continues under any implementation
+authorization already given. An alignment-only request stops at the agreement.
+When the agreement needs to survive the conversation, Align preserves it in one
+self-contained project HTML record. Visual choices can use two or three image
+options when comparison helps.
 
-When that understanding needs a durable record, Align writes one
-self-contained HTML artifact inside the project. The artifact preserves the
-goal and problem, intended outcomes, consequential choices, exclusions,
-delegations, and relevant flow. It guides implementation at the level the
-person confirmed, while implementation owns execution and completion evidence.
-
-For a material visual choice, Align checks the project and presents two or
-three image directions as evidence. The same decision frontier decides whether
-that probe contributes value.
+See [the Align Skill](plugins/hope/skills/align/SKILL.md) for the conversation
+and artifact workflow.
 
 > [!IMPORTANT]
 > Generated Align records are project documentation. Later version-control work
@@ -111,45 +102,24 @@ its timeout map, microworld, and quiz.](docs/diffs/ky-825-total-timeout.en.html)
 
 ### ⚖️ Toxic Review — Put a work product through a rigorous Red–Blue review
 
-Red finds. Blue challenges. The active agent judges.
+Independent red reviewers challenge the work. Fresh blue reviewers verify
+high-priority, consequential, or materially uncertain findings. The active
+agent adjudicates the evidence and reports supported actions and limits.
 
-Independent Red reviewers probe distinct material risks. Every high-priority
-finding, every finding that proposes a broad or difficult-to-reverse action,
-and every materially uncertain finding receives a fresh Blue verifier. Blue
-separately challenges the issue, impact, scope, and proposed action against the
-sealed finding and scoped evidence.
-
-The active agent retains final judgment, records each candidate's disposition
-and each actionable candidate's final priority, and reports findings no more
-strongly than the evidence supports.
-
-> [!TIP]
-> Ask Hope to limit the Red reviewer count when you want a smaller routine run.
-> Review size alone does not add Blue, but high-priority, broad-action, or
-> materially uncertain findings still require it.
+See [the Toxic Review Skill](plugins/hope/skills/toxic-review/SKILL.md) for role
+independence, verification criteria, and final judgment.
 
 ---
 
 ### 🧹 Sweep — Clean up a codebase
 
-Sweep runs only when explicitly invoked. It immediately applies proven,
-behavior-preserving cleanup.
+Explicitly invoke Sweep to apply proven, behavior-preserving cleanup across
+the current repository or a named scope. It removes dead code, duplication,
+needless work, and their obsolete support material while keeping public behavior
+unchanged. Bugs, product decisions, and uncertain removals stay outside Sweep.
 
-Sweep uses the entire current repository unless the request names a narrower
-scope inside it.
-
-It cleans up:
-
-- dead code and its dedicated tests, documentation, configuration, generation,
-  and assets;
-- duplicated implementations, unnecessary work, and needless indirection;
-- abstractions that are missing, excessive, or owned by the wrong boundary;
-- documentation, comments, examples, and configuration that no longer match
-  the code; and
-- the minimum tests or checks needed to refactor safely.
-
-Bug fixes, behavior or public-contract changes, product decisions, and
-uncertain removals remain outside Sweep.
+See [the Sweep Skill](plugins/hope/skills/sweep/SKILL.md) for scope and
+verification.
 
 ---
 
@@ -159,13 +129,9 @@ Diagram creates, refines, or reviews explanatory diagrams and data charts when
 position, connection, sequence, hierarchy, state, or quantitative shape
 communicates more clearly than prose or a small table.
 
-It can own a standalone diagram request or work inside another Hope task without
-changing that task's scope, artifact, or completion conditions. It chooses one
-primary visual grammar, removes or groups detail before shrinking it, limits
-focal emphasis, keeps connectors traceable, preserves source uncertainty, and
-renders the result at its intended size before calling it verified. Other Hope
-features use Diagram's shared standard for visual selection and design while
-retaining ownership of their evidence and artifact contracts.
+It works on its own or inside an existing task, preserving that task's evidence
+and artifact contract. See [the Diagram Skill](plugins/hope/skills/diagram/SKILL.md)
+for composition, accessibility, and rendered verification.
 
 **Complete example HTML:** [Open the parcel-handoff visualization created by
 Diagram.](docs/visualizations/parcel-handoff.html)

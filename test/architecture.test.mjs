@@ -17,13 +17,8 @@ const sharedDiagramStandard = resolve(
   skillsRoot,
   "diagram/references/diagram-standard.md",
 );
-const sharedCodeMaintenanceGuidance = resolve(
-  pluginRoot,
-  "references/code-maintenance.md",
-);
 const publishedCrossFeatureReferences = new Set([
   sharedArtifactTheme,
-  sharedCodeMaintenanceGuidance,
   sharedDiagramStandard,
   sharedWritingStandard,
 ]);

@@ -13,6 +13,8 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
+import { CONTRACT_VERSION } from "./constants.mjs";
+
 async function syncDirectory(path) {
   let handle;
   try {
@@ -89,16 +91,14 @@ async function unlinkOwnedFile(path, expected) {
   }
 }
 
-function existingOutputError(target, noun) {
+function existingOutputError(target) {
   return new Error(
-    `Hope did not replace the existing ${noun}: ${target}. `
+    `Hope did not replace the existing output: ${target}. `
       + "Choose a new destination with --output <new-path>.",
   );
 }
 
-export async function preflightArtifactOutput(outputPath, {
-  noun = "artifact",
-} = {}) {
+export async function preflightReviewOutput(outputPath) {
   if (!outputPath) return undefined;
   const requested = isAbsolute(outputPath) ? outputPath : resolve(outputPath);
   const parent = await realpath(dirname(requested));
@@ -109,14 +109,11 @@ export async function preflightArtifactOutput(outputPath, {
     if (error?.code === "ENOENT") return target;
     throw error;
   }
-  throw existingOutputError(target, noun);
+  throw existingOutputError(target);
 }
 
-export async function publishArtifact(bytes, {
-  directoryPrefix = "hope-artifact-",
-  fileName = "hope-artifact.html",
+async function publishReviewBytes(bytes, {
   linkFile = link,
-  noun = "artifact",
   outputPath,
   temporaryRoot = tmpdir(),
 } = {}) {
@@ -124,10 +121,10 @@ export async function publishArtifact(bytes, {
   let privateDirectoryIdentity;
   let target;
   if (outputPath) {
-    target = await preflightArtifactOutput(outputPath, { noun });
+    target = await preflightReviewOutput(outputPath);
   } else {
     const trustedTemporaryRoot = await realpath(temporaryRoot);
-    privateDirectory = await mkdtemp(join(trustedTemporaryRoot, directoryPrefix));
+    privateDirectory = await mkdtemp(join(trustedTemporaryRoot, "hope-review-"));
     if (process.platform !== "win32") await chmod(privateDirectory, 0o700);
     privateDirectoryIdentity = await lstat(privateDirectory);
     if (
@@ -136,7 +133,7 @@ export async function publishArtifact(bytes, {
     ) {
       throw new Error("Hope could not verify the artifact directory");
     }
-    target = join(privateDirectory, fileName);
+    target = join(privateDirectory, "hope-review.html");
   }
 
   const parent = dirname(target);
@@ -152,10 +149,10 @@ export async function publishArtifact(bytes, {
       await linkFile(staging, target);
       published = true;
     } catch (error) {
-      if (error?.code === "EEXIST") throw existingOutputError(target, noun);
+      if (error?.code === "EEXIST") throw existingOutputError(target);
       if (["EXDEV", "ENOTSUP", "EPERM"].includes(error?.code)) {
         throw new Error(
-          `This filesystem cannot publish a Hope ${noun} without an overwrite race`,
+          "This filesystem cannot publish a Hope output without an overwrite race",
         );
       }
       throw error;
@@ -200,4 +197,24 @@ export async function publishArtifact(bytes, {
     }
     throw error;
   }
+}
+
+export async function finalizeReview(bytes, {
+  artifactDigest,
+  linkFile,
+  outputPath,
+  revalidatedAt,
+  runId,
+  snapshotDigest,
+  temporaryRoot,
+} = {}) {
+  const target = await publishReviewBytes(bytes, { linkFile, outputPath, temporaryRoot });
+  return Object.freeze({
+    artifactDigest,
+    outputPath: target,
+    publicationSchemaVersion: CONTRACT_VERSION,
+    revalidatedAt,
+    runId,
+    snapshotDigest,
+  });
 }

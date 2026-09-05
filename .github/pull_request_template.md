@@ -1,24 +1,12 @@
-## Goal
-
-- User result:
-- Why it is needed:
-- Not included:
-
 ## Change
 
-- Before:
-- After:
-- Important decision or tradeoff:
-
-## Safety
-
-- Main risk or unknown:
-- Ownership or cleanup rule, if relevant:
+Describe the problem and resulting behavior. Include material trade-offs or
+limits when they help review.
 
 ## Validation
 
-- Commands that ran:
-- Checks not run:
+- Checks and results:
+- Remaining verification gap, if any:
 - [ ] `npm run check`
 
 ## Release
