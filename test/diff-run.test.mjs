@@ -533,6 +533,45 @@ test("a lock-release failure keeps the published review location", async () => {
   await removeDiffRun(created.path, { temporaryRoot });
 });
 
+test("cleanup and lock failures preserve the stale-review error and owned path", async () => {
+  const temporaryRoot = await createTestTemporaryDirectory("hope-run-combined-failure-");
+  const { created } = await createAnalyzedRun(temporaryRoot);
+  for (const replaced of [false, true]) {
+    for (const releaseFails of [false, true]) {
+      const cleanupError = new Error("cleanup failed");
+      if (replaced) {
+        cleanupError.code = "HOPE_DIFF_RUN_REPLACED";
+        cleanupError.preservedPath = created.path;
+      }
+      const releaseError = new Error("lock release failed");
+      await assert.rejects(
+        finishDiff(created.path, {
+          claimMutation: async () => ({
+            assertOwned: async () => {},
+            release: async () => { if (releaseFails) throw releaseError; },
+          }),
+          finalize: async () => assert.fail("A stale review must not publish"),
+          removeRun: async () => { throw cleanupError; },
+          render: async () => ({ bytes: Buffer.from("review"), digest: "d".repeat(64) }),
+          revalidate: async () => ({ matches: false }),
+          temporaryRoot,
+        }),
+        (error) => {
+          assert.equal(error.code, "HOPE_DIFF_STALE");
+          assert.match(error.message, /The pull request changed/u);
+          assert.equal(error.preservedPath, replaced ? created.path : undefined);
+          assert.equal(error.cleanupError, cleanupError);
+          assert.equal(error.releaseError, releaseFails ? releaseError : undefined);
+          assert.equal(error.cleanupPending, !replaced || releaseFails ? true : undefined);
+          return true;
+        },
+      );
+      await access(created.path);
+    }
+  }
+  await removeDiffRun(created.path, { temporaryRoot });
+});
+
 test("inspection windows are ordered and replayable", async () => {
   const temporaryRoot = await createTestTemporaryDirectory("hope-run-window-order-");
   const created = await createDiffRun(makeSnapshot(), { temporaryRoot });

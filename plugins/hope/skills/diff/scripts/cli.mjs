@@ -3,7 +3,6 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { takeOptions } from "./command-options.mjs";
 import {
   addDiffContext,
   buildMicroworldSkeleton,
@@ -48,60 +47,64 @@ function usage() {
   ].join("\n");
 }
 
+const commandOptions = {
+  prepare: ["host-locale", "locale", "theme", "output"],
+  "resolve-target": [],
+  "inspect-window": ["run", "page"],
+  "checkpoint-window": ["run", "page"],
+  ledger: ["run", "page"],
+  context: ["run", "request"],
+  "microworld-skeleton": ["input"],
+  validate: ["run"],
+  finish: ["run"],
+  cancel: ["run"],
+};
+const knownOptions = new Set(Object.values(commandOptions).flat());
+
+function takeOptions(values) {
+  const options = {};
+  const positionals = [];
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
+    if (!value.startsWith("--")) {
+      positionals.push(value);
+      continue;
+    }
+    const key = value.slice(2);
+    if (!knownOptions.has(key)) {
+      throw new TypeError(`Unknown Hope diff option: ${value}`);
+    }
+    const next = values[index + 1];
+    if (next === undefined || next.startsWith("--")) {
+      throw new TypeError(`Hope diff option ${value} needs a value`);
+    }
+    if (key === "request") {
+      (options[key] ??= []).push(next);
+    } else {
+      if (options[key] !== undefined) {
+        throw new TypeError(`Hope diff option ${value} was repeated`);
+      }
+      options[key] = next;
+    }
+    index += 1;
+  }
+  return { options, positionals };
+}
+
 export function parseDiffArguments(argv) {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return { command: "help" };
   }
   const [command, ...rest] = argv;
-  if (![
-    "prepare",
-    "resolve-target",
-    "inspect-window",
-    "checkpoint-window",
-    "ledger",
-    "context",
-    "microworld-skeleton",
-    "validate",
-    "finish",
-    "cancel",
-  ].includes(command)) {
+  if (!Object.hasOwn(commandOptions, command)) throw new TypeError(usage());
+  const { options, positionals } = takeOptions(rest);
+  if (Object.entries(options).some(
+    ([key, value]) => value && !commandOptions[command].includes(key),
+  )) {
     throw new TypeError(usage());
   }
-  const { options, positionals } = takeOptions(rest, {
-    allowed: [
-      "host-locale",
-      "locale",
-      "theme",
-      "output",
-      "run",
-      "page",
-      "request",
-      "input",
-    ],
-    prefix: "Hope diff",
-    repeatable: ["request"],
-  });
   if (command === "prepare" || command === "resolve-target") {
-    if (
-      positionals.length > 1
-      || options.run
-      || options.page
-      || options.request
-      || options.input
-    ) {
-      throw new TypeError(usage());
-    }
-    if (
-      command === "resolve-target"
-      && (
-        options["host-locale"]
-        || options.locale
-        || options.theme
-        || options.output
-      )
-    ) {
-      throw new TypeError(usage());
-    }
+    if (positionals.length > 1) throw new TypeError(usage());
     const target = parsePullRequestTargetArgument(positionals[0]);
     if (command === "resolve-target") return { command, ...target };
     return {
@@ -113,60 +116,24 @@ export function parseDiffArguments(argv) {
       ...target,
     };
   }
+  if (positionals.length > 0) throw new TypeError(usage());
   if (command === "microworld-skeleton") {
-    if (
-      positionals.length > 0
-      || !options.input
-      || options.run
-      || options.page
-      || options.locale
-      || options.theme
-      || options.output
-      || options["host-locale"]
-      || options.request
-    ) {
-      throw new TypeError(usage());
-    }
+    if (!options.input) throw new TypeError(usage());
     return { command, inputPath: options.input };
   }
-  if (positionals.length > 0 || !options.run) throw new TypeError(usage());
+  if (!options.run) throw new TypeError(usage());
   if (command === "context") {
-    if (
-      options.page
-      || options.input
-      || options.locale
-      || options.theme
-      || options.output
-      || options["host-locale"]
-    ) {
-      throw new TypeError(usage());
-    }
     const requestIds = options.request ?? [];
     if (requestIds.length === 0) throw new TypeError(usage());
     return { command, requestIds, runPath: options.run };
   }
-  if (options.request) throw new TypeError(usage());
-  if (
-    options.input
-    || options.locale
-    || options.theme
-    || options.output
-    || options["host-locale"]
-  ) {
-    throw new TypeError(usage());
-  }
-  if (
-    command === "inspect-window"
-    || command === "checkpoint-window"
-    || command === "ledger"
-  ) {
+  if (commandOptions[command].includes("page")) {
     const page = Number.parseInt(options.page, 10);
     if (!options.page || !Number.isSafeInteger(page) || String(page) !== options.page) {
       throw new TypeError(usage());
     }
     return { command, page, runPath: options.run };
   }
-  if (options.page) throw new TypeError(usage());
   return { command, runPath: options.run };
 }
 

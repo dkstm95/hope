@@ -14,14 +14,11 @@ control their work with AI.
 - Read [docs/design.md](docs/design.md) before changing a Hope GUI.
 - Read [docs/release.md](docs/release.md) before changing packaging, versions,
   or release automation.
-- Follow [AGENTS.md](AGENTS.md) when an AI agent performs the work.
+- AI agents also follow [AGENTS.md](AGENTS.md) for collaboration guidance.
 
 Do not edit files marked as generated.
 
 Change their editable source and run the documented build instead.
-
-Apply [Close material frontiers](PRINCIPLES.md#close-material-frontiers) around
-each change. Do not create a separate record for small, clear work.
 
 ## Work locally
 
@@ -39,6 +36,17 @@ Run `npm run test:browser` when a Hope GUI layout or interaction changes.
 
 Run `npm run render:readme-assets` and inspect the updated captures when an
 artifact rendering change affects the README examples.
+
+Verify changed behavior with representative prompts or direct runtime checks.
+Skill discovery and package validity alone do not prove behavior. Add tests
+only for meaningful risks; once relevant checks pass, repeat or broaden them
+only for new changes, failures, or unresolved concerns.
+
+Before finishing, review the full changed scope against
+[Prefer simple, direct design](PRINCIPLES.md#prefer-simple-direct-design),
+follow [release preparation](docs/release.md), and run `npm run check`.
+Do not finish a file-changing task while that check fails. Report the checks
+and any remaining verification gap.
 
 Install the current delivery for an end-to-end development smoke test with:
 
@@ -68,18 +76,18 @@ Start a new Codex task after installation.
   Add a commit body only when the reason or trade-off is not clear from the
   title.
 
-  Validate the title before committing or opening the pull request:
+  Use the same final title for the commit and pull request. Validate it before
+  committing, opening a pull request, or pushing:
 
   ```bash
   npm run check:title -- "feat(align): skip artifacts for same-session work"
   ```
+
+  Do not submit while the title check fails.
 
   The checker enforces the structure and rejects unsafe control characters.
   Review owns whether the outcome is concrete. Trusted CI checks every pull
   request title before merge and audits the new `main` head after a push.
   Commit type does not determine the release decision.
 - Keep product documentation aligned with implemented behavior.
-- State which checks ran and any remaining verification gap in the pull
-  request.
-- Follow [docs/release.md](docs/release.md) to record the release decision,
-  prepare any version change, and pass the completion gate before committing.
+- Include validation and the release decision in the pull request.

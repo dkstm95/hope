@@ -46,17 +46,6 @@ test("the staged plugin runs from an external platform path", async (context) =>
     /\npolicy:\n  allow_implicit_invocation: false\n/u,
   );
 
-  const sweepSkill = normalizeLineEndings(await readFile(
-    join(destination, "skills", "sweep", "SKILL.md"),
-    "utf8",
-  ));
-  assert.match(sweepSkill, /description: Use only when someone explicitly invokes/u);
-  assert.match(sweepSkill, /\$hope:sweep in Codex/u);
-  assert.match(sweepSkill, /\/hope:sweep in Claude Code/u);
-  assert.match(
-    sweepSkill,
-    /If an implicit selection reaches this Skill, stop before inspecting or editing/u,
-  );
   assert.equal(
     stagedFiles.some((path) => path.startsWith("skills/polish/")),
     false,

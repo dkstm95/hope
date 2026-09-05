@@ -10,7 +10,6 @@ assets/fonts/OFL-Gmarket.txt
 assets/fonts/SOURCE.md
 assets/hope-icon.png
 assets/hope-protected-light.png
-references/code-maintenance.md
 skills/align/SKILL.md
 skills/align/agents/openai.yaml
 skills/align/references/artifact.md
@@ -39,13 +38,11 @@ skills/diff/scripts/checkpoint-window-v2.schema.json
 skills/diff/scripts/checkpoint.mjs
 skills/diff/scripts/cli.mjs
 skills/diff/scripts/code-evidence.mjs
-skills/diff/scripts/command-options.mjs
 skills/diff/scripts/constants.mjs
 skills/diff/scripts/context.mjs
 skills/diff/scripts/derive.mjs
 skills/diff/scripts/design/tokens.mjs
 skills/diff/scripts/evidence-range.mjs
-skills/diff/scripts/finalize.mjs
 skills/diff/scripts/github.mjs
 skills/diff/scripts/hash.mjs
 skills/diff/scripts/index.mjs

@@ -1,67 +1,55 @@
 ---
 name: sweep
-description: Use only when someone explicitly invokes $hope:sweep in Codex, /hope:sweep in Claude Code, or the host's explicit Hope Sweep command to apply behavior-preserving maintenance across a codebase and its directly supporting material. Do not use for ordinary maintenance questions, reviews, planning, bug fixes, feature changes, or product decisions.
+description: Use only when someone explicitly invokes $hope:sweep in Codex, /hope:sweep in Claude Code, or the host's Hope Sweep command for behavior-preserving codebase cleanup.
 ---
 
 # Hope Sweep
 
-Use the active host session to apply proven, behavior-preserving maintenance to
-operating code and its directly supporting material.
+Apply proven maintenance to operating code and directly supporting tests,
+configuration, build logic, documentation, examples, and assets. Read
+`../write/references/writing-standard.md` for user-facing language.
 
-Read `../../references/code-maintenance.md` before inspecting the target. Read
-`../write/references/writing-standard.md` before drafting user-facing language.
+## Invocation and scope
 
-## Require explicit invocation
+Require explicit namespaced invocation. An ordinary cleanup request or a
+follow-up such as “do that” uses the ordinary workflow. If selected implicitly,
+continue that request without activating Sweep.
 
-Start only after the person explicitly invokes `$hope:sweep` in Codex,
-`/hope:sweep` in Claude Code, or the host's namespaced Hope Sweep command.
+Use the named repository, or the current one, and the whole repository unless
+the person narrows it. Record the revision and working-tree state; preserve
+unrelated edits and project instructions. Invocation authorizes reversible
+local edits in this scope, not commits, pushes, pull requests, or merges.
 
-Do not infer Sweep from a request to inspect a project, suggest improvements,
-choose the next task, review work, fix a bug, or clean up code. A follow-up such
-as “do that” is not an explicit invocation.
+## Prove and apply cleanup
 
-If an implicit selection reaches this Skill, stop before inspecting or editing
-the target and continue the underlying request through the ordinary workflow.
+Trace entry points, active consumers, runtime registration, configuration, and
+build boundaries. Running code and configuration establish current behavior
+when supporting material disagrees.
 
-## Bind the target
+Remove dead code, duplication, needless branches or wrappers, misplaced
+abstractions, and repeated work. Share logic only when behavior, ownership,
+and reasons to change match. Optimize only for a plausible workload with a
+concrete benefit.
 
-Use the named repository or, when none is named, the current repository. The
-whole repository is the default; narrow it only when the person names a smaller
-scope.
+Before removal, check public and external consumers, dynamic lookup,
+reflection, string-based registration, generated sources, and package boundaries.
+A missing text reference alone does not prove safety. Remove dedicated tests,
+documentation, generation, configuration, and assets with their obsolete
+consumer; retain support for remaining paths.
 
-Include operating code and only the tests, configuration, build logic,
-documentation, comments, examples, generation, and assets that directly
-support it. Record the current revision and working-tree state, and preserve
-unrelated changes and project instructions.
+Apply small coherent batches. Leave bugs, public-contract or behavior changes,
+product and compatibility decisions, migrations, dependency changes, and
+uncertain removals outside Sweep. Do not turn those signals into unsolicited
+findings or follow-up tasks.
 
-Explicit invocation authorizes reversible local edits inside this boundary. It
-does not override host permissions or authorize commits, pushes, pull requests,
-or merges.
+## Verify and finish
 
-## Apply proven cleanup
+Verify affected consumers with the narrowest useful tests, checks, builds, or
+runtime observations, plus required project checks. Add tests only when needed
+to protect the refactor. Correct or revert regressions Sweep introduced; do not
+repair pre-existing failures or widen scope during verification.
 
-Follow the maintenance guidance to trace active consumers and form a candidate
-frontier: evidence-backed cleanup opportunities whose prerequisites have been
-inspected. Resolve each candidate by applying it, rejecting it when the evidence
-does not prove safety, or leaving it outside the bound target. Inspect only
-enough surrounding evidence to resolve the frontier; Sweep does not require a
-complete file or category inventory.
-
-Apply proven changes in small coherent batches. Do not fix or report suspected
-bugs, customer-visible or public-contract changes, product or compatibility
-decisions, or uncertain removals. Leave those signals outside Sweep without
-turning them into recommendations or follow-up tasks.
-
-After each batch, verify affected consumers and recompute only the affected
-frontier. Correct or revert any regression introduced by Sweep. Do not fix a
-pre-existing failure or widen the cleanup during verification.
-
-Stop when the candidate frontier is empty and one evidence pass over the changed
-scope finds no new proven candidate. Do not keep searching to fill a category or
-justify having invoked Sweep.
-
-## Report the result
-
-Report the behavior-preserving cleanup, or that no proven cleanup was available;
-the directly supporting material changed with it; and the checks that passed or
-failed. Do not mention skipped out-of-scope signals.
+Finish when the supported candidates are resolved and one pass over the changed
+scope finds no new proven cleanup. Report the cleanup, supporting material
+changed with it, and checks or verification gaps. If no proven cleanup exists,
+say so. Keep unrelated signals out of the report.
