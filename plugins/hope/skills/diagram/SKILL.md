@@ -25,7 +25,9 @@ and responsive shell. A standalone HTML visual uses the same dual-mode
 language; read `../../assets/artifact-theme.mjs` and embed its current roles.
 
 Inspect the result at its intended size using the standard. Fix material
-defects and recheck affected relationships; stop when the relevant checks pass.
+defects and recheck affected relationships. Before returning a created or
+edited visual, inspect the whole result again at its intended size. Finish
+only when that fresh inspection reveals no new material issue.
 Return the finished artifact or review findings with material assumptions,
 omissions, and verification gaps. A review request alone does not authorize
 editing its target.

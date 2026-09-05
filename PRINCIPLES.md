@@ -62,8 +62,10 @@ exclusion, or explicit delegation; revisit only when new evidence changes the
 basis. Routine implementation choices need no separate approval.
 
 Support material claims with evidence or state the limitation. Finish when no
-material issue remains and one proportionate pass finds no new one. This is a
-decision rule, not a required tree, checklist, artifact, or automation.
+material issue remains and one proportionate pass finds no new one. Features
+own the procedure needed to meet this rule; [Align's decision-tree interview](plugins/hope/skills/align/SKILL.md)
+requires every material branch to be resolved. Other tasks need no tree,
+checklist, artifact, or automation unless their own contract requires one.
 
 ## Prefer simple, direct design
 

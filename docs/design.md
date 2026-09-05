@@ -321,11 +321,16 @@ its semantic color.
 
 Use native controls suited to the task and established platform conventions.
 Apply guidance to controls the product needs; it does not require adding them.
+Follow these defaults unless a documented product need, accessibility
+requirement, or platform convention calls for an exception.
 
 - Name actions by their outcome. Use buttons for actions and links for
   navigation, with persistent labels and visible keyboard focus.
 - Keep related fields in reading order. Preserve entered values on error,
-  identify the affected field, and explain recovery beside it.
+  identify the affected field, and explain recovery beside it. Do not reject
+  a value while the person is still typing; validate after they leave the field.
+- Open links in the same tab by default and state any exception in the visible
+  link text.
 - Use checkboxes for independent choices, radio buttons for exclusive choices,
   and toggles for settings that take effect immediately.
 - Show current location and state through text or shape as well as color.
