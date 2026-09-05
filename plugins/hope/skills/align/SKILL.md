@@ -17,26 +17,44 @@ Start from the conversation, relevant code, and governing project sources.
 Research facts and recommend a path. Keep evidence, user decisions, AI
 proposals, assumptions, and uncertainty distinct.
 
-Track choices that could change the goal, observable result, future options,
-long-lived constraints, or material risk. Include architecture and data modeling
-when they have those effects. Leave routine, reversible mechanics to
-implementation. Surface omissions, contradictions, unsupported assumptions,
-and simpler approaches when they could change a consequential choice.
+Build and maintain a decision tree of choices that could change the goal,
+observable result, future options, long-lived constraints, or material risk.
+Include architecture and data modeling when they have those effects. For every
+possible branch, judge whether it needs the person's understanding and a
+decision or explicit delegation before implementation. Leave routine,
+reversible mechanics to implementation. Surface omissions, contradictions,
+unsupported assumptions, edge cases, and simpler approaches when they could
+change a material branch.
 
-Ask related, ready questions together in a manageable round. Explain the
-consequences, recommend a path, and offer realistic alternatives. Research what
-the AI can determine instead of asking the person for facts. Continue
-independent authorized work while answers are pending.
+## Work the complete decision frontier
 
-Close a choice through a decision, deliberate exclusion, or delegation. Reopen
-it only when evidence changes its basis. If the person is uncertain, gather
-useful evidence or recommend a probe. Read `references/design-directions.md`
-when a material visual choice needs comparison images.
+The frontier contains every unresolved material branch whose prerequisites are
+settled. Ask the whole frontier in each round; do not select only the easiest
+or most obvious questions. Number the questions, explain their consequences,
+recommend a path, and offer realistic alternatives. Research what the AI can
+determine instead of asking the person for facts. Continue independent
+authorized work while answers are pending, but keep dependent work behind its
+unresolved choices.
+
+After each answer, update the decision tree and recompute the entire frontier,
+including newly ready branches. Reopen dependent choices when new evidence or
+an earlier decision changes their basis. Close each material branch through a
+decision, deliberate exclusion, or explicit delegation; do not silently settle
+it through an assumption.
+
+If the person is uncertain, gather useful evidence or recommend a probe. Keep
+the branch open until they can decide, deliberately exclude it, or explicitly
+delegate it. Read `references/design-directions.md` when a material visual
+choice needs comparison images.
 
 ## Confirm and continue
 
-Once the material choices are settled, summarize the goal, how success will be
-recognized, consequential decisions, and relevant exclusions or assumptions.
+Before confirmation, check the whole tree: every material branch must be
+resolved, including dependent branches that became ready in later rounds.
+An empty question list alone is not completion. When the frontier is empty and
+no material branch remains unresolved, summarize the goal and problem model,
+how success will be recognized, consequential decisions and their effects,
+and every exclusion, delegation, or assumption that shaped the agreement.
 Ask for confirmation of new shared understanding; do not ask the person to
 reconfirm an unchanged agreement.
 
@@ -60,5 +78,5 @@ absolute directory containing this file. In Claude Code it is
 Report where the confirmed understanding remains. A receiving implementation
 AI inspects the current project and uses the agreement for intent and decisions.
 
-The decision interview is informed by Matt Pocock's
+The decision-tree and complete-frontier interview is informed by Matt Pocock's
 [grill-me](https://github.com/mattpocock/skills/blob/main/docs/productivity/grill-me.md).
