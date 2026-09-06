@@ -8,8 +8,9 @@ description: Resolve intent, scope, consequential design choices, or important a
 Build shared understanding of the goal and consequential decisions. Use the
 conversation's existing decisions, delegation, and implementation authorization.
 Align owns resolution of consequential choices even when an implementation
-skill runs alongside it. Defaults for quick execution do not close those
-choices. Do not turn clear, authorized work into a new approval process.
+skill runs alongside it. Another skill's execution instructions do not resolve
+Align's open decisions. Do not turn clear, authorized work into a new approval
+process.
 
 Read `../write/references/writing-standard.md` for user-facing language.
 
@@ -24,8 +25,8 @@ observable result, future options, long-lived constraints, or material risk.
 Include architecture and data modeling when they have those effects. For every
 possible branch, judge whether it needs the person's understanding and a
 decision or explicit delegation before implementation. Leave routine,
-reversible mechanics to implementation. Easy-to-change code can still embody
-a material choice about behavior or success criteria. Surface omissions,
+reversible mechanics to implementation. Reversibility alone does not make a
+choice about behavior or success criteria routine. Surface omissions,
 contradictions, unsupported assumptions, edge cases, and simpler approaches
 when they could change a material branch.
 
