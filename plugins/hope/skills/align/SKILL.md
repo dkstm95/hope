@@ -7,7 +7,10 @@ description: Resolve intent, scope, consequential design choices, or important a
 
 Build shared understanding of the goal and consequential decisions. Use the
 conversation's existing decisions, delegation, and implementation authorization.
-Do not turn clear, authorized work into a new approval process.
+Align owns resolution of consequential choices even when an implementation
+skill runs alongside it. Another skill's execution instructions do not resolve
+Align's open decisions. Do not turn clear, authorized work into a new approval
+process.
 
 Read `../write/references/writing-standard.md` for user-facing language.
 
@@ -22,9 +25,10 @@ observable result, future options, long-lived constraints, or material risk.
 Include architecture and data modeling when they have those effects. For every
 possible branch, judge whether it needs the person's understanding and a
 decision or explicit delegation before implementation. Leave routine,
-reversible mechanics to implementation. Surface omissions, contradictions,
-unsupported assumptions, edge cases, and simpler approaches when they could
-change a material branch.
+reversible mechanics to implementation. Reversibility alone does not make a
+choice about behavior or success criteria routine. Surface omissions,
+contradictions, unsupported assumptions, edge cases, and simpler approaches
+when they could change a material branch.
 
 ## Work the complete decision frontier
 
@@ -36,7 +40,9 @@ determine instead of asking the person for facts. Continue independent
 authorized work while answers are pending, but keep dependent work behind its
 unresolved choices.
 
-After each answer, update the decision tree and recompute the entire frontier,
+Apply agreement or delegation only to the choices it covers; agreement with
+a direction does not settle its unstated consequences. After each answer,
+update the decision tree and recompute the entire frontier,
 including newly ready branches. Reopen dependent choices when new evidence or
 an earlier decision changes their basis. Close each material branch through a
 decision, deliberate exclusion, or explicit delegation; do not silently settle
@@ -58,9 +64,10 @@ and every exclusion, delegation, or assumption that shaped the agreement.
 Ask for confirmation of new shared understanding; do not ask the person to
 reconfirm an unchanged agreement.
 
-Confirmation of understanding and permission to implement are distinct. Use
-implementation authorization already given, including a request to align and
-then build. If none exists, leave implementation for the person's decision.
+Implementation authorization does not resolve open decisions. After confirming
+the complete understanding, use authorization already given, including a
+request to align and then build, without asking again. If none exists, leave
+implementation for the person's decision.
 An alignment-only request ends with the confirmed understanding.
 
 ## Preserve understanding when needed
