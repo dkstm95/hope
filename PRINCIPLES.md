@@ -1,8 +1,21 @@
 # Hope principles
 
-Hope helps people work with AI while staying able to see, understand, and
-control the work. These principles guide the product; outside references and
-delivery tools support them.
+Hope helps people take on more complex work with AI while preserving their
+judgment and agency. These principles guide the product; outside references
+and delivery tools support them.
+
+## Expand the person's ability to judge
+
+Help people understand and take responsibility for a wider range of work with
+AI. Focus their attention on choices that need human judgment and reduce the
+effort needed to understand the relevant evidence and consequences. Match the
+depth of explanation and involvement to the person, the task, and its stakes.
+
+Judge product progress through real use: can people better predict important
+outcomes, make informed decisions, and direct their next steps at a reasonable
+cost in time and attention? Start with a concrete user group and a recurring
+need. Let demonstrated use guide expansion to teams, other fields, or shared
+conventions across tools.
 
 ## Keep delivery secondary
 
