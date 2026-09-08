@@ -10,14 +10,27 @@
 
 <p align="center">
   <strong>
-    Hope helps people work with AI while staying able to see, understand, and
-    control the work.
+    Hope helps people take on more complex work with AI while preserving their
+    judgment and agency.
   </strong>
 </p>
 
 <p align="center"><a href="README.ko.md">한국어</a></p>
 
 <br>
+
+> As AI becomes more capable of doing the work, how much should people understand
+> about the results they are responsible for, and how should they judge them?
+
+Hope starts with this question. It brings choices that need human judgment into
+view and helps people understand the evidence and consequences behind them. Its
+aim is to reduce the effort needed to make informed decisions, so people can
+take on a wider range of work with AI that they understand and can answer for.
+
+Today, Hope puts this direction into practice in development work: aligning
+intent, reviewing results, and understanding changes. We judge its progress by
+whether people can better predict the consequences of important choices, make
+better decisions, and direct their next steps.
 
 ## Features
 
