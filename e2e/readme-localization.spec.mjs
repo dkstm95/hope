@@ -81,6 +81,26 @@ for (const example of examples) {
   });
 }
 
+test("English Align rationale labels stay clear of their descriptions", async ({ page }) => {
+  await page.goto(localUrl("docs/alignments/rescene-fan-calendar-default-run.en.html"));
+  await page.evaluate(() => document.fonts.ready);
+  for (const width of [1440, 1168, 768, 390, 320]) {
+    await page.setViewportSize({ height: 900, width });
+    const rows = await page.locator("#design-directions .direction-rationales > div").evaluateAll((items) => items.map((item) => {
+      const label = item.querySelector("dt");
+      const description = item.querySelector("dd").getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      return [...range.getClientRects()].every((text) => (
+        text.right <= description.left || text.bottom <= description.top
+      ));
+    }));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every(Boolean), `Rationale label overlap at ${width}px`).toBe(true);
+    await expectNoOverflow(page);
+  }
+});
+
 test("Align and Diff share document-rail and numbered contents geometry", async ({ page }) => {
   await page.setViewportSize({ height: 1000, width: 1440 });
   const metrics = [];
@@ -121,6 +141,11 @@ test("Align and Diff share document-rail and numbered contents geometry", async 
         width: element.getBoundingClientRect().width,
       };
     });
+    const navigationMarker = await page.locator(`${tocSelector} .toc-link[aria-current="location"]`).evaluate((link) => {
+      const bounds = link.getBoundingClientRect();
+      return document.elementFromPoint(bounds.left + 1, bounds.top + bounds.height / 2) === link;
+    });
+    expect(navigationMarker).toBe(true);
     const tocEntries = await page.locator(`${tocSelector} .toc-link`).evaluateAll((links) => links.map((link) => ({
       id: link.getAttribute("href")?.slice(1),
       number: link.querySelector(".toc-number")?.textContent,

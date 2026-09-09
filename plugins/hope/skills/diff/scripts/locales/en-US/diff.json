@@ -113,6 +113,7 @@
   "scope.verification.subject": "Execution and CI results",
   "section.background": "Background",
   "section.changeOverview": "Change overview",
+  "section.behaviorFlow": "Behavior flow",
   "section.evidence": "Evidence and scope",
   "section.explore": "Behavior change",
   "section.judge": "Review items",

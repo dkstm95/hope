@@ -162,10 +162,12 @@ removing the full finding, effect, next step, completion condition, or evidence.
 
 Keep background in Summary after the direct before-and-after explanation. Open
 Behavior change with one **Change overview** subsection. Lead with the behavior
-summary, use the core details to support it, and follow with an optional behavior
-model. Give the lead and details the same body type scale. Keep the understanding
-check as its own subsection because it asks the reader to act. The behavior
-summary adds the condition, state, or relationship that makes its flow useful.
+summary and use the core details to support it. Follow with a separate **Behavior
+flow** subsection for the optional behavior model, so its numbered steps are
+distinct from overview details. Give the lead and details the same body type
+scale. Keep the understanding check as its own subsection because it asks the
+reader to act. The behavior summary adds the condition, state, or relationship
+that makes its flow useful.
 Present a visual's authored title as its figure caption so it identifies the
 visual within that model. Keep teaching aid choices with the implementation
 record in Evidence and scope.
@@ -191,7 +193,9 @@ Show only the code excerpts needed for understanding instead of reproducing the
 full diff.
 
 Put a quiet numbered reference such as `[1]` immediately after every grounded
-claim. Reuse the number when the same source interval supports another claim.
+claim, including the document title. Keep title references in the title's inline
+flow, separate from the reviewed commit below it. Reuse the number when the same
+source interval supports another claim.
 Activating the reference shows a bounded preview popover anchored to that
 reference. Place it below the marker when space allows, flip it above when
 needed, and keep it within the viewport. Its ordinary fragment link remains

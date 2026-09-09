@@ -49,14 +49,16 @@ AI가 조사하고 방향을 추천하면 사용자가 결정하거나 위임합
 > 생성된 Align 문서는 프로젝트 문서입니다. 관련 변경과 함께 버전 관리에
 > 포함하는 방식을 기본으로 삼습니다.
 
-**전체 HTML 예시:** [출처 충돌·변경·취소와 판단 책임을 합의한 한국어 팬 일정 Align 기록을 엽니다.](docs/alignments/rescene-fan-calendar.ko.html)
+**전체 HTML:** [팬 일정 예시 합의를 일반 생성 경로로 기록한 Align 결과물을 엽니다.](docs/alignments/rescene-fan-calendar-default-run.ko.html)
 
-![신뢰 가능한 팬 일정의 목표와 공유된 이해를 보여 주는 다크 Hope Align 기술 기록](assets/readme/hope-align-ko.png)
+아래 이미지는 실제 생성된 HTML을 라이트 모드에서 캡처했습니다.
+
+![목표와 공유된 이해, 버전 이력을 보여 주는 실제 Align 결과물](assets/readme/hope-align-ko.png)
 
 <details>
 <summary>Align 세부 이미지 보기</summary>
 
-| 라이트 시각 시안 | 다크 공유 이해와 판단 기준 |
+| 시각 시안 | 공유 이해와 판단 기준 |
 | --- | --- |
 | [![한국어 Align 문서에서 비교한 신뢰 가능한 팬 일정 UI 두 가지](assets/readme/hope-align-directions-ko.png)](assets/readme/hope-align-directions-ko.png) | [![한국어 Align 문서의 출처 우선순위, 충돌, 최신성, 취소 결정](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
 
@@ -79,21 +81,20 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 > 없으면 저장소에서 사용자가 만든 최신 열린 PR을 선택합니다.
 > PR이 바뀌면 Diff를 다시 실행하세요.
 
-아래 이미지는 [Ky PR #825](https://github.com/sindresorhus/ky/pull/825)을 바탕으로
-고정된 한국어 Diff 예시에서 만들었습니다.
+아래 이미지는 [Ky PR #825](https://github.com/sindresorhus/ky/pull/825)을 실제로
+분석해 생성한 HTML을 라이트 모드에서 캡처했습니다. 이번 결과물에는 동작 흐름과
+마이크로월드가 포함되어 있습니다.
 
-**전체 HTML 예시:** [Ky PR #825의 전체 시간 제한을 결정표, 마이크로월드, 퀴즈로 설명한 한국어 Diff 결과물을 엽니다.](docs/diffs/ky-825-total-timeout.ko.html)
+**전체 HTML:** [Ky PR #825의 재시도 시간 예산을 설명한 Diff 결과물을 엽니다.](docs/diffs/ky-825-default-run.ko.html)
 
-![Ky PR 825의 목표, 공유 시간 제한 동작, 검토 항목을 보여 주는 다크 Hope Diff 기술 기록](assets/readme/hope-diff-ko.png)
+![제목에 붙은 근거, 변경 요약, 검토 항목을 보여 주는 실제 Diff 결과물](assets/readme/hope-diff-ko.png)
 
 <details>
 <summary>Diff 세부 이미지 보기</summary>
 
-| 라이트 결정표 | 다크 인터랙티브 마이크로월드 |
+| 변경 개요와 동작 흐름 | 펼친 마이크로월드 |
 | --- | --- |
-| [![한국어 Diff 문서의 공유 시간 제한 결정표](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![한국어 Diff 문서의 인터랙티브 전체 시간 제한 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
-
-[![한국어 Diff 라이트 문서의 공유 시간 제한과 재시도 이해 퀴즈](assets/readme/hope-diff-quiz-ko.png)](assets/readme/hope-diff-quiz-ko.png)
+| [![변경 개요와 번호가 매겨진 동작 흐름을 구분한 Diff 결과물](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![시간 상태에 따른 재시도 동작을 비교하는 Diff 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
 
 </details>
 

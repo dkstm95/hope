@@ -672,7 +672,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /font-family: "Hope Code"/u);
   assert.equal((first.match(/@font-face/gu) ?? []).length, 3);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="32"/u);
+  assert.match(first, /name="hope-align-design-version" content="33"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>문서 목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,

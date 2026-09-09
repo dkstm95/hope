@@ -176,6 +176,18 @@ test("Align presents one compact shared understanding with secondary history", a
   await expect(page.locator(".rail-navigation .rail-history .past .revision-head strong"))
     .toHaveText("v1");
   await expect(page.locator(".rail-navigation .rail-history .current")).toContainText("복구 의도와 근거를 명확히 함");
+  const historyMarkers = await page.locator(".rail-navigation").evaluate((navigation) => {
+    const clip = navigation.getBoundingClientRect();
+    return [...navigation.querySelectorAll(".revision-dot")].map((dot) => {
+      const marker = dot.getBoundingClientRect();
+      return { left: marker.left - clip.left, right: clip.right - marker.right, width: marker.width };
+    });
+  });
+  for (const marker of historyMarkers) {
+    expect(marker.width).toBeGreaterThan(0);
+    expect(marker.left).toBeGreaterThanOrEqual(0);
+    expect(marker.right).toBeGreaterThanOrEqual(0);
+  }
   await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#intent")).toContainText("중단 지점부터 이어서 완료할 수 있다");
   await expect(page.locator("#decisions")).toContainText("각 원본 업로드에는 하나의 복구 기록이 연결되고");
@@ -402,6 +414,37 @@ test("Align presents one compact shared understanding with secondary history", a
     "location",
   );
   await expectNoOverflow(page);
+});
+
+test("Align history details escape the rail clip and close from the keyboard", async ({ page }) => {
+  for (const width of [1920, 1440, 1168]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(artifactUrl);
+    const summary = page.locator("#revision-1 > summary");
+    await summary.click();
+    const geometry = await page.locator("#revision-1 .revision-popup").evaluate((panel) => {
+      const bounds = panel.getBoundingClientRect();
+      const sample = document.elementFromPoint(bounds.left + 2, bounds.top + 2);
+      return {
+        left: bounds.left,
+        railRight: document.querySelector(".rail").getBoundingClientRect().right,
+        right: bounds.right,
+        top: bounds.top,
+        bottom: bounds.bottom,
+        visible: panel === sample || panel.contains(sample),
+        overflow: panel.scrollWidth - panel.clientWidth,
+      };
+    });
+    expect(geometry.left).toBeGreaterThan(geometry.railRight);
+    expect(geometry.right).toBeLessThanOrEqual(width);
+    expect(geometry.top).toBeGreaterThanOrEqual(0);
+    expect(geometry.bottom).toBeLessThanOrEqual(900);
+    expect(geometry.visible).toBe(true);
+    expect(geometry.overflow).toBeLessThanOrEqual(1);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#revision-1")).not.toHaveAttribute("open", "");
+    await expect(summary).toBeFocused();
+  }
 });
 
 test("Align theme action is keyboard reachable and updates its label", async ({ page }) => {

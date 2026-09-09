@@ -15,7 +15,6 @@ const captureNames = [
   "diff",
   "diff-core",
   "diff-microworld",
-  "diff-quiz",
   "diagram",
 ];
 const detailCaptureNames = captureNames.filter((name) => ![
@@ -63,11 +62,11 @@ test("README examples keep English and Korean assets separate", async () => {
   await Promise.all([...englishImages, ...koreanImages]
     .map((path) => access(new URL(path, root))));
 
-  assert.match(english, /docs\/alignments\/rescene-fan-calendar\.en\.html/u);
-  assert.match(english, /docs\/diffs\/ky-825-total-timeout\.en\.html/u);
+  assert.match(english, /docs\/alignments\/rescene-fan-calendar-default-run\.en\.html/u);
+  assert.match(english, /docs\/diffs\/ky-825-default-run\.en\.html/u);
   assert.match(english, /docs\/visualizations\/parcel-handoff\.html/u);
-  assert.match(korean, /docs\/alignments\/rescene-fan-calendar\.ko\.html/u);
-  assert.match(korean, /docs\/diffs\/ky-825-total-timeout\.ko\.html/u);
+  assert.match(korean, /docs\/alignments\/rescene-fan-calendar-default-run\.ko\.html/u);
+  assert.match(korean, /docs\/diffs\/ky-825-default-run\.ko\.html/u);
   assert.match(korean, /docs\/visualizations\/parcel-handoff\.html/u);
   await access(new URL("docs/visualizations/parcel-handoff.html", root));
 });
@@ -82,7 +81,7 @@ test("README examples show overviews and collapse detailed captures by default",
     const images = expectedImages(suffix);
     assert.deepEqual(collapsedExampleImages(source), [
       images.slice(1, 3),
-      images.slice(4, 7),
+      images.slice(4, 6),
     ]);
   }
 });
@@ -95,6 +94,21 @@ test("README detail captures preserve a readable wide layout", async () => {
       assert.ok(width >= 720, `${path}: ${width}px wide`);
       assert.ok(height <= width * 2, `${path}: ${width}x${height}`);
     }
+  }
+});
+
+test("READMEs use preserved runtime artifacts with their actual available sections", async () => {
+  for (const [suffix, locale] of [["en", "en-US"], ["ko", "ko-KR"]]) {
+    const align = await read(`docs/alignments/rescene-fan-calendar-default-run.${suffix}.html`);
+    const diff = await read(`docs/diffs/ky-825-default-run.${suffix}.html`);
+    for (const source of [align, diff]) {
+      assert.ok(source.includes(`<html lang="${locale}"`));
+      assert.doesNotMatch(source, /<details class="locale-menu">/u);
+      if (suffix === "en") assert.doesNotMatch(source, /[가-힣]/u);
+    }
+    assert.match(diff, /id="behavior-flow"/u);
+    assert.match(diff, /class="microworld-disclosure"/u);
+    assert.doesNotMatch(diff, /class="quiz-question"/u);
   }
 });
 

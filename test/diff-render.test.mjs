@@ -90,7 +90,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
   ]);
   assert.equal(first.rendererVersion, 19);
-  assert.equal(first.designVersion, 24);
+  assert.equal(first.designVersion, 25);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -167,7 +167,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(documentTitleHtml, /pull-request-link|https?:\/\//u);
   assert.match(
     documentTitleHtml,
-    /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi><\/h1>/u,
+    /<h1 id="review-title"><bdi dir="auto">The final retry error now reaches the caller\.<\/bdi>&nbsp;<span class="title-evidence">[\s\S]*?<\/h1>/u,
   );
   assert.match(documentTitleHtml, /<span class="title-evidence"><sup class="evidence-markers">/u);
   assert.doesNotMatch(documentTitleHtml, /&lt;script|Goal|<dl>|<dt>|Captured|Commit/u);
@@ -797,7 +797,7 @@ test("behavior steps keep one vertical numbered flow regardless of count or leng
   );
   assert.match(
     shortHtml,
-    /<div class="behavior-summary">[\s\S]*?<div class="core-change" id="core-change">[\s\S]*?<div class="behavior-model" id="behavior-flow">/u,
+    /<div class="behavior-summary">[\s\S]*?<div class="core-change" id="core-change">[\s\S]*?<section class="review-subsection" id="behavior-flow">[\s\S]*?<h3>Behavior flow<\/h3>/u,
   );
   assert.match(shortHtml, /<ol class="flow">/u);
   assert.doesNotMatch(shortHtml, /flow-short/u);

@@ -554,7 +554,7 @@ function compactRevisionContent(content, dictionary, idPrefix) {
 
 function railRevision(revision, index, data, dictionary, idSuffix) {
   const current = index === 0;
-  const details = current || data.revisions.length === 1 ? "" : `<details class="revision-disclosure" id="revision-${revision.number}${idSuffix}">
+  const details = current || data.revisions.length === 1 ? "" : `<details class="revision-disclosure" id="revision-${revision.number}${idSuffix}" name="align-revision">
     <summary>${escapeHtml(label(dictionary, "revisionDetails"))}</summary>
     <div class="revision-popup">${compactRevisionContent(revision.content, dictionary, `revision-${revision.number}${idSuffix}-`)}</div>
   </details>`;
@@ -710,8 +710,9 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .toc-heading { display: flex; align-items: baseline; justify-content: space-between; gap: ${space2}px; }
 .toc-progress { display: none; color: var(--muted); font-size: ${TYPE.micro.fontSize}px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .toc-list, .rail-history ol { list-style: none; padding: 0; }
+.rail-history ol { padding-inline-start: 5px; }
 .toc-list { display: grid; gap: 2px; }
-.toc-link { min-height: 46px; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: center; margin-left: -${space5}px; padding: ${space2}px ${space2}px ${space2}px ${space5}px; border-left: 3px solid transparent; color: var(--muted); font-size: ${TYPE.body.wide.fontSize}px; font-weight: 500; text-decoration: none; }
+.toc-link { min-height: 46px; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: ${space2}px; align-items: center; padding: ${space2}px; border-left: 3px solid transparent; color: var(--muted); font-size: ${TYPE.body.wide.fontSize}px; font-weight: 500; text-decoration: none; }
 .toc-link:visited { color: var(--muted); }
 .toc-number { color: var(--muted); font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
 .toc-link[aria-current="location"], .toc-link[aria-current="location"]:visited { border-left-color: var(--accent); color: var(--text); font-weight: 700; }
@@ -729,11 +730,12 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .revision-disclosure, .older-history { position: relative; }
 .revision-disclosure > summary, .older-history > summary { min-height: 32px; display: flex; align-items: center; color: var(--text); cursor: pointer; font-size: ${TYPE.supporting.wide.fontSize}px; }
 .revision-disclosure > summary::marker, .older-history > summary::marker { color: var(--muted); }
-.revision-popup { position: absolute; z-index: 12; top: 100%; right: 0; width: min(560px, calc(100vw - ${LAYOUT.tableOfContentsWidth + 80}px)); max-height: min(70vh, 680px); overflow: auto; padding: ${space4}px; border: 1px solid var(--border); background: var(--panel); box-shadow: 0 12px 32px color-mix(in srgb, var(--text) 14%, transparent); }
+.revision-popup { position: fixed; z-index: 12; top: ${space5}px; left: max(${LAYOUT.tableOfContentsWidth + space5}px, calc((100vw - ${LAYOUT.documentWidth}px) / 2 + ${LAYOUT.tableOfContentsWidth + space5}px)); width: min(560px, calc(100vw - ${LAYOUT.tableOfContentsWidth + space5 * 2}px)); max-height: calc(100dvh - ${space5 * 2}px); overflow: auto; overscroll-behavior: contain; padding: ${space4}px; border: 1px solid var(--border); background: var(--panel); box-shadow: 0 12px 32px color-mix(in srgb, var(--text) 14%, transparent); }
+.revision-popup .revision-content > div { grid-template-columns: 1fr; gap: ${space1}px; }
 .revision-popup .design-direction-list { grid-template-columns: 1fr; }
 .revision-popup .design-direction { padding-inline: ${space2}px; }
 .revision-popup .design-direction + .design-direction { border-top: 1px solid var(--border); border-left: 0; }
-.older-history > ol { list-style: none; padding: ${space3}px 0 0; }
+.older-history > ol { padding-top: ${space3}px; }
 .document-head { max-width: ${LAYOUT.proseWidth}; padding-top: ${space1}px; }
 .document-head + .document-section { margin-top: ${space5}px; padding-top: ${space4}px; }
 .document-section + .document-section { margin-top: ${space6}px; padding-top: ${space4}px; }
@@ -777,7 +779,7 @@ button, summary { font-family: "Hope Sans", sans-serif; font-weight: 500; }
 .direction-reference-content { min-width: 0; padding-top: ${space2}px; }
 .direction-references li p { margin: ${space1}px 0 0; font-size: ${TYPE.supporting.wide.fontSize}px; }
 .direction-rationales { margin: ${space4}px 0 0; border-top: 1px solid var(--border); }
-.direction-rationales > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: ${space3}px; padding: ${space3}px 0; }
+.direction-rationales > div { display: grid; grid-template-columns: minmax(92px, min-content) minmax(0, 1fr); gap: ${space3}px; padding: ${space3}px 0; }
 .direction-rationales > div + div { border-top: 1px solid var(--border); }
 .direction-rationales dt { color: var(--muted); font-size: ${TYPE.supporting.wide.fontSize}px; font-weight: 700; }
 .direction-rationales dd { margin: 0; }
@@ -976,7 +978,7 @@ referencePopover?.addEventListener("toggle",event=>{if(event.newState==="closed"
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);
 addEventListener("hashchange",openTarget);
 addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});
-addEventListener("keydown",event=>{if(event.key==="Escape"&&navigation?.open){navigation.open=false;navigation.querySelector("summary")?.focus();}});
+addEventListener("keydown",event=>{if(event.key!=="Escape"||referencePopover?.matches(":popover-open"))return;const revision=document.querySelector(".revision-disclosure[open]");if(revision){revision.open=false;revision.querySelector("summary")?.focus();}else if(navigation?.open){navigation.open=false;navigation.querySelector("summary")?.focus();}});
 addEventListener("resize",schedulePopoverPosition);
 addEventListener("scroll",()=>{schedulePopoverPosition();if(frame)return;frame=requestAnimationFrame(()=>{frame=0;syncCurrent();});},{passive:true});
 openTarget();syncCurrent();
