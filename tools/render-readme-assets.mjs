@@ -311,14 +311,18 @@ async function captureRuntimeExamples(page, outputDirectory, suffix) {
   const diffPath = join(root, `docs/diffs/ky-825-default-run.${suffix}.html`);
   // Preserve the published run bytes. Captures change only viewport, theme,
   // scroll position, and native disclosure state; never the document's styles.
-  await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`));
+  await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`), { colorScheme: "dark" });
   await page.locator("#decisions").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-align-decisions-${suffix}.png`) });
+  await loadPage(page, alignPath, { colorScheme: "light" });
   await page.locator("#design-directions").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-align-directions-${suffix}.png`) });
 
   await capturePage(page, diffPath, join(outputDirectory, `hope-diff-${suffix}.png`), {
+    colorScheme: "dark",
     expectedTopSection: "#synopsis",
   });
+  await loadPage(page, diffPath, { colorScheme: "light" });
   await page.locator("#explore").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-diff-core-${suffix}.png`) });
+  await loadPage(page, diffPath, { colorScheme: "dark" });
   await page.locator(".microworld-disclosure > summary").click();
   await page.locator(".microworld").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-diff-microworld-${suffix}.png`) });
 }

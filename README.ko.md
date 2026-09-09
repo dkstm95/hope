@@ -51,14 +51,14 @@ AI가 조사하고 방향을 추천하면 사용자가 결정하거나 위임합
 
 **전체 HTML:** [팬 일정 예시 합의를 일반 생성 경로로 기록한 Align 결과물을 엽니다.](docs/alignments/rescene-fan-calendar-default-run.ko.html)
 
-아래 이미지는 실제 생성된 HTML을 라이트 모드에서 캡처했습니다.
+아래 이미지는 실제 생성된 HTML을 다크·라이트 모드에서 캡처했습니다.
 
 ![목표와 공유된 이해, 버전 이력을 보여 주는 실제 Align 결과물](assets/readme/hope-align-ko.png)
 
 <details>
 <summary>Align 세부 이미지 보기</summary>
 
-| 시각 시안 | 공유 이해와 판단 기준 |
+| 라이트 모드 시각 시안 | 다크 모드 공유 이해와 판단 기준 |
 | --- | --- |
 | [![한국어 Align 문서에서 비교한 신뢰 가능한 팬 일정 UI 두 가지](assets/readme/hope-align-directions-ko.png)](assets/readme/hope-align-directions-ko.png) | [![한국어 Align 문서의 출처 우선순위, 충돌, 최신성, 취소 결정](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
 
@@ -82,7 +82,7 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 > PR이 바뀌면 Diff를 다시 실행하세요.
 
 아래 이미지는 [Ky PR #825](https://github.com/sindresorhus/ky/pull/825)을 실제로
-분석해 생성한 HTML을 라이트 모드에서 캡처했습니다. 이번 결과물에는 동작 흐름과
+분석해 생성한 HTML을 다크·라이트 모드에서 캡처했습니다. 이번 결과물에는 동작 흐름과
 마이크로월드가 포함되어 있습니다.
 
 **전체 HTML:** [Ky PR #825의 재시도 시간 예산을 설명한 Diff 결과물을 엽니다.](docs/diffs/ky-825-default-run.ko.html)
@@ -92,7 +92,7 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 <details>
 <summary>Diff 세부 이미지 보기</summary>
 
-| 변경 개요와 동작 흐름 | 펼친 마이크로월드 |
+| 라이트 모드 변경 개요와 동작 흐름 | 다크 모드 펼친 마이크로월드 |
 | --- | --- |
 | [![변경 개요와 번호가 매겨진 동작 흐름을 구분한 Diff 결과물](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![시간 상태에 따른 재시도 동작을 비교하는 Diff 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
 
