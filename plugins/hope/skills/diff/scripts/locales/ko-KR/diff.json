@@ -113,6 +113,7 @@
   "scope.verification.subject": "실행과 CI 결과",
   "section.background": "배경",
   "section.changeOverview": "변경 개요",
+  "section.behaviorFlow": "동작 흐름",
   "section.evidence": "근거와 범위",
   "section.explore": "동작 변화",
   "section.judge": "검토 항목",

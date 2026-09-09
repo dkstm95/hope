@@ -526,7 +526,15 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#review-title")).toContainText(
     "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
   );
-  await expect(page.locator(".document-title-meta .title-evidence .evidence-marker")).toHaveText("[1]");
+  await expect(page.locator("#review-title .evidence-marker")).toHaveText("[1]");
+  const titleReference = await page.locator("#review-title").evaluate((heading) => {
+    const text = heading.querySelector("bdi").getBoundingClientRect();
+    const marker = heading.querySelector(".evidence-marker").getBoundingClientRect();
+    return { gap: marker.left - text.right, sameLine: marker.top < text.bottom && marker.bottom > text.top };
+  });
+  expect(titleReference.gap).toBeGreaterThanOrEqual(0);
+  expect(titleReference.gap).toBeLessThan(16);
+  expect(titleReference.sameLine).toBe(true);
   const judge = page.locator("#judge");
   await expect(judge).not.toHaveAttribute("open", "");
   await expect(judge.locator(".section-content")).not.toBeVisible();
@@ -555,7 +563,9 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     "변경 개요",
   );
   await expect(page.locator("#core-change > .subsection-heading")).toHaveCount(0);
-  await expect(page.locator("#behavior-flow > .subsection-heading")).toHaveCount(0);
+  await expect(page.locator("#behavior-flow > .subsection-heading h3")).toHaveText("동작 흐름");
+  await expect(page.locator("#change-overview .flow")).toHaveCount(0);
+  await expect(page.locator("#behavior-flow .flow > li")).toHaveCount(4);
   await expect(page.locator("#change-overview > .change-overview-content > .behavior-summary")).toContainText(
     "네 단계로 이어지는 변경 동작입니다.",
   );

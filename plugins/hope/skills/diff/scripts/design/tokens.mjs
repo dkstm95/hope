@@ -5,7 +5,7 @@ import {
   ARTIFACT_TYPE,
 } from "../../../../assets/artifact-theme.mjs";
 
-export const DESIGN_VERSION = 24;
+export const DESIGN_VERSION = 25;
 
 export const COLORS = Object.freeze({
   dark: Object.freeze({

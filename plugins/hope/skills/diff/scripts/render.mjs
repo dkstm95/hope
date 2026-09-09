@@ -541,10 +541,9 @@ function documentTitle(claim, dictionary, review, codeRenderer) {
     { context: claim.text },
   );
   return `<header class="document-title">
-    <h1 id="review-title">${userText(claim.text)}</h1>
+    <h1 id="review-title">${userText(claim.text)}${markers === "" ? "" : `&nbsp;<span class="title-evidence">${markers}</span>`}</h1>
     <div class="document-title-meta">
       <p class="document-state"><span class="document-state-dot" aria-hidden="true"></span>PR #${review.snapshot.pullRequest.number} · <code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></p>
-      ${markers === "" ? "" : `<span class="title-evidence">${markers}</span>`}
     </div>
   </header>`;
 }
@@ -1096,7 +1095,10 @@ function buildSections(review, dictionary, codeRenderer) {
       review,
       codeRenderer,
     )}</div>`;
-    behaviorModel = `<div class="behavior-model" id="behavior-flow">
+    behaviorModel = subsection({
+      id: "behavior-flow",
+      title: label(dictionary, "section.behaviorFlow"),
+      content: `<div class="behavior-model">
       ${review.behavior.visual
           ? visualBlock(
             review.behavior.visual,
@@ -1121,13 +1123,13 @@ function buildSections(review, dictionary, codeRenderer) {
             codeRenderer,
           )
           : ""}
-    </div>`;
+    </div>`,
+    });
   }
   const changeOverview = subsection({
     content: `<div class="change-overview-content">
       ${behaviorLead}
       ${coreChange}
-      ${behaviorModel}
     </div>`,
     id: "change-overview",
     title: label(dictionary, "section.changeOverview"),
@@ -1167,7 +1169,7 @@ function buildSections(review, dictionary, codeRenderer) {
   let number = 2;
   sections.push({
     html: section({
-      content: `${changeOverview}${quiz}`,
+      content: `${changeOverview}${behaviorModel}${quiz}`,
       id: "explore",
       number,
       title: label(dictionary, "section.explore"),
@@ -1604,8 +1606,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   gap: ${space2}px;
-  margin-left: -${space5}px;
-  padding: ${space2}px ${space2}px ${space2}px ${space5}px;
+  padding: ${space2}px;
   border-left: 3px solid transparent;
   color: var(--muted);
   font-size: ${TYPE.body.wide.fontSize}px;
@@ -1647,11 +1648,11 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   letter-spacing: -.04em;
   overflow-wrap: anywhere;
 }
-.document-title-meta { display: flex; align-items: center; justify-content: space-between; gap: ${space3}px; margin-top: ${space3}px; }
+.document-title-meta { margin-top: ${space3}px; }
 .document-state { display: flex; align-items: center; gap: ${space2}px; margin: 0; color: var(--accent); }
 .document-state code { color: inherit; font-size: .9em; }
 .document-state-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
-.title-evidence { flex: none; }
+.title-evidence { display: inline-block; font-size: ${TYPE.supporting.wide.fontSize}px; line-height: 1; letter-spacing: normal; vertical-align: middle; }
 .synopsis-grid > div > h3,
 .synopsis-background > h3,
 .synopsis-review-head > h3,
@@ -1985,7 +1986,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 }
 .explanation-step + .explanation-step { margin-top: ${space4}px; }
 .behavior-summary + .core-change { margin-top: ${space3}px; }
-.core-change + .behavior-model { margin-top: ${space4}px; }
 .core-details { margin: 0; }
 .claim-list,
 .code-step-list,
@@ -2851,7 +2851,6 @@ td:first-child {
     font-size: ${narrowPageTitle.fontSize}px;
     line-height: ${narrowPageTitle.lineHeight};
   }
-  .document-title-meta { align-items: flex-start; flex-direction: column; }
   .main { padding: ${space8}px ${space4}px ${space9}px; }
   .document-title + .synopsis,
   .synopsis + .review-section,

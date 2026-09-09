@@ -37,7 +37,6 @@ const captureNames = [
   "diff",
   "diff-core",
   "diff-microworld",
-  "diff-quiz",
   "diagram",
 ];
 const generatedPaths = [
@@ -271,46 +270,7 @@ async function capturePage(page, htmlPath, outputPath, options = {}) {
   await page.screenshot({ animations: "disabled", clip: { height, width, x: 0, y: 0 }, path: outputPath, type: "png" });
 }
 
-async function captureElement(page, outputPath, selector, { capturePadding = 16, expandDetails = false } = {}) {
-  await page.locator(".skip").evaluate((skipLink) => {
-    skipLink.style.display = "none";
-  });
-  const element = page.locator(selector);
-  await element.scrollIntoViewIfNeeded();
-  if (expandDetails) {
-    await element.evaluate((target) => {
-      if (target.matches("details")) target.open = true;
-    });
-    await element.locator("details").evaluateAll((details) => {
-      for (const detail of details) detail.open = true;
-    });
-  }
-  const previousStyle = await element.getAttribute("style");
-  await element.evaluate((target, padding) => {
-    const style = getComputedStyle(target);
-    for (const side of ["Top", "Right", "Bottom", "Left"]) {
-      const current = Number.parseFloat(style[`padding${side}`]);
-      target.style[`padding${side}`] = `${current + padding}px`;
-    }
-  }, capturePadding);
-  try {
-    const bounds = await element.boundingBox();
-    assert.ok(bounds, `README capture target must have bounds: ${selector}`);
-    assert.ok(
-      bounds.width >= 720 && bounds.height <= bounds.width * 2,
-      `README detail capture must preserve a readable wide layout: ${selector} (${bounds.width}x${bounds.height})`,
-    );
-    await element.screenshot({ animations: "disabled", path: outputPath, type: "png" });
-  } finally {
-    await element.evaluate((target, style) => {
-      if (style === null) target.removeAttribute("style");
-      else target.setAttribute("style", style);
-    }, previousStyle);
-  }
-}
-
 async function renderHtmlExamples(page, locations, fonts) {
-  const paths = {};
   for (const example of examples) {
     const mockups = {
       actionRadar: await captureMockup(page, example.locale, "actionRadar", fonts),
@@ -331,47 +291,40 @@ async function renderHtmlExamples(page, locations, fonts) {
       alternateLocale: alternateLocale(example.alternateLocale, `ky-825-total-timeout.${example.alternateSuffix}.html`),
     });
     await writeFile(diffPath, generatedHtml(rendered.bytes));
-    paths[example.suffix] = { alignPath, diffPath };
   }
-  return paths;
 }
 
-async function captureReadmeAssets(browser, paths, outputDirectory, fonts) {
+async function captureReadmeAssets(browser, outputDirectory) {
   for (const { locale, suffix } of examples) {
     const page = await browser.newPage();
     try {
-      const { alignPath, diffPath } = paths[suffix];
-      await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`), {
-        colorScheme: "dark",
-      });
-      await captureElement(page, join(outputDirectory, `hope-align-decisions-${suffix}.png`), "#decisions");
-      await loadPage(page, alignPath, { colorScheme: "light" });
-      await captureElement(page, join(outputDirectory, `hope-align-directions-${suffix}.png`), "#design-directions");
-
-      await capturePage(page, diffPath, join(outputDirectory, `hope-diff-${suffix}.png`), {
-        colorScheme: "dark",
-        expectedTopSection: "#synopsis",
-        height: 820,
-      });
-      await loadPage(page, diffPath, { colorScheme: "light" });
-      await captureElement(page, join(outputDirectory, `hope-diff-core-${suffix}.png`), ".behavior-visual");
-      await loadPage(page, diffPath, { colorScheme: "dark" });
-      await page.locator(".microworld-disclosure").evaluate((details) => {
-        details.open = true;
-      });
-      await page.locator('.microworld-control[data-control-id="delay"][value="long"]').check();
-      await captureElement(page, join(outputDirectory, `hope-diff-microworld-${suffix}.png`), ".microworld", { expandDetails: true });
-      await loadPage(page, diffPath, { colorScheme: "light" });
-      await captureElement(page, join(outputDirectory, `hope-diff-quiz-${suffix}.png`), "#quiz", { expandDetails: true });
-      await captureDiagramExample(
-        page,
-        locale,
-        join(outputDirectory, `hope-diagram-${suffix}.png`),
-      );
+      await captureRuntimeExamples(page, outputDirectory, suffix);
+      await captureDiagramExample(page, locale, join(outputDirectory, `hope-diagram-${suffix}.png`));
     } finally {
       await page.close();
     }
   }
+}
+
+async function captureRuntimeExamples(page, outputDirectory, suffix) {
+  const alignPath = join(root, `docs/alignments/rescene-fan-calendar-default-run.${suffix}.html`);
+  const diffPath = join(root, `docs/diffs/ky-825-default-run.${suffix}.html`);
+  // Preserve the published run bytes. Captures change only viewport, theme,
+  // scroll position, and native disclosure state; never the document's styles.
+  await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`), { colorScheme: "dark" });
+  await page.locator("#decisions").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-align-decisions-${suffix}.png`) });
+  await loadPage(page, alignPath, { colorScheme: "light" });
+  await page.locator("#design-directions").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-align-directions-${suffix}.png`) });
+
+  await capturePage(page, diffPath, join(outputDirectory, `hope-diff-${suffix}.png`), {
+    colorScheme: "dark",
+    expectedTopSection: "#synopsis",
+  });
+  await loadPage(page, diffPath, { colorScheme: "light" });
+  await page.locator("#explore").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-diff-core-${suffix}.png`) });
+  await loadPage(page, diffPath, { colorScheme: "dark" });
+  await page.locator(".microworld-disclosure > summary").click();
+  await page.locator(".microworld").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-diff-microworld-${suffix}.png`) });
 }
 
 async function generateExamples(destinationRoot) {
@@ -383,13 +336,12 @@ async function generateExamples(destinationRoot) {
     const fonts = await loadMockupFonts();
     browser = await chromium.launch({ headless: true });
     const renderPage = await browser.newPage();
-    let paths;
     try {
-      paths = await renderHtmlExamples(renderPage, locations, fonts);
+      await renderHtmlExamples(renderPage, locations, fonts);
     } finally {
       await renderPage.close();
     }
-    await captureReadmeAssets(browser, paths, locations.outputDirectory, fonts);
+    await captureReadmeAssets(browser, locations.outputDirectory);
   } finally {
     await browser?.close();
   }
