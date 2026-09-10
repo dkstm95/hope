@@ -5,70 +5,74 @@ description: Resolve intent, scope, consequential design choices, or important a
 
 # Hope Align
 
-Build shared understanding of the goal and consequential decisions. Use the
-conversation's existing decisions, delegation, and implementation authorization.
-Align owns resolution of consequential choices even when an implementation
-skill runs alongside it. Another skill's execution instructions do not resolve
-Align's open decisions. Do not turn clear, authorized work into a new approval
-process.
+Discover and test a design with the person to understand its goal and
+consequential decisions. Honor existing decisions, delegation, and implementation
+authorization. Align owns its open choices even when an implementation skill
+runs alongside it. Do not turn clear, authorized work into a new approval process.
 
 Read `../write/references/writing-standard.md` for user-facing language.
 
-## Resolve consequential choices
+## Discover choices through their consequences
 
 Start from the conversation, relevant code, and governing project sources.
-Research facts and recommend a path. Keep evidence, user decisions, AI
-proposals, assumptions, and uncertainty distinct.
+Keep evidence, user decisions, AI proposals, assumptions, and uncertainty distinct.
 
-Build and maintain a decision tree of choices that could change the goal,
-observable result, future options, long-lived constraints, or material risk.
-Include architecture and data modeling when they have those effects. For every
-possible branch, judge whether it needs the person's understanding and a
-decision or explicit delegation before implementation. Leave routine,
-reversible mechanics to implementation. Reversibility alone does not make a
-choice about behavior or success criteria routine. Surface omissions,
-contradictions, unsupported assumptions, edge cases, and simpler approaches
-when they could change a material branch.
+Understand the goal by following relevant situations from the starting need
+to the proposed outcome in its real setting. Investigate transitions that
+depend on unstated choices or unsupported assumptions. Derive questions from
+the task and evidence, without a fixed topic checklist or round count.
+
+Use a decision tree to track discovered choices and their dependencies. A
+choice is material when it could change the goal, observable result, future
+options, long-lived constraints, or material risk, including architecture and
+data modeling with those effects. Leave routine, reversible mechanics to
+implementation. Reversibility alone does not make behavior or success criteria
+routine.
 
 ## Work the complete decision frontier
 
 The frontier contains every unresolved material branch whose prerequisites are
-settled. Ask the whole frontier in each round; do not select only the easiest
-or most obvious questions. Number the questions, explain their consequences,
-recommend a path, and offer realistic alternatives. Research what the AI can
+settled. Ask the whole frontier in each round. Number the questions, explain
+their consequences, recommend a path, and offer realistic alternatives. Research what the AI can
 determine instead of asking the person for facts. Continue independent
 authorized work while answers are pending, but keep dependent work behind its
 unresolved choices.
 
-Apply agreement or delegation only to the choices it covers; agreement with
-a direction does not settle its unstated consequences. After each answer,
-update the decision tree and recompute the entire frontier,
-including newly ready branches. Reopen dependent choices when new evidence or
-an earlier decision changes their basis. Close each material branch through a
-decision, deliberate exclusion, or explicit delegation; do not silently settle
-it through an assumption.
+After each answer or new evidence, trace its effects in the real situation and
+its interactions with other commitments to discover choices beyond the current
+tree. Update the problem understanding and tree, then recompute the frontier.
+Reopen settled choices when their basis changes. Close each material branch
+through a decision, deliberate exclusion, or explicit delegation, applying
+agreement only to the choices it covers. Unstated consequences remain open.
 
-If the person is uncertain, gather useful evidence or recommend a probe. Keep
-the branch open until they can decide, deliberately exclude it, or explicitly
-delegate it. Read `references/design-directions.md` when a material visual
-choice needs comparison images.
+For uncertainty that conversation cannot resolve, identify a useful observation
+and gather evidence or recommend a small probe. Use actual screens or mockups
+when judgment depends on seeing the experience; read `references/design-directions.md`
+for material visual comparisons. Bring the result back into discovery and
+agreement; uncertainty alone does not close a branch.
 
-## Confirm and continue
+## Test the understanding before confirmation
 
-Before confirmation, check the whole tree: every material branch must be
-resolved, including dependent branches that became ready in later rounds.
-An empty question list alone is not completion. When the frontier is empty and
-no material branch remains unresolved, summarize the goal and problem model,
-how success will be recognized, consequential decisions and their effects,
-and every exclusion, delegation, or assumption that shaped the agreement.
-Ask for confirmation of new shared understanding; do not ask the person to
-reconfirm an unchanged agreement.
+Agreement and sufficient discovery are separate requirements. Once known
+material choices are resolved, return to the original goal. Walk through
+concrete situations with the choices applied together to test the outcome and
+its supporting evidence. Look for missing decisions, conflicts, or unsupported
+assumptions that the tree never exposed, and simpler ways to meet the goal.
 
-Implementation authorization does not resolve open decisions. After confirming
-the complete understanding, use authorization already given, including a
-request to align and then build, without asking again. If none exists, leave
-implementation for the person's decision.
-An alignment-only request ends with the confirmed understanding.
+Return material issues to discovery and agreement. Finish when all material
+branches are resolved and one proportionate walkthrough finds no new material issue.
+An empty question list or assent to recommendations does not establish this.
+A clear, narrow request may need no additional question round.
+
+Summarize the goal, problem, success criteria, consequential decisions and
+effects, and the exclusions, delegation, or assumptions shaping the agreement.
+Report verification and its limits, distinguishing reasoned walkthroughs from
+observed behavior. Confirm new shared understanding without reconfirming an
+unchanged agreement.
+
+After confirmation, use existing implementation authorization without asking
+again; otherwise leave implementation for the person's decision. An
+alignment-only request ends with the confirmed understanding.
 
 ## Preserve understanding when needed
 

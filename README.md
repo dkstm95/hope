@@ -38,8 +38,10 @@ better decisions, and direct their next steps.
 
 Align resolves choices that could materially change the result, using the
 conversation and project evidence. The AI researches and recommends; the person
-decides or delegates. It follows every material decision branch through to
-resolution. Routine implementation details stay with implementation.
+decides or delegates. Align explores what each answer changes in practice to
+discover further choices. Before confirmation, Align walks through the combined
+decisions against the original goal to find gaps that earlier questions missed.
+Routine implementation details stay with implementation.
 
 It confirms new shared understanding and continues under any implementation
 authorization already given. An alignment-only request stops at the agreement.
