@@ -6,94 +6,31 @@ visual system, and delivery.
 
 ## Define the reading job
 
-Write one sentence that states what the reader should understand after seeing
-the visual. If it describes a list rather than a relationship, use a list or
-table. If the visual needs a paragraph of instructions before it can be read,
-simplify or split it.
+Choose what the reader needs to understand and use a visual only when its
+relationships explain that meaning more clearly than prose or a table.
 
 Identify the reader, destination, intended viewing size, and required detail.
 A slide or small preview needs fewer items and larger type than a document read
 up close. An existing artifact keeps its format, tokens, and component
 boundaries.
 
-## Model meaning before layout
+## Let the meaning determine the form
 
-Choose one primary semantic job before choosing shapes. A semantic job may use
-different layouts; a layout does not determine what the facts mean.
+Choose a familiar visual form that represents the actual relationship without
+forcing the facts into a pattern. Preserve distinctions that affect the
+conclusion, and mark inference, uncertainty, and missing evidence. Do not
+invent nodes, relationships, values, or business meaning to complete a layout.
+Read `chart-standard.md` whenever a visual property encodes quantity.
 
-| Semantic job | Required meaning |
-| --- | --- |
-| Capacity or bottleneck | Sources, constrained stage or queue, capacity signal, and outcomes |
-| Policy divergence | The same ordered checks, explicit statuses, and first meaningful divergence |
-| Trust or permitted path | Trust zones, allowed and blocked paths, and the exact boundary or stop point |
-| Enforcement or governance | Control surface, responsible actor, timing, and any exception or gap |
-| Cause, effect, or residual risk | Supported causal links, limitations, and what risk remains |
-| Transformation | Inputs, checks or transformations, outputs, and unknown or provenance boundaries |
-
-Use one primary job and at most one supporting notation. Never invent a node,
-relationship, value, or business meaning to complete a pattern. Mark inference,
-uncertainty, and absent evidence explicitly.
-
-## Choose the primary grammar
-
-Use the smallest grammar that represents the reading job honestly.
-
-| The reader needs to see | Primary grammar and boundary |
-| --- | --- |
-| Logical components and connections | Component map or architecture diagram |
-| Physical placement, zones, replicas, or versions | Deployment diagram; otherwise use architecture |
-| Multi-parent or cyclic prerequisites | Dependency graph; use a tree for strict parent-child structure |
-| Ordered actions, branches, or runtime movement | Flowchart |
-| Messages between actors where order is the point | Sequence diagram |
-| Finite states, transitions, and guards | State machine |
-| Responsibility and handoffs | Swimlane; use a process flow when ownership is not the point |
-| A census of work by current status | Kanban; do not add flow connectors |
-| Conditions and outcomes | Decision table |
-| Events by time | Timeline or Gantt; use story map for narrative and release slices, user journey for experience or sentiment |
-| Scope, containment, or reporting | Nested regions, tree, org chart, or layer stack |
-| Conceptual entities and cardinality | Entity relationship diagram; use a database schema for physical columns, types, keys, and indexes |
-| Class contracts and relationships | UML class diagram |
-| Categories of possible causes | Fishbone; do not imply proof of causation |
-| Set overlap | Venn diagram; use a matrix when exact combinations matter |
-| Quantitative shape or comparison | Read `chart-standard.md` and choose a truthful chart or table |
-
-When two grammars appear necessary, keep the one carrying the main message.
-Add one supporting notation only if it stays readable; otherwise create an
-overview and a detail visual.
-
-## Respect artifact-constrained grammars
-
-Some Hope artifacts accept only a fixed visual vocabulary. Choose among the
-allowed kinds without changing their schema:
-
-- `component-map` shows fixed components, responsibilities, calls, or handoffs;
-- `decision-table` shows meaningful conditions and outcomes;
-- `flow` shows runtime data movement, control flow, or branching; and
-- `sequence` shows time-ordered messages or interactions.
-
-If the teaching job cannot be represented honestly by an allowed kind,
-simplify it without changing its claim or omit the visual with a reason. Do not
-force another grammar into a familiar-looking schema.
+Respect the containing artifact's supported visual kinds and schema. If none
+can represent the claim honestly, use prose or omit the visual with a reason.
 
 ## Edit before decorating
 
-Aim for a calm overview: about nine primary nodes or fewer, one clear path, and
-one or two focal elements. Data charts may contain more marks, but the reader
-should not need to decode a label for every mark. Split overview from detail
-when the source would otherwise require smaller type, tangled connectors, or
-repeated explanation.
-
-Apply the remove test before styling:
-
-- Remove a node when it adds no distinct idea.
-- Merge items that always move together, and name the group honestly.
-- Remove a connector when position already makes the relationship unambiguous.
-- Remove a label when another visible cue already carries the same meaning.
-- Reduce emphasis when more than two elements compete for attention.
-
-Keep a fidelity ledger when the visual differs materially from its source.
-Report what was merged, grouped, collapsed, omitted, inferred, or moved to a
-detail view.
+Keep a clear reading path and remove elements that add no distinct meaning.
+Choose the amount of detail for the viewing size; split overview from detail
+when needed for legibility. Report material simplifications or omissions that
+change what the reader can conclude from the visual.
 
 ## Establish hierarchy
 
@@ -170,19 +107,11 @@ equivalent when exact quantities matter.
 
 ## Inspect the rendered result
 
-Check the actual target size, not only source code:
-
-- Does the reading job appear first and remain faithful to the evidence?
-- Can every label be read without collision, clipping, or unexpected fallback?
-- Can every connector or type-native mark be followed end to end?
-- Is the focal signal limited and meaningful?
-- Does the visual work in grayscale, without motion, and without color alone?
-- Are title, description, source, assumptions, and uncertainty accurate?
-- Does the containing artifact still validate and behave as required?
-
-Use browser or artifact-specific checks when layout or interaction depends on
-them. Syntax-valid markup or a discoverable Skill is not proof that the visual
-works.
+Inspect the actual result at its intended size for faithful meaning, readable
+labels, traceable relationships, and accessible use. Choose checks for the
+layout and interaction risks present, including the containing artifact's
+requirements. Fix material defects and recheck what changed. Syntax-valid
+markup alone is not evidence that the visual works.
 
 ## Source
 

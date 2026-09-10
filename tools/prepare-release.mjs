@@ -118,8 +118,7 @@ async function prepareRelease(version) {
   await Promise.all(versionFiles.map(async (path) => await writeVersion(path, version)));
   await buildPlugin();
   run(["tools/check-release.mjs"]);
-  run(["--test"]);
-  process.stdout.write(`Hope ${version} is ready to review and commit.\n`);
+  process.stdout.write(`Hope ${version} is prepared. Run npm run check before committing.\n`);
 }
 
 export async function prepareReleaseType(releaseType, baseReference = "origin/main") {

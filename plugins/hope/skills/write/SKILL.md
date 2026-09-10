@@ -16,6 +16,5 @@ separate workflow, worker, or artifact.
 Use the current language unless the person or project chooses another. Read
 translated text for naturalness, then compare versions for meaning drift.
 
-Lead with the requested text, edit result, or material review findings. Preserve
-meaning, facts, uncertainty, citations, exact text, and voice. Correct problems
-introduced by the edit, then stop; do not return the standard or a checklist.
+Return the requested text, edit result, or material review findings; do not
+return the standard or a checklist.

@@ -24,10 +24,9 @@ Inside a Hope HTML artifact, inherit its Technical Record theme, typography,
 and responsive shell. A standalone HTML visual uses the same dual-mode
 language; read `../../assets/artifact-theme.mjs` and embed its current roles.
 
-Inspect the result at its intended size using the standard. Fix material
-defects and recheck affected relationships. Before returning a created or
-edited visual, inspect the whole result again at its intended size. Finish
-only when that fresh inspection reveals no new material issue.
+Inspect the rendered result at its intended size using the standard. Fix
+material defects and recheck what the fixes affect. Finish when the result
+meets its reading purpose and the necessary visual checks pass.
 Return the finished artifact or review findings with material assumptions,
 omissions, and verification gaps. A review request alone does not authorize
 editing its target.

@@ -7,27 +7,14 @@ import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.m
 import {
   makeAnalysis,
   makeSnapshot,
-  makeTeachingAidDecisions,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
 
 const runId = "1".repeat(32);
 
 function addTeachingBehavior(analysis, options = {}) {
-  const includeMicroworld = options.includeMicroworld ?? true;
   analysis.behavior = makeTeachingBehavior(options);
-  analysis.teachingAids = makeTeachingAidDecisions({
-    microworld: includeMicroworld,
-    visual: true,
-  });
   return analysis.behavior;
-}
-
-function markQuizIncluded(analysis) {
-  analysis.teachingAids = {
-    ...analysis.teachingAids,
-    quiz: makeTeachingAidDecisions({ quiz: true }).quiz,
-  };
 }
 
 function withVerificationLimit(snapshot) {
@@ -78,20 +65,13 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(validated.sourceIndex.length, snapshot.sources.length);
   assert.equal("text" in validated.sourceIndex[0], false);
   assert.deepEqual(validated.resources, {
-    analysisCanonicalBytes: 2888,
-    analysisFileBytes: 2888,
-    authoredProseBytes: 1061,
+    analysisCanonicalBytes: 2563,
+    analysisFileBytes: 2563,
+    authoredProseBytes: 887,
     evidenceBytes: 178,
     evidenceLines: 5,
     evidenceReferences: 10,
     codeEvidenceLines: 8,
-    teachingAidDecisions: 3,
-    teachingAidMicroworldIncluded: 0,
-    teachingAidQuizIncluded: 0,
-    teachingAidVisualIncluded: 0,
-    teachingAidsIncluded: 0,
-    teachingAidsNotApplicable: 0,
-    teachingAidsOmitted: 3,
     uniqueEvidenceRanges: 4,
   });
   assert.equal(
@@ -438,11 +418,11 @@ test("analysis validation reports independent repair issues together", () => {
 test("analysis validation keeps an uncollected first error", () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
-  analysis.teachingAids.visual = {
-    decision: "included",
-    reason: "A visual is required.",
-    teachingJob: "Show the changed behavior.",
-  };
+  analysis.quiz = [{
+    answer: "The saved failure reaches the caller.",
+    evidence: [],
+    question: "Which error reaches the caller?",
+  }];
   analysis.codeSteps[0].evidence = [{
     endLine: 1,
     sourceId: "source-99",
@@ -453,7 +433,7 @@ test("analysis validation keeps an uncollected first error", () => {
     () => validateAnalysis(analysis, snapshot, { runId }),
     (error) => {
       assert.ok(error.issues.some(
-        (issue) => issue.path === "teachingAids.visual.decision",
+        (issue) => issue.path === "quiz[0].evidence",
       ));
       assert.ok(error.issues.some(
         (issue) => issue.path === "codeSteps[0]",
@@ -525,7 +505,6 @@ test("quiz evidence follows the published schema limit", () => {
     evidence,
     question: `Question ${index + 1}`,
   }));
-  markQuizIncluded(analysis);
 
   assert.throws(
     () => validateAnalysis(analysis, snapshot, { runId }),
@@ -648,7 +627,7 @@ test("analysis fails when the core change is unknown or no file body is availabl
   emptyExplanation.coreChange.details = [];
   assert.throws(
     () => validateAnalysis(emptyExplanation, snapshot, { runId }),
-    /coreChange\.details needs the main explanation/u,
+    /coreChange\.details needs at least 1 item/u,
   );
 });
 
@@ -785,7 +764,7 @@ test("analysis rejects bidirectional controls in user-facing prose", () => {
 
 test("the published analysis schema matches runtime lexical rules", async () => {
   const schema = JSON.parse(await readFile(new URL(
-    "../plugins/hope/skills/diff/scripts/analysis-v3.schema.json",
+    "../plugins/hope/skills/diff/scripts/analysis-v4.schema.json",
     import.meta.url,
   ), "utf8"));
   const pattern = new RegExp(schema.$defs.text.pattern, "u");
@@ -802,6 +781,69 @@ test("the published analysis schema matches runtime lexical rules", async () => 
     analysis.purpose.text = value;
     assert.throws(() => validateAnalysis(analysis, snapshot, { runId }));
   }
+});
+
+test("context checks may be empty only when no captured limit needs accounting", () => {
+  const snapshot = { ...makeSnapshot(), limits: [] };
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.contextChecks = [];
+  analysis.limitImpacts = [];
+  analysis.reviewItems = [];
+  assert.deepEqual(validateAnalysis(analysis, snapshot, { runId }).contextChecks, []);
+
+  const limitedSnapshot = makeSnapshot();
+  const limited = makeAnalysis(limitedSnapshot, runId);
+  limited.contextChecks = [];
+  assert.throws(
+    () => validateAnalysis(limited, limitedSnapshot, { runId }),
+    /No context check accounts for limit-1/u,
+  );
+});
+
+test("background and purpose constraints participate in the same repair pass", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.background = ["First", "Second"].map((title) => ({
+    ...analysis.coreChange.details[0], title,
+  }));
+  analysis.purpose = { ...analysis.coreChange.after };
+  analysis.codeSteps[0].evidence = [{ sourceId: "source-99", startLine: 1, endLine: 1 }];
+  assert.throws(() => validateAnalysis(analysis, snapshot, { runId }), (error) => {
+    assert.ok(error.issues.some((issue) => issue.path === "background"));
+    assert.ok(error.issues.some((issue) => issue.path === "purpose"));
+    assert.ok(error.issues.some((issue) => issue.path === "codeSteps[0]"));
+    return true;
+  });
+});
+
+test("core and optional schemas resolve offline and agree on review bounds", async () => {
+  const root = new URL("../plugins/hope/skills/diff/scripts/", import.meta.url);
+  const documents = new Map();
+  async function checkDocument(url) {
+    if (documents.has(url.href)) return documents.get(url.href);
+    const schema = JSON.parse(await readFile(url, "utf8"));
+    documents.set(url.href, schema);
+    async function visit(value) {
+      if (!value || typeof value !== "object") return;
+      if (value.$ref) {
+        const target = new URL(value.$ref, url);
+        const fragment = target.hash.slice(1);
+        target.hash = "";
+        assert.equal(new URL(".", target).href, root.href);
+        let resolved = await checkDocument(target);
+        for (const key of fragment.slice(1).split("/")) {
+          resolved = resolved?.[key.replaceAll("~1", "/").replaceAll("~0", "~")];
+        }
+        assert.notEqual(resolved, undefined, value.$ref);
+      }
+      for (const child of Object.values(value)) await visit(child);
+    }
+    await visit(schema);
+    return schema;
+  }
+  const schema = await checkDocument(new URL("analysis-v4.schema.json", root));
+  assert.equal(schema.properties.contextChecks.minItems ?? 0, 0);
+  assert.equal(schema.properties.background.maxItems, 1);
 });
 
 test("generated prose rejects Markdown backticks while source excerpts keep them", () => {

@@ -5,7 +5,7 @@ description: Explain or review a GitHub pull request as an evidence-linked, self
 
 # Hope Diff
 
-Resolve one exact GitHub pull request, give a fresh worker the analysis, and
+Resolve one exact GitHub pull request, analyze its captured evidence, and
 report its artifact. Diff covers the captured PR snapshot; local staged,
 unstaged, and untracked changes are outside its scope.
 
@@ -27,21 +27,17 @@ Run adapter commands with `node "<skill-dir>/scripts/cli.mjs"`, replacing
 it is `${CLAUDE_PLUGIN_ROOT}/skills/diff`. Pass arguments separately; never
 construct shell commands from PR content.
 
-## Assign one independent worker
+## Analyze the captured evidence
 
-Start a subagent with no inherited conversation. Independence protects review
-judgment; if the host cannot provide it, explain that limit without claiming
-to have completed Diff.
+For artifact generation, read `references/workflow.md`, `references/analysis.md`, and
+`../write/references/writing-standard.md`. Follow the run from `prepare` through
+`finish` or `cancel`, grounding conclusions in the captured evidence.
 
-Give the worker only the exact request, selected repository and PR, explicit
-locale/theme/output choices, review focus or exclusions, and the absolute Skill
-path and adapter command. Exclude earlier reasoning, drafts, implementation
-narrative, prior conclusions, and other agents' output.
-
-Tell it to read `references/workflow.md`, `references/analysis.md`, and
-`../write/references/writing-standard.md`. The worker owns evidence inspection,
-analysis, repairs, and the run from `prepare` through `finish` or `cancel`.
-Tell the person which PR is selected before starting it.
+Use an independent worker when its perspective is worth the time or the person
+requests one. Give it a fresh context with the exact request, target, choices,
+constraints, and Skill path, separate from earlier conclusions. Disclose any
+limit on requested independence. The same evidence and runtime rules apply
+whether analysis stays in this conversation or is delegated.
 
 Review generation uses the active host under its data policy; do not claim
 private PR content stays on the local machine.
@@ -49,7 +45,7 @@ private PR content stays on the local machine.
 ## Return the artifact
 
 Report the PR, exact head, result scope, absolute HTML path, and any failure or
-cleanup limit. The artifact completes Diff. The parent task handles any
+cleanup limit. The artifact completes Diff. The surrounding task handles any
 publishing, merging, commenting, or code changes under the person's existing
 authorization.
 

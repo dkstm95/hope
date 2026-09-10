@@ -8,27 +8,14 @@ import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.m
 import {
   makeAnalysis,
   makeSnapshot,
-  makeTeachingAidDecisions,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
 
 const runId = "3".repeat(32);
 
 function addTeachingBehavior(analysis, options = {}) {
-  const includeMicroworld = options.includeMicroworld ?? true;
   analysis.behavior = makeTeachingBehavior(options);
-  analysis.teachingAids = makeTeachingAidDecisions({
-    microworld: includeMicroworld,
-    visual: true,
-  });
   return analysis.behavior;
-}
-
-function markQuizIncluded(analysis) {
-  analysis.teachingAids = {
-    ...analysis.teachingAids,
-    quiz: makeTeachingAidDecisions({ quiz: true }).quiz,
-  };
 }
 
 function withLocaleSource(snapshot, localeSource) {
@@ -44,23 +31,6 @@ function withLocaleSource(snapshot, localeSource) {
     ...updated,
     digest: digestJson(updated),
   });
-}
-
-function teachingAidCards(html) {
-  const section = html.match(
-    /<details class="evidence-group teaching-aid-record" id="teaching-aids">[\s\S]*?<\/details>/u,
-  )?.[0] ?? "";
-  const cards = [...section.matchAll(
-    /<article class="teaching-aid-choice decision-([^"]+)">([\s\S]*?)<\/article>/gu,
-  )].map((match) => ({
-    body: match[2],
-    decision: match[1],
-    label: match[2].match(
-      /<span class="teaching-aid-decision">([^<]+)<\/span>/u,
-    )?.[1],
-    name: match[2].match(/<h3>([^<]+)<\/h3>/u)?.[1],
-  }));
-  return { cards, section };
 }
 
 test("rendering is byte-identical and keeps untrusted content inert", async () => {
@@ -79,17 +49,13 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
       ...analysis.coreChange.details[0],
       title: "Existing behavior",
     },
-    {
-      ...analysis.coreChange.details[0],
-      title: "Required context",
-    },
   ];
   const review = validateAnalysis(analysis, snapshot, { runId });
   const [first, second] = await Promise.all([
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 19);
+  assert.equal(first.rendererVersion, 20);
   assert.equal(first.designVersion, 25);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
@@ -282,7 +248,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(coreChange, /class="core-details"/u);
   assert.match(coreChange, /class="claim core-detail"/u);
   assert.match(html, /<ul class="claim-list core-detail-list">/u);
-  assert.match(html, /<ul class="titled-claim-list"><li><article/u);
+  assert.match(html, /class="synopsis-background-content">\s*<article/u);
   assert.match(html, /<ol class="code-step-list">/u);
   assert.match(html, /<ul class="scope-impact-list"><li><a href="#scope-limit-1">/u);
   assert.equal((html.match(/id="review-item-1"/gu) ?? []).length, 1);
@@ -506,126 +472,29 @@ test("beginner primer stays closed, localized, linkable, and print-visible", asy
   assert.doesNotMatch(absentHtml, /class="beginner-primer"/u);
 });
 
-test("the artifact shows every teaching-aid decision when all aids are omitted", async () => {
+test("the artifact renders selected aids without a decision report", async () => {
   const snapshot = makeSnapshot();
-  const analysis = makeAnalysis(snapshot, runId);
-  analysis.teachingAids.visual.reason =
-    "</article><script src=https://evil.example/reason.js></script>";
-  const review = validateAnalysis(analysis, snapshot, { runId });
-  const html = (await renderReview(review)).bytes.toString("utf8");
-  const section = html.match(
-    /<details class="evidence-group teaching-aid-record" id="teaching-aids">[\s\S]*?<\/details>/u,
-  )?.[0] ?? "";
-
-  assert.match(section, /<h3>Teaching aid choices<\/h3>/u);
-  assert.match(
-    section,
-    /Why each teaching aid was included or omitted\./u,
-  );
-  assert.equal(
-    (section.match(/class="teaching-aid-choice decision-omitted"/gu) ?? []).length,
-    3,
-  );
-  assert.match(section, /<h3>Visual<\/h3>/u);
-  assert.match(section, /<h3>Microworld<\/h3>/u);
-  assert.match(section, /<h3>Quiz<\/h3>/u);
-  assert.equal((section.match(/>Omitted<\/span>/gu) ?? []).length, 3);
-  assert.match(
-    section,
-    /&lt;\/article&gt;&lt;script src=https:\/\/evil\.example\/reason\.js&gt;&lt;\/script&gt;/u,
-  );
-  assert.doesNotMatch(section, /<script src=https:\/\/evil/u);
-  assert.doesNotMatch(html, /<a href="#teaching-aids">/u);
-  assert.match(html, /<a class="toc-link" href="#explore"><span class="toc-number">02<\/span><span>Behavior change<\/span><\/a>/u);
-});
-
-test("the artifact preserves mixed and all-included teaching-aid states", async () => {
-  const snapshot = makeSnapshot();
-  const mixed = makeAnalysis(snapshot, runId);
-  mixed.behavior = makeTeachingBehavior({ includeMicroworld: false });
-  mixed.teachingAids = makeTeachingAidDecisions({ visual: true });
-  mixed.teachingAids.microworld = {
-    decision: "not-applicable",
-    reason: "This change has no bounded state to explore.",
-  };
-  mixed.teachingAids.quiz.reason =
-    "The visual and prose already cover the useful prediction.";
-
-  const allIncluded = makeAnalysis(snapshot, runId);
-  addTeachingBehavior(allIncluded);
-  allIncluded.quiz = [{
-    answer: "The saved final failure reaches the caller.",
-    evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
-    question: "Which failure reaches the caller after the final retry?",
-  }];
-  markQuizIncluded(allIncluded);
-
-  const cases = [
-    {
-      analysis: mixed,
-      decisions: ["included", "not-applicable", "omitted"],
-      jobs: [
-        "Show the retry branch and outcome relationship.",
-        undefined,
-        undefined,
-      ],
-      labels: ["Included", "Not applicable", "Omitted"],
-      reasons: [
-        "This aid makes a distinct behavior easier to predict.",
-        "This change has no bounded state to explore.",
-        "The visual and prose already cover the useful prediction.",
-      ],
-    },
-    {
-      analysis: allIncluded,
-      decisions: ["included", "included", "included"],
-      jobs: [
-        "Show the retry branch and outcome relationship.",
-        "Let the reader compare retry outcomes by changing bounded state.",
-        "Check one non-trivial prediction about the final failure.",
-      ],
-      labels: ["Included", "Included", "Included"],
-      reasons: Array(3).fill(
-        "This aid makes a distinct behavior easier to predict.",
-      ),
-    },
-  ];
-
-  for (const expected of cases) {
-    const review = validateAnalysis(expected.analysis, snapshot, { runId });
+  for (const included of [false, true]) {
+    const analysis = makeAnalysis(snapshot, runId);
+    if (included) {
+      analysis.behavior = makeTeachingBehavior();
+      analysis.quiz = [{
+        answer: "The saved final failure reaches the caller.",
+        evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
+        question: "Which failure reaches the caller after the final retry?",
+      }];
+    }
+    const review = validateAnalysis(analysis, snapshot, { runId });
     const html = (await renderReview(review)).bytes.toString("utf8");
-    const { cards } = teachingAidCards(html);
-    assert.deepEqual(cards.map((card) => card.name), [
-      "Visual",
-      "Microworld",
-      "Quiz",
-    ]);
-    assert.deepEqual(cards.map((card) => card.decision), expected.decisions);
-    assert.deepEqual(cards.map((card) => card.label), expected.labels);
-    expected.reasons.forEach((reason, index) => {
-      assert.match(cards[index].body, new RegExp(reason.replaceAll(".", "\\."), "u"));
-    });
-    expected.jobs.forEach((job, index) => {
-      if (job === undefined) {
-        assert.doesNotMatch(cards[index].body, /<dt>Teaching job<\/dt>/u);
-      } else {
-        assert.match(cards[index].body, new RegExp(job.replaceAll(".", "\\."), "u"));
-      }
-    });
-    if (expected.analysis === allIncluded) {
-      const behaviorOrder = [
-        html.indexOf('id="core-change"'),
-        html.indexOf('class="behavior-model"'),
-        html.indexOf('id="quiz"'),
-        html.indexOf('id="teaching-aids"'),
-      ];
-      assert.ok(behaviorOrder.every((position) => position >= 0));
-      assert.deepEqual(
-        behaviorOrder,
-        [...behaviorOrder].sort((left, right) => left - right),
-      );
-      assert.match(html, /<section class="review-subsection" id="quiz">/u);
-      assert.doesNotMatch(html, /<details[^>]+id="quiz"/u);
+    assert.doesNotMatch(html, /teaching-aid-record|Teaching aid choices/u);
+    assert.equal(html.includes('class="behavior-visual '), included);
+    assert.equal(html.includes('class="microworld"'), included);
+    assert.equal(html.includes('id="quiz"'), included);
+    if (included) {
+      const positions = ['id="core-change"', 'class="behavior-model"', 'id="quiz"']
+        .map((marker) => html.indexOf(marker));
+      assert.ok(positions.every((position) => position >= 0));
+      assert.deepEqual(positions, [...positions].sort((left, right) => left - right));
     }
   }
 });
@@ -675,7 +544,6 @@ test("quiz responses stay visually unlabeled and separate from the answer", asyn
     }],
     question: `모든 재시도가 실패하면 어떤 오류가 전달되나요? ${index + 1}`,
   }));
-  markQuizIncluded(analysis);
   const review = validateAnalysis(analysis, snapshot, { runId });
   const html = (await renderReview(review)).bytes.toString("utf8");
 
@@ -883,18 +751,6 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.match(
     html,
     /<aside class="microworld"[\s\S]*?<header>[\s\S]*?<\/bdi><sup class="evidence-markers">[\s\S]*?<\/header>/u,
-  );
-  assert.equal(
-    (html.match(/class="teaching-aid-choice decision-included"/gu) ?? []).length,
-    2,
-  );
-  assert.match(
-    html,
-    /Let the reader compare retry outcomes by changing bounded state\./u,
-  );
-  assert.match(
-    html,
-    /Show the retry branch and outcome relationship\./u,
   );
   assert.match(html, /src\/retry\.js · change excerpt 2–4/u);
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/u);

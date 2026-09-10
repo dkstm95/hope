@@ -1,14 +1,15 @@
-# Diff worker workflow
+# Diff artifact workflow
 
-Use this protocol only as the fresh worker assigned by `SKILL.md`. Read
+Use this protocol for artifact generation under `SKILL.md`. Read
 `analysis.md` and the shared Hope Write standard before authoring review text.
 
-Use only the target, options, focus, exclusions, and Skill path in the handoff.
-Do not inspect the parent conversation or use other tools to expand the review.
+Honor the selected target, options, focus, and exclusions. Ground the analysis
+in evidence collected by the adapter; do not use other tools to expand the
+review. An independent worker uses only the supplied handoff context.
 
 ## Prepare the run
 
-Run the private adapter command from the handoff with:
+Run the private adapter command from `SKILL.md` with:
 
 ```text
 prepare <GitHub PR URL or PR number> [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]
@@ -75,10 +76,11 @@ Give every `classifiable-file` one disposition and no disposition to an
 `automatic-file`. Resolve an automatic file's `limitId` through its matching
 limit entry.
 
-When `next` requires `write-analysis`, read the complete analysis schema and
-follow `analysis.md`. Write one JSON object to the exact `analysisPath` with a
-file-writing tool. Do not use shell interpolation or an inline heredoc. Use the
-latest snapshot digest.
+When `next` requires `write-analysis`, read the complete core analysis schema
+and follow `analysis.md`. Its external teaching-aid definitions are needed only
+when authoring an aid; read them through `teaching-aids.md` then. Write one JSON
+object to the exact `analysisPath` with a file-writing tool. Do not use shell
+interpolation or an inline heredoc. Use the latest snapshot digest.
 
 When the analysis selects a microworld, write its controls to a restricted
 temporary JSON file, run `microworld-skeleton --input <path>`, copy the returned

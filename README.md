@@ -83,8 +83,9 @@ way to understand the resulting behavior, conditions, boundaries, and evidence.
 Diff creates one HTML artifact that explains behavior before code and links
 important claims to evidence.
 
-It may use visuals, a microworld, or a quiz to help the reader explore the
-change.
+It may use visuals, a microworld, or a quiz when they help explain the change.
+Analysis can stay in the current conversation; an independent reviewer joins
+when useful or requested.
 
 The artifact helps the reader build a working mental model of the change and
 turn that understanding into follow-up questions, decisions, and work ideas.
@@ -114,14 +115,15 @@ Ky PR #825.](docs/diffs/ky-825-default-run.en.html)
 
 ---
 
-### ⚖️ Toxic Review — Put a work product through a rigorous Red–Blue review
+### ⚖️ Toxic Review — Critically examine a work product
 
-Independent red reviewers challenge the work. Fresh blue reviewers verify
-high-priority, consequential, or materially uncertain findings. The active
-agent adjudicates the evidence and reports supported actions and limits.
+Toxic Review challenges important flaws and unsupported assumptions against the
+work's purpose and evidence. It tests its own criticisms before recommending
+proportionate changes. The task determines the depth and format; independent
+reviewers join when their perspective is worth the time or you request them.
 
-See [the Toxic Review Skill](plugins/hope/skills/toxic-review/SKILL.md) for role
-independence, verification criteria, and final judgment.
+See [the Toxic Review Skill](plugins/hope/skills/toxic-review/SKILL.md) for its
+review guidance.
 
 ---
 

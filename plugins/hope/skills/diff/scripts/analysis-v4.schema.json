@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/analysis-v4.schema.json",
+  "title": "Hope diff analysis v4",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "snapshotDigest",
+    "locale",
+    "title",
+    "purpose",
+    "coreChange",
+    "contextChecks",
+    "codeSteps",
+    "reviewItems",
+    "fileDispositions",
+    "limitImpacts"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 4 },
+    "runId": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "snapshotDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "locale": { "enum": ["en-US", "ko-KR"] },
+    "title": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "properties": {
+            "text": { "type": "string", "minLength": 1, "maxLength": 80 }
+          }
+        }
+      ],
+      "description": "One concise, change-based plain-language sentence used as the review title."
+    },
+    "purpose": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "properties": {
+            "basis": { "enum": ["stated", "inferred", "unknown"] }
+          }
+        }
+      ],
+      "description": "The stated or inferred goal. Code can support the explanation, but is not itself the purpose source."
+    },
+    "coreChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["before", "after", "why", "details"],
+      "properties": {
+        "before": {
+          "$ref": "#/$defs/claim",
+          "description": "The previous behavior, grounded in collected changed-file code."
+        },
+        "after": {
+          "$ref": "#/$defs/claim",
+          "description": "The new behavior, grounded in collected changed-file code."
+        },
+        "why": { "$ref": "#/$defs/claim" },
+        "details": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "description": "Plain-language observable outcomes or preserved conditions grounded in evidence.",
+          "items": { "$ref": "#/$defs/claim" }
+        }
+      }
+    },
+    "contextChecks": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subject",
+          "status",
+          "basis",
+          "explanation",
+          "evidence",
+          "limitIds"
+        ],
+        "properties": {
+          "subject": { "$ref": "#/$defs/text" },
+          "status": {
+            "enum": ["checked", "not-applicable", "limited"]
+          },
+          "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+          "explanation": { "$ref": "#/$defs/text" },
+          "evidence": {
+            "type": "array",
+            "maxItems": 12,
+            "items": { "$ref": "#/$defs/evidence" }
+          },
+          "limitIds": {
+            "type": "array",
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^limit-[0-9]+$" }
+          }
+        }
+      }
+    },
+    "background": {
+      "type": "array",
+      "maxItems": 1,
+      "items": { "$ref": "#/$defs/titledClaim" }
+    },
+    "beginnerPrimer": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "description": "Optional evidence-grounded background claims.",
+      "items": { "$ref": "#/$defs/primerClaim" }
+    },
+    "behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "steps"],
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/claim",
+          "description": "The distinct condition, state, or relationship that makes the behavior model useful."
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "description": "Ordered behavior or state claims.",
+          "items": { "$ref": "#/$defs/claim" }
+        },
+        "visual": { "$ref": "./teaching-aids-v1.schema.json#/$defs/visual" },
+        "microworld": { "$ref": "./teaching-aids-v1.schema.json#/$defs/microworld" }
+      }
+    },
+    "codeSteps": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Technical implementation steps rendered as collapsed evidence.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "text", "basis", "evidence"],
+        "properties": {
+          "title": { "$ref": "#/$defs/text" },
+          "text": { "$ref": "#/$defs/text" },
+          "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+          "evidence": {
+            "type": "array",
+            "maxItems": 12,
+            "items": { "$ref": "#/$defs/evidence" }
+          }
+        }
+      }
+    },
+    "reviewItems": {
+      "type": "array",
+      "maxItems": 80,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "importance",
+          "basis",
+          "title",
+          "explanation",
+          "effect",
+          "nextStep",
+          "doneWhen",
+          "evidence"
+        ],
+        "properties": {
+          "kind": { "enum": ["resolve", "decide", "verify"] },
+          "importance": { "enum": ["high", "medium", "low"] },
+          "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+          "title": { "$ref": "#/$defs/text" },
+          "explanation": { "$ref": "#/$defs/text" },
+          "effect": { "$ref": "#/$defs/text" },
+          "nextStep": { "$ref": "#/$defs/text" },
+          "doneWhen": {
+            "$ref": "#/$defs/text",
+            "description": "The observation or decision that closes this item."
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "items": { "$ref": "#/$defs/evidence" }
+          },
+          "limitIds": {
+            "type": "array",
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^limit-[0-9]+$" }
+          }
+        }
+      }
+    },
+    "fileDispositions": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fileId", "disposition"],
+        "properties": {
+          "fileId": { "type": "string", "pattern": "^file-[0-9]+$" },
+          "disposition": {
+            "enum": ["explained", "supporting", "mechanical"]
+          }
+        }
+      }
+    },
+    "limitImpacts": {
+      "type": "array",
+      "maxItems": 514,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["limitId", "material", "impact"],
+        "properties": {
+          "limitId": { "type": "string", "pattern": "^limit-[0-9]+$" },
+          "material": {
+            "type": "boolean",
+            "description": "Whether this limit changes a main explanation or judgment. A material execution-or-CI limit also needs a linked verify review item."
+          },
+          "impact": {
+            "$ref": "#/$defs/text",
+            "description": "The concrete effect of this limit on the review."
+          }
+        }
+      }
+    },
+    "quiz": { "$ref": "./teaching-aids-v1.schema.json#/$defs/quiz" }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "description": "User-facing plain text rendered without Markdown or HTML interpretation.",
+      "minLength": 1,
+      "maxLength": 32768,
+      "pattern": "^(?=[\\s\\S]*\\S)[^`\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]+$"
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceId", "startLine", "endLine"],
+      "description": "One source-bound interval of at most 96 lines. Hope preserves the interval and splits it into evidence excerpts of at most 24 lines.",
+      "properties": {
+        "sourceId": { "type": "string", "pattern": "^source-[0-9]+$" },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "basis", "evidence"],
+      "properties": {
+        "text": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+        "evidence": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "titledClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "text", "basis", "evidence"],
+      "properties": {
+        "title": { "$ref": "#/$defs/text" },
+        "text": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred", "unknown"] },
+        "evidence": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "primerClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "text", "basis", "evidence"],
+      "description": "A primer item must be grounded. Unknown basis and empty evidence are not allowed.",
+      "properties": {
+        "title": { "$ref": "#/$defs/text" },
+        "text": { "$ref": "#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    }
+  }
+}

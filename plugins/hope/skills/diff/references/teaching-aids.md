@@ -1,7 +1,9 @@
 # Diff teaching aids
 
-Read this reference only after `analysis.md` identifies a distinct teaching job
-for a visual, microworld, or quiz. Use the smallest aid that performs that job.
+Read this reference when authoring a useful visual, microworld, or quiz.
+Use the smallest aid that serves the reader's need.
+Read `../scripts/teaching-aids-v1.schema.json` for their exact input shapes;
+its shared text and evidence definitions come from the core analysis schema.
 
 ## Microworld
 

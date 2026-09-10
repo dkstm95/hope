@@ -74,11 +74,12 @@ material harm before dependent work. Use evidence, a decision, deliberate
 exclusion, or explicit delegation; revisit only when new evidence changes the
 basis. Routine implementation choices need no separate approval.
 
-Support material claims with evidence or state the limitation. Finish when no
-material issue remains and one proportionate pass finds no new one. Features
-own the procedure needed to meet this rule; [Align's decision-tree interview](plugins/hope/skills/align/SKILL.md)
-requires every material branch to be resolved. Other tasks need no tree,
-checklist, artifact, or automation unless their own contract requires one.
+Support material claims with evidence or state the limitation. Finish when the
+requested result is complete, affected behavior has been checked, and relevant
+limits are clear. Features own their completion criteria; [Align's decision-tree interview](plugins/hope/skills/align/SKILL.md)
+retains its requirement to resolve every material branch and test the combined
+understanding. Other tasks need no extra review round, tree, checklist,
+artifact, or automation unless their own contract requires one.
 
 ## Prefer simple, direct design
 

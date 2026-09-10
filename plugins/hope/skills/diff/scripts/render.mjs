@@ -16,7 +16,6 @@ import {
 } from "./constants.mjs";
 import { renderCodeEvidence } from "./code-evidence.mjs";
 import { sha256 } from "./hash.mjs";
-import { TEACHING_AID_NAMES } from "./teaching-aids.mjs";
 import { exposeBidiControls } from "./text.mjs";
 
 const fontUrls = Object.freeze({
@@ -593,45 +592,6 @@ function beginnerPrimerBlock(review, dictionary, codeRenderer) {
   </details>`;
 }
 
-function teachingAidChoices(review, dictionary) {
-  const choices = TEACHING_AID_NAMES.map((name) => {
-    const choice = review.teachingAids[name];
-    const teachingJob = choice.decision === "included"
-      ? choice.teachingJob
-      : undefined;
-    const decisionLabel = label(
-      dictionary,
-      `teachingAid.decision.${choice.decision}`,
-    );
-    return `<li>
-      <article class="teaching-aid-choice decision-${html(choice.decision)}">
-        <header>
-          <h3>${html(label(dictionary, `teachingAid.${name}`))}</h3>
-          <span class="teaching-aid-decision">${html(decisionLabel)}</span>
-        </header>
-        <dl>
-          <div>
-            <dt>${html(label(dictionary, "teachingAid.reason"))}</dt>
-            <dd>${userParagraphs(choice.reason)}</dd>
-          </div>
-          ${teachingJob === undefined ? "" : `<div>
-            <dt>${html(label(dictionary, "teachingAid.teachingJob"))}</dt>
-            <dd>${userParagraphs(teachingJob)}</dd>
-          </div>`}
-        </dl>
-      </article>
-    </li>`;
-  }).join("");
-  return `<details class="evidence-group teaching-aid-record" id="teaching-aids">
-    <summary><h3>${html(label(dictionary, "section.teachingAids"))}</h3></summary>
-    <div class="evidence-group-content"><p class="teaching-aid-summary">${html(label(
-      dictionary,
-      "teachingAid.summary",
-    ))}</p>
-      <ul class="teaching-aid-choices">${choices}</ul></div>
-  </details>`;
-}
-
 function limitText(limit, dictionary) {
   if (limit.kind === "unchanged-context") {
     return {
@@ -710,12 +670,7 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
     : `<section class="synopsis-background" id="background">
       <h3>${html(label(dictionary, "section.background"))}</h3>
       <div class="synopsis-background-content">
-        ${backgroundClaims.length > 1
-          ? `<ul class="titled-claim-list">${backgroundClaims.map(
-            (claim) => `<li>${claim}</li>`,
-          ).join("")}</ul>`
-          : backgroundClaims.join("")
-        }
+        ${backgroundClaims.join("")}
         ${beginnerPrimerBlock(review, dictionary, codeRenderer)}
       </div>
     </section>`;
@@ -1000,7 +955,6 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
   return collapsibleSection({
     content: `
       ${implementationDetails}
-      ${teachingAidChoices(review, dictionary)}
       <details class="evidence-group">
         <summary><h3>${html(label(dictionary, "evidence.sources"))}</h3></summary>
         <div class="evidence-group-content">
@@ -1366,7 +1320,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .behavior-visual figcaption > p + p,
 .microworld header > p + p,
 .review-item > p + p,
-.teaching-aid-choice dd > p + p,
 .item-actions dd > p + p,
 .scope-limit dd > p + p,
 .quiz-answer-content > p + p { margin-top: ${space2}px; }
@@ -2121,59 +2074,6 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 .behavior-summary {
   max-width: ${LAYOUT.proseWidth};
 }
-.teaching-aid-summary {
-  max-width: ${LAYOUT.proseWidth};
-  margin: 0 0 ${space3}px;
-}
-.teaching-aid-choices {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: ${space3}px;
-  list-style: none;
-}
-.teaching-aid-choice {
-  height: 100%;
-  padding: 0 ${space3}px;
-}
-.teaching-aid-choices > li + li { border-left: 1px solid var(--border); }
-.teaching-aid-choice > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${space2}px;
-}
-.teaching-aid-choice h3 {
-  margin: 0;
-  font-size: ${wideSubsection.fontSize}px;
-  line-height: ${wideSubsection.lineHeight};
-}
-.teaching-aid-decision {
-  padding: ${space1}px ${space2}px;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: ${TYPE.micro.fontSize}px;
-  line-height: ${TYPE.micro.lineHeight};
-  font-weight: 500;
-  white-space: nowrap;
-}
-.decision-included .teaching-aid-decision { color: var(--accent); }
-.decision-not-applicable .teaching-aid-decision { color: var(--scope); }
-.teaching-aid-choice dl {
-  display: grid;
-  margin: ${space3}px 0 0;
-  gap: ${space2}px;
-}
-.teaching-aid-choice dt {
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-}
-.teaching-aid-choice dd {
-  margin: ${space1}px 0 0;
-}
 .behavior-visual > figcaption .visual-title,
 .microworld > header h3 {
   display: block;
@@ -2895,7 +2795,6 @@ td:first-child {
   .evidence-popover { width: min(520px, calc(100vw - ${space6}px)); max-height: 76vh; }
   .change-shift,
   .visual-components,
-  .teaching-aid-choices,
   .microworld-comparison,
   .microworld-boundary {
     grid-template-columns: 1fr;
@@ -2906,11 +2805,6 @@ td:first-child {
     border-left: 0;
   }
   .change-shift::after { display: none; }
-  .teaching-aid-choice { padding: ${space3}px 0; }
-  .teaching-aid-choices > li + li {
-    border-top: 1px solid var(--border);
-    border-left: 0;
-  }
   .item-actions > div,
   .scope-limit dl > div,
   .artifact-details dl > div {
@@ -3055,7 +2949,6 @@ td:first-child {
   .review-item,
   .evidence-item,
   .behavior-visual,
-  .teaching-aid-choice,
   .microworld,
   .quiz-question { break-inside: avoid; }
   .review-section-collapsible > .section-content,

@@ -4,18 +4,6 @@ import {
 } from "./constants.mjs";
 import { containsBidiControl } from "./text.mjs";
 
-export const TEACHING_AID_NAMES = Object.freeze([
-  "visual",
-  "microworld",
-  "quiz",
-]);
-
-export const TEACHING_AID_DECISIONS = Object.freeze([
-  "included",
-  "omitted",
-  "not-applicable",
-]);
-
 const CONTROL_KINDS = Object.freeze(["input", "condition", "state"]);
 
 function exactObject(value, name, keys) {

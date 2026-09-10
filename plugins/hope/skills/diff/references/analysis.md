@@ -85,6 +85,7 @@ material actions grounded in the captured change.
 
 Add `contextChecks` only for concrete categories that mattered. Mark each
 `checked`, `not-applicable`, or `limited`.
+Use an empty array when none mattered and no collected limit needs accounting.
 
 A checked category needs evidence whose role matches the claim. Use `unknown`
 without evidence for an unchecked limited or not-applicable category. Do not
@@ -128,29 +129,13 @@ Keep each prose value to one semantic paragraph unless a real paragraph
 boundary is needed. Normally use at most 12 review items, four core details,
 and 12 code steps; do not fill maxima for their own sake.
 
-## Decide teaching aids
+## Use teaching aids when useful
 
-Consider teaching aids after the core understanding frontier is closed. Do not open an
-aid branch during evidence inspection.
-
-Record one decision for each `visual`, `microworld`, and `quiz`:
-
-- `not-applicable` when it has no distinct teaching job;
-- `omitted` when prose or another selected aid already does that job clearly;
-  or
-- `included` when it makes a distinct job materially easier to understand.
-
-Give every decision a reason and every included aid a concise `teachingJob`.
-Do not assign the same job to two included aids.
-
-Consider a microworld for a bounded input or state whose changes help predict
-outcomes, a visual for a static relationship or flow that prose makes hard to
-follow, and a quiz for non-trivial predictions or preserved conditions that do
-not need interaction.
-
-If any aid has a distinct teaching job, read `teaching-aids.md` before deciding
-whether to omit or include it and before authoring its content. If none has such
-a job, mark all three not applicable without loading that reference.
+Include a visual, microworld, or quiz only when it makes a distinct part of the
+change easier to understand than the existing explanation. Let the task
+determine the choice; omit unused aids without recording a decision or reason.
+Read `teaching-aids.md` when authoring an aid for its supported formats and
+evidence requirements.
 
 ## Add a beginner primer only when needed
 

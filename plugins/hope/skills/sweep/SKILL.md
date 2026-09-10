@@ -22,20 +22,18 @@ local edits in this scope, not commits, pushes, pull requests, or merges.
 
 ## Prove and apply cleanup
 
-Trace entry points, active consumers, runtime registration, configuration, and
-build boundaries. Running code and configuration establish current behavior
-when supporting material disagrees.
+Establish current behavior from running code and configuration. Follow the
+actual consumers and boundaries relevant to each proposed cleanup.
 
 Remove dead code, duplication, needless branches or wrappers, misplaced
 abstractions, and repeated work. Share logic only when behavior, ownership,
 and reasons to change match. Optimize only for a plausible workload with a
 concrete benefit.
 
-Before removal, check public and external consumers, dynamic lookup,
-reflection, string-based registration, generated sources, and package boundaries.
-A missing text reference alone does not prove safety. Remove dedicated tests,
-documentation, generation, configuration, and assets with their obsolete
-consumer; retain support for remaining paths.
+Prove a removal has no remaining consumer, including external or dynamic use
+where relevant. A missing text reference alone does not prove safety. Remove
+dedicated tests, documentation, generation, configuration, and assets with
+their obsolete consumer; retain support for remaining paths.
 
 Apply small coherent batches. Leave bugs, public-contract or behavior changes,
 product and compatibility decisions, migrations, dependency changes, and
@@ -49,7 +47,7 @@ runtime observations, plus required project checks. Add tests only when needed
 to protect the refactor. Correct or revert regressions Sweep introduced; do not
 repair pre-existing failures or widen scope during verification.
 
-Finish when the supported candidates are resolved and one pass over the changed
-scope finds no new proven cleanup. Report the cleanup, supporting material
-changed with it, and checks or verification gaps. If no proven cleanup exists,
-say so. Keep unrelated signals out of the report.
+Finish when the supported cleanup is complete and affected behavior has been
+checked. Report the cleanup, supporting material changed with it, and any
+verification limits. If no proven cleanup exists, say so. Keep unrelated
+signals out of the report.

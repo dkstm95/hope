@@ -12,8 +12,6 @@ import { deriveReviewResult, sortReviewItems } from "./derive.mjs";
 import {
   microworldSelections,
   normalizeMicroworldControls,
-  TEACHING_AID_DECISIONS,
-  TEACHING_AID_NAMES,
 } from "./teaching-aids.mjs";
 import { containsBidiControl } from "./text.mjs";
 
@@ -51,7 +49,6 @@ const proseFields = new Set([
   "simplifies",
   "steps",
   "subject",
-  "teachingJob",
   "text",
   "title",
 ]);
@@ -72,7 +69,6 @@ const analysisFields = Object.freeze([
   "fileDispositions",
   "limitImpacts",
   "quiz",
-  "teachingAids",
 ]);
 
 function comparableTitle(value) {
@@ -772,73 +768,6 @@ function validateMicroworld(value, sourceMap) {
   });
 }
 
-function validateTeachingAidDecision(value, name) {
-  object(value, name, ["decision", "reason", "teachingJob"]);
-  const decision = enumeration(
-    value.decision,
-    `${name}.decision`,
-    TEACHING_AID_DECISIONS,
-  );
-  const reason = text(value.reason, `${name}.reason`);
-  if (decision === "included") {
-    if (value.teachingJob === undefined) {
-      throw new Error(`${name}.teachingJob is required when the aid is included`);
-    }
-    return Object.freeze({
-      decision,
-      reason,
-      teachingJob: text(value.teachingJob, `${name}.teachingJob`),
-    });
-  }
-  if (value.teachingJob !== undefined) {
-    throw new Error(`${name}.teachingJob is allowed only when the aid is included`);
-  }
-  return Object.freeze({ decision, reason });
-}
-
-function validateTeachingAidDecisions(value, {
-  behavior,
-  quiz,
-}) {
-  object(value, "teachingAids", TEACHING_AID_NAMES);
-  const decisions = Object.freeze(Object.fromEntries(
-    TEACHING_AID_NAMES.map((name) => [
-      name,
-      validateTeachingAidDecision(value[name], `teachingAids.${name}`),
-    ]),
-  ));
-  const payloads = {
-    microworld: Boolean(behavior?.microworld),
-    quiz: quiz.length > 0,
-    visual: Boolean(behavior?.visual),
-  };
-  for (const name of TEACHING_AID_NAMES) {
-    const included = decisions[name].decision === "included";
-    if (included !== payloads[name]) {
-      throw new Error(
-        `teachingAids.${name}.decision must match the ${name} payload`,
-      );
-    }
-  }
-  const teachingJobs = new Map();
-  for (const name of TEACHING_AID_NAMES) {
-    const teachingJob = decisions[name].teachingJob;
-    if (teachingJob === undefined) continue;
-    const key = teachingJob
-      .normalize("NFKC")
-      .trim()
-      .replace(/\s+/gu, " ")
-      .toLocaleLowerCase("en-US");
-    if (teachingJobs.has(key)) {
-      throw new Error(
-        `teachingAids.${name}.teachingJob repeats the teaching job for ${teachingJobs.get(key)}`,
-      );
-    }
-    teachingJobs.set(key, name);
-  }
-  return decisions;
-}
-
 function reviewItem(value, index, sourceMap, limitMap) {
   const name = `reviewItems[${index}]`;
   object(value, name, [
@@ -978,9 +907,6 @@ function validateMaterialVerificationLimits(limits, reviewItems) {
 
 function validateContextChecks(values, sourceMap, limitMap) {
   const entries = array(values, "contextChecks", 20);
-  if (entries.length === 0) {
-    throw new Error("contextChecks needs at least one item");
-  }
   const subjects = new Set();
   const linkedLimits = new Set();
   const checks = entries.map((value, index) => {
@@ -1092,12 +1018,6 @@ function validateCodeStep(value, index, sourceMap, fileMap) {
   return Object.freeze({ ...validatedClaim, fileIds: Object.freeze([...fileIds]) });
 }
 
-function validateCodeSteps(values, sourceMap, fileMap) {
-  return array(values, "codeSteps", 20).map(
-    (value, index) => validateCodeStep(value, index, sourceMap, fileMap),
-  );
-}
-
 function validateAnalysisIdentity(analysis, snapshot, runId) {
   if (snapshot?.schemaVersion !== CONTRACT_VERSION) {
     throw new RangeError("Unsupported Hope snapshot schema");
@@ -1130,103 +1050,159 @@ function validateAnalysisValue(analysis, snapshot, {
     if (lines.length !== source.lineCount) {
       throw new Error(`Hope source ${source.id} line count does not match`);
     }
-    return [source.id, {
-      ...source,
-      lines,
-      referenceCache: new Map(),
-    }];
+    return [source.id, { ...source, lines, referenceCache: new Map() }];
   }));
   const fileMap = new Map(snapshot.files.map((file) => [file.id, file]));
   const limitMap = new Map(snapshot.limits.map((limit) => [limit.id, limit]));
-  const title = validateReviewTitle(analysis.title, snapshot, sourceMap);
-  const core = object(
-    analysis.coreChange,
-    "coreChange",
-    ["before", "after", "why", "details"],
+  const errors = [];
+  const capture = (path, operation) => {
+    try {
+      return operation();
+    } catch (error) {
+      errors.push({ error, issue: analysisIssue(error, path) });
+      return undefined;
+    }
+  };
+  // Validate each field once. Only checks that need invalid values are skipped.
+  const items = (values, name, minimum, maximum, validate, identity) => {
+    const entries = capture(name, () => boundedArray(
+      values, name, minimum, maximum,
+    ));
+    if (!entries) return undefined;
+    const validated = entries.map((value, index) => capture(
+      `${name}[${index}]`, () => validate(value, index),
+    ));
+    if (validated.some((value) => value === undefined)) return undefined;
+    if (identity) {
+      capture(name, () => assertUniqueSiblings(validated, name, identity));
+    }
+    return validated;
+  };
+  const groundedChange = (value, name) => {
+    const validated = claim(value, name, sourceMap);
+    if (
+      validated.basis === "unknown"
+      || !validated.evidence.some((item) => changeSources.has(item.sourceKind))
+    ) {
+      throw new Error(`${name} must be grounded in collected code`);
+    }
+    return validated;
+  };
+
+  const title = capture(undefined, () => validateReviewTitle(
+    analysis.title, snapshot, sourceMap,
+  ));
+  const purpose = capture("purpose", () => {
+    const value = claim(analysis.purpose, "purpose", sourceMap);
+    if (!["stated", "inferred", "unknown"].includes(value.basis)) {
+      throw new Error("purpose basis must be stated, inferred, or unknown");
+    }
+    return value;
+  });
+  const core = capture("coreChange", () => object(
+    analysis.coreChange, "coreChange", ["before", "after", "why", "details"],
+  ));
+  let coreChange;
+  if (core) {
+    coreChange = Object.freeze({
+      before: capture("coreChange.before", () => groundedChange(
+        core.before, "coreChange.before",
+      )),
+      after: capture("coreChange.after", () => groundedChange(
+        core.after, "coreChange.after",
+      )),
+      why: capture("coreChange.why", () => claim(
+        core.why, "coreChange.why", sourceMap,
+      )),
+      details: items(
+        core.details, "coreChange.details", 1, 4,
+        (value, index) => claim(value, `coreChange.details[${index}]`, sourceMap),
+        claimIdentity,
+      ),
+    });
+    if (title && Object.values(coreChange).every((value) => value !== undefined)) {
+      capture("title.evidence", () => {
+        const renderedEvidence = new Set([
+          coreChange.before, coreChange.after, coreChange.why, ...coreChange.details,
+        ].flatMap((value) => value.evidence.map(evidenceRange)));
+        if (title.evidence.some((item) => !renderedEvidence.has(evidenceRange(item)))) {
+          throw new Error("title.evidence must reuse evidence rendered by coreChange");
+        }
+      });
+    }
+  }
+  const background = analysis.background === undefined ? [] : items(
+    analysis.background, "background", 0, 1,
+    (value, index) => claim(value, `background[${index}]`, sourceMap, { title: true }),
+    claimIdentity,
   );
-  const background = analysis.background === undefined
-    ? []
-    : array(analysis.background, "background", 8).map(
-      (value, index) => claim(value, `background[${index}]`, sourceMap, { title: true }),
-    );
-  assertUniqueSiblings(background, "background", claimIdentity);
-  const beginnerPrimer = analysis.beginnerPrimer === undefined
-    ? []
-    : boundedArray(analysis.beginnerPrimer, "beginnerPrimer", 1, 8).map(
-      (value, index) => primerClaim(value, `beginnerPrimer[${index}]`, sourceMap),
-    );
-  assertUniqueSiblings(beginnerPrimer, "beginnerPrimer", claimIdentity);
+  const beginnerPrimer = analysis.beginnerPrimer === undefined ? [] : items(
+    analysis.beginnerPrimer, "beginnerPrimer", 1, 8,
+    (value, index) => primerClaim(value, `beginnerPrimer[${index}]`, sourceMap),
+    claimIdentity,
+  );
   let behavior;
   if (analysis.behavior !== undefined) {
-    object(analysis.behavior, "behavior", [
-      "summary",
-      "steps",
-      "visual",
-      "microworld",
-    ]);
-    const steps = array(analysis.behavior.steps, "behavior.steps", 12);
-    if (steps.length < 2) throw new Error("behavior.steps needs at least two steps");
-    const visual = analysis.behavior.visual === undefined
-      ? undefined
-      : validateVisual(analysis.behavior.visual, sourceMap);
-    const microworld = analysis.behavior.microworld === undefined
-      ? undefined
-      : validateMicroworld(analysis.behavior.microworld, sourceMap);
-    const validatedSteps = steps.map(
-      (value, index) => claim(value, `behavior.steps[${index}]`, sourceMap),
-    );
-    assertUniqueSiblings(validatedSteps, "behavior.steps", claimIdentity);
-    behavior = Object.freeze({
-      microworld,
-      steps: validatedSteps,
-      summary: claim(analysis.behavior.summary, "behavior.summary", sourceMap),
-      visual,
-    });
+    const value = capture("behavior", () => object(
+      analysis.behavior, "behavior", ["summary", "steps", "visual", "microworld"],
+    ));
+    if (value) {
+      behavior = Object.freeze({
+        summary: capture("behavior.summary", () => claim(
+          value.summary, "behavior.summary", sourceMap,
+        )),
+        steps: items(
+          value.steps, "behavior.steps", 2, 12,
+          (item, index) => claim(item, `behavior.steps[${index}]`, sourceMap),
+          claimIdentity,
+        ),
+        visual: value.visual === undefined ? undefined : capture(
+          "behavior.visual", () => validateVisual(value.visual, sourceMap),
+        ),
+        microworld: value.microworld === undefined ? undefined : capture(
+          "behavior.microworld", () => validateMicroworld(value.microworld, sourceMap),
+        ),
+      });
+    }
   }
-
-  const authoredReviewItems = array(
-    analysis.reviewItems,
-    "reviewItems",
-    LIMITS.reviewItems,
-  ).map((value, index) => reviewItem(value, index, sourceMap, limitMap));
-  assertUniqueSiblings(
-    authoredReviewItems,
-    "reviewItems",
+  const authoredReviewItems = items(
+    analysis.reviewItems, "reviewItems", 0, LIMITS.reviewItems,
+    (value, index) => reviewItem(value, index, sourceMap, limitMap),
     (item) => JSON.stringify([
-      item.kind,
-      item.importance,
-      item.basis,
-      item.title,
-      item.explanation,
-      item.effect,
-      item.nextStep,
-      item.doneWhen,
-      evidenceSetIdentity(item.evidence),
-      [...item.limitIds].sort(),
+      item.kind, item.importance, item.basis, item.title, item.explanation,
+      item.effect, item.nextStep, item.doneWhen,
+      evidenceSetIdentity(item.evidence), [...item.limitIds].sort(),
     ]),
   );
-  const sorted = sortReviewItems(authoredReviewItems);
-  const reviewItems = sorted.map((item, index) => Object.freeze({
-    ...item,
-    id: `review-item-${index + 1}`,
-    originalIndex: undefined,
-  }));
-  const limits = validateLimitImpacts(analysis.limitImpacts, snapshot);
-  validateMaterialVerificationLimits(limits, reviewItems);
-  const contextChecks = validateContextChecks(
-    analysis.contextChecks,
-    sourceMap,
-    limitMap,
+  const limits = capture("limitImpacts", () => validateLimitImpacts(
+    analysis.limitImpacts, snapshot,
+  ));
+  if (limits && authoredReviewItems) {
+    capture("limitImpacts", () => validateMaterialVerificationLimits(
+      limits, authoredReviewItems,
+    ));
+  }
+  const contextChecks = capture("contextChecks", () => validateContextChecks(
+    analysis.contextChecks, sourceMap, limitMap,
+  ));
+  const files = capture("fileDispositions", () => validateFileDispositions(
+    analysis.fileDispositions, snapshot,
+  ));
+  capture("coreChange", () => {
+    if (!snapshot.files.some((file) => file.bodyState === "included")) {
+      throw new Error("The core change cannot be grounded without an included file");
+    }
+  });
+  const codeSteps = items(
+    analysis.codeSteps, "codeSteps", 0, 20,
+    (value, index) => validateCodeStep(value, index, sourceMap, fileMap),
+    claimIdentity,
   );
-  const files = validateFileDispositions(analysis.fileDispositions, snapshot);
 
   let quiz = [];
   if (analysis.quiz !== undefined) {
-    const values = array(analysis.quiz, "quiz", 5);
-    if (values.length < 1) {
-      throw new Error("quiz needs at least 1 question");
-    }
-    quiz = values.map((value, index) => {
+    const values = capture("quiz", () => boundedArray(analysis.quiz, "quiz", 1, 5));
+    quiz = values?.map((value, index) => capture(undefined, () => {
       const name = `quiz[${index}]`;
       object(value, name, ["question", "answer", "evidence"]);
       return Object.freeze({
@@ -1237,73 +1213,16 @@ function validateAnalysisValue(analysis, snapshot, {
         id: `quiz-${index + 1}`,
         question: text(value.question, `${name}.question`),
       });
-    });
-    assertUniqueSiblings(
-      quiz,
-      "quiz",
-      (item) => JSON.stringify([
-        item.question,
-        item.answer,
-        evidenceSetIdentity(item.evidence),
-      ]),
-    );
-  }
-  const teachingAids = validateTeachingAidDecisions(analysis.teachingAids, {
-    behavior,
-    quiz,
-  });
-
-  const coreDetails = array(core.details, "coreChange.details", 4).map(
-    (value, index) => claim(value, `coreChange.details[${index}]`, sourceMap),
-  );
-  assertUniqueSiblings(coreDetails, "coreChange.details", claimIdentity);
-  const coreChange = Object.freeze({
-    after: claim(core.after, "coreChange.after", sourceMap),
-    before: claim(core.before, "coreChange.before", sourceMap),
-    details: Object.freeze(coreDetails),
-    why: claim(core.why, "coreChange.why", sourceMap),
-  });
-  if (coreChange.details.length === 0) {
-    throw new Error("coreChange.details needs the main explanation");
-  }
-  const renderedCoreEvidence = new Set([
-    coreChange.before,
-    coreChange.after,
-    coreChange.why,
-    ...coreChange.details,
-  ].flatMap((claimValue) => claimValue.evidence.map(evidenceRange)));
-  if (title.evidence.some((item) => !renderedCoreEvidence.has(evidenceRange(item)))) {
-    throw new Error("title.evidence must reuse evidence rendered by coreChange");
-  }
-  if (!snapshot.files.some((file) => file.bodyState === "included")) {
-    throw new Error("The core change cannot be grounded without an included file");
-  }
-  for (const [name, value] of [
-    ["coreChange.before", coreChange.before],
-    ["coreChange.after", coreChange.after],
-  ]) {
-    if (
-      value.basis === "unknown"
-      || !value.evidence.some((item) => changeSources.has(item.sourceKind))
-    ) {
-      throw new Error(`${name} must be grounded in collected code`);
+    }));
+    if (quiz?.every((value) => value !== undefined)) {
+      capture("quiz", () => assertUniqueSiblings(
+        quiz, "quiz", (item) => JSON.stringify([
+          item.question, item.answer, evidenceSetIdentity(item.evidence),
+        ]),
+      ));
     }
   }
-
-  const purpose = claim(analysis.purpose, "purpose", sourceMap);
-  if (!["stated", "inferred", "unknown"].includes(purpose.basis)) {
-    throw new Error("purpose basis must be stated, inferred, or unknown");
-  }
-  const sourceIndex = snapshot.sources.map((source) => Object.freeze({
-    fileId: source.fileId,
-    kind: source.kind,
-    lineCount: source.lineCount,
-    path: source.path,
-    revision: source.revision,
-  }));
-  const codeSteps = validateCodeSteps(analysis.codeSteps, sourceMap, fileMap);
-  assertUniqueSiblings(codeSteps, "codeSteps", claimIdentity);
-  const analysisResourceValues = analysisResources(
+  const resources = capture("analysis.resources", () => analysisResources(
     analysis,
     [
       ["background", background],
@@ -1314,31 +1233,32 @@ function validateAnalysisValue(analysis, snapshot, {
       ["beginnerPrimer", beginnerPrimer],
       ["purpose", purpose],
       ["quiz", quiz],
-      ["reviewItems", reviewItems],
+      ["reviewItems", authoredReviewItems],
       ["title", title],
     ],
     { analysisFileBytes, enforceLimits: enforceResourceLimits },
+  ));
+  if (errors.length > 0) {
+    const first = errors[0].error;
+    const issues = Object.freeze(errors.map(({ issue }) => issue));
+    if (issues.length === 1) {
+      first.issues = issues;
+      throw first;
+    }
+    const combined = new Error(
+      `${first.message} (${issues.length - 1} additional independent contract issue${issues.length === 2 ? "" : "s"}; fix them together)`,
+      { cause: first },
+    );
+    combined.issues = issues;
+    throw combined;
+  }
+  const reviewItems = sortReviewItems(authoredReviewItems).map(
+    (item, index) => Object.freeze({
+      ...item,
+      id: `review-item-${index + 1}`,
+      originalIndex: undefined,
+    }),
   );
-  const decisionValues = Object.values(teachingAids);
-  const resources = Object.freeze({
-    ...analysisResourceValues,
-    teachingAidDecisions: decisionValues.length,
-    teachingAidMicroworldIncluded: teachingAids.microworld.decision === "included"
-      ? 1
-      : 0,
-    teachingAidQuizIncluded: teachingAids.quiz.decision === "included" ? 1 : 0,
-    teachingAidVisualIncluded: teachingAids.visual.decision === "included" ? 1 : 0,
-    teachingAidsIncluded: decisionValues.filter(
-      (item) => item.decision === "included",
-    ).length,
-    teachingAidsNotApplicable: decisionValues.filter(
-      (item) => item.decision === "not-applicable",
-    ).length,
-    teachingAidsOmitted: decisionValues.filter(
-      (item) => item.decision === "omitted",
-    ).length,
-  });
-
   return Object.freeze({
     analysisSchemaVersion: ANALYSIS_VERSION,
     background: Object.freeze(background),
@@ -1346,7 +1266,9 @@ function validateAnalysisValue(analysis, snapshot, {
     behavior,
     codeSteps: Object.freeze(codeSteps),
     contextChecks: Object.freeze(contextChecks),
-    coreChange,
+    coreChange: Object.freeze({
+      ...coreChange, details: Object.freeze(coreChange.details),
+    }),
     files: Object.freeze(files),
     limits: Object.freeze(limits),
     purpose,
@@ -1355,7 +1277,13 @@ function validateAnalysisValue(analysis, snapshot, {
     result: deriveReviewResult(reviewItems, limits),
     reviewItems: Object.freeze(reviewItems),
     runId,
-    sourceIndex: Object.freeze(sourceIndex),
+    sourceIndex: Object.freeze(snapshot.sources.map((source) => Object.freeze({
+      fileId: source.fileId,
+      kind: source.kind,
+      lineCount: source.lineCount,
+      path: source.path,
+      revision: source.revision,
+    }))),
     snapshot: Object.freeze({
       capturedAt: snapshot.capturedAt,
       digest: snapshot.digest,
@@ -1364,7 +1292,6 @@ function validateAnalysisValue(analysis, snapshot, {
       settings: snapshot.settings,
       snapshot: snapshot.snapshot,
     }),
-    teachingAids,
     title,
   });
 }
@@ -1372,7 +1299,7 @@ function validateAnalysisValue(analysis, snapshot, {
 function analysisIssue(error, path) {
   const message = error instanceof Error ? error.message : String(error);
   const inferredPath = message.match(
-    /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|teachingAids|title)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
+    /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|title)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
   )?.[0] ?? "analysis";
   let code = "ANALYSIS_CONTRACT";
   if (
@@ -1402,217 +1329,11 @@ function analysisIssue(error, path) {
   });
 }
 
-function collectAnalysisIssues(analysis, snapshot, options, firstError) {
-  const issues = [];
-  const seen = new Set();
-  const add = (error, path) => {
-    const issue = analysisIssue(error, path);
-    const key = `${issue.code}\u0000${issue.message}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      issues.push(issue);
-    }
-  };
-  const capture = (path, operation) => {
-    try {
-      return operation();
-    } catch (error) {
-      add(error, path);
-      return undefined;
-    }
-  };
-
-  try {
-    validateAnalysisIdentity(analysis, snapshot, options.runId);
-  } catch (error) {
-    add(error, "analysis");
-    return issues;
-  }
-  add(firstError);
-
-  const sourceMap = new Map(snapshot.sources.map((source) => {
-    const lines = typeof source.text === "string"
-      ? Object.freeze(source.text.split("\n"))
-      : Object.freeze([]);
-    return [source.id, { ...source, lines, referenceCache: new Map() }];
-  }));
-  const fileMap = new Map(snapshot.files.map((file) => [file.id, file]));
-  const limitMap = new Map(snapshot.limits.map((limit) => [limit.id, limit]));
-
-  capture("title", () => validateReviewTitle(analysis.title, snapshot, sourceMap));
-  capture("purpose", () => claim(analysis.purpose, "purpose", sourceMap));
-  if (analysis.coreChange && typeof analysis.coreChange === "object") {
-    for (const name of ["before", "after", "why"]) {
-      const validated = capture(`coreChange.${name}`, () => claim(
-        analysis.coreChange[name],
-        `coreChange.${name}`,
-        sourceMap,
-      ));
-      if (
-        validated
-        && ["before", "after"].includes(name)
-        && (
-          validated.basis === "unknown"
-          || !validated.evidence.some((item) => changeSources.has(item.sourceKind))
-        )
-      ) {
-        add(
-          new Error(`coreChange.${name} must be grounded in collected code`),
-          `coreChange.${name}`,
-        );
-      }
-    }
-    if (Array.isArray(analysis.coreChange.details)) {
-      analysis.coreChange.details.forEach((value, index) => capture(
-        `coreChange.details[${index}]`,
-        () => claim(value, `coreChange.details[${index}]`, sourceMap),
-      ));
-    }
-  } else {
-    capture("coreChange", () => object(
-      analysis.coreChange,
-      "coreChange",
-      ["before", "after", "why", "details"],
-    ));
-  }
-
-  if (analysis.background !== undefined) {
-    const values = capture("background", () => array(analysis.background, "background", 8));
-    values?.forEach((value, index) => capture(
-      `background[${index}]`,
-      () => claim(value, `background[${index}]`, sourceMap, { title: true }),
-    ));
-  }
-  if (analysis.beginnerPrimer !== undefined) {
-    const values = capture(
-      "beginnerPrimer",
-      () => boundedArray(analysis.beginnerPrimer, "beginnerPrimer", 1, 8),
-    );
-    values?.forEach((value, index) => capture(
-      `beginnerPrimer[${index}]`,
-      () => primerClaim(value, `beginnerPrimer[${index}]`, sourceMap),
-    ));
-  }
-  capture("behavior", () => {
-    if (analysis.behavior === undefined) return undefined;
-    object(analysis.behavior, "behavior", ["summary", "steps", "visual", "microworld"]);
-    const steps = boundedArray(analysis.behavior.steps, "behavior.steps", 2, 12);
-    claim(analysis.behavior.summary, "behavior.summary", sourceMap);
-    steps.forEach((value, index) => claim(
-      value,
-      `behavior.steps[${index}]`,
-      sourceMap,
-    ));
-    if (analysis.behavior.visual !== undefined) {
-      validateVisual(analysis.behavior.visual, sourceMap);
-    }
-    if (analysis.behavior.microworld !== undefined) {
-      validateMicroworld(analysis.behavior.microworld, sourceMap);
-    }
-    return true;
-  });
-
-  const codeSteps = capture("codeSteps", () => array(analysis.codeSteps, "codeSteps", 20));
-  codeSteps?.forEach((value, index) => capture(
-    `codeSteps[${index}]`,
-    () => validateCodeStep(value, index, sourceMap, fileMap),
-  ));
-  const reviewItems = capture(
-    "reviewItems",
-    () => array(analysis.reviewItems, "reviewItems", LIMITS.reviewItems),
-  );
-  const validatedReviewItems = [];
-  reviewItems?.forEach((value, index) => {
-    const validated = capture(
-      `reviewItems[${index}]`,
-      () => reviewItem(value, index, sourceMap, limitMap),
-    );
-    if (validated) validatedReviewItems.push(validated);
-  });
-  capture("fileDispositions", () => validateFileDispositions(
-    analysis.fileDispositions,
-    snapshot,
-  ));
-  const limits = capture("limitImpacts", () => validateLimitImpacts(
-    analysis.limitImpacts,
-    snapshot,
-  ));
-  if (
-    limits
-    && reviewItems
-    && validatedReviewItems.length === reviewItems.length
-  ) {
-    capture("limitImpacts", () => validateMaterialVerificationLimits(
-      limits,
-      validatedReviewItems,
-    ));
-  }
-  capture("contextChecks", () => validateContextChecks(
-    analysis.contextChecks,
-    sourceMap,
-    limitMap,
-  ));
-
-  const quiz = analysis.quiz === undefined
-    ? []
-    : capture("quiz", () => array(analysis.quiz, "quiz", 5));
-  quiz?.forEach((value, index) => capture(`quiz[${index}]`, () => {
-    const name = `quiz[${index}]`;
-    object(value, name, ["question", "answer", "evidence"]);
-    text(value.question, `${name}.question`);
-    text(value.answer, `${name}.answer`);
-    evidenceList(value.evidence, `${name}.evidence`, sourceMap, { maximum: 8 });
-  }));
-
-  const validatedReferences = [];
-  const visitEvidence = (value, path = "analysis") => {
-    if (Array.isArray(value)) {
-      value.forEach((item, index) => visitEvidence(item, `${path}[${index}]`));
-      return;
-    }
-    if (!value || typeof value !== "object") return;
-    if (
-      Object.hasOwn(value, "sourceId")
-      && Object.hasOwn(value, "startLine")
-      && Object.hasOwn(value, "endLine")
-    ) {
-      const validated = capture(path, () => evidenceReferences(value, path, sourceMap));
-      if (validated) validatedReferences.push([path, validated]);
-      return;
-    }
-    for (const [key, item] of Object.entries(value)) {
-      visitEvidence(item, `${path}.${key}`);
-    }
-  };
-  for (const [key, value] of Object.entries(analysis)) {
-    visitEvidence(value, key);
-  }
-  capture("analysis.resources", () => analysisResources(
-    analysis,
-    validatedReferences,
-    {
-      analysisFileBytes: options.analysisFileBytes,
-      enforceLimits: options.enforceResourceLimits !== false,
-    },
-  ));
-
-  return issues;
-}
-
 export function validateAnalysis(analysis, snapshot, options = {}) {
   try {
     return validateAnalysisValue(analysis, snapshot, options);
   } catch (error) {
-    const issues = collectAnalysisIssues(analysis, snapshot, options, error);
-    if (issues.length <= 1) {
-      error.issues = Object.freeze(issues);
-      throw error;
-    }
-    const combined = new Error(
-      `${error.message} (${issues.length - 1} additional independent contract issue${issues.length === 2 ? "" : "s"}; fix them together)`,
-      { cause: error },
-    );
-    combined.issues = Object.freeze(issues);
-    throw combined;
+    error.issues ??= Object.freeze([analysisIssue(error)]);
+    throw error;
   }
 }

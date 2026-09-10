@@ -291,7 +291,7 @@ export async function prepareDiff({
   return Object.freeze({
     ...run,
     analysisSchemaPath: fileURLToPath(
-      new URL("./analysis-v3.schema.json", import.meta.url),
+      new URL("./analysis-v4.schema.json", import.meta.url),
     ),
     analysisSchemaVersion: ANALYSIS_VERSION,
     locale: display.locale,
