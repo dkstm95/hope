@@ -32,7 +32,7 @@ skills/diff/references/analysis.md
 skills/diff/references/runtime.md
 skills/diff/references/teaching-aids.md
 skills/diff/references/workflow.md
-skills/diff/scripts/analysis-v3.schema.json
+skills/diff/scripts/analysis-v4.schema.json
 skills/diff/scripts/artifact.mjs
 skills/diff/scripts/checkpoint-window-v2.schema.json
 skills/diff/scripts/checkpoint.mjs
@@ -56,6 +56,7 @@ skills/diff/scripts/render.mjs
 skills/diff/scripts/run.mjs
 skills/diff/scripts/structured-input.mjs
 skills/diff/scripts/target.mjs
+skills/diff/scripts/teaching-aids-v1.schema.json
 skills/diff/scripts/teaching-aids.mjs
 skills/diff/scripts/text.mjs
 skills/diff/scripts/transitions.mjs
@@ -64,9 +65,6 @@ skills/sweep/SKILL.md
 skills/sweep/agents/openai.yaml
 skills/toxic-review/SKILL.md
 skills/toxic-review/agents/openai.yaml
-skills/toxic-review/references/causal-review.md
-skills/toxic-review/references/red-review.md
-skills/toxic-review/references/verification.md
 skills/write/SKILL.md
 skills/write/agents/openai.yaml
 skills/write/assets/hope-protected-light.png

@@ -1,7 +1,7 @@
 # Diff runtime contract
 
 This maintainer reference records the deterministic guarantees enforced by
-Diff's scripts. `SKILL.md` owns coordination, `workflow.md` owns the worker
+Diff's scripts. `SKILL.md` owns coordination, `workflow.md` owns the artifact
 protocol, and `analysis.md` owns review judgment.
 
 ## Exact, current source

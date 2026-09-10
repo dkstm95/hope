@@ -1065,7 +1065,7 @@ export function makeDiffAnalysis(snapshot) {
   ];
   const boundaryEvidence = [...budgetEvidence, ...boundaryTestEvidence];
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     runId: DIFF_RUN_ID,
     snapshotDigest: snapshot.digest,
     locale,
@@ -1160,11 +1160,6 @@ export function makeDiffAnalysis(snapshot) {
       { fileId: "file-4", disposition: "supporting" },
     ],
     limitImpacts: [],
-    teachingAids: {
-      visual: { decision: "included", reason: text(locale, "The checks occur at several boundaries that are hard to retain as prose.", "여러 경계에서 확인하므로 글만으로 위치를 기억하기 어렵다."), teachingJob: text(locale, "Map each timeout checkpoint to its zero-budget result.", "각 시간 제한 확인 지점과 예산이 0일 때의 결과를 대응시킨다.") },
-      microworld: { decision: "included", reason: text(locale, "Two timing choices expose when another request can start.", "두 시간 선택으로 다음 요청을 시작할 수 있는 때를 드러낸다."), teachingJob: text(locale, "Explore how attempt time and retry delay change the result.", "시도 시간과 재시도 대기가 결과를 어떻게 바꾸는지 탐색한다.") },
-      quiz: { decision: "included", reason: text(locale, "Retry settings do not override an exhausted shared deadline.", "재시도 설정은 소진된 공유 마감 시각을 무시하지 못한다."), teachingJob: text(locale, "Predict which retry configurations can start another request.", "어떤 재시도 설정이 다음 요청을 시작할 수 있는지 예측한다.") },
-    },
     quiz: [
       {
         question: text(locale, "With timeout disabled and one retry allowed, can a second request start after a retryable error?", "시간 제한을 끄고 재시도를 한 번 허용하면 재시도 가능 오류 뒤에 두 번째 요청을 시작할 수 있는가?"),

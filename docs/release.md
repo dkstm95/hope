@@ -78,12 +78,15 @@ npm run release:prepare -- <patch|minor|major>
 ```
 
 The command reads the version from `origin/main`, calculates the exact next
-version, updates all four files, rebuilds the package, and runs its checks.
+version, updates all four files, rebuilds the package, and checks package
+consistency. It leaves the full test suite to the final check below.
 
 Pass another base ref as a second argument only when `origin/main` is not the
 task base.
 
-Run `npm run check` again and commit the version with the work it releases.
+Run `npm run check` once after preparation and any remaining edits, then commit
+the version with the work it releases. Repeat checks only for new changes,
+failures, or unresolved concerns.
 
 The pull request therefore contains both the product change and its release
 decision before review and merge.

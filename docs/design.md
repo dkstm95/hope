@@ -169,8 +169,8 @@ scale. Keep the understanding check as its own subsection because it asks the
 reader to act. The behavior summary adds the condition, state, or relationship
 that makes its flow useful.
 Present a visual's authored title as its figure caption so it identifies the
-visual within that model. Keep teaching aid choices with the implementation
-record in Evidence and scope.
+visual within that model. Include only aids that help explain the change;
+unused aids need no visible placeholder or decision record.
 
 Let the reading path answer these questions in order:
 

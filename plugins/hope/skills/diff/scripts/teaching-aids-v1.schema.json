@@ -1,0 +1,299 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hope.local/schemas/teaching-aids-v1.schema.json",
+  "title": "Hope Diff optional teaching aids",
+  "$defs": {
+    "quiz": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "answer", "evidence"],
+        "properties": {
+          "question": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+          "answer": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": { "$ref": "./analysis-v4.schema.json#/$defs/evidence" }
+          }
+        }
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "aidEvidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": { "$ref": "./analysis-v4.schema.json#/$defs/evidence" }
+    },
+    "flowVisual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "caption", "basis", "evidence", "items"],
+      "properties": {
+        "kind": { "const": "flow" },
+        "title": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "caption": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "detail"],
+            "properties": {
+              "label": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+              "detail": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "decisionTableVisual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "caption", "basis", "evidence", "columns", "rows"],
+      "properties": {
+        "kind": { "const": "decision-table" },
+        "title": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "caption": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["case", "cells"],
+            "properties": {
+              "case": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+              "cells": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 6,
+                "items": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sequenceVisual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "caption", "basis", "evidence", "participants", "messages"],
+      "properties": {
+        "kind": { "const": "sequence" },
+        "title": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "caption": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "participants": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "label": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+            }
+          }
+        },
+        "messages": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to", "label"],
+            "properties": {
+              "from": { "$ref": "#/$defs/id" },
+              "to": { "$ref": "#/$defs/id" },
+              "label": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "componentMapVisual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "title", "caption", "basis", "evidence", "components", "connections"],
+      "properties": {
+        "kind": { "const": "component-map" },
+        "title": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "caption": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "components": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "detail"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "label": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+              "detail": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+            }
+          }
+        },
+        "connections": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to", "label"],
+            "properties": {
+              "from": { "$ref": "#/$defs/id" },
+              "to": { "$ref": "#/$defs/id" },
+              "label": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "visual": {
+      "oneOf": [
+        { "$ref": "#/$defs/flowVisual" },
+        { "$ref": "#/$defs/decisionTableVisual" },
+        { "$ref": "#/$defs/sequenceVisual" },
+        { "$ref": "#/$defs/componentMapVisual" }
+      ]
+    },
+    "microworldOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+      }
+    },
+    "microworldTrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps", "outcome"],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+        },
+        "outcome": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+      }
+    },
+    "microworld": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "instructions",
+        "simplifies",
+        "omits",
+        "basis",
+        "evidence",
+        "controls",
+        "scenarios"
+      ],
+      "properties": {
+        "title": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "instructions": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "simplifies": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "omits": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+        "basis": { "enum": ["stated", "code", "inferred"] },
+        "evidence": { "$ref": "#/$defs/aidEvidence" },
+        "controls": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "description": "The complete Cartesian product of all control options must contain no more than 12 combinations. Use the runtime skeleton command to enumerate it.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "label", "defaultOptionId", "options"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "kind": { "enum": ["input", "condition", "state"] },
+              "label": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+              "defaultOptionId": { "$ref": "#/$defs/id" },
+              "options": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 4,
+                "items": { "$ref": "#/$defs/microworldOption" }
+              }
+            }
+          }
+        },
+        "scenarios": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 12,
+          "description": "Provide exactly one scenario for every control-option combination returned by the runtime skeleton command.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "title", "when", "before", "after", "lesson"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "title": { "$ref": "./analysis-v4.schema.json#/$defs/text" },
+              "when": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["controlId", "optionId"],
+                  "properties": {
+                    "controlId": { "$ref": "#/$defs/id" },
+                    "optionId": { "$ref": "#/$defs/id" }
+                  }
+                }
+              },
+              "before": { "$ref": "#/$defs/microworldTrace" },
+              "after": {
+                "oneOf": [
+                  { "$ref": "#/$defs/microworldTrace" },
+                  {
+                    "const": "unchanged",
+                    "description": "Reuse the before trace when the represented steps and outcome do not change."
+                  }
+                ]
+              },
+              "lesson": { "$ref": "./analysis-v4.schema.json#/$defs/text" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
