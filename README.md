@@ -46,8 +46,8 @@ Routine implementation details stay with implementation.
 It confirms new shared understanding and continues under any implementation
 authorization already given. An alignment-only request stops at the agreement.
 When the agreement needs to survive the conversation, Align preserves it in one
-self-contained project HTML record. Visual choices can use two or three image
-options when comparison helps.
+self-contained project HTML record. Visual choices use Design for images or
+working mockups, with comparisons when a meaningful choice remains.
 
 See [the Align Skill](plugins/hope/skills/align/SKILL.md) for the conversation
 and artifact workflow.
@@ -72,6 +72,27 @@ sample data for an illustrative `rescene.fan` concept.
 | [![Two design directions for the trusted fan schedule in an English Align artifact](assets/readme/hope-align-directions-en.png)](assets/readme/hope-align-directions-en.png) | [![Decided outcomes, user flow, exclusions, and judgment markers in an English Align artifact](assets/readme/hope-align-decisions-en.png)](assets/readme/hope-align-decisions-en.png) |
 
 </details>
+
+---
+
+### 🎨 Design — Turn goals and impressions into a considered interface
+
+Describe what you need or what feels wrong without learning design terminology.
+Design examines the actual task and screen, recommends a direction, and creates
+image or working mockups suited to the decision. It compares meaningful choices
+and preserves the parts you accept through feedback and refinement.
+
+It addresses generic composition, excessive headings and labels, and inconsistent
+visual choices while keeping useful information, controls, and the product's
+character. Relevant guidance covers typography, color, interaction, accessibility,
+motion, responsive layouts, localization, assets, and rendered verification.
+
+Use it directly or within Align. For example: `$hope:design This screen feels
+loud. Keep the colors and table, and make daily work easier to scan.`
+
+See [the Design Skill](plugins/hope/skills/design/SKILL.md) for the workflow and
+[its source index](plugins/hope/skills/design/references/sources.md) for the
+adapted guidance, pinned references, licenses, and limits.
 
 ---
 
@@ -211,3 +232,6 @@ claude plugin install hope@hope
 Diagram also carries the
 [Diagram Design MIT notice](plugins/hope/skills/diagram/LICENSE.diagram-design)
 for its adapted design guidance.
+
+Design includes adapted MIT and Apache-2.0 guidance with the upstream notices
+and changes recorded in its [source index](plugins/hope/skills/design/references/sources.md).

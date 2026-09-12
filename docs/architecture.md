@@ -25,6 +25,11 @@ behavior, model judgment, conversation flow, and private guidance.
 Published shared guidance owns only invariants used across feature boundaries.
 A feature does not depend on another feature's private source.
 
+A feature may invoke another feature through its public Skill contract when
+that contract defines the handoff and each feature retains its own decisions
+and artifact ownership. This does not expose the callee's private references
+or runtime as shared source.
+
 ### Feature runtime
 
 A feature owns the deterministic runtime needed to control external state or

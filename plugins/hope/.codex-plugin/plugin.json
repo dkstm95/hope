@@ -1,7 +1,7 @@
 {
   "name": "hope",
-  "version": "6.4.0",
-  "description": "Align intent and consequential decisions before implementation and optionally preserve the shared understanding, sweep codebase maintenance, challenge work with evidence, understand pull requests, create clear explanatory visuals, and improve writing. Requires Node.js 22 or newer.",
+  "version": "6.5.0",
+  "description": "Align intent and consequential decisions before implementation and optionally preserve the shared understanding, sweep codebase maintenance, challenge work with evidence, understand pull requests, design interfaces and mockups, create clear explanatory visuals, and improve writing. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -9,17 +9,18 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["alignment", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "pull-request", "visualization", "diagram", "writing"],
+  "keywords": ["alignment", "design", "mockups", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "pull-request", "visualization", "diagram", "writing"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
     "shortDescription": "Practical ways for people and AI to work better together",
-    "longDescription": "Align builds shared intent and consequential decisions before implementation and can preserve them in a durable record. Explicitly invoked Sweep removes proven codebase waste while preserving customer-observed behavior. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can understand consequences and discover follow-up work. Diagram makes explanatory diagrams and data charts clear without taking over the active task. Write improves language without changing its meaning.",
+    "longDescription": "Align builds shared intent and consequential decisions before implementation and can preserve them in a durable record. Design turns goals and ordinary-language feedback into inspectable interface mockups, independently or within Align. Explicitly invoked Sweep removes proven codebase waste while preserving customer-observed behavior. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can understand consequences and discover follow-up work. Diagram makes explanatory diagrams and data charts clear without taking over the active task. Write improves language without changing its meaning.",
     "developerName": "SeungIl",
     "category": "Engineering",
     "capabilities": ["Read", "Write", "Interactive"],
     "defaultPrompt": [
       "Use $hope:align to build a shared understanding before implementation.",
+      "Use $hope:design to turn this interface goal and feedback into a considered mockup.",
       "Use $hope:sweep to remove proven codebase waste without changing customer-observed behavior.",
       "Use $hope:toxic-review to challenge this plan.",
       "Use $hope:diff to explain the current pull request.",

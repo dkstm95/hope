@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hope Design"
+  short_description: "Turn goals and feedback into considered UI mockups"
+  default_prompt: "Use $hope:design to create or refine this interface and show a considered mockup without requiring design terminology."
