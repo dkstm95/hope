@@ -21,6 +21,8 @@ const publishedCrossFeatureReferences = new Set([
   sharedArtifactTheme,
   sharedDiagramStandard,
   sharedWritingStandard,
+  resolve(skillsRoot, "design/SKILL.md"),
+  resolve(skillsRoot, "diagram/SKILL.md"),
 ]);
 const publishedSharedModules = new Set([sharedArtifactTheme]);
 const deliveryDependencyPattern =
@@ -276,4 +278,13 @@ test("architecture checks distinguish allowed and forbidden source edges", () =>
     skill,
     featureRoot,
   ).some((issue) => issue.includes("without a published shared contract")));
+  for (const feature of ["design", "diagram"]) {
+    assert.deepEqual(
+      guidanceBoundaryIssues(`Read \`../${feature}/SKILL.md\`.`, skill, featureRoot),
+      [],
+    );
+    assert.ok(guidanceBoundaryIssues(
+      `Read \`../${feature}/references/private.md\`.`, skill, featureRoot,
+    ).some((issue) => issue.includes("without a published shared contract")));
+  }
 });

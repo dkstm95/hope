@@ -40,8 +40,8 @@ AI가 조사하고 방향을 추천하면 사용자가 결정하거나 위임합
 
 새로운 합의는 확인하고, 이미 받은 구현 허가가 있으면 이어서 진행합니다.
 합의만 요청했다면 거기서 마칩니다. 대화 이후에도 보존할 합의는 프로젝트 안의
-독립형 HTML 문서에 기록합니다. 시각적 선택은 비교가 도움이 될 때 이미지
-시안 2~3개를 활용합니다.
+독립형 HTML 문서에 기록합니다. 시각적 선택에는 Design의 이미지 또는 작동하는
+시안을 활용하고, 의미 있는 선택이 남아 있을 때 비교합니다.
 
 대화와 산출물 처리 절차는 [Align 스킬](plugins/hope/skills/align/SKILL.md)에
 정의되어 있습니다.
@@ -64,6 +64,26 @@ AI가 조사하고 방향을 추천하면 사용자가 결정하거나 위임합
 | [![한국어 Align 문서에서 비교한 신뢰 가능한 팬 일정 UI 두 가지](assets/readme/hope-align-directions-ko.png)](assets/readme/hope-align-directions-ko.png) | [![한국어 Align 문서의 출처 우선순위, 충돌, 최신성, 취소 결정](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
 
 </details>
+
+---
+
+### 🎨 Design — 목적과 느낌을 보고 판단할 수 있는 UI로 만듭니다
+
+디자인 용어를 몰라도 필요한 일이나 불편한 느낌을 설명할 수 있습니다.
+Design은 실제 작업과 화면을 살펴 방향을 추천하고, 판단에 맞는 이미지 또는
+작동하는 시안을 만듭니다. 중요한 차이를 비교하고, 마음에 든 부분은 유지하면서
+피드백을 반영합니다.
+
+획일적인 구성, 과도한 제목·라벨, 일관성 없는 표현을 다듬되 필요한 정보와
+조작 요소, 제품의 개성은 보존합니다. 서체·색상·상호작용·접근성·모션·반응형·
+다국어·이미지·렌더링 검증 지침은 해당 작업에 필요한 부분만 읽습니다.
+
+직접 호출하거나 Align 안에서 사용할 수 있습니다. 예: `$hope:design 이 화면이
+좀 요란해. 색감과 표는 살리고 매일 업무를 확인하기 편하게 다듬어줘.`
+
+진행 방식은 [Design 스킬](plugins/hope/skills/design/SKILL.md), 참고한 지침과
+고정 버전 원문·라이선스·한계는 [출처 색인](plugins/hope/skills/design/references/sources.md)에
+정리되어 있습니다.
 
 ---
 
@@ -195,3 +215,6 @@ claude plugin install hope@hope
 Diagram에서 각색한 디자인 지침에는
 [Diagram Design MIT 고지](plugins/hope/skills/diagram/LICENSE.diagram-design)도
 적용됩니다.
+
+Design은 MIT와 Apache-2.0 지침을 각색했으며, 원저작자 고지와 변경 내역은
+[출처 색인](plugins/hope/skills/design/references/sources.md)에 기록되어 있습니다.

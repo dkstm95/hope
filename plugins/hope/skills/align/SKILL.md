@@ -48,7 +48,7 @@ agreement only to the choices it covers. Unstated consequences remain open.
 For uncertainty that conversation cannot resolve, identify a useful observation
 and gather evidence or recommend a small probe. Use actual screens or mockups
 when judgment depends on seeing the experience; read `references/design-directions.md`
-for material visual comparisons. Bring the result back into discovery and
+for visual exploration through Design. Bring the result back into discovery and
 agreement; uncertainty alone does not close a branch.
 
 ## Test the understanding before confirmation
