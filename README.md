@@ -34,6 +34,18 @@ better decisions, and direct their next steps.
 
 ## Features
 
+All seven Hope skills require explicit invocation: use `$hope:<name>` in Codex,
+`/hope:<name>` in Claude Code, or another host's equivalent skill command or
+picker. Names are `align`, `design`, `diff`, `toxic-review`, `sweep`, `diagram`,
+and `write`. Ordinary requests do not start a Hope skill. Follow-ups within an
+invoked task continue without repeating the command. To combine skills, invoke
+each one; a skill does not automatically activate another.
+
+Codex and Claude Code have native invocation controls in the package. Other
+hosts must follow the same rule in each skill's instructions; their enforcement
+depends on the host. Shared writing and visual references remain available to
+the workflows that use them without starting their owning skills.
+
 ### 🤝 Align — Share intent and consequential decisions before implementation
 
 Align resolves choices that could materially change the result, using the
@@ -46,8 +58,9 @@ Routine implementation details stay with implementation.
 It confirms new shared understanding and continues under any implementation
 authorization already given. An alignment-only request stops at the agreement.
 When the agreement needs to survive the conversation, Align preserves it in one
-self-contained project HTML record. Visual choices use Design for images or
-working mockups, with comparisons when a meaningful choice remains.
+self-contained project HTML record. When you also invoke Design, visual choices
+use its images or working mockups, with comparisons when a meaningful choice
+remains. Align can use visual evidence without invoking Design.
 
 See [the Align Skill](plugins/hope/skills/align/SKILL.md) for the conversation
 and artifact workflow.
@@ -87,7 +100,7 @@ visual choices while keeping useful information, controls, and the product's
 character. Relevant guidance covers typography, color, interaction, accessibility,
 motion, responsive layouts, localization, assets, and rendered verification.
 
-Use it directly or within Align. For example: `$hope:design This screen feels
+Invoke it directly or alongside Align. For example: `$hope:design This screen feels
 loud. Keep the colors and table, and make daily work easier to scan.`
 
 See [the Design Skill](plugins/hope/skills/design/SKILL.md) for the workflow and
@@ -185,8 +198,9 @@ Diagram Design's templates, scripts, fonts, gallery, or third-party icons.
 
 ### ✍️ Write — Make language clearer without losing meaning
 
-Hope also uses Write within other tasks, including implementation and other
-Skills.
+Invoke Write to draft, edit, or review text. You can also invoke it within an
+implementation task or alongside another skill. Its shared writing standard
+remains available to other workflows without invoking Write.
 
 Write's shared standard adapts George Orwell's six rules in
 [Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/).

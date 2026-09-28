@@ -5,3 +5,5 @@ interface:
   icon_large: "./assets/hope-protected-light.png"
   brand_color: "#087EA4"
   default_prompt: "Use $hope:write within this task wherever clearer language would help."
+policy:
+  allow_implicit_invocation: false

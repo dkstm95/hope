@@ -1,14 +1,22 @@
 ---
 name: align
-description: Resolve intent, scope, consequential design choices, or important assumptions that need shared understanding before implementation. Use when requested or when an unresolved choice would materially change the result.
+description: Resolve consequential choices and shared intent before implementation. Use only when explicitly invoked.
+disable-model-invocation: true
 ---
 
 # Hope Align
 
+Use only when the person invokes `$hope:align`, `/hope:align`, or the
+host's equivalent skill command or picker. Continue follow-ups within that
+invoked task without requiring another invocation. Ordinary requests and calls
+from another skill do not activate this skill; continue authorized work through
+the ordinary workflow. Reading a shared reference does not invoke its skill.
+
 Discover and test a design with the person to understand its goal and
 consequential decisions. Honor existing decisions, delegation, and implementation
 authorization. Align owns its open choices even when an implementation skill
-runs alongside it. Do not turn clear, authorized work into a new approval process.
+runs alongside it. Clear, authorized tasks and routine implementation choices
+need no new alignment or approval process.
 
 Read `../write/references/writing-standard.md` for user-facing language.
 
@@ -47,9 +55,9 @@ agreement only to the choices it covers. Unstated consequences remain open.
 
 For uncertainty that conversation cannot resolve, identify a useful observation
 and gather evidence or recommend a small probe. Use actual screens or mockups
-when judgment depends on seeing the experience; read `references/design-directions.md`
-for visual exploration through Design. Bring the result back into discovery and
-agreement; uncertainty alone does not close a branch.
+when judgment depends on seeing the experience. Read `references/design-directions.md`
+when the person also invokes Design or visual evidence needs preservation.
+Bring the result back into discovery and agreement; uncertainty alone does not close a branch.
 
 ## Test the understanding before confirmation
 

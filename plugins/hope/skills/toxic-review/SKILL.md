@@ -1,9 +1,16 @@
 ---
 name: toxic-review
-description: Critically review a work product for material flaws and unsupported assumptions, with evidence and proportionate recommendations.
+description: Review a work product for material flaws and unsupported assumptions. Use only when explicitly invoked.
+disable-model-invocation: true
 ---
 
 # Hope Toxic Review
+
+Use only when the person invokes `$hope:toxic-review`, `/hope:toxic-review`, or the
+host's equivalent skill command or picker. Continue follow-ups within that
+invoked task without requiring another invocation. Ordinary requests and calls
+from another skill do not activate this skill; continue authorized work through
+the ordinary workflow. Reading a shared reference does not invoke its skill.
 
 Critically examine the work against its intended purpose and real use. Be
 strict about the work and respectful toward people.

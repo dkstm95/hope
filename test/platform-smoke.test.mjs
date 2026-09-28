@@ -37,14 +37,27 @@ test("the staged plugin runs from an external platform path", async (context) =>
   assert.equal(manifest.name, "hope");
   assert.equal(manifest.skills, "./skills/");
 
-  const sweepOpenAi = normalizeLineEndings(await readFile(
-    join(destination, "skills", "sweep", "agents", "openai.yaml"),
-    "utf8",
-  ));
-  assert.match(
-    sweepOpenAi,
-    /\npolicy:\n  allow_implicit_invocation: false\n/u,
+  const skillPaths = stagedFiles.filter(
+    (path) => /^skills\/[^/]+\/SKILL\.md$/u.test(path),
   );
+  assert.ok(skillPaths.length > 0);
+  for (const skillPath of skillPaths) {
+    const source = normalizeLineEndings(await readFile(
+      join(destination, skillPath), "utf8",
+    ));
+    const frontmatter = source.match(/^---\n([\s\S]*?)\n---\n/u)?.[1];
+    assert.ok(frontmatter, `${skillPath}: missing frontmatter`);
+    assert.match(frontmatter, /^disable-model-invocation: true$/mu, skillPath);
+    assert.doesNotMatch(frontmatter, /^user-invocable: false$/mu, skillPath);
+
+    const metadataPath = join(dirname(skillPath), "agents", "openai.yaml");
+    const metadata = normalizeLineEndings(await readFile(
+      join(destination, metadataPath), "utf8",
+    ));
+    assert.match(
+      metadata, /\npolicy:\n  allow_implicit_invocation: false\n/u, metadataPath,
+    );
+  }
 
   assert.equal(
     stagedFiles.some((path) => path.startsWith("skills/polish/")),
