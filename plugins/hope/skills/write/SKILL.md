@@ -1,9 +1,16 @@
 ---
 name: write
-description: Draft, edit, or review language for clarity while preserving meaning and voice. Apply within implementation and other Skills wherever clearer language helps.
+description: Draft, edit, or review language while preserving meaning and voice. Use only when explicitly invoked.
+disable-model-invocation: true
 ---
 
 # Hope Write
+
+Use only when the person invokes `$hope:write`, `/hope:write`, or the
+host's equivalent skill command or picker. Continue follow-ups within that
+invoked task without requiring another invocation. Ordinary requests and calls
+from another skill do not activate this skill; continue authorized work through
+the ordinary workflow. Reading a shared reference does not invoke its skill.
 
 Read `references/writing-standard.md` and apply it to the requested text.
 Infer drafting, editing, or review from the request. A review reports problems

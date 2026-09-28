@@ -1,9 +1,16 @@
 ---
 name: diagram
-description: Create, refine, or review explanatory diagrams and data charts when relationships or quantitative shape communicate better than prose or a small table. Excludes decorative illustration and UI screen design.
+description: Create, refine, or review explanatory diagrams and data charts. Use only when explicitly invoked.
+disable-model-invocation: true
 ---
 
 # Hope Diagram
+
+Use only when the person invokes `$hope:diagram`, `/hope:diagram`, or the
+host's equivalent skill command or picker. Continue follow-ups within that
+invoked task without requiring another invocation. Ordinary requests and calls
+from another skill do not activate this skill; continue authorized work through
+the ordinary workflow. Reading a shared reference does not invoke its skill.
 
 Make the relationship or quantitative claim easier to understand. When working
 inside another task, preserve its scope, facts, evidence, artifact schema,

@@ -15,9 +15,10 @@ When it does, quote and link the exact instruction and explain the remaining
 decision. Prepare the authorized work so any needed approval concerns a
 concrete, reviewable result.
 
-Use [Hope Write](plugins/hope/skills/write/SKILL.md) wherever clearer language
-helps. Keep updates and results concise; report the change, relevant evidence,
-and any verification gap.
+Apply the shared [writing standard](plugins/hope/skills/write/references/writing-standard.md).
+Invoke Hope skills only when the person explicitly selects them. Keep updates
+and results concise; report the change, relevant evidence, and any verification
+gap.
 
 These collaboration rules draw on the
 [GPT-6 Astra prompting guide](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra#prompting-best-practices).

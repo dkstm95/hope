@@ -1,9 +1,16 @@
 ---
 name: diff
-description: Explain or review a GitHub pull request as an evidence-linked, self-contained offline HTML record. Answer narrow PR questions directly when they do not need a full artifact.
+description: Explain or review a GitHub pull request with captured evidence and an optional offline HTML record. Use only when explicitly invoked.
+disable-model-invocation: true
 ---
 
 # Hope Diff
+
+Use only when the person invokes `$hope:diff`, `/hope:diff`, or the
+host's equivalent skill command or picker. Continue follow-ups within that
+invoked task without requiring another invocation. Ordinary requests and calls
+from another skill do not activate this skill; continue authorized work through
+the ordinary workflow. Reading a shared reference does not invoke its skill.
 
 Resolve one exact GitHub pull request, analyze its captured evidence, and
 report its artifact. Diff covers the captured PR snapshot; local staged,

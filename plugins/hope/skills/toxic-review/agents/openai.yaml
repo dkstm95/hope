@@ -3,3 +3,5 @@ interface:
   short_description: "Find and prioritize material issues"
   brand_color: "#087EA4"
   default_prompt: "Use $hope:toxic-review to challenge this work with evidence and prioritize material issues."
+policy:
+  allow_implicit_invocation: false

@@ -1,19 +1,22 @@
 ---
 name: sweep
-description: Use only when someone explicitly invokes $hope:sweep in Codex, /hope:sweep in Claude Code, or the host's Hope Sweep command for behavior-preserving codebase cleanup.
+description: Apply proven, behavior-preserving codebase cleanup. Use only when explicitly invoked.
+disable-model-invocation: true
 ---
 
 # Hope Sweep
+
+Use only when the person invokes `$hope:sweep`, `/hope:sweep`, or the
+host's equivalent skill command or picker. Continue follow-ups within that
+invoked task without requiring another invocation. Ordinary requests and calls
+from another skill do not activate this skill; continue authorized work through
+the ordinary workflow. Reading a shared reference does not invoke its skill.
 
 Apply proven maintenance to operating code and directly supporting tests,
 configuration, build logic, documentation, examples, and assets. Read
 `../write/references/writing-standard.md` for user-facing language.
 
-## Invocation and scope
-
-Require explicit namespaced invocation. An ordinary cleanup request or a
-follow-up such as “do that” uses the ordinary workflow. If selected implicitly,
-continue that request without activating Sweep.
+## Scope
 
 Use the named repository, or the current one, and the whole repository unless
 the person narrows it. Record the revision and working-tree state; preserve

@@ -93,8 +93,10 @@ and resource counters. Do not author those values.
 ## Validate, finish, or cancel
 
 Follow the returned transition through `validate` and `finish`. Fix every
-independent structured validation issue before retrying. If the same error
-repeats or repair makes no progress, cancel once and report the failure.
+independent structured validation issue before retrying. Continue repairs while
+the reported issues show concrete progress, such as resolved fields or fewer
+violations, even when the same error code remains. If the same unresolved cause
+recurs without progress, cancel once and report the failure.
 
 Retry only when Hope returns `canRetry: true`, using its returned command and
 run path. For `HOPE_ANALYSIS_INVALID`, repair through `validate`. For a

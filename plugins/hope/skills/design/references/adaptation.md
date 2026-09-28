@@ -52,8 +52,9 @@ relevant implementation families without maintaining a parallel SDK manual.
 For dashboards, begin with the question the data answers. Use charts only when
 their encoding helps; preserve units, scale, uncertainty, status, and accessible
 data alternatives. Consider filtering, selection, drilldown, streaming updates,
-and whether animation obscures changes. Apply Hope Diagram's public guidance
-for the quantitative representation while keeping the product's visual system.
+and whether animation obscures changes. When the person also explicitly invokes
+Hope Diagram, use its public handoff in `../SKILL.md` while keeping the product's
+visual system.
 
 For maps, spatial editors, or 3D, distinguish essential spatial manipulation
 from decoration. Give navigation and gesture alternatives where possible and

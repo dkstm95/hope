@@ -1,15 +1,18 @@
 # Align design directions
 
-Use the public `../../design/SKILL.md` when an unresolved visual choice needs
-mockups, reference interpretation, or visual feedback. Existing mockups, design
-systems, explicit decisions, and delegation take priority. Routine corrections
-usually need no new exploration.
+Use the public `../../design/SKILL.md` only when the person also explicitly
+invokes Design for mockups, reference interpretation, or visual feedback.
+Otherwise use available visual evidence and ordinary tools within Align's scope;
+do not require another skill to continue. Existing mockups, design systems,
+explicit decisions, and delegation take priority. Routine corrections usually
+need no new exploration.
 
 ## Pass the current understanding
 
-Supply the goal, target surface, constraints, settled choices, implementation
-authority and delegation, and unresolved visual decisions. Design owns the
-exploration, suitable image or working mockups, comparison, and design checks.
+When both skills are invoked, supply the goal, target surface, constraints,
+settled choices, implementation authority and delegation, and unresolved visual
+decisions. Design owns the exploration, suitable image or working mockups,
+comparison, and design checks.
 Keep Align's overall decision frontier here; do not repeat a settled interview.
 
 Bring Design's evidence, recommendation, and selected or delegated direction

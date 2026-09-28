@@ -1,9 +1,16 @@
 ---
 name: design
-description: Design or refine interface mockups with people who describe goals and impressions rather than design terminology. Use for UI direction, visual references, alternatives, and design feedback, including visual choices within Align.
+description: Create or refine interface mockups from goals, references, and feedback. Use only when explicitly invoked.
+disable-model-invocation: true
 ---
 
 # Hope Design
+
+Use only when the person invokes `$hope:design`, `/hope:design`, or the
+host's equivalent skill command or picker. Continue follow-ups within that
+invoked task without requiring another invocation. Ordinary requests and calls
+from another skill do not activate this skill; continue authorized work through
+the ordinary workflow. Reading a shared reference does not invoke its skill.
 
 Turn the person's purpose and impressions into a considered interface they can
 see, try, and direct. Carry new screens, refinements, reference studies, or
@@ -77,8 +84,9 @@ this session or another screen or worker will rely on them.
 
 ## Work inside Align
 
-This is the public handoff contract. Align supplies the goal, target, constraints,
-settled choices, authority and delegation, and unresolved visual decisions.
+This handoff applies when the person explicitly invokes both skills.
+Align supplies the goal, target, constraints, settled choices, authority and
+delegation, and unresolved visual decisions.
 Use those directly. Design owns the visual exploration, mockups, feedback, and
 design evidence; Align owns the overall decision frontier and agreement.
 
@@ -106,7 +114,8 @@ Align session or artifact merely to use this process.
 | Existing systems, reusable decisions, artifact ownership and handoff | `references/continuity.md` |
 | Additional depth, brand/style/font catalogs, library and platform sources | `references/sources.md` |
 
-For explanatory diagrams and quantitative charts, also use the public
-`../diagram/SKILL.md`; keep the current product's visual system. Specialized
-image, document, or presentation work uses the available tools for that medium
-under the same scope. Design does not require an external skill installation.
+For explanatory diagrams and quantitative charts, use the public
+`../diagram/SKILL.md` only when the person also explicitly invokes Diagram.
+Otherwise use ordinary tools within the current task; keep the product's visual
+system. Specialized image, document, or presentation work uses the available
+tools for that medium under the same scope. Design does not require an external skill installation.

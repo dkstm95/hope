@@ -42,6 +42,9 @@ Skill discovery and package validity alone do not prove behavior. Add tests
 only for meaningful risks; once relevant checks pass, repeat or broaden them
 only for new changes, failures, or unresolved concerns.
 
+For skill invocation or completion changes, use the affected scenarios in
+[skill verification](docs/skill-verification.md) and record observed behavior.
+
 Before finishing, review the full changed scope against
 [Prefer simple, direct design](PRINCIPLES.md#prefer-simple-direct-design),
 follow [release preparation](docs/release.md), and run `npm run check`.
