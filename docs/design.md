@@ -700,6 +700,8 @@ a compact, sticky detail panel on the right. Groups may span files or split one
 file. Preserve paths, before/after line numbers, and each captured row exactly
 once. Shared code is linked as evidence. Complete coverage is required before
 publication; unavailable content remains an explicit file entry.
+An absent text patch on a renamed file does not prove unchanged content. Keep
+that entry unavailable unless captured evidence establishes a pure rename.
 
 Groups start collapsed. Each title toggles its code and selects the group for
 the detail panel. Expansion is independent, works by keyboard and without
@@ -709,6 +711,11 @@ their target group; printing includes every group and inline explanation.
 Selecting code highlights its location and shows any contextual note in the
 panel. On narrow screens the panel follows the selected heading inline, even
 when its code is collapsed. Wrap code and prose without page-level overflow.
+Keep keyboard focus on group navigation controls when the panel moves; at a
+disabled navigation endpoint, focus the selected group heading. Each code part
+has one line in the Tab order. Up/Down and Home/End move line focus, and
+Enter/Space select the focused line with the same explanation and follow-up
+anchor as a pointer selection.
 Restored progress follows the captured code; revised groups lose their read
 marks. Provide export/import when browser storage is unavailable.
 

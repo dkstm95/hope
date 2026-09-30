@@ -234,3 +234,18 @@ part notes, and a relocated mobile detail panel without horizontal overflow at
 These are authored-example and runtime checks; native model adherence to the
 revised explanation guidance remains unverified. The release remains the
 unreleased 7.2.0 minor version.
+
+### Review corrections
+
+Renames without a text patch now retain the unavailable-content warning and
+cannot count as read. The regression fixture covers both text and binary paths.
+Keyboard regression scenarios at 1280 and 375 pixels verify repeated group
+navigation, focus at disabled endpoints, one Tab stop per code part, directional
+line movement, Enter/Space selection, and the exact line in copied follow-up
+requests. All six reader unit tests and eleven reader browser scenarios passed.
+
+The bilingual explorer now gives the quick-error/no-wait case an explicit
+remaining-budget outcome. The overview and behavior table describe error-body
+handling as a test expectation with an uncaptured implementation, consistent
+with the detailed note. Regenerated light reader and dark explorer captures were
+visually inspected. These corrections add no dependency or secondary workflow.

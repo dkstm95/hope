@@ -72,6 +72,8 @@ publication. It serializes only the small identity/path payload needed for
 browser progress; code and explanations already exist in the DOM. Read status
 is scoped to the snapshot and group fingerprint, is reversible, and can be
 exported when local storage is unavailable. It conveys no PR approval.
+Files without a complete text patch retain an unavailable-content limit even
+when the provider reports a rename; that status does not establish a pure rename.
 Old HTML remains readable, but previous analysis/run formats are not accepted
 by this runtime. Follow-up questions use the captured artifact; changed code
 or a revised review requires a new publication, preserving the old one.

@@ -33,6 +33,7 @@
 .diff-reader.enhanced .workspace { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr); align-items: start; }
 .diff-reader .changes { min-width: 0; padding: 20px 20px 24px; }
 .diff-reader .changes-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.diff-reader .code-navigation-help { margin: 0 0 16px; color: var(--quiet); font-size: 12px; }
 .diff-reader .file-index { position: relative; }
 .diff-reader .file-index > summary { font-size: 12px; cursor: pointer; padding: 5px 0; }
 .diff-reader .file-index nav { position: absolute; z-index: 3; top: 100%; left: 0; display: grid; gap: 8px; width: min(420px, 80vw); max-height: 320px; overflow: auto; overscroll-behavior: contain; padding: 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }

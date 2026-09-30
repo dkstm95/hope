@@ -198,7 +198,7 @@ test("the fixed Ky example preserves captured pull request provenance", () => {
       "After retry wait",
       "beforeRetry hook",
       "afterResponse forced retry",
-      "Error response body",
+      "Error response body (test)",
       "Next request",
     ],
   );

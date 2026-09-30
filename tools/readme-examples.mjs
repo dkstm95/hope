@@ -1025,7 +1025,13 @@ function makeTimeoutMicroworld(locale, evidence) {
             text(locale, "Recalculate the remaining operation budget.", "남은 작업 예산을 다시 계산한다."),
             text(locale, "Stop when no budget remains.", "예산이 없으면 중단한다."),
           ],
-        } : "unchanged",
+        } : {
+          outcome: text(locale, "A retry starts with only the remaining operation budget.", "재시도는 작업 전체의 남은 시간만 받아 시작한다."),
+          steps: [
+            text(locale, "Subtract time spent on the first attempt.", "첫 시도에 사용한 시간을 뺀다."),
+            text(locale, "Start the next request with the time still available.", "남아 있는 시간으로 다음 요청을 시작한다."),
+          ],
+        },
         lesson: budgetExpired
           ? text(locale, "Attempts and waits spend one shared timeout budget.", "시도와 대기는 하나의 시간 제한 예산을 함께 쓴다.")
           : text(locale, "A quick failure can still retry when enough budget remains.", "빠른 실패 뒤 예산이 충분하면 여전히 재시도할 수 있다."),
@@ -1129,11 +1135,11 @@ export function makeDiffAnalysis(snapshot) {
         claim(locale, "A delay that consumes the remaining budget ends at the deadline without a new request.", "재시도 대기가 남은 예산을 모두 쓰면 새 요청 없이 마감 시각에 끝난다.", budgetEvidence),
         claim(locale, "Disabling timeout still permits the configured retry.", "시간 제한을 끄면 설정한 재시도를 계속 허용한다.", retryEvidence),
         claim(locale, "Focused tests place initial and retry beforeRequest hooks and afterResponse forced retries under the shared budget.", "집중 테스트는 최초·재시도 beforeRequest 훅과 afterResponse 강제 재시도에 공유 예산을 적용한다.", [...beforeRequestEvidence, ...forcedRetryEvidence]),
-        claim(locale, "A never-ending error response body now ends with TimeoutError after one request.", "끝나지 않는 오류 응답 본문은 한 번의 요청 뒤 TimeoutError로 끝난다.", errorBodyEvidence),
+        claim(locale, "The error-body test now expects TimeoutError after one request; the captured patch does not show its body-handling implementation.", "오류 본문 테스트는 요청 한 번 뒤 TimeoutError를 기대하도록 바뀌었다. 수집한 패치에는 본문 처리 구현이 없다.", errorBodyEvidence),
       ],
     },
     behavior: {
-      summary: claim(locale, "The remaining budget is recalculated at different points across hooks, waits, forced retries, and error-body handling.", "훅, 대기, 강제 재시도, 오류 본문 처리 경로마다 남은 예산을 다시 계산하는 시점이 다르다.", boundaryEvidence),
+      summary: claim(locale, "The code checks remaining time around waits and hooks; focused tests describe forced-retry and error-body expectations.", "코드는 대기와 훅 전후에 남은 시간을 확인한다. 집중 테스트는 강제 재시도와 오류 본문의 기대 동작을 설명한다.", boundaryEvidence),
       steps: [
         claim(locale, "A numeric timeout records the operation start once.", "숫자 시간 제한이면 작업 시작 시각을 한 번 기록한다.", [sourceReference(snapshot, "source-4", "Track start time", "Date.now")]),
         claim(locale, "Retry delay is compared with the remaining time.", "재시도 대기를 남은 시간과 비교한다.", budgetEvidence),
@@ -1142,7 +1148,7 @@ export function makeDiffAnalysis(snapshot) {
       visual: {
         basis: "code",
         evidence: boundaryEvidence,
-        caption: text(locale, "The shared budget reaches every material path that can delay or start another request.", "공유 예산이 다음 요청을 늦추거나 시작할 수 있는 모든 주요 경로에 적용된다."),
+        caption: text(locale, "The table separates visible budget checks from the error-body test expectation, whose implementation is not captured.", "표는 코드에서 확인한 예산 검사와, 구현이 수집되지 않은 오류 본문 테스트의 기대를 구분한다."),
         columns: [
           text(locale, "When the budget is checked", "예산을 확인하는 때"),
           text(locale, "When the budget is zero", "예산이 0이면"),
@@ -1155,7 +1161,7 @@ export function makeDiffAnalysis(snapshot) {
           { case: text(locale, "After retry wait", "재시도 대기 후"), cells: [text(locale, "Recalculate after elapsed time", "경과 시간을 반영해 다시 계산"), text(locale, "TimeoutError without a new request", "새 요청 없이 TimeoutError")] },
           { case: "beforeRetry hook", cells: [text(locale, "Recalculate only after the hook returns", "hook이 반환된 뒤에만 다시 계산"), text(locale, "Cannot end the call before it returns", "반환 전에는 호출을 끝내지 못함")] },
           { case: text(locale, "afterResponse forced retry", "afterResponse 강제 재시도"), cells: [text(locale, "Apply its requested delay to the shared budget", "요청한 대기에 공유 예산을 적용"), text(locale, "TimeoutError before another request", "다음 요청 전에 TimeoutError")] },
-          { case: text(locale, "Error response body", "오류 응답 본문"), cells: [text(locale, "Keep body handling under the operation deadline", "본문 처리를 작업 마감 시각 안에 포함"), text(locale, "TimeoutError after one request", "한 번의 요청 뒤 TimeoutError")] },
+          { case: text(locale, "Error response body (test)", "오류 응답 본문(테스트)"), cells: [text(locale, "Check location is unknown; body-handling implementation is not captured", "검사 위치는 확인 불가: 본문 처리 구현이 수집되지 않음"), text(locale, "Test expects TimeoutError and one request; its 3000 ms bound does not establish the exact 1000 ms deadline", "TimeoutError와 요청 1회를 기대함. 3000ms 미만 단언은 정확한 1000ms 마감 시각을 입증하지 않음")] },
           { case: text(locale, "Next request", "다음 요청"), cells: [text(locale, "Pass only remaining timeout to the request timer", "남은 timeout만 요청 타이머에 전달"), text(locale, "Do not start the request", "요청을 시작하지 않고 TimeoutError")] },
         ],
         title: text(locale, "Where the shared timeout budget is checked", "공통 시간 예산을 확인하는 지점"),
@@ -1167,7 +1173,7 @@ export function makeDiffAnalysis(snapshot) {
         subject: text(locale, "Shared timeout boundaries", "공유 시간 제한 경계"),
         status: "checked",
         basis: "code",
-        explanation: text(locale, "The core path and focused tests cover delays, disabled timeout, hooks, forced retries, error-body handling, exhausted budget, and a successful retry.", "핵심 경로와 집중 테스트가 대기, 시간 제한 해제, 훅, 강제 재시도, 오류 본문 처리, 예산 소진, 성공하는 재시도를 확인한다."),
+        explanation: text(locale, "The core path and focused tests cover delays, disabled timeout, hooks, forced retries, exhausted budget, and a successful retry. Error-body coverage is limited to the test expectation; its implementation is absent.", "핵심 경로와 집중 테스트는 대기, 시간 제한 해제, 훅, 강제 재시도, 예산 소진, 성공하는 재시도를 다룬다. 오류 본문은 구현 없이 테스트의 기대 동작만 확인했다."),
         evidence: boundaryEvidence,
         limitIds: [],
       },

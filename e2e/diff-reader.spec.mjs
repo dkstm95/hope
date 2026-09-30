@@ -21,6 +21,67 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => { await cleanup(); });
 
+test("keyboard group navigation preserves focus until an endpoint", async ({ page }) => {
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(url);
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    const next = page.locator("#next-group");
+    await next.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#position")).toHaveText("02 / 4");
+    await expect(next).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#position")).toHaveText("03 / 4");
+    await expect(next).toBeFocused();
+    await expect(page.locator("#read-group")).toBeDisabled();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#position")).toHaveText("04 / 4");
+    await expect(page.locator("#g-image .group-heading")).toBeFocused();
+    const previous = page.locator("#previous-group");
+    await previous.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#position")).toHaveText("03 / 4");
+    await expect(previous).toBeFocused();
+  }
+});
+
+test("keyboard line selection keeps one tab stop per code part and the exact follow-up anchor", async ({ page }) => {
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(url);
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.locator("#g-expiration .group-heading").click();
+    const part = page.locator('#g-expiration .diff-part[data-file="file-1"]');
+    const first = part.locator(".code-row").first();
+    const target = part.locator('[data-source-line="3"]');
+    await part.locator(".part-select").focus();
+    await page.keyboard.press("Tab");
+    await expect(first).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(target).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(target).toBeFocused();
+    await expect(target).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#selected-reason .reason-location")).toContainText("변경 전 L2");
+    await expect(part.locator('.code-row[tabindex="0"]')).toHaveCount(1);
+    await page.keyboard.press("End");
+    await expect(part.locator(".code-row").last()).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(part.locator(".code-row").last()).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Home");
+    await expect(first).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Space");
+    await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("denied"); } } }));
+    await page.locator("#copy-request").click();
+    await expect(page.locator("#request-text")).toHaveValue(/"fileId":"file-1","sourceLine":3/u);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
 test("complete code, group navigation, explicit read undo and persistence", async ({ page }) => {
   const errors = []; page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(url);
@@ -28,16 +89,16 @@ test("complete code, group navigation, explicit read undo and persistence", asyn
   await expect(page.locator(".code-row.add, .code-row.del")).toHaveCount(6);
   await expect(page.locator("#position")).toHaveText("01 / 4");
   await expect(page.locator("#selected-reason h3")).toHaveText("만료 시점부터 세션을 거부");
-  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await expect(page.locator("#read-progress")).toContainText("0/2");
   await page.locator("#next-group").click();
-  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await expect(page.locator("#read-progress")).toContainText("0/2");
   await page.locator("#read-group").click();
-  await expect(page.locator("#read-progress")).toContainText("1/3");
+  await expect(page.locator("#read-progress")).toContainText("1/2");
   await page.reload();
   await expect(page.locator("#position")).toHaveText("02 / 4");
   await expect(page.locator("#read-group")).toHaveAttribute("aria-pressed", "true");
   await page.locator("#read-group").click();
-  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await expect(page.locator("#read-progress")).toContainText("0/2");
   await expect(page.locator("#read-group")).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator("[data-mode]")).toHaveCount(0);
   await page.locator(".group-select").last().click();
@@ -79,11 +140,11 @@ test("progress export/import verifies snapshot and storage failure stays usable"
   const progress = JSON.parse(await readFile(await download.path(), "utf8"));
   expect(progress.read).toHaveLength(1);
   await page.reload();
-  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await expect(page.locator("#read-progress")).toContainText("0/2");
   await page.locator("#progress-file").setInputFiles({ name: "progress.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(progress)) });
-  await expect(page.locator("#read-progress")).toContainText("1/3");
+  await expect(page.locator("#read-progress")).toContainText("1/2");
   await page.locator("#progress-file").setInputFiles({ name: "wrong.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ ...progress, snapshotId: "wrong" })) });
-  await expect(page.locator("#read-progress")).toContainText("1/3");
+  await expect(page.locator("#read-progress")).toContainText("1/2");
   await expect(page.locator("#storage-warning")).toContainText("다른 변경");
 });
 
@@ -189,7 +250,7 @@ test("regrouping follows selected code and viewport while invalidating revised r
   await writeReview(path, snapshot, input.groups);
   await page.reload();
   await expect(page.locator("#read-group")).toHaveAttribute("aria-pressed", "false");
-  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await expect(page.locator("#read-progress")).toContainText("0/2");
   await expect(page.locator(".code-row")).toHaveCount(9);
 
 });
@@ -205,7 +266,7 @@ test("groups start collapsed, toggle independently by keyboard, and retain detai
   await expect(page.locator("#g-label .group-disclosure")).toHaveAttribute("open", "");
   await expect(page.locator(".group-disclosure[open]")).toHaveCount(1);
   await expect(page.locator("#selected-reason h3")).toHaveText("유효 기간이 남았다는 뜻을 이름에 반영");
-  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await expect(page.locator("#read-progress")).toContainText("0/2");
   await page.reload();
   await expect(page.locator(".group-disclosure[open]")).toHaveCount(1);
   await heading.click();

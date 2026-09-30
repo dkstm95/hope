@@ -11,6 +11,7 @@ const en = {
   imported: "Progress restored", readOnly: "Read markers do not approve the PR.",
   groupJump: "Jump to group", groups: "groups", showCode: "Show captured code", selectedCode: "Selected code",
   restored: "Progress is saved in this browser for this snapshot.",
+  codeKeys: "Use Up and Down to move between code lines, Home and End to reach the first or last line, and Enter or Space to select a line.",
   reasons: {
     "private-file": "Private configuration is not embedded.",
     credential: "Content matching a credential pattern is not embedded.",
@@ -20,7 +21,6 @@ const en = {
     "size-limit": "This file exceeds the safe text size limit.",
     binary: "This is a binary file; text before and after cannot be displayed.",
     "no-text-diff": "GitHub provided no text diff; binary or mode-only details are unavailable.",
-    "rename-only": "The file path changed without text changes.",
     "patch-incomplete": "A complete patch could not be reconstructed and verified.",
   },
 };
@@ -38,6 +38,7 @@ const ko = {
   imported: "진행 상태를 복원했습니다", readOnly: "확인 표시는 PR 승인이 아닙니다.",
   groupJump: "묶음으로 이동", groups: "개 묶음", showCode: "수집한 코드 보기", selectedCode: "선택한 코드",
   restored: "이 브라우저에 현재 변경의 진행 상태를 저장합니다.",
+  codeKeys: "위·아래 방향키로 코드 줄을 이동하고, Home·End로 첫 줄·마지막 줄에 이동합니다. Enter 또는 Space로 줄을 선택합니다.",
   reasons: {
     "private-file": "비공개 설정 파일의 내용은 포함하지 않았습니다.",
     credential: "인증 정보 패턴이 포함된 내용은 표시하지 않습니다.",
@@ -47,7 +48,6 @@ const ko = {
     "size-limit": "안전하게 수집할 수 있는 텍스트 크기를 초과했습니다.",
     binary: "바이너리 파일이므로 텍스트 변경 전후를 표시할 수 없습니다.",
     "no-text-diff": "GitHub가 텍스트 변경을 제공하지 않았습니다. 바이너리나 권한 변경의 세부 정보는 확인할 수 없습니다.",
-    "rename-only": "내용 변경 없이 파일 경로가 바뀌었습니다.",
     "patch-incomplete": "모든 변경 줄을 포함한 patch를 복원·검증하지 못했습니다.",
   },
 };

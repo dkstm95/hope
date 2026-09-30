@@ -1,6 +1,6 @@
 export const CONTRACT_VERSION = 1;
 export const ANALYSIS_VERSION = 5;
-export const RENDERER_VERSION = 22;
+export const RENDERER_VERSION = 23;
 export const RUN_VERSION = 8;
 export const CHECKPOINT_VERSION = 1;
 export const CHECKPOINT_WINDOW_VERSION = 2;

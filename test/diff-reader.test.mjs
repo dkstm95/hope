@@ -9,8 +9,22 @@ import { buildLayout } from "../plugins/hope/skills/diff/scripts/reader/layout.m
 import { readerSnapshot } from "../plugins/hope/skills/diff/scripts/reader/snapshot.mjs";
 import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
 import { renderReview } from "../plugins/hope/skills/diff/scripts/render.mjs";
-import { fixture, reasons, analysisFor, runId } from "../test-support/diff-reader-fixture.mjs";
+import { fixture, reasons, analysisFor, runId, providerFiles } from "../test-support/diff-reader-fixture.mjs";
 const validate = (snapshot, groups) => validateAnalysis({ ...analysisFor(snapshot), groups }, snapshot, { runId });
+test("renames without a patch retain content uncertainty and cannot count as read", async () => {
+  for (const path of ["docs/renamed.md", "assets/renamed.png"]) {
+    const files = structuredClone(providerFiles);
+    files[2] = { filename: path, previous_filename: `previous/${path}`, status: "renamed", additions: 0, deletions: 0 };
+    const snapshot = fixture({ files });
+    const review = validate(snapshot, reasons(snapshot).groups);
+    assert.equal(review.reader.snapshot.files[2].availability, "unavailable");
+    assert.equal(review.reader.snapshot.files[2].reason, "no-text-diff");
+    assert.equal(review.reader.layout.groups[2].readable, false);
+    const output = (await renderReview(review)).bytes.toString();
+    assert.match(output, /<details class="limits"><summary>2 /u);
+    assert.doesNotMatch(output, /내용 변경 없이 파일 경로가 바뀌었습니다/u);
+  }
+});
 test("patch parser preserves sign-like content, multiple hunks, and no-newline markers", async () => {
   const patch = "@@ -1 +1 @@\n---a\n+++b\n\\ No newline at end of file\n@@ -8,0 +9 @@\n+last";
   const result = parsePatch(patch, { additions: 2, deletions: 1 });

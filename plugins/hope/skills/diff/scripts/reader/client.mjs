@@ -69,11 +69,14 @@ export function mount() {
 
   function movePanel() {
     const panel = root.querySelector(".reason-aside");
+    const focused = panel.contains(document.activeElement) ? document.activeElement : null;
     if (narrow.matches && selected) {
       const disclosure = $(selected).querySelector(".group-disclosure");
-      (disclosure.open ? disclosure.querySelector(".group-heading") : disclosure).after(panel);
+      const preceding = disclosure.open ? disclosure.querySelector(".group-heading") : disclosure;
+      if (preceding.nextElementSibling !== panel) preceding.after(panel);
     }
-    else root.querySelector(".workspace").append(panel);
+    else if (panel.parentElement !== root.querySelector(".workspace")) root.querySelector(".workspace").append(panel);
+    if (focused?.isConnected && !focused.disabled && document.activeElement !== focused) focused.focus({ preventScroll: true });
   }
   function updateRead() {
     for (const group of groups) group.querySelector(".group-read").textContent = read.has(group.dataset.fingerprint) ? "✓" : "";
@@ -87,8 +90,10 @@ export function mount() {
   }
   function select(id, element = null, scroll = false) {
     if (!groupIds.includes(id)) return;
+    const focusedNavigation = document.activeElement?.matches("#previous-group, #next-group") ? document.activeElement : null;
     root.querySelectorAll(".selected-group, .selected-part, .selected-code").forEach((item) => {
       item.classList.remove("selected-group", "selected-part", "selected-code");
+      if (item.matches(".code-row")) item.setAttribute("aria-pressed", "false");
     });
     for (const group of groups) group.querySelector(".group-select").setAttribute("aria-current", String(group.id === id));
     selected = id;
@@ -106,7 +111,11 @@ export function mount() {
     if (element) {
       const part = element.closest(".diff-part");
       part.classList.add("selected-part");
-      if (element.matches(".code-row")) element.classList.add("selected-code");
+      if (element.matches(".code-row")) {
+        element.classList.add("selected-code");
+        element.setAttribute("aria-pressed", "true");
+        for (const row of part.querySelectorAll(".code-row")) row.tabIndex = row === element ? 0 : -1;
+      }
       const context = document.createElement("div");
       context.className = "selected-context";
       const location = document.createElement("div");
@@ -124,6 +133,7 @@ export function mount() {
     $("request-feedback").textContent = "";
     $("request-text").hidden = true;
     updateRead(); movePanel();
+    if (focusedNavigation?.disabled) group.querySelector(".group-heading").focus({ preventScroll: true });
     if (scroll) (element ?? group).scrollIntoView({ block: "start", behavior: "instant" });
   }
   for (const group of groups) {
@@ -131,7 +141,27 @@ export function mount() {
     group.querySelector(".group-disclosure").addEventListener("toggle", () => { movePanel(); save(); });
   }
   for (const part of parts) {
+    const codeRows = [...part.querySelectorAll(".code-row")];
+    for (const [index, row] of codeRows.entries()) {
+      row.tabIndex = index === 0 ? 0 : -1;
+      row.setAttribute("role", "button");
+      row.setAttribute("aria-pressed", "false");
+      row.setAttribute("aria-describedby", "reader-code-help");
+    }
     part.querySelector(".part-select").addEventListener("click", () => { select(part.dataset.group, part); save(); });
+    part.addEventListener("keydown", (event) => {
+      const row = event.target.closest(".code-row");
+      if (!row || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const index = codeRows.indexOf(row);
+      const target = ({ ArrowUp: Math.max(0, index - 1), ArrowDown: Math.min(codeRows.length - 1, index + 1), Home: 0, End: codeRows.length - 1 })[event.key];
+      if (target !== undefined) {
+        event.preventDefault();
+        for (const item of codeRows) item.tabIndex = item === codeRows[target] ? 0 : -1;
+        codeRows[target].focus();
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault(); select(part.dataset.group, row); save();
+      }
+    });
     part.addEventListener("click", (event) => {
       const row = event.target.closest(".code-row");
       if (row && !window.getSelection()?.toString()) { select(part.dataset.group, row); save(); }
@@ -150,7 +180,7 @@ export function mount() {
   $("copy-request").addEventListener("click", async () => {
     const artifact = location.protocol === "file:" ? decodeURIComponent(location.pathname) : artifactPath;
     const prompt = `Use $hope:diff to explain group ${JSON.stringify(selected)} in ${JSON.stringify(artifact)}. `
-      + `Selected code: ${JSON.stringify(anchor)}. Keep snapshot ${snapshot.id} (head ${snapshot.head}), mention before/after line numbers where helpful,. Answer using the captured review; create a new review if code or grouping must change.`;
+      + `Selected code: ${JSON.stringify(anchor)}. Keep snapshot ${snapshot.id} (head ${snapshot.head}), mention before/after line numbers where helpful. Answer using the captured review; create a new review if code or grouping must change.`;
     try { await navigator.clipboard.writeText(prompt); $("request-feedback").textContent = labels.copied; }
     catch { $("request-feedback").textContent = labels.copyFailed; $("request-text").value = prompt; $("request-text").hidden = false; $("request-text").focus(); $("request-text").select(); }
   });
@@ -182,7 +212,7 @@ export function mount() {
     if (source && root.contains(source)) {
       const entries = [...(rows.get(source.dataset.referenceFile)?.entries() ?? [])];
       const row = entries.filter(([line]) => line >= Number(source.dataset.referenceLine)).sort((a, b) => a[0] - b[0])[0]?.[1];
-      if (row) { select(row.closest(".change-group").id, row, true); row.tabIndex = -1; row.focus({ preventScroll: true }); save(); }
+      if (row) { select(row.closest(".change-group").id, row, true); row.focus({ preventScroll: true }); save(); }
     }
     const link = event.target.closest('.file-index a, .limits a');
     if (link) {

@@ -48,7 +48,7 @@ export function reasons(snapshot) {
       text: "active 대신 unexpired로 바꿔 이름이 실제 비교 조건을 표현하게 하려는 것으로 보입니다.",
       parts: [{ fileId: implementation.id, startLine: 6, endLine: 7 }], evidence: [{ sourceId: implementation.sourceIds[0], startLine: 6, endLine: 7 }] },
     { id: "g-docs", title: "문서 이름을 세션 용어에 맞춤", basis: "inferred",
-      text: "파일명도 코드에서 사용하는 세션 용어에 맞추려는 것으로 보입니다. 문서 본문은 바뀌지 않았습니다.",
+      text: "파일명도 코드에서 사용하는 세션 용어에 맞추려는 것으로 보입니다. 텍스트 패치가 없어 본문 변경 여부는 확인할 수 없습니다.",
       parts: [{ fileId: docs.id }], evidence: [{ sourceId: "source-2", startLine: 1, endLine: 1 }] },
     { id: "g-image", title: "이미지 변경의 이유는 확인되지 않음", basis: "unknown",
       text: "텍스트 패치가 없는 이미지입니다. 캡처한 PR 설명에는 이미지 변경의 목적이 적혀 있지 않습니다.",
