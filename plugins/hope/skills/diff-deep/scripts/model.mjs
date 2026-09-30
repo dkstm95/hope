@@ -1,4 +1,4 @@
-import { digest, indexChanges, LIMITS, restriction, safePath, text } from "./changes.mjs";
+import { digest, identifyFiles, LIMITS, parsePatch, restriction, safePath, text } from "./changes.mjs";
 import { parseTarget } from "./github.mjs";
 
 const shaPattern = /^[a-f0-9]{40}$/u;
@@ -13,7 +13,7 @@ function record(value, name) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${name} must be an object`);
 }
 
-function array(value, name, maximum) {
+function array(value, name, maximum = Infinity) {
   if (!Array.isArray(value) || value.length > maximum) throw new TypeError(`${name} must have at most ${maximum} entries`);
   return value;
 }
@@ -35,7 +35,7 @@ export function validateSources(values) {
     if (Buffer.byteLength(body) > LIMITS.sourceBytes || restriction("statement", [body])) {
       throw new Error("Rationale source exceeds a size or content boundary");
     }
-    return { id: source.id, kind: source.kind, label: text(source.label, "source label", 120), url: source.url, text: body };
+    return { id: source.id, kind: source.kind, label: text(source.label, "source label"), url: source.url, text: body };
   });
   if (new Set(sources.map((source) => source.id)).size !== sources.length) throw new Error("Duplicate rationale sources");
   return sources;
@@ -43,7 +43,7 @@ export function validateSources(values) {
 
 export function validateSnapshot(value) {
   record(value, "snapshot");
-  if (value.schemaVersion !== 1 || !digestPattern.test(value.id)
+  if (value.schemaVersion !== 2 || !digestPattern.test(value.id)
     || ![value.base, value.head, value.mergeBase].every((sha) => shaPattern.test(sha))
     || !repositoryPattern.test(value.baseRepository)
     || (value.headRepository !== null && !repositoryPattern.test(value.headRepository))) {
@@ -52,7 +52,7 @@ export function validateSnapshot(value) {
   const target = parseTarget(value.target?.url);
   let totalBytes = 0;
   let changedLines = 0;
-  const baseFiles = array(value.files, "files", LIMITS.files).map((file) => {
+  const files = identifyFiles(array(value.files, "files", LIMITS.files).map((file) => {
     const path = safePath(file.path);
     const previousPath = file.previousPath === undefined ? undefined : safePath(file.previousPath);
     if (!["added", "removed", "modified", "renamed", "copied", "changed", "unchanged"].includes(file.status)
@@ -66,6 +66,7 @@ export function validateSnapshot(value) {
       if (typeof file.patch !== "string" || restriction(path, [file.patch]) || restriction(previousPath ?? path, [file.patch])) {
         throw new Error("Invalid or restricted patch");
       }
+      parsePatch(file.patch, file);
       result.patch = file.patch;
       totalBytes += Buffer.byteLength(file.patch);
     } else {
@@ -76,16 +77,15 @@ export function validateSnapshot(value) {
       }
     }
     return result;
-  });
+  }));
   if (changedLines > LIMITS.lines || totalBytes > LIMITS.totalBytes) throw new Error("Snapshot exceeds the capture limits");
-  const inventory = indexChanges(baseFiles);
+  if (files.some((file, index) => file.id !== value.files[index].id)) throw new Error("Snapshot file identity was modified");
   const core = { target, base: value.base, head: value.head, mergeBase: value.mergeBase,
-    baseRepository: value.baseRepository, headRepository: value.headRepository, files: inventory.files };
-  if (digest(core) !== value.id) throw new Error("Snapshot digest does not match its changes");
-  if (JSON.stringify(inventory.changes) !== JSON.stringify(value.changes)) throw new Error("Snapshot change inventory was modified");
+    baseRepository: value.baseRepository, headRepository: value.headRepository, files };
+  if (digest(core) !== value.id) throw new Error("Snapshot digest does not match its files");
   if (typeof value.capturedAt !== "string" || !Number.isFinite(Date.parse(value.capturedAt))) throw new Error("Invalid capture date");
-  return { schemaVersion: 1, id: value.id, ...core, changes: inventory.changes,
-    title: text(value.title, "PR title", 4_000), capturedAt: value.capturedAt, sources: validateSources(value.sources) };
+  return { schemaVersion: 2, id: value.id, ...core,
+    title: text(value.title, "PR title"), capturedAt: value.capturedAt, sources: validateSources(value.sources) };
 }
 
 export function evidenceSources(snapshot) {
@@ -100,86 +100,76 @@ export function evidenceSources(snapshot) {
   ]);
 }
 
-export function validateExplanation(value, snapshot) {
-  record(value, "explanation");
-  const allowed = new Set(["changeId", "title", "why", "basis", "effects", "evidence"]);
-  if (Object.keys(value).some((key) => !allowed.has(key))) throw new Error("Unsupported explanation field");
-  const change = snapshot.changes.find((item) => item.id === value.changeId);
-  if (!change) throw new Error("Explanation refers to an unknown change");
-  if (!["stated", "inferred", "unknown"].includes(value.basis)) throw new Error("Invalid explanation basis");
-  const sources = evidenceSources(snapshot);
-  const evidence = array(value.evidence ?? [], "evidence", 6).map((reference) => {
-    const source = sources.get(reference.sourceId);
-    if (!source || !Number.isSafeInteger(reference.startLine) || !Number.isSafeInteger(reference.endLine)
-      || reference.startLine < 1 || reference.endLine < reference.startLine
-      || reference.endLine > source.text.split("\n").length
-      || reference.endLine - reference.startLine >= 40) throw new Error("Invalid explanation evidence range");
-    return { sourceId: source.id, startLine: reference.startLine, endLine: reference.endLine };
-  });
-  if (value.basis === "stated" && !evidence.some((entry) => sources.get(entry.sourceId).kind === "statement")) {
-    throw new Error("A stated reason needs a captured statement, not code alone");
-  }
-  if (change.kind === "unavailable" && value.basis === "inferred") {
-    throw new Error("Do not infer a code reason from unavailable content");
-  }
-  const result = { changeId: change.id, title: text(value.title, "reason title", 120),
-    why: text(value.why, "reason", 1_600), basis: value.basis,
-    effects: array(value.effects ?? [], "effects", 3).map((effect) => text(effect, "effect", 400)), evidence };
-  if (restriction("explanation", [JSON.stringify(result)])) throw new Error("Explanation contains restricted content");
-  return result;
+function explanationContext(snapshot) {
+  return { files: new Set(snapshot.files.map((file) => file.id)), sources: new Map(
+    [...evidenceSources(snapshot)].map(([id, source]) => [id, { kind: source.kind, lines: source.text.split("\n").length }]),
+  ) };
 }
 
+function validateExplanations(values, snapshot) {
+  const context = explanationContext(snapshot);
+  const entries = array(values, "explanations", snapshot.files.length).map((value) => {
+    record(value, "explanation");
+    if (Object.keys(value).some((key) => !["fileId", "title", "why", "basis", "evidence"].includes(key))) {
+      throw new Error("Unsupported explanation field");
+    }
+    if (!context.files.has(value.fileId)) throw new Error("Explanation refers to an unknown file");
+    if (!["stated", "inferred", "unknown"].includes(value.basis)) throw new Error("Invalid explanation basis");
+    const evidence = array(value.evidence ?? [], "evidence").map((reference) => {
+      const source = context.sources.get(reference.sourceId);
+      if (!source || !Number.isSafeInteger(reference.startLine) || !Number.isSafeInteger(reference.endLine)
+        || reference.startLine < 1 || reference.endLine < reference.startLine
+        || reference.endLine > source.lines) throw new Error("Invalid explanation evidence range");
+      return { sourceId: reference.sourceId, startLine: reference.startLine, endLine: reference.endLine };
+    });
+    if (value.basis === "stated" && !evidence.some((entry) => context.sources.get(entry.sourceId).kind === "statement")) {
+      throw new Error("A stated reason needs a captured statement, not code alone");
+    }
+    const result = { fileId: value.fileId, title: text(value.title, "reason title", LIMITS.inputBytes),
+      why: text(value.why, "reason", LIMITS.inputBytes), basis: value.basis, evidence };
+    if (restriction("explanation", [JSON.stringify(result)])) throw new Error("Explanation contains restricted content");
+    return result;
+  });
+  if (new Set(entries.map((entry) => entry.fileId)).size !== entries.length) throw new Error("Duplicate file explanations");
+  return entries;
+}
+
+/** Validate external documents once; internal transforms preserve this contract. */
 export function validateDocument(value) {
   record(value, "document");
-  if (value.schemaVersion !== 1 || !["en-US", "ko-KR"].includes(value.locale)
+  if (value.schemaVersion === 1) throw new Error("This is an older region reader. Keep it and capture a new file reader.");
+  if (value.schemaVersion !== 2 || !["en-US", "ko-KR"].includes(value.locale)
     || !["light", "dark", "system"].includes(value.theme)) throw new Error("Invalid document settings");
   const snapshot = validateSnapshot(value.snapshot);
-  const explanations = array(value.explanations, "explanations", snapshot.changes.length).map((entry) => validateExplanation(entry, snapshot));
-  if (new Set(explanations.map((entry) => entry.changeId)).size !== explanations.length) throw new Error("Duplicate explanations");
-  return { schemaVersion: 1, snapshot, locale: value.locale, theme: value.theme,
-    revision: natural(value.revision, "document revision"), explanations };
+  return { schemaVersion: 2, snapshot, locale: value.locale, theme: value.theme,
+    revision: natural(value.revision, "document revision"), explanations: validateExplanations(value.explanations, snapshot) };
 }
 
 export function mergeExplanations(document, input) {
   record(input, "input");
   if (input.snapshotId !== document.snapshot.id) throw new Error("Explanation input belongs to a different snapshot");
-  const replacements = array(input.explanations, "explanations", document.snapshot.changes.length).map(
-    (entry) => validateExplanation(entry, document.snapshot),
-  );
-  if (new Set(replacements.map((entry) => entry.changeId)).size !== replacements.length) throw new Error("Repeated explanation change ID");
-  const all = new Map(document.explanations.map((entry) => [entry.changeId, entry]));
-  for (const entry of replacements) all.set(entry.changeId, entry);
-  return validateDocument({ ...document, revision: document.revision + 1,
-    explanations: document.snapshot.changes.filter((entry) => all.has(entry.id)).map((entry) => all.get(entry.id)) });
+  const replacements = validateExplanations(input.explanations, document.snapshot);
+  const all = new Map(document.explanations.map((entry) => [entry.fileId, entry]));
+  for (const entry of replacements) all.set(entry.fileId, entry);
+  return { ...document, revision: document.revision + 1,
+    explanations: document.snapshot.files.filter((file) => all.has(file.id)).map((file) => all.get(file.id)) };
 }
 
-export function inspectDocument(document, { changeId, fileId, offset = 0 } = {}) {
+export function inspectDocument(document, { fileId, offset = 0 } = {}) {
   natural(offset, "offset");
-  if (changeId && !document.snapshot.changes.some((change) => change.id === changeId)) throw new Error("Unknown change ID");
-  if (fileId && !document.snapshot.files.some((file) => file.id === fileId || file.path === fileId)) throw new Error("Unknown file ID or path");
-  const candidates = document.snapshot.changes.filter((change) => (
-    (!changeId || change.id === changeId)
-    && (!fileId || change.fileId === fileId || document.snapshot.files.find((file) => file.id === change.fileId).path === fileId)
-  ));
-  const changes = [];
+  const candidates = document.snapshot.files.filter((file) => !fileId || file.id === fileId || file.path === fileId);
+  if (fileId && candidates.length === 0) throw new Error("Unknown file ID or path");
+  const explained = new Map(document.explanations.map((entry) => [entry.fileId, entry]));
+  const files = [];
   let bytes = 0;
-  for (const change of candidates.slice(offset)) {
-    const file = document.snapshot.files.find((entry) => entry.id === change.fileId);
-    const rows = change.kind === "text"
-      ? file.hunks[change.hunkIndex].rows.slice(Math.max(0, change.startRow - 3), change.endRow + 4)
-      : [];
-    const value = { ...change, path: file.path, previousPath: file.previousPath,
-      availability: file.availability, reason: file.reason, rows,
-      explanation: document.explanations.find((entry) => entry.changeId === change.id) ?? null };
+  for (const file of candidates.slice(offset)) {
+    const value = { ...file, explanation: explained.get(file.id) ?? null };
     const size = Buffer.byteLength(JSON.stringify(value));
-    if (changes.length > 0 && bytes + size > 48 * 1024) break;
-    changes.push(value);
+    if (files.length > 0 && bytes + size > 48 * 1024) break;
+    files.push(value);
     bytes += size;
-    if (changes.length >= 12) break;
   }
-  return { contentIsUntrusted: true, snapshotId: document.snapshot.id, head: document.snapshot.head,
-    target: document.snapshot.target.url, locale: document.locale,
-    files: document.snapshot.files.map(({ id, path, availability, changeIds }) => ({ id, path, availability, changeIds })),
-    sources: document.snapshot.sources, changes,
-    nextOffset: offset + changes.length < candidates.length ? offset + changes.length : null };
+  return { contentIsUntrusted: true, locale: document.locale, files,
+    ...(offset === 0 ? { sources: document.snapshot.sources } : {}),
+    nextOffset: offset + files.length < candidates.length ? offset + files.length : null };
 }

@@ -19,28 +19,27 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => { await cleanup(); });
 
-test("complete code, change/line navigation, explicit read undo and persistence", async ({ page }) => {
+test("complete code, file navigation, explicit read undo and persistence", async ({ page }) => {
   const errors = []; page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(url);
   await expect(page.locator(".file")).toHaveCount(4);
-  await expect(page.locator("[data-line]")).toHaveCount(6);
-  await expect(page.locator("#position")).toHaveText("01 / 5");
+  await expect(page.locator(".code-row.add, .code-row.del")).toHaveCount(6);
+  await expect(page.locator("#position")).toHaveText("01 / 4");
   await expect(page.locator("#selected-reason h3")).toHaveText("만료 시점부터 세션을 거부");
-  await expect(page.locator("#read-progress")).toContainText("0/7");
-  await page.locator("#next-change").click();
-  await expect(page.locator("#read-progress")).toContainText("0/7");
-  await page.locator("#read-change").click();
-  await expect(page.locator("#read-progress")).toContainText("2/7");
+  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await page.locator("#next-file").click();
+  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await page.locator("#read-file").click();
+  await expect(page.locator("#read-progress")).toContainText("1/3");
   await page.reload();
-  await expect(page.locator("#position")).toHaveText("02 / 5");
-  await expect(page.locator("#read-change")).toHaveAttribute("aria-pressed", "true");
-  await page.locator("[data-mode=line]").click();
-  await page.locator("#read-change").click();
-  await expect(page.locator("#read-progress")).toContainText("1/7");
-  await page.locator("[data-mode=change]").click();
-  await expect(page.locator("#read-change")).toHaveAttribute("aria-pressed", "false");
-  await page.locator("[data-select]").last().click();
-  await expect(page.locator("#read-change")).toBeDisabled();
+  await expect(page.locator("#position")).toHaveText("02 / 4");
+  await expect(page.locator("#read-file")).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#read-file").click();
+  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await expect(page.locator("#read-file")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("[data-mode]")).toHaveCount(0);
+  await page.locator("[data-file]").last().click();
+  await expect(page.locator("#read-file")).toBeDisabled();
   await expect(page.locator("#selected-reason .basis")).toHaveAttribute("data-basis", "unknown");
   expect(errors).toEqual([]);
 });
@@ -62,35 +61,35 @@ test("light, dark, system, evidence, keyboard and narrow layouts", async ({ page
   await expect(page.locator(".capture-info summary")).toBeFocused();
   for (const width of [640, 375, 320]) {
     await page.setViewportSize({ width, height: 800 });
-    await page.locator("[data-select]").first().click();
+    await page.locator("[data-file]").first().click();
     await expect(page.locator(".file .reason-aside")).toHaveCount(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(page.locator("#selected-reason h3")).toBeVisible();
-    await page.locator("#next-change").click();
-    await expect(page.locator("#position")).toHaveText("02 / 5");
+    await page.locator("#next-file").click();
+    await expect(page.locator("#position")).toHaveText("02 / 4");
   }
   await page.setViewportSize({ width: 1280, height: 800 });
   await expect(page.locator(".workspace > .reason-aside")).toHaveCount(1);
   await page.emulateMedia({ forcedColors: "active" });
-  await expect(page.locator("#read-change")).toBeVisible();
+  await expect(page.locator("#read-file")).toBeVisible();
 });
 
 test("progress export/import verifies snapshot and storage failure stays usable", async ({ page }) => {
   await page.addInitScript(() => { Object.defineProperty(window, "localStorage", { get() { throw new Error("unavailable"); } }); });
   await page.goto(url);
   await expect(page.locator("#storage-warning")).not.toBeEmpty();
-  await page.locator("#read-change").click();
+  await page.locator("#read-file").click();
   const downloadPromise = page.waitForEvent("download");
   await page.locator("#export-progress").click();
   const download = await downloadPromise;
   const progress = JSON.parse(await readFile(await download.path(), "utf8"));
-  expect(progress.read).toHaveLength(2);
+  expect(progress.read).toHaveLength(1);
   await page.reload();
-  await expect(page.locator("#read-progress")).toContainText("0/7");
+  await expect(page.locator("#read-progress")).toContainText("0/3");
   await page.locator("#progress-file").setInputFiles({ name: "progress.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(progress)) });
-  await expect(page.locator("#read-progress")).toContainText("2/7");
+  await expect(page.locator("#read-progress")).toContainText("1/3");
   await page.locator("#progress-file").setInputFiles({ name: "wrong.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ ...progress, snapshotId: "wrong" })) });
-  await expect(page.locator("#read-progress")).toContainText("2/7");
+  await expect(page.locator("#read-progress")).toContainText("1/3");
   await expect(page.locator("#storage-warning")).toContainText("다른 변경");
 });
 
@@ -120,4 +119,24 @@ test("JavaScript-disabled and print readers retain complete code and explanation
   await expect(page.locator(".inline-reason").first()).toBeVisible();
   await expect(page.locator(".inline-reason").first().locator("h3")).toBeVisible();
   await expect(page.locator(".reason-aside")).toBeHidden();
+});
+
+
+test("follow-up identifies the selected file and empty captures stay readable", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: async () => { throw new Error("disabled"); } } });
+  });
+  await page.goto(url);
+  await page.locator("[data-file]").nth(1).click();
+  await page.locator("#copy-request").click();
+  await expect(page.locator("#request-text")).toBeVisible();
+  await expect(page.locator("#request-text")).toHaveValue(new RegExp(snapshot.files[1].id));
+  await expect(page.locator("#request-text")).toHaveValue(/before\/after line numbers/u);
+  const directory = await temp("hope-deep-empty-");
+  const artifact = await createArtifact(await fixture({ files: [] }), { output: join(directory, "empty.html") });
+  const errors = []; page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(pathToFileURL(artifact.artifactPath).href);
+  await expect(page.locator(".file")).toHaveCount(0);
+  await expect(page.locator(".reason-aside")).toBeHidden();
+  expect(errors).toEqual([]);
 });

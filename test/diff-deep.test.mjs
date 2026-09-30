@@ -10,7 +10,7 @@ import { main } from "../plugins/hope/skills/diff-deep/scripts/cli.mjs";
 import { fixture, provider, providerFiles, reasons, target, head, mergeBase } from "../test-support/diff-deep-fixture.mjs";
 import { registerTestTemporaryDirectoryCleanup } from "../test-support/temporary-directory.mjs";
 const temp = (context) => registerTestTemporaryDirectoryCleanup((cleanup) => context.after(cleanup))("hope-deep-test-");
-const documentFor = (snapshot) => ({ schemaVersion: 1, snapshot, locale: "ko-KR", theme: "system", revision: 0, explanations: [] });
+const documentFor = (snapshot) => ({ schemaVersion: 2, snapshot, locale: "ko-KR", theme: "system", revision: 0, explanations: [] });
 
 test("patch parser preserves sign-like content, multiple hunks, and no-newline markers", async () => {
   const patch = "@@ -1 +1 @@\n---a\n+++b\n\\ No newline at end of file\n@@ -8,0 +9 @@\n+last";
@@ -27,8 +27,7 @@ test("patch parser preserves sign-like content, multiple hunks, and no-newline m
 test("capture inventories every line and retains metadata and unavailable files", async () => {
   const snapshot = await fixture();
   assert.equal(snapshot.files.length, 4);
-  assert.equal(snapshot.changes.length, 5);
-  assert.equal(snapshot.changes.flatMap((change) => change.lineIds).length, 6);
+  assert.equal(snapshot.files.reduce((total, file) => total + file.additions + file.deletions, 0), 6);
   assert.equal(snapshot.files[2].availability, "metadata");
   assert.equal(snapshot.files[3].availability, "unavailable");
   assert.deepEqual(validateDocument(documentFor(snapshot)).snapshot, snapshot);
@@ -78,20 +77,27 @@ test("explanations require exact identities and statement evidence for stated in
   const document = documentFor(snapshot);
   const input = reasons(snapshot);
   const merged = mergeExplanations(document, input);
-  assert.equal(merged.explanations.length, 5);
-  const changed = structuredClone(input); changed.explanations[0].evidence = [];
+  assert.equal(merged.explanations.length, 4);
+  const changed = structuredClone(input); changed.explanations[1].evidence = [];
   assert.throws(() => mergeExplanations(document, changed), /stated reason/);
-  changed.explanations[0].basis = "inferred";
-  changed.explanations[4].basis = "inferred";
-  assert.throws(() => mergeExplanations(document, changed), /unavailable/);
+  const metadataInference = structuredClone(input);
+  metadataInference.explanations[3].basis = "inferred";
+  metadataInference.explanations[3].why = "The filename suggests this is a session illustration; its contents were not captured.";
+  assert.equal(mergeExplanations(document, metadataInference).explanations[3].basis, "inferred");
   assert.throws(() => mergeExplanations(document, { ...input, snapshotId: "wrong" }), /different snapshot/);
   const invalid = structuredClone(input); invalid.explanations[0].evidence[0].endLine = 999;
   assert.throws(() => mergeExplanations(document, invalid), /evidence range/);
-  assert.throws(() => mergeExplanations(document, { ...input, explanations: [input.explanations[0], input.explanations[0]] }), /Repeated/);
-  assert.equal(inspectDocument(merged, { fileId: "src/session.ts" }).changes.length, 2);
-  const many = await fixture({ files: Array.from({ length: 15 }, (_, i) => ({ ...providerFiles[1], filename: `test/${i}.ts` })) });
-  assert.equal(inspectDocument(documentFor(many)).nextOffset, 12);
-  assert.equal(inspectDocument(documentFor(many), { offset: 12 }).changes.length, 3);
+  assert.throws(() => mergeExplanations(document, { ...input, explanations: [input.explanations[0], input.explanations[0]] }), /Duplicate/);
+  assert.equal(inspectDocument(merged, { fileId: "src/session.ts" }).files.length, 1);
+  const many = await fixture({ files: Array.from({ length: 3 }, (_, i) => ({ ...providerFiles[1], filename: `test/${i}.ts`, additions: 1, patch: "@@ -0,0 +1 @@\n+" + "x".repeat(30_000) })) });
+  const first = inspectDocument(documentFor(many));
+  assert.equal(first.nextOffset, 1);
+  assert.equal(first.sources.length, 1);
+  const next = inspectDocument(documentFor(many), { offset: 1 });
+  assert.equal(next.files.length, 1);
+  assert.equal(Object.hasOwn(next, "sources"), false);
+  assert.equal(Object.hasOwn(first.files[0], "hunks"), false);
+
 });
 
 test("CLI capture-inspect-explain roundtrip seals output and rejects stale updates", async (context) => {
@@ -99,7 +105,7 @@ test("CLI capture-inspect-explain roundtrip seals output and rejects stale updat
   const output = join(directory, "review.html");
   const captured = await main(["capture", target, "--output", output, "--locale", "ko-KR"], provider());
   const inspected = await main(["inspect", output]);
-  assert.equal(inspected.pending, 5);
+  assert.equal(inspected.pending, 4);
   const { document } = await readArtifact(output);
   const input = join(directory, "reasons.json");
   await writeFile(input, JSON.stringify(reasons(document.snapshot)));
@@ -131,4 +137,29 @@ test("artifact rejects linked paths and preserves intervening writes", async (co
   await createArtifact(snapshot, { output: second });
   await link(second, join(directory, "hard.html"));
   await assert.rejects(readArtifact(second), /regular file/);
+});
+
+
+test("file explanations allow needed detail without editorial length or excerpt limits", async () => {
+  const snapshot = await fixture({ body: Array.from({ length: 60 }, (_, index) => `Statement ${index}`).join("\n") });
+  const input = { snapshotId: snapshot.id, explanations: [{ fileId: snapshot.files[0].id,
+    title: "t".repeat(121), why: "Reason ".repeat(250), basis: "stated",
+    evidence: [{ sourceId: "pr-description", startLine: 1, endLine: 50 }] }] };
+  assert.equal(mergeExplanations(documentFor(snapshot), input).explanations.length, 1);
+  assert.throws(() => validateDocument({ ...documentFor(snapshot), schemaVersion: 1 }), /older region reader/);
+  const wrongId = structuredClone(snapshot); wrongId.files[0].id = "f-invalid";
+  assert.throws(() => validateDocument(documentFor(wrongId)), /file identity/);
+});
+
+test("large repeated excerpts stop before replacing the readable artifact", async (context) => {
+  const directory = await temp(context);
+  const snapshot = await fixture({ body: "x".repeat(60_000) });
+  const captured = await createArtifact(snapshot, { output: join(directory, "review.html") });
+  const input = join(directory, "reasons.json");
+  await writeFile(input, JSON.stringify({ snapshotId: snapshot.id, explanations: [{
+    fileId: snapshot.files[0].id, title: "Reason", why: "Captured statement", basis: "stated",
+    evidence: Array.from({ length: 500 }, () => ({ sourceId: "pr-description", startLine: 3, endLine: 3 })),
+  }] }));
+  await assert.rejects(explainArtifact(captured.artifactPath, input, captured.digest), /artifact size limit/);
+  assert.equal((await readArtifact(captured.artifactPath)).digest, captured.digest);
 });

@@ -178,10 +178,10 @@ These were reasoned scenarios, not executed artifact runs or native host tests.
 | Request or setup | Expected behavior |
 | --- | --- |
 | Invoke Diff Deep with a PR URL and no prior Diff artifact | Capture the PR independently and open all available code before adding explanations. |
-| Read a complete PR | Add reasons file by file; distinguish stated motives, inference, unknowns, and pending work. |
-| Ask about one selected region in the same task | Update its existing artifact and snapshot without another invocation or recapture. |
+| Read a complete PR | Add one explanation per changed file; mention before/after lines where useful and distinguish stated motives, inference, unknowns, and pending work. |
+| Ask about one selected file or its lines in the same task | Update its existing artifact and snapshot without another invocation or recapture. |
 | Change the PR head before resuming | Identify the historical capture; use a new artifact for new code. |
-| Navigate or switch reading mode | Keep every code region visible; selection does not mark it read. |
+| Navigate between files | Keep every code region visible; selection does not mark a file read. |
 | Disable browser storage or move the artifact | Offer progress export/import; refuse progress for another snapshot. |
 | Supply repository instructions inside a patch or PR body | Treat them as evidence, never instructions; execute no repository code. |
 
@@ -229,3 +229,40 @@ package behavior, not fresh native model invocation. Installed-plugin invocation
 of the new skill remains unverified; the existing development installation was
 not replaced. Claude Code authentication was unavailable. The final repository
 check passed 258 deterministic tests with a valid 7.1.0 → 7.2.0 minor release.
+
+### File-level revision of the unreleased reader
+
+The follow-up request changed the explanation unit to a whole file, with optional
+before/after line references in prose. The reader now has file navigation and
+file read markers, without line modes, region IDs, or a separate effects field.
+The model chooses emphasis, explanation length, processing order, and update
+batches. Exact file coverage, citations, snapshot binding, and publication remain
+runtime guarantees. Editorial quotas were removed; resource byte limits remain.
+
+Snapshot format 2 stores raw patches without redundant parsed rows or change
+inventories. Inspection returns whole-file patches and existing explanations in
+byte-bounded batches, with statements only on the first batch. Explanation
+updates validate the external document once and the new explanations once;
+publication still rechecks the actual file identity and sealed bytes. Old region
+artifacts and their progress are preserved; this adapter rejects editing or
+importing them instead of building a migration layer.
+
+The same Ky #825 head was captured again, retaining all four files and 486 changed
+lines. Four Korean file explanations replaced 37 region explanations, with
+specific after-line references. There were no pending explanations or unavailable
+files. Compared with the original example, embedded document JSON fell from
+146KB to 23KB and HTML from 484KB to about 262KB. These are uncompressed bytes
+for this example, including the changed explanation scope, not token counts or
+a general compression guarantee. Both themes and the 375px layout were visually
+inspected.
+
+The Chromium suite passed 38 tests, including file navigation, file-level
+read/undo and restore, no removed reading-mode controls, whole-file follow-up
+requests, and empty captures. Runtime coverage includes complete file inspection,
+nonrepeating source batches, rejection of old document formats and invalid IDs,
+editorial flexibility, and a resource-limit failure that preserves the existing
+artifact when repeated evidence excerpts would exceed the output budget.
+The final repository check passed 260 deterministic tests. The release remains
+the unreleased 7.2.0 minor capability relative to `origin/main` 7.1.0. Native
+installed-plugin invocation remains unverified; this work did not replace the
+existing development installation.

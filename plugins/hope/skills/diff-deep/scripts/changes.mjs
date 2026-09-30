@@ -123,47 +123,13 @@ export function parsePatch(patch, expected) {
   return { hunks, additions, deletions };
 }
 
-/** Runtime owns the change inventory; explanations never decide which lines exist. */
-export function indexChanges(files) {
-  const changes = [];
-  const indexed = files.map((file) => {
-    const id = `f-${digest([file.path, file.previousPath ?? ""]).slice(0, 20)}`;
-    if (file.availability !== "text") {
-      const changeId = `c-${digest([id, file.status, file.reason]).slice(0, 20)}`;
-      changes.push({ id: changeId, fileId: id, kind: file.availability, lineIds: [] });
-      return { ...file, id, hunks: [], changeIds: [changeId] };
-    }
-    const parsed = parsePatch(file.patch, file);
-    const changeIds = [];
-    const hunks = parsed.hunks.map((hunk, hunkIndex) => {
-      let active;
-      const rows = hunk.rows.map((row, rowIndex) => {
-        if (row.kind === "context") { active = undefined; return row; }
-        const lineId = `l-${digest([id, row.kind, row.oldLine, row.newLine, row.text]).slice(0, 24)}`;
-        if (!active) {
-          active = {
-            id: `c-${digest([id, hunkIndex, rowIndex, file.patch]).slice(0, 20)}`,
-            fileId: id, kind: "text", hunkIndex, startRow: rowIndex, endRow: rowIndex, lineIds: [],
-          };
-          changes.push(active);
-          changeIds.push(active.id);
-        }
-        active.endRow = rowIndex;
-        active.lineIds.push(lineId);
-        return { ...row, id: lineId, changeId: active.id };
-      });
-      return { ...hunk, rows };
-    });
-    // A complete empty patch still represents a file-level change (e.g. rename).
-    if (changeIds.length === 0) {
-      const changeId = `c-${digest([id, file.status]).slice(0, 20)}`;
-      changes.push({ id: changeId, fileId: id, kind: "metadata", lineIds: [] });
-      changeIds.push(changeId);
-    }
-    return { ...file, id, hunks, changeIds };
-  });
-  if (new Set(indexed.map((file) => file.id)).size !== indexed.length) {
+/** File identity is scoped by the captured snapshot; no per-line IDs are needed. */
+export function identifyFiles(files) {
+  const result = files.map((file) => ({
+    ...file, id: `f-${digest([file.path, file.previousPath ?? ""]).slice(0, 20)}`,
+  }));
+  if (new Set(result.map((file) => file.id)).size !== result.length) {
     throw new Error("Changed files contain duplicate identities");
   }
-  return { files: indexed, changes };
+  return result;
 }

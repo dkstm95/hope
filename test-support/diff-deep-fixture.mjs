@@ -45,12 +45,11 @@ export async function fixture(options) {
 }
 
 export function reasons(snapshot) {
-  return { snapshotId: snapshot.id, explanations: snapshot.changes.map((change, index) => ({
-    changeId: change.id,
-    title: ["만료 시점부터 세션을 거부", "상태 이름을 유효 기간에 맞춤", "경계 조건의 회귀를 방지", "문서 이름을 세션 용어에 맞춤", "이미지 변경의 이유는 확인되지 않음"][index],
-    why: ["만료 시각과 현재 시각이 같을 때도 세션이 허용되는 문제가 있었습니다. PR은 만료되는 순간부터 거부하도록 요구합니다.", "유효 기간이 남았다는 의미를 이름에 담으려는 변경으로 보입니다. 이름만으로 실제 연결 상태까지 보장하지는 않습니다.", "만료 시점의 세션은 거부하고 아직 시간이 남은 세션은 허용해야 합니다. 두 경계 사례를 고정해 같은 문제가 다시 생기는지 확인합니다.", "파일명도 코드에서 사용하는 세션 용어에 맞추려는 것으로 보입니다. 문서 본문은 바뀌지 않았습니다.", "텍스트 패치가 없는 이미지입니다. 캡처한 PR 설명에는 이미지 변경의 목적이 적혀 있지 않습니다."][index],
-    basis: ["stated", "inferred", "stated", "inferred", "unknown"][index],
-    effects: index === 0 ? ["만료 시각과 같은 요청도 거부됩니다."] : [],
-    evidence: [0, 2].includes(index) ? [{ sourceId: "pr-description", startLine: 3, endLine: 3 }] : [],
+  return { snapshotId: snapshot.id, explanations: snapshot.files.map((file, index) => ({
+    fileId: file.id,
+    title: ["만료 시점부터 세션을 거부", "경계 조건의 회귀를 방지", "문서 이름을 세션 용어에 맞춤", "이미지 변경의 이유는 확인되지 않음"][index],
+    why: ["만료 시각과 현재 시각이 같을 때도 세션이 허용되는 문제가 있었습니다. 변경 후 2줄은 만료되는 순간부터 거부합니다. 4줄의 이름도 유효 기간이 남았다는 뜻에 맞추려는 것으로 보입니다.", "만료 시점의 세션은 거부하고 아직 시간이 남은 세션은 허용해야 합니다. 두 경계 사례를 고정해 같은 문제가 다시 생기는지 확인합니다.", "파일명도 코드에서 사용하는 세션 용어에 맞추려는 것으로 보입니다. 문서 본문은 바뀌지 않았습니다.", "텍스트 패치가 없는 이미지입니다. 캡처한 PR 설명에는 이미지 변경의 목적이 적혀 있지 않습니다."][index],
+    basis: ["inferred", "stated", "inferred", "unknown"][index],
+    evidence: index < 2 ? [{ sourceId: "pr-description", startLine: 3, endLine: 3 }] : [],
   })) };
 }

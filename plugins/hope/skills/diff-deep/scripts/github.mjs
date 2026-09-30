@@ -5,7 +5,7 @@ import { devNull, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
-import { digest, indexChanges, LIMITS, parsePatch, restriction, safePath, text } from "./changes.mjs";
+import { digest, identifyFiles, LIMITS, parsePatch, restriction, safePath, text } from "./changes.mjs";
 
 const execFile = promisify(execFileCallback);
 const shaPattern = /^[a-f0-9]{40}$/u;
@@ -228,11 +228,11 @@ export async function collectPullRequest(targetValue, options = {}) {
   }
   const title = restriction("title", [String(pull.title)]) ? "Pull request" : text(pull.title, "PR title", 4_000);
   const sources = [source("pr-description", "statement", "PR", target.url, `${title}\n\n${pull.body ?? ""}`)].filter(Boolean);
-  const inventory = indexChanges(files);
+  const capturedFiles = identifyFiles(files);
   const core = { target, base: pull.base.sha, head: pull.head.sha, mergeBase,
     baseRepository: pull.base.repo.full_name, headRepository: pull.head.repo?.full_name ?? null,
-    files: inventory.files };
-  const snapshot = { schemaVersion: 1, id: digest(core), ...core, changes: inventory.changes,
+    files: capturedFiles };
+  const snapshot = { schemaVersion: 2, id: digest(core), ...core,
     title, capturedAt: (options.now ?? (() => new Date()))().toISOString(), sources };
   if (Buffer.byteLength(JSON.stringify(snapshot)) > LIMITS.snapshotBytes) throw new Error("Snapshot exceeds its size limit");
   return snapshot;

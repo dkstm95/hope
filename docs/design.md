@@ -690,25 +690,21 @@ features.
 
 Diff Deep uses a code inspector layout independently of Diff's Technical Record.
 On a wide screen, the complete captured diff occupies roughly two thirds of
-the view, with a compact, sticky reason panel alongside it. Selecting a region
-never filters out other code. On narrow screens, the panel follows the selected
-region inline; code and prose wrap without page-level horizontal scrolling.
+the view, with a compact, sticky file explanation alongside it. Selecting a
+file never filters out other code. On narrow screens, the panel follows that
+file's heading inline; code and prose wrap without page-level overflow.
 
 Use the compact monospace `diff-deep` wordmark, quiet file boundaries, mint
-selection accents, and the shared semantic artifact colors. Light, dark, and
-system controls expose their selected state and accessible names. No remote
-fonts or assets are required.
+selection accents, and shared semantic artifact colors. Light, dark, and system
+controls expose their selected state and accessible names. No remote assets
+are required.
 
-The panel leads with why: a short title, one or two paragraphs, optional
-consequences, and collapsed evidence. Show stated, inferred, or unknown basis.
-Keep previous, position, next, and the reversible read control in one small
-row. Changing selection does not mark anything read. Line and change modes
-share the same underlying line markers. Unavailable content cannot be marked
-fully read. Reading progress is separate from explanation coverage.
+Each file has one explanation: a short title, prose that leads with why, and
+collapsed evidence. Prose can point to before/after lines where useful. Do not
+add per-line or per-hunk explanation controls. Show stated, inferred, or unknown
+basis. Keep previous file, position, next file, and reversible file read status
+in one small row. Reading progress is separate from explanation coverage.
 
-All code renders before explanations. Pending reasons and unavailable files
-are explicit. Add explanations to the same HTML through the host's adapter;
-the browser can copy a follow-up request and reload the artifact. It does not
-call a model or keep a service running. Preserve the complete code and inline
-explanations for printing and browsers with JavaScript disabled. Interactive
-controls support keyboard focus, forced colors, and narrow viewports.
+Pending explanations and unavailable content stay visible. Retain complete code
+and inline explanations for printing and JavaScript-disabled reading, with
+keyboard focus, forced colors, and narrow viewport support.

@@ -7,7 +7,7 @@ import { addStatement, artifactStatus, captureArtifact, explainArtifact, inspect
 const help = `Use Hope Diff Deep through its private Skill adapter.
 
   capture [PR URL or number] [--output new.html] [--locale en-US|ko-KR] [--theme system|light|dark]
-  inspect artifact.html [--file id-or-path] [--change id] [--offset number]
+  inspect artifact.html [--file id-or-path] [--offset number]
   explain artifact.html --input reasons.json --expected-digest digest
   source artifact.html --url issue-or-PR-URL --expected-digest digest
   status artifact.html [--current]
@@ -25,7 +25,7 @@ function argumentsFor(argv) {
     const name = value.slice(2);
     if (Object.hasOwn(options, name)) throw new Error(`Repeated option --${name}`);
     if (name === "current") { options.current = true; continue; }
-    if (!["output", "locale", "theme", "file", "change", "offset", "input", "expected-digest", "url"].includes(name)) {
+    if (!["output", "locale", "theme", "file", "offset", "input", "expected-digest", "url"].includes(name)) {
       throw new Error(`Unknown option --${name}`);
     }
     const next = argv[++index];
@@ -40,7 +40,7 @@ export async function main(argv, dependencies = {}) {
   const [command, ...remaining] = argv;
   const { positional, options } = argumentsFor(remaining);
   const allowed = {
-    capture: ["output", "locale", "theme"], inspect: ["file", "change", "offset"],
+    capture: ["output", "locale", "theme"], inspect: ["file", "offset"],
     explain: ["input", "expected-digest"], source: ["url", "expected-digest"], status: ["current"],
   }[command];
   if (!allowed) throw new Error(`Unknown command: ${command}`);
@@ -50,7 +50,7 @@ export async function main(argv, dependencies = {}) {
   if (command === "capture") return await captureArtifact(target, { ...dependencies, ...options });
   if (command === "inspect") {
     if (options.offset !== undefined && !/^(?:0|[1-9][0-9]*)$/u.test(options.offset)) throw new Error("Offset must be nonnegative");
-    return await inspectArtifact(target, { fileId: options.file, changeId: options.change, offset: Number(options.offset ?? 0) });
+    return await inspectArtifact(target, { fileId: options.file, offset: Number(options.offset ?? 0) });
   }
   if (command === "status") return await artifactStatus(target, { ...dependencies, current: options.current ?? false });
   if (!options["expected-digest"]) throw new Error("--expected-digest is required");

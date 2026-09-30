@@ -40,16 +40,21 @@ function sealed(source) {
   return { html: neutral.replace(digestMeta, (_, before, old, after) => `${before}${hash}${after}`), digest: hash, stored: matches[0][2] };
 }
 
-export async function readArtifact(pathValue) {
+async function readSealedArtifact(pathValue) {
   const path = resolve(pathValue);
   const file = await regularFile(path, LIMITS.artifactBytes);
   const source = file.bytes.toString("utf8");
   const seal = sealed(source);
   if (seal.digest !== seal.stored) throw new Error("Artifact was changed outside Diff Deep");
+  return { path, identity: file.identity, source, digest: seal.digest };
+}
+
+export async function readArtifact(pathValue) {
+  const { path, identity, source, digest: seal } = await readSealedArtifact(pathValue);
   const blocks = [...source.matchAll(/<script id="diff-deep-document" type="application\/json">([\s\S]*?)<\/script>/gu)];
   if (blocks.length !== 1) throw new Error("Artifact has no unique captured document");
   const document = validateDocument(JSON.parse(blocks[0][1]));
-  return { path, identity: file.identity, document, digest: seal.digest };
+  return { path, identity, document, digest: seal };
 }
 
 async function parentFor(path) {
@@ -95,7 +100,7 @@ async function writeArtifact(path, document, original, options = {}) {
     await options.beforePublish?.();
     await verifyParent(parent);
     if (original) {
-      const current = await readArtifact(path);
+      const current = await readSealedArtifact(path);
       if (!sameFile(current.identity, original.identity) || current.digest !== original.digest) {
         throw new Error("Artifact changed before the explanation update");
       }
@@ -121,14 +126,14 @@ async function writeArtifact(path, document, original, options = {}) {
 function result(path, document) {
   const { snapshot } = document;
   return { artifactPath: path, target: snapshot.target.url, head: snapshot.head, mergeBase: snapshot.mergeBase,
-    snapshotId: snapshot.id, revision: document.revision, files: snapshot.files.length,
-    changes: snapshot.changes.length, explained: document.explanations.length,
-    pending: snapshot.changes.length - document.explanations.length,
+    snapshotId: snapshot.id, revision: document.revision, fileCount: snapshot.files.length,
+    explained: document.explanations.length,
+    pending: snapshot.files.length - document.explanations.length,
     unavailableFiles: snapshot.files.filter((file) => file.availability === "unavailable").length };
 }
 
 export async function createArtifact(snapshot, { output, locale = "en-US", theme = "system", ...options } = {}) {
-  const document = validateDocument({ schemaVersion: 1, snapshot, locale, theme, revision: 0, explanations: [] });
+  const document = validateDocument({ schemaVersion: 2, snapshot, locale, theme, revision: 0, explanations: [] });
   const path = output
     ? await preflightOutput(output)
     : join(await mkdtemp(join(await realpath(tmpdir()), "hope-diff-deep-")), "review.html");
@@ -147,7 +152,7 @@ async function updateArtifact(path, expectedDigest, transform, options) {
   const original = await readArtifact(path);
   if (original.digest !== expectedDigest) throw new Error("Artifact digest is stale; inspect it before updating");
   const document = await transform(original.document);
-  return await writeArtifact(original.path, validateDocument(document), original, options);
+  return await writeArtifact(original.path, document, original, options);
 }
 
 export async function explainArtifact(path, inputPath, expectedDigest, options = {}) {

@@ -149,14 +149,14 @@ Ky PR #825.](docs/diffs/ky-825-default-run.en.html)
 
 ---
 
-### 🔎 Diff Deep — Read every change beside its reason
+### 🔎 Diff Deep — Understand why each file changed
 
 Invoke `$hope:diff-deep` with a GitHub PR to open an independent reader. The
 complete captured diff stays on the left; a compact panel explains why the
-selected change was made. Code appears first, and reasons are added file by
-file. Stated motives, inferred purposes, and unknown reasons stay distinct.
+selected file changed, mentioning before/after lines when helpful. Code appears
+first; file explanations follow. Stated motives, inferred purposes, and unknown reasons stay distinct.
 
-Navigate by change or changed line, mark what you have read, and switch between
+Navigate between files, mark each file read, and switch between
 light, dark, and system appearance. Progress belongs to the captured revision
 and can be exported. The reader is one HTML file with no running server or
 browser AI calls. Missing text and pending explanations remain visible.

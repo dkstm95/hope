@@ -1,6 +1,6 @@
 interface:
   display_name: "Hope Diff Deep"
-  short_description: "Read every PR change and understand why it was made"
-  default_prompt: "Use $hope:diff-deep to read this pull request and explain why each change was made."
+  short_description: "Explain why each file changed beside the complete PR diff"
+  default_prompt: "Use $hope:diff-deep to read this pull request and explain why each file changed."
 policy:
   allow_implicit_invocation: false
