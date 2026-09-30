@@ -51,6 +51,7 @@ skills/diff-deep/scripts/changes.mjs
 skills/diff-deep/scripts/cli.mjs
 skills/diff-deep/scripts/client.mjs
 skills/diff-deep/scripts/github.mjs
+skills/diff-deep/scripts/layout.mjs
 skills/diff-deep/scripts/locales.mjs
 skills/diff-deep/scripts/model.mjs
 skills/diff-deep/scripts/render.mjs

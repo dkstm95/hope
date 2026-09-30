@@ -24,7 +24,7 @@
       "Use $hope:sweep to remove proven codebase waste without changing customer-observed behavior.",
       "Use $hope:toxic-review to challenge this plan.",
       "Use $hope:diff to explain the current pull request.",
-      "Use $hope:diff-deep to explain why each file changed in this PR.",
+      "Use $hope:diff-deep to organize this PR into meaningful change groups and explain why they changed.",
       "Use $hope:diagram to make this explanatory diagram or data chart clear, faithful, and accessible."
     ],
     "brandColor": "#087EA4",

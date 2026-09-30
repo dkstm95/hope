@@ -689,22 +689,27 @@ features.
 ## Diff Deep reader
 
 Diff Deep uses a code inspector layout independently of Diff's Technical Record.
-On a wide screen, the complete captured diff occupies roughly two thirds of
-the view, with a compact, sticky file explanation alongside it. Selecting a
-file never filters out other code. On narrow screens, the panel follows that
-file's heading inline; code and prose wrap without page-level overflow.
+The model arranges all captured code into meaningful groups on the left, with
+a compact, sticky detail panel for the selected group on the right. Groups may
+span files or split one file. Preserve paths, before/after line numbers, and
+each captured row exactly once. Shared code is linked as evidence. Unassigned
+changes remain in visible pending sections, not hidden behind a filter.
+
+Group titles and code select the same group. A code selection also highlights
+its location and shows its optional contextual note in the detail panel. On
+narrow screens the panel follows the selected group's heading inline. Keep
+code and prose wrapping without page-level overflow. Reloading after regrouping
+follows the selected code and viewport; it must not transfer read markers to
+new or revised explanations.
 
 Use the compact monospace `diff-deep` wordmark, quiet file boundaries, mint
 selection accents, and shared semantic artifact colors. Light, dark, and system
 controls expose their selected state and accessible names. No remote assets
 are required.
 
-Each file has one explanation: a short title, prose that leads with why, and
-collapsed evidence. Prose can point to before/after lines where useful. Do not
-add per-line or per-hunk explanation controls. Show stated, inferred, or unknown
-basis. Keep previous file, position, next file, and reversible file read status
-in one small row. Reading progress is separate from explanation coverage.
-
-Pending explanations and unavailable content stay visible. Retain complete code
-and inline explanations for printing and JavaScript-disabled reading, with
-keyboard focus, forced colors, and narrow viewport support.
+Each group has a short title, prose that leads with why, and collapsed evidence.
+Show stated, inferred, or unknown basis. Keep previous group, position, next
+group, and reversible group read status in one small row. Reading progress is
+separate from grouping coverage; unavailable code cannot count as fully read.
+Retain all code and inline explanations for printing and JavaScript-disabled
+reading, with keyboard focus, forced colors, and narrow viewport support.

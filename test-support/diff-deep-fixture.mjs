@@ -45,11 +45,21 @@ export async function fixture(options) {
 }
 
 export function reasons(snapshot) {
-  return { snapshotId: snapshot.id, explanations: snapshot.files.map((file, index) => ({
-    fileId: file.id,
-    title: ["만료 시점부터 세션을 거부", "경계 조건의 회귀를 방지", "문서 이름을 세션 용어에 맞춤", "이미지 변경의 이유는 확인되지 않음"][index],
-    why: ["만료 시각과 현재 시각이 같을 때도 세션이 허용되는 문제가 있었습니다. 변경 후 2줄은 만료되는 순간부터 거부합니다. 4줄의 이름도 유효 기간이 남았다는 뜻에 맞추려는 것으로 보입니다.", "만료 시점의 세션은 거부하고 아직 시간이 남은 세션은 허용해야 합니다. 두 경계 사례를 고정해 같은 문제가 다시 생기는지 확인합니다.", "파일명도 코드에서 사용하는 세션 용어에 맞추려는 것으로 보입니다. 문서 본문은 바뀌지 않았습니다.", "텍스트 패치가 없는 이미지입니다. 캡처한 PR 설명에는 이미지 변경의 목적이 적혀 있지 않습니다."][index],
-    basis: ["inferred", "stated", "inferred", "unknown"][index],
-    evidence: index < 2 ? [{ sourceId: "pr-description", startLine: 3, endLine: 3 }] : [],
-  })) };
+  const [implementation, tests, docs, image] = snapshot.files;
+  return { snapshotId: snapshot.id, groups: [
+    { id: "g-expiration", title: "만료 시점부터 세션을 거부", basis: "stated",
+      why: "만료 시각과 현재 시각이 같을 때도 세션이 허용되는 문제가 있었습니다. 비교 조건과 두 경계 테스트를 함께 바꿔 만료되는 순간부터 거부합니다.",
+      parts: [{ fileId: implementation.id, startLine: 3, endLine: 4, note: "변경 후 2줄에서 만료 시각과 같은 경우를 제외합니다." },
+        { fileId: tests.id, note: "거부해야 할 경계와 허용해야 할 경계를 함께 확인합니다." }],
+      evidence: [{ sourceId: "pr-description", startLine: 3, endLine: 3 }, { sourceId: implementation.id, startLine: 3, endLine: 4 }] },
+    { id: "g-label", title: "유효 기간이 남았다는 뜻을 이름에 반영", basis: "inferred",
+      why: "active 대신 unexpired로 바꿔 이름이 실제 비교 조건을 표현하게 하려는 것으로 보입니다.",
+      parts: [{ fileId: implementation.id, startLine: 6, endLine: 7 }], evidence: [] },
+    { id: "g-docs", title: "문서 이름을 세션 용어에 맞춤", basis: "inferred",
+      why: "파일명도 코드에서 사용하는 세션 용어에 맞추려는 것으로 보입니다. 문서 본문은 바뀌지 않았습니다.",
+      parts: [{ fileId: docs.id }], evidence: [] },
+    { id: "g-image", title: "이미지 변경의 이유는 확인되지 않음", basis: "unknown",
+      why: "텍스트 패치가 없는 이미지입니다. 캡처한 PR 설명에는 이미지 변경의 목적이 적혀 있지 않습니다.",
+      parts: [{ fileId: image.id }], evidence: [] },
+  ] };
 }

@@ -1,42 +1,59 @@
 /** Embedded as a fixed script. This function has no module or network dependencies. */
 export function mount() {
+  history.scrollRestoration = "manual";
   const model = JSON.parse(document.getElementById("diff-deep-document").textContent);
   const { labels, artifactPath } = JSON.parse(document.getElementById("diff-deep-view").textContent);
   const snapshot = model.snapshot;
   const $ = (id) => document.getElementById(id);
+  const groups = [...document.querySelectorAll(".change-group")];
+  const groupIds = groups.map((group) => group.id);
+  const parts = [...document.querySelectorAll(".diff-part")];
   const files = new Map(snapshot.files.map((file) => [file.id, file]));
-  const fileIds = [...files.keys()];
-  const readable = new Set(snapshot.files.filter((file) => file.availability !== "unavailable").map((file) => file.id));
-  const storageKey = `hope.diff-deep.v2:${snapshot.id}`;
+  const rows = new Map();
+  for (const part of parts) {
+    if (!rows.has(part.dataset.file)) rows.set(part.dataset.file, new Map());
+    const index = rows.get(part.dataset.file);
+    if (!part.querySelector(".code-row")) index.set(0, part);
+    for (const row of part.querySelectorAll(".code-row")) index.set(Number(row.dataset.sourceLine), row);
+  }
+  const readable = new Set(groups.filter((group) => group.dataset.readable === "true").map((group) => group.dataset.fingerprint));
+  const storageKey = `hope.diff-deep.v3:${snapshot.id}`;
   const narrow = matchMedia("(max-width: 760px)");
-  let selected = fileIds[0] ?? null;
+  const reference = (element) => {
+    const part = element.closest(".diff-part");
+    return { fileId: part.dataset.file, sourceLine: Number(element.dataset.sourceLine ?? part.dataset.firstLine) };
+  };
+  const elementFor = (anchor) => anchor && rows.get(anchor.fileId)?.get(anchor.sourceLine);
+  let selected = groupIds[0] ?? null;
+  let anchor = parts[0] ? reference(parts[0]) : null;
+  let detail = false;
+  let viewport = null;
   let read = new Set();
   let storageOK = true;
 
   function restore(value) {
-    if (!value || value.schemaVersion !== 2 || value.snapshotId !== snapshot.id
-      || (fileIds.length ? !files.has(value.selected) : value.selected !== null)
-      || !Array.isArray(value.read) || value.read.length > readable.size
-      || value.read.some((id) => !readable.has(id))) throw new Error(labels.invalidProgress);
-    selected = value.selected;
-    read = new Set(value.read);
+    if (!value || value.schemaVersion !== 3 || value.snapshotId !== snapshot.id
+      || (parts.length ? !elementFor(value.anchor) : value.anchor !== null)
+      || typeof value.detail !== "boolean" || !Array.isArray(value.read)
+      || value.read.length > 20_500 || value.read.some((id) => typeof id !== "string" || !/^[a-f0-9]{64}$/u.test(id))
+      || (value.viewport !== null && (!elementFor(value.viewport?.anchor) || !Number.isFinite(value.viewport?.offset)))) {
+      throw new Error(labels.invalidProgress);
+    }
+    anchor = value.anchor;
+    detail = value.detail;
+    viewport = value.viewport;
+    selected = elementFor(anchor)?.closest(".change-group").id ?? null;
+    read = new Set(value.read.filter((id) => readable.has(id)));
   }
-
-  function progress() {
-    return { schemaVersion: 2, snapshotId: snapshot.id, selected, read: [...read] };
-  }
-
+  function progress() { return { schemaVersion: 3, snapshotId: snapshot.id, anchor, detail, viewport, read: [...read] }; }
   function storageMessage() {
     $("storage-warning").textContent = storageOK ? "" : labels.storageUnavailable;
     $("storage-description").textContent = storageOK ? labels.restored : labels.storageUnavailable;
   }
-
   function save() {
-    try { localStorage.setItem(storageKey, JSON.stringify(progress())); }
-    catch { storageOK = false; }
+    try { localStorage.setItem(storageKey, JSON.stringify(progress())); } catch { storageOK = false; }
     storageMessage();
   }
-
   try {
     const previous = localStorage.getItem(storageKey);
     if (previous) restore(JSON.parse(previous));
@@ -44,125 +61,138 @@ export function mount() {
 
   function movePanel() {
     const panel = document.querySelector(".reason-aside");
-    if (narrow.matches && selected) $(selected).querySelector(".file-heading").after(panel);
+    if (narrow.matches && selected) $(selected).querySelector(".group-heading").after(panel);
     else document.querySelector(".workspace").append(panel);
   }
-
-  function updateRead(id) {
-    $(id).querySelector(".file-read").textContent = read.has(id) ? "✓" : "";
-    const checked = read.has(selected);
-    $("read-file").disabled = !readable.has(selected);
-    $("read-file").setAttribute("aria-pressed", String(checked));
-    $("read-file").setAttribute("aria-label", checked ? labels.undoRead : labels.reviewed);
-    $("read-file").dataset.tip = checked ? labels.undoRead : labels.reviewed;
+  function updateRead() {
+    for (const group of groups) group.querySelector(".group-read").textContent = read.has(group.dataset.fingerprint) ? "✓" : "";
+    const fingerprint = $(selected)?.dataset.fingerprint;
+    const checked = read.has(fingerprint);
+    $("read-group").disabled = !readable.has(fingerprint);
+    $("read-group").setAttribute("aria-pressed", String(checked));
+    $("read-group").setAttribute("aria-label", checked ? labels.undoRead : labels.reviewed);
+    $("read-group").dataset.tip = checked ? labels.undoRead : labels.reviewed;
     $("read-progress").textContent = `${read.size}/${readable.size} ${labels.read}`;
   }
-
-  function select(id, scroll = false) {
-    if (!files.has(id)) return;
-    if (selected) {
-      $(selected).classList.remove("selected-file");
-      $(selected).querySelector(".file-select").setAttribute("aria-pressed", "false");
-    }
+  function select(id, element = null, scroll = false) {
+    if (!groupIds.includes(id)) return;
+    document.querySelectorAll(".selected-group, .selected-part, .selected-code").forEach((item) => {
+      item.classList.remove("selected-group", "selected-part", "selected-code");
+    });
+    for (const group of groups) group.querySelector(".group-select").setAttribute("aria-pressed", String(group.id === id));
     selected = id;
-    $(id).classList.add("selected-file");
-    $(id).querySelector(".file-select").setAttribute("aria-pressed", "true");
-    const index = fileIds.indexOf(id);
-    $("position").textContent = `${String(index + 1).padStart(2, "0")} / ${fileIds.length}`;
-    $("previous-file").disabled = index === 0;
-    $("next-file").disabled = index === fileIds.length - 1;
-    const template = $(`reason-${id}`);
+    const group = $(id);
+    group.classList.add("selected-group");
+    detail = Boolean(element);
+    anchor = reference(element ?? group.querySelector(".diff-part"));
+    const index = groupIds.indexOf(id);
+    $("position").textContent = `${String(index + 1).padStart(2, "0")} / ${groupIds.length}`;
+    $("previous-group").disabled = index === 0;
+    $("next-group").disabled = index === groupIds.length - 1;
     const content = $("selected-reason");
-    content.replaceChildren(...[...template.children].filter((element) => element.tagName !== "SUMMARY").map((element) => element.cloneNode(true)));
-    const location = document.createElement("div");
-    location.className = "reason-location";
-    location.textContent = files.get(id).path;
-    content.querySelector(".reason-copy").prepend(location);
+    content.replaceChildren(...[...$(`reason-${id}`).children].filter((item) => item.tagName !== "SUMMARY").map((item) => item.cloneNode(true)));
+    if (element) {
+      const part = element.closest(".diff-part");
+      part.classList.add("selected-part");
+      if (element.matches(".code-row")) element.classList.add("selected-code");
+      const context = document.createElement("div");
+      context.className = "selected-context";
+      const location = document.createElement("div");
+      location.className = "reason-location";
+      location.textContent = `${labels.selectedCode} · ${files.get(anchor.fileId).path}`
+        + (element.matches(".code-row") ? ` · ${element.querySelector(".sr-only").textContent.replace(/: $/u, "")}` : "");
+      context.append(location);
+      const note = part.querySelector(".part-note");
+      if (note) { const paragraph = document.createElement("p"); paragraph.textContent = note.textContent; context.append(paragraph); }
+      content.querySelector(".reason-copy").append(context);
+      for (const entry of content.querySelectorAll(".evidence-entry")) {
+        if (entry.dataset.source === anchor.fileId && Number(entry.dataset.start) <= anchor.sourceLine && Number(entry.dataset.end) >= anchor.sourceLine) entry.classList.add("related-evidence");
+      }
+    }
     $("request-feedback").textContent = "";
     $("request-text").hidden = true;
-    updateRead(id);
-    movePanel();
-    if (scroll) $(id).scrollIntoView({ block: "start", behavior: "instant" });
+    updateRead(); movePanel();
+    if (scroll) (element ?? group).scrollIntoView({ block: "start", behavior: "instant" });
   }
-
-  for (const id of fileIds) {
-    $(id).querySelector(".file-select").addEventListener("click", () => { select(id); save(); });
-    $(id).querySelector(".file-read").textContent = read.has(id) ? "✓" : "";
-  }
-  for (const [buttonId, delta] of [["previous-file", -1], ["next-file", 1]]) {
-    $(buttonId).addEventListener("click", () => {
-      const id = fileIds[fileIds.indexOf(selected) + delta];
-      if (id) { select(id, true); save(); }
+  for (const group of groups) group.querySelector(".group-select").addEventListener("click", () => { select(group.id); save(); });
+  for (const part of parts) {
+    part.querySelector(".part-select").addEventListener("click", () => { select(part.dataset.group, part); save(); });
+    part.addEventListener("click", (event) => {
+      const row = event.target.closest(".code-row");
+      if (row && !window.getSelection()?.toString()) { select(part.dataset.group, row); save(); }
     });
   }
-  $("read-file").addEventListener("click", () => {
-    if (!readable.has(selected)) return;
-    read.has(selected) ? read.delete(selected) : read.add(selected);
-    updateRead(selected); save();
+  for (const [buttonId, delta] of [["previous-group", -1], ["next-group", 1]]) $(buttonId).addEventListener("click", () => {
+    const id = groupIds[groupIds.indexOf(selected) + delta];
+    if (id) { select(id, null, true); save(); }
   });
-  for (const button of document.querySelectorAll("[data-theme-choice]")) {
-    button.addEventListener("click", () => {
-      document.documentElement.dataset.theme = button.dataset.themeChoice;
-      document.querySelectorAll("[data-theme-choice]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
-    });
-  }
-  $("refresh").hidden = model.explanations.length === fileIds.length;
+  $("read-group").addEventListener("click", () => {
+    const key = $(selected)?.dataset.fingerprint;
+    if (!readable.has(key)) return;
+    read.has(key) ? read.delete(key) : read.add(key);
+    updateRead(); save();
+  });
+  for (const button of document.querySelectorAll("[data-theme-choice]")) button.addEventListener("click", () => {
+    document.documentElement.dataset.theme = button.dataset.themeChoice;
+    document.querySelectorAll("[data-theme-choice]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
+  });
+  $("refresh").hidden = !document.querySelector(".pending-group");
   $("refresh").addEventListener("click", () => location.reload());
   $("copy-request").addEventListener("click", async () => {
     const artifact = location.protocol === "file:" ? decodeURIComponent(location.pathname) : artifactPath;
-    const prompt = `Use $hope:diff-deep to explain why ${JSON.stringify(files.get(selected).path)} (file ${selected}) changed in ${JSON.stringify(artifact)}. `
-      + `Keep snapshot ${snapshot.id} (head ${snapshot.head}), mention before/after line numbers where helpful, and update this file's explanation in the artifact.`;
-    try {
-      await navigator.clipboard.writeText(prompt);
-      $("request-feedback").textContent = labels.copied;
-    } catch {
-      $("request-feedback").textContent = labels.copyFailed;
-      $("request-text").value = prompt;
-      $("request-text").hidden = false;
-      $("request-text").focus();
-      $("request-text").select();
-    }
+    const prompt = `Use $hope:diff-deep to explain or refine group ${JSON.stringify(selected)} in ${JSON.stringify(artifact)}. `
+      + `Selected code: ${JSON.stringify(anchor)}. Keep snapshot ${snapshot.id} (head ${snapshot.head}), mention before/after line numbers where helpful, and preserve other groups when submitting the full group list.`;
+    try { await navigator.clipboard.writeText(prompt); $("request-feedback").textContent = labels.copied; }
+    catch { $("request-feedback").textContent = labels.copyFailed; $("request-text").value = prompt; $("request-text").hidden = false; $("request-text").focus(); $("request-text").select(); }
   });
   $("export-progress").addEventListener("click", () => {
     const url = URL.createObjectURL(new Blob([JSON.stringify(progress(), null, 2)], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `diff-deep-${snapshot.head.slice(0, 12)}-progress.json`;
-    link.click();
+    const link = document.createElement("a"); link.href = url; link.download = `diff-deep-${snapshot.head.slice(0, 12)}-progress.json`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1_000);
   });
   $("import-progress").addEventListener("click", () => $("progress-file").click());
+  function restoreViewport() {
+    if (viewport) window.scrollBy(0, elementFor(viewport.anchor).getBoundingClientRect().top - viewport.offset);
+  }
   $("progress-file").addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     try {
       if (file.size > 2 * 1024 * 1024) throw new Error(labels.invalidProgress);
       restore(JSON.parse(await file.text()));
-      for (const id of fileIds) $(id).querySelector(".file-read").textContent = read.has(id) ? "✓" : "";
-      document.querySelectorAll(".selected-file").forEach((element) => {
-        element.classList.remove("selected-file");
-        element.querySelector(".file-select").setAttribute("aria-pressed", "false");
-      });
-      select(selected); save();
+      select(selected, detail ? elementFor(anchor) : null); restoreViewport(); save();
       $("storage-warning").textContent = storageOK ? labels.imported : labels.storageUnavailable;
     } catch { $("storage-warning").textContent = labels.invalidProgress; }
     event.target.value = "";
   });
-  for (const link of document.querySelectorAll(".file-index a")) link.addEventListener("click", () => {
-    select(link.hash.slice(1)); save();
-    link.closest("details").open = false;
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      for (const details of document.querySelectorAll(".capture-info[open], .file-index[open]")) {
-        details.open = false;
-        details.querySelector("summary").focus();
-      }
+  document.addEventListener("click", (event) => {
+    const source = event.target.closest("[data-reference-file]");
+    if (source) {
+      const entries = [...(rows.get(source.dataset.referenceFile)?.entries() ?? [])];
+      const row = entries.filter(([line]) => line >= Number(source.dataset.referenceLine)).sort((a, b) => a[0] - b[0])[0]?.[1];
+      if (row) { select(row.closest(".change-group").id, row, true); save(); }
+    }
+    const link = event.target.closest('.file-index a, .limits a');
+    if (link) {
+      const target = $(link.hash.slice(1));
+      if (target) { event.preventDefault(); select(target.closest(".change-group").id, target.matches(".diff-part") ? target : null, true); save(); link.closest("details").open = false; }
     }
   });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") for (const details of document.querySelectorAll(".capture-info[open], .file-index[open]")) { details.open = false; details.querySelector("summary").focus(); }
+  });
+  let scrollTimer;
+  window.addEventListener("scroll", () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const box = $("changes").getBoundingClientRect();
+      const element = document.elementFromPoint(box.left + box.width / 2, 24)?.closest(".code-row, .diff-part");
+      if (element) { viewport = { anchor: reference(element), offset: element.getBoundingClientRect().top }; save(); }
+    }, 120);
+  }, { passive: true });
   narrow.addEventListener("change", movePanel);
   document.documentElement.classList.add("enhanced");
-  $("reason-panel").parentElement.hidden = fileIds.length === 0;
-  select(selected);
-  storageMessage();
+  $("reason-panel").parentElement.hidden = groupIds.length === 0;
+  select(selected, detail ? elementFor(anchor) : null);
+  requestAnimationFrame(restoreViewport); storageMessage();
 }

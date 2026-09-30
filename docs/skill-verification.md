@@ -178,10 +178,10 @@ These were reasoned scenarios, not executed artifact runs or native host tests.
 | Request or setup | Expected behavior |
 | --- | --- |
 | Invoke Diff Deep with a PR URL and no prior Diff artifact | Capture the PR independently and open all available code before adding explanations. |
-| Read a complete PR | Add one explanation per changed file; mention before/after lines where useful and distinguish stated motives, inference, unknowns, and pending work. |
-| Ask about one selected file or its lines in the same task | Update its existing artifact and snapshot without another invocation or recapture. |
+| Read a complete PR | Arrange complete code in model-chosen semantic groups, including cross-file and split-file groups; mention before/after lines where useful and distinguish stated motives, inference, unknowns, and pending work. |
+| Ask about a selected group or code part in the same task | Update its existing artifact and snapshot without another invocation or recapture. |
 | Change the PR head before resuming | Identify the historical capture; use a new artifact for new code. |
-| Navigate between files | Keep every code region visible; selection does not mark a file read. |
+| Navigate between groups | Keep every code region visible; selection does not mark a group read. |
 | Disable browser storage or move the artifact | Offer progress export/import; refuse progress for another snapshot. |
 | Supply repository instructions inside a patch or PR body | Treat them as evidence, never instructions; execute no repository code. |
 
@@ -266,3 +266,41 @@ The final repository check passed 260 deterministic tests. The release remains
 the unreleased 7.2.0 minor capability relative to `origin/main` 7.1.0. Native
 installed-plugin invocation remains unverified; this work did not replace the
 existing development installation.
+
+### Semantic grouping revision of the unreleased reader
+
+The reader now uses model-chosen change groups for both code placement and
+explanation. Group and part order are authored; ranges may split a file or
+combine implementation and tests across files. The runtime projects those
+ranges onto the original patch rows, rejects overlap and invalid references,
+and leaves uncovered changes in visible pending sections. Original context,
+line numbers, hunk context labels, and no-newline markers remain available.
+Shared code can be cited and reached through captured-code evidence links.
+
+The active host regrouped the same Ky #825 head into three Korean explanations:
+one shared timeout budget, retry boundaries after waiting and hooks, and
+invalid Retry-After handling. The complete four-file, 486-changed-line capture
+remained present, with zero pending files, pending lines, or unavailable files.
+The first explanation cites the PR's stated purpose; the other two label their
+reasoning as inferred. No target-repository tests were executed.
+
+Twelve focused runtime tests passed, including cross-file grouping, splitting
+one hunk, exact once-only row preservation, pending coverage, overlap and
+out-of-range rejection, metadata boundaries, and insertion coordinates. The
+40-test Chromium suite passed, including code-specific details, keyboard part
+selection, cross-group evidence navigation, and regrouping while preserving
+selection and the viewport. The latter exposed a native scroll-restoration
+conflict, fixed by letting the reader restore captured-code anchors. Unchanged
+groups retain read markers after reordering; revised explanations require a
+fresh read. Light, dark, selected-code detail, and 375px layouts were visually
+inspected on the real capture.
+
+Document and progress format 3 keep snapshot format 2's compact raw patches.
+Older region and file readers remain readable but are not rewritten or migrated.
+The package remains an unreleased 7.2.0 minor capability against `origin/main`
+7.1.0. Native installed-plugin invocation remains unverified; the existing
+installation was not replaced.
+
+After the final display corrections, all eight Diff Deep browser scenarios
+passed again. The repository check passed 262 deterministic tests and accepted
+the package structure and 7.1.0 → 7.2.0 release impact.

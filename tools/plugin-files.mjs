@@ -96,6 +96,7 @@ export const staticPluginFiles = Object.freeze([
   "plugins/hope/skills/diff-deep/scripts/cli.mjs",
   "plugins/hope/skills/diff-deep/scripts/client.mjs",
   "plugins/hope/skills/diff-deep/scripts/github.mjs",
+  "plugins/hope/skills/diff-deep/scripts/layout.mjs",
   "plugins/hope/skills/diff-deep/scripts/locales.mjs",
   "plugins/hope/skills/diff-deep/scripts/model.mjs",
   "plugins/hope/skills/diff-deep/scripts/render.mjs",

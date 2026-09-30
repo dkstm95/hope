@@ -6,7 +6,8 @@ import { dirname, extname, join, resolve } from "node:path";
 
 import { digest, LIMITS } from "./changes.mjs";
 import { collectPullRequest, collectStatement, currentTarget, resolveTarget } from "./github.mjs";
-import { inspectDocument, mergeExplanations, validateDocument, validateSources } from "./model.mjs";
+import { inspectDocument, replaceGroups, validateDocument, validateSources } from "./model.mjs";
+import { buildLayout } from "./layout.mjs";
 import { renderArtifact } from "./render.mjs";
 
 const digestMeta = /(<meta name="hope-diff-deep-digest" content=")([a-f0-9]{64})(">)/gu;
@@ -125,15 +126,16 @@ async function writeArtifact(path, document, original, options = {}) {
 
 function result(path, document) {
   const { snapshot } = document;
+  const layout = buildLayout(snapshot, document.groups);
   return { artifactPath: path, target: snapshot.target.url, head: snapshot.head, mergeBase: snapshot.mergeBase,
     snapshotId: snapshot.id, revision: document.revision, fileCount: snapshot.files.length,
-    explained: document.explanations.length,
-    pending: snapshot.files.length - document.explanations.length,
+    explained: document.groups.length,
+    pending: layout.pendingFiles, pendingLines: layout.pendingLines,
     unavailableFiles: snapshot.files.filter((file) => file.availability === "unavailable").length };
 }
 
 export async function createArtifact(snapshot, { output, locale = "en-US", theme = "system", ...options } = {}) {
-  const document = validateDocument({ schemaVersion: 2, snapshot, locale, theme, revision: 0, explanations: [] });
+  const document = validateDocument({ schemaVersion: 3, snapshot, locale, theme, revision: 0, groups: [] });
   const path = output
     ? await preflightOutput(output)
     : join(await mkdtemp(join(await realpath(tmpdir()), "hope-diff-deep-")), "review.html");
@@ -158,7 +160,7 @@ async function updateArtifact(path, expectedDigest, transform, options) {
 export async function explainArtifact(path, inputPath, expectedDigest, options = {}) {
   const file = await regularFile(resolve(inputPath), LIMITS.inputBytes);
   const input = JSON.parse(file.bytes.toString("utf8"));
-  return await updateArtifact(path, expectedDigest, (document) => mergeExplanations(document, input), options);
+  return await updateArtifact(path, expectedDigest, (document) => replaceGroups(document, input), options);
 }
 
 export async function addStatement(path, url, expectedDigest, options = {}) {

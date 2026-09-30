@@ -149,17 +149,19 @@ Ky PR #825.](docs/diffs/ky-825-default-run.en.html)
 
 ---
 
-### 🔎 Diff Deep — Understand why each file changed
+### 🔎 Diff Deep — Read changes by purpose
 
 Invoke `$hope:diff-deep` with a GitHub PR to open an independent reader. The
-complete captured diff stays on the left; a compact panel explains why the
-selected file changed, mentioning before/after lines when helpful. Code appears
-first; file explanations follow. Stated motives, inferred purposes, and unknown reasons stay distinct.
+model arranges the complete diff into meaningful groups on the left. A group
+can combine implementation and tests across files, or use part of a file. The
+right panel explains the selected group; selecting code adds its specific
+context. Stated motives, inferred purposes, and unknown reasons stay distinct.
 
-Navigate between files, mark each file read, and switch between
-light, dark, and system appearance. Progress belongs to the captured revision
-and can be exported. The reader is one HTML file with no running server or
-browser AI calls. Missing text and pending explanations remain visible.
+Code appears first; unassigned changes remain visible until grouped. Navigate
+and mark groups read, and switch between light, dark, and system appearance.
+Regrouping retains the selected code and reading position; changed groups need
+to be read again. Progress belongs to the captured revision and can be exported.
+The reader is one HTML file with no server or browser AI calls.
 
 See [the Diff Deep Skill](plugins/hope/skills/diff-deep/SKILL.md) for its workflow.
 

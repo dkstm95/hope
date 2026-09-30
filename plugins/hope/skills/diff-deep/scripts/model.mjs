@@ -1,4 +1,5 @@
 import { digest, identifyFiles, LIMITS, parsePatch, restriction, safePath, text } from "./changes.mjs";
+import { buildLayout } from "./layout.mjs";
 import { parseTarget } from "./github.mjs";
 
 const shaPattern = /^[a-f0-9]{40}$/u;
@@ -106,14 +107,24 @@ function explanationContext(snapshot) {
   ) };
 }
 
-function validateExplanations(values, snapshot) {
+function validateGroups(values, snapshot) {
   const context = explanationContext(snapshot);
-  const entries = array(values, "explanations", snapshot.files.length).map((value) => {
-    record(value, "explanation");
-    if (Object.keys(value).some((key) => !["fileId", "title", "why", "basis", "evidence"].includes(key))) {
-      throw new Error("Unsupported explanation field");
+  const entries = array(values, "groups", LIMITS.lines + LIMITS.files).map((value) => {
+    record(value, "group");
+    if (Object.keys(value).some((key) => !["id", "parts", "title", "why", "basis", "evidence"].includes(key))) {
+      throw new Error("Unsupported group field");
     }
-    if (!context.files.has(value.fileId)) throw new Error("Explanation refers to an unknown file");
+    if (typeof value.id !== "string" || !/^g-[a-z0-9][a-z0-9-]{0,63}$/u.test(value.id)) throw new Error("Invalid group ID");
+    const parts = array(value.parts, "parts", LIMITS.lines + LIMITS.files).map((part) => {
+      record(part, "group part");
+      if (Object.keys(part).some((key) => !["fileId", "startLine", "endLine", "note"].includes(key))
+        || !context.files.has(part.fileId)) throw new Error("Invalid group part or unknown file");
+      const range = part.startLine !== undefined || part.endLine !== undefined;
+      if (range && (!Number.isSafeInteger(part.startLine) || !Number.isSafeInteger(part.endLine))) throw new Error("Invalid group code range");
+      return { fileId: part.fileId, ...(range ? { startLine: part.startLine, endLine: part.endLine } : {}),
+        ...(part.note === undefined ? {} : { note: text(part.note, "part note", LIMITS.inputBytes) }) };
+    });
+    if (!parts.length) throw new Error("A group needs changed code or file metadata");
     if (!["stated", "inferred", "unknown"].includes(value.basis)) throw new Error("Invalid explanation basis");
     const evidence = array(value.evidence ?? [], "evidence").map((reference) => {
       const source = context.sources.get(reference.sourceId);
@@ -125,51 +136,48 @@ function validateExplanations(values, snapshot) {
     if (value.basis === "stated" && !evidence.some((entry) => context.sources.get(entry.sourceId).kind === "statement")) {
       throw new Error("A stated reason needs a captured statement, not code alone");
     }
-    const result = { fileId: value.fileId, title: text(value.title, "reason title", LIMITS.inputBytes),
+    const result = { id: value.id, parts, title: text(value.title, "reason title", LIMITS.inputBytes),
       why: text(value.why, "reason", LIMITS.inputBytes), basis: value.basis, evidence };
     if (restriction("explanation", [JSON.stringify(result)])) throw new Error("Explanation contains restricted content");
     return result;
   });
-  if (new Set(entries.map((entry) => entry.fileId)).size !== entries.length) throw new Error("Duplicate file explanations");
+  if (new Set(entries.map((entry) => entry.id)).size !== entries.length) throw new Error("Duplicate group IDs");
+  buildLayout(snapshot, entries);
   return entries;
 }
 
 /** Validate external documents once; internal transforms preserve this contract. */
 export function validateDocument(value) {
   record(value, "document");
-  if (value.schemaVersion === 1) throw new Error("This is an older region reader. Keep it and capture a new file reader.");
-  if (value.schemaVersion !== 2 || !["en-US", "ko-KR"].includes(value.locale)
+  if ([1, 2].includes(value.schemaVersion)) throw new Error("This is an older reader. Keep it and capture a new grouped reader.");
+  if (value.schemaVersion !== 3 || !["en-US", "ko-KR"].includes(value.locale)
     || !["light", "dark", "system"].includes(value.theme)) throw new Error("Invalid document settings");
   const snapshot = validateSnapshot(value.snapshot);
-  return { schemaVersion: 2, snapshot, locale: value.locale, theme: value.theme,
-    revision: natural(value.revision, "document revision"), explanations: validateExplanations(value.explanations, snapshot) };
+  return { schemaVersion: 3, snapshot, locale: value.locale, theme: value.theme,
+    revision: natural(value.revision, "document revision"), groups: validateGroups(value.groups, snapshot) };
 }
 
-export function mergeExplanations(document, input) {
+export function replaceGroups(document, input) {
   record(input, "input");
   if (input.snapshotId !== document.snapshot.id) throw new Error("Explanation input belongs to a different snapshot");
-  const replacements = validateExplanations(input.explanations, document.snapshot);
-  const all = new Map(document.explanations.map((entry) => [entry.fileId, entry]));
-  for (const entry of replacements) all.set(entry.fileId, entry);
-  return { ...document, revision: document.revision + 1,
-    explanations: document.snapshot.files.filter((file) => all.has(file.id)).map((file) => all.get(file.id)) };
+  const groups = validateGroups(input.groups, document.snapshot);
+  return { ...document, revision: document.revision + 1, groups };
 }
 
 export function inspectDocument(document, { fileId, offset = 0 } = {}) {
   natural(offset, "offset");
   const candidates = document.snapshot.files.filter((file) => !fileId || file.id === fileId || file.path === fileId);
   if (fileId && candidates.length === 0) throw new Error("Unknown file ID or path");
-  const explained = new Map(document.explanations.map((entry) => [entry.fileId, entry]));
   const files = [];
   let bytes = 0;
   for (const file of candidates.slice(offset)) {
-    const value = { ...file, explanation: explained.get(file.id) ?? null };
+    const value = file;
     const size = Buffer.byteLength(JSON.stringify(value));
     if (files.length > 0 && bytes + size > 48 * 1024) break;
     files.push(value);
     bytes += size;
   }
   return { contentIsUntrusted: true, locale: document.locale, files,
-    ...(offset === 0 ? { sources: document.snapshot.sources } : {}),
+    ...(offset === 0 ? { sources: document.snapshot.sources, groups: document.groups } : {}),
     nextOffset: offset + files.length < candidates.length ? offset + files.length : null };
 }
