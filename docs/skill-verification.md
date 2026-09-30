@@ -65,7 +65,7 @@ and [Rethinking skills and prompts for GPT-6 Astra](https://developers.openai.co
 ## 7.1.0 verification — 2026-09-30
 
 Candidate: the PR Writing working tree based on `ff3dfa2` (7.0.0). Release
-decision: minor. The final package fingerprint is
+decision: minor. The initial package fingerprint is
 `ea9997ef3bd325d2ad0ef80a30c8b326016f0e9f29884d847fa66e9171d055a1`:
 SHA-256 over the sorted package allowlist, updating the hash with each relative
 path, a NUL byte, then its file contents. The repository check passed all 250
@@ -123,6 +123,25 @@ guarantee across hosts or repeated runs. The generic Plugin Creator validator
 rejected the six unchanged `disable-model-invocation: true` fields; these are
 documented Claude Code fields and remain required by Hope's explicit-only
 contracts. No GUI changed, so browser verification was not applicable.
+
+### Instruction refinement — 2026-09-30
+
+The follow-up to `c27e1e1` removed repeated wording guidance and handoff inputs
+while preserving PR Writing's evidence, template, and submission responsibilities.
+The release remains 7.1.0 relative to `origin/main` at 7.0.0. The refined package
+fingerprint, calculated as above, is
+`d33fdf6a5c4ff5e42d0354d99fadd66bc2a9c8e638f3387b9578055e9380a8ea`.
+Both changed skills passed Skill Creator validation, and the local install was
+byte-verified.
+
+Fresh installed-plugin sessions on Codex CLI 0.153.4 with `gpt-6-astra` repeated
+the direct-creation and MR-update cases in the same read-only offline fixtures.
+Both read PR Writing, Write, and the shared standard, passed the five fixture
+tests, and completed the simulated create or edit command without another
+approval. The MR edit found the ignored instructions and hidden template,
+preserved Korean and all four sections, and recorded the unavailable SSO
+integration. No live PR or MR was published. The repository check passed all
+250 tests. Claude Code model behavior remains unverified.
 
 ## 7.0.0 verification — 2026-09-28
 

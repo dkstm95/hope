@@ -34,22 +34,17 @@ better decisions, and direct their next steps.
 
 ## Features
 
-PR Writing applies automatically when the AI prepares a PR or MR title and
-description, including during an authorized implementation-and-submission task.
-It uses Write to draft or refine the text. Install Hope once for your host;
-individual projects need no Hope-specific writing configuration.
+Hope offers eight skills for different parts of development work: agreeing on
+intent, shaping interfaces, understanding and reviewing changes, cleaning up
+code, and explaining results through visuals and writing. Use them individually
+or select a combination for the task.
 
-You can also explicitly select any of the eight skills with `$hope:<name>` in
-Codex, `/hope:<name>` in Claude Code, or another host's skill command or picker.
-Names are `align`, `design`, `diff`, `toxic-review`, `sweep`, `diagram`, `write`,
-and `pr-writing`. The other skills require explicit invocation, except for
-Write's handoff from PR Writing. Follow-ups within an invoked task continue
-without repeating the command. Other combinations require selecting each skill.
-
-The package sets native invocation controls for Codex and Claude Code. Automatic
-selection depends on the host and model recognizing the task; it is not a
-mandatory pre-publication hook. Shared writing and visual references remain
-available without starting their owning skills.
+Select a skill with `$hope:<name>` in Codex, `/hope:<name>` in Claude Code, or
+another host's skill command or picker. Names are `align`, `design`, `diff`,
+`toxic-review`, `sweep`, `diagram`, `write`, and `pr-writing`. Follow-ups within
+an invoked task continue without repeating the command. PR Writing also
+applies automatically when preparing PR or MR text and calls Write; the other
+skills start only when selected.
 
 ### 🤝 Align — Share intent and consequential decisions before implementation
 
@@ -204,8 +199,8 @@ Diagram Design's templates, scripts, fonts, gallery, or third-party icons.
 ### ✍️ Write — Make language clearer without losing meaning
 
 Invoke Write to draft, edit, or review text. You can also invoke it within an
-implementation task or alongside another skill. PR Writing calls Write for its
-title and description without a separate user command. Its shared writing
+implementation task or alongside another skill. It preserves the meaning and
+voice of the text and the scope of the surrounding task. Its shared writing
 standard remains available to other workflows without invoking Write.
 
 Write's shared standard adapts George Orwell's six rules in
@@ -213,22 +208,25 @@ Write's shared standard adapts George Orwell's six rules in
 
 ---
 
-### PR Writing — Apply writing guidance when preparing a PR or MR
+### PR Writing — Explain a change for its reviewers
 
-Ask "Create a PR" or "Implement this and open a PR." When the work reaches the
-title and description, PR Writing reads the project conventions, grounds the
-explanation in the actual changes and verification, and uses Write to produce
-the text. It also handles requested drafts and updates to existing PR or MR text.
+PR Writing applies automatically when you ask "Create a PR" or when an
+authorized implementation task reaches PR or MR writing. It reads the project
+conventions, grounds the explanation in the actual changes and verification,
+and calls Write to produce the title and body. It also handles requested drafts
+and updates to existing PR or MR text. Individual projects need no Hope-specific
+writing configuration.
 
 It describes the concrete result, why the change matters, and the evidence a
 reviewer needs. Existing templates and language choices take precedence over
 Hope's defaults. Simple changes stay short; consequential changes include the
-needed trade-offs, limitations, or review focus. The surrounding task retains
-creation and update authority. Review-only requests do not activate PR Writing.
+needed trade-offs, limitations, or review focus. It continues authorized creation
+or updates after writing. Review-only requests do not activate PR Writing.
 
 See [PR Writing](plugins/hope/skills/pr-writing/SKILL.md) for its scope and Write
-handoff, and [skill verification](docs/skill-verification.md) for observed host
-behavior and remaining limits.
+handoff. Automatic selection depends on the host and model recognizing the task;
+see [skill verification](docs/skill-verification.md) for observed behavior and
+remaining limits.
 
 <br>
 

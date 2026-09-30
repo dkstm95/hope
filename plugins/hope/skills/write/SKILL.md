@@ -7,10 +7,8 @@ description: Draft, edit, or review language while preserving meaning and voice.
 
 Use when the person invokes `$hope:write`, `/hope:write`, or the host's equivalent
 skill command or picker, or when Hope PR Writing calls Write for a PR or MR title
-and description. That public handoff supplies the grounded change, project
-format, language, verification evidence, and any review focus; draft or edit the
-text within those facts and return it to PR Writing in the same conversation.
-Do not require a separate user invocation for that handoff.
+and description. For that handoff, preserve the supplied facts and constraints
+and return the text to PR Writing without requiring a separate user invocation.
 
 Continue follow-ups within the invoked task without requiring another invocation.
 Ordinary requests and other skill calls do not activate Write; continue their
