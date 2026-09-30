@@ -25,11 +25,11 @@ behavior, model judgment, conversation flow, and private guidance.
 Published shared guidance owns only invariants used across feature boundaries.
 A feature does not depend on another feature's private source.
 
-Features may collaborate through a public Skill contract when the person has
-explicitly invoked each participating skill, that contract defines the handoff,
-and each feature retains its own decisions and artifact ownership. This does
-not expose the callee's private references or runtime as shared source. Reading
-published shared guidance does not invoke the skill that owns it.
+Features may collaborate through a public Skill contract when each participating
+skill is explicitly invoked or its contract permits the handoff. Both features
+must define the handoff and retain their own decisions and artifact ownership.
+This does not expose the callee's private references or runtime as shared source.
+Reading published shared guidance does not invoke the skill that owns it.
 
 ### Feature runtime
 
