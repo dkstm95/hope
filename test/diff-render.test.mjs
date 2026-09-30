@@ -55,8 +55,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 21);
-  assert.equal(first.designVersion, 26);
+  assert.equal(first.rendererVersion, 22);
+  assert.equal(first.designVersion, 27);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -491,7 +491,7 @@ test("the artifact renders selected aids without a decision report", async () =>
     assert.equal(html.includes('class="microworld"'), included);
     assert.equal(html.includes('id="quiz"'), included);
     if (included) {
-      const positions = ['id="core-change"', 'class="behavior-model"', 'id="quiz"']
+      const positions = ['id="core-change"', 'class="behavior-model"', 'id="diff-reader"', 'id="quiz"']
         .map((marker) => html.indexOf(marker));
       assert.ok(positions.every((position) => position >= 0));
       assert.deepEqual(positions, [...positions].sort((left, right) => left - right));

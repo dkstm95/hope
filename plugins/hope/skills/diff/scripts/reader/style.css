@@ -70,6 +70,7 @@
 .diff-reader .reason-location { color: var(--quiet); font: 11px/1.6 ui-monospace, monospace; margin-bottom: 10px; overflow-wrap: anywhere; }
 .diff-reader .reason-copy h3 { margin: 0 0 12px; font-size: 19px; line-height: 1.5; letter-spacing: -.5px; font-weight: 650; word-break: keep-all; overflow-wrap: anywhere; }
 .diff-reader .reason-copy p { font-size: 13px; line-height: 1.85; color: var(--quiet); margin: 0; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; }
+.diff-reader .reason-copy p + p { margin-top: 12px; }
 .diff-reader .basis { display: block; font-size: 11px; color: var(--quiet); margin-top: 12px; }
 .diff-reader .basis[data-basis="inferred"], .diff-reader .basis[data-basis="unknown"] { color: var(--warn); }
 .diff-reader .evidence { margin: 0 18px; border-top: 1px solid var(--rule); font-size: 11px; padding: 10px 0 12px; }

@@ -93,6 +93,21 @@ repeat the overview in every group.
 Each group has a stable `g-...` ID, a short `title`, and `text` that leads with
 why the change exists, then explains the relevant before/after difference.
 Choose the needed depth; there is no target number of groups or sentences.
+For each material change, connect the previous behavior and its triggering
+condition to the new mechanism and observable result. Explain why the check,
+state, or operation belongs at that point in the code. Describe consequential
+boundaries, preserved behavior, and limits beside the code they qualify; a
+separate review item does not replace that explanation. For changed tests,
+connect the input and assertion to the behavior they establish, distinguishing
+test intent from observed execution. Keep mechanical edits brief and do not
+invent a motive or missing implementation detail to fill a template.
+
+Use distinct paragraphs for distinct ideas. Split a group when its parts need
+different explanations; use a part's `note` for local mechanics or test meaning
+that would interrupt the group's main explanation. Check whether a reader can
+explain why the changed lines produce the stated result and recognize an
+important boundary case. A paraphrase of the diff or overview is insufficient.
+
 Distinguish `stated`, `inferred`, and `unknown`. A stated reason needs captured
 PR or commit prose; it may also cite code that shows its implementation.
 Code alone cannot establish stated intent. For unavailable content, explain

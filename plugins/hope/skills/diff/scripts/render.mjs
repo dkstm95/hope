@@ -1118,12 +1118,9 @@ function buildSections(review, dictionary, codeRenderer, reader) {
       title: label(dictionary, "section.quiz"),
     });
   let number = 2;
-  sections.push({ id: "changes", number, title: label(dictionary, "section.changes"),
-    html: section({ id: "changes", number, title: label(dictionary, "section.changes"), content: reader.content }) });
-  number += 1;
   sections.push({
     html: section({
-      content: `${changeOverview}${behaviorModel}${quiz}`,
+      content: `${changeOverview}${behaviorModel}`,
       id: "explore",
       number,
       title: label(dictionary, "section.explore"),
@@ -1132,6 +1129,9 @@ function buildSections(review, dictionary, codeRenderer, reader) {
     number,
     title: label(dictionary, "section.explore"),
   });
+  number += 1;
+  sections.push({ id: "changes", number, title: label(dictionary, "section.changes"),
+    html: section({ id: "changes", number, title: label(dictionary, "section.changes"), content: `${reader.content}${quiz}` }) });
   number += 1;
   if (review.reviewItems.length > 0) {
     sections.push({
@@ -1516,7 +1516,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   padding: ${space7}px ${space8}px 80px;
   background: var(--panel);
 }
-.main > :not(#changes) { max-width: 1000px; margin-inline: 0; }
+.main > :not(#changes), #changes > .review-subsection { max-width: 1000px; margin-inline: 0; }
 .locale-warning {
   margin: 0 0 ${space4}px;
   padding: ${space3}px ${space4}px;

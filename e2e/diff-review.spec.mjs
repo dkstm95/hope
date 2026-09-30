@@ -504,8 +504,8 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     (links) => links.map((link) => link.getAttribute("href")),
   )).toEqual([
     "#synopsis",
-    "#changes",
     "#explore",
+    "#changes",
     "#judge",
     "#evidence-and-scope",
   ]);
@@ -1205,6 +1205,10 @@ test("quiz separates an optional response from the answer and evidence", async (
 }) => {
   await openArtifact(page, viewports.mobile);
   const quizSection = page.locator("#quiz");
+  await expect(page.locator("#changes #quiz")).toHaveCount(1);
+  expect(await quizSection.evaluate((quiz) => (
+    Boolean(document.querySelector("#diff-reader").compareDocumentPosition(quiz) & Node.DOCUMENT_POSITION_FOLLOWING)
+  ))).toBe(true);
   await expect(quizSection).toBeVisible();
   await expect(quizSection.locator(":scope > summary")).toHaveCount(0);
   const questions = page.locator(".quiz > details.quiz-question");

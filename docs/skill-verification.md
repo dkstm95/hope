@@ -179,6 +179,8 @@ These were reasoned scenarios, not executed artifact runs or native host tests.
 | --- | --- |
 | Invoke Diff for a PR without naming another skill or reader option | One capture and analysis produce the overall explanation and full grouped code in one review. |
 | One reason spans implementation and tests; a file has two purposes | The model may combine files and split patches; all changed rows appear exactly once with their original coordinates. |
+| Read an unfamiliar change from the beginning | Summary and behavior precede grouped code; an optional understanding check follows the code. |
+| Explain a behavior-bearing edit and its tests | The explanation connects the old trigger, new mechanism, boundary, and test inputs/assertions to the selected code without claiming unobserved test execution. |
 | Analysis omits a group, overlaps a range, or calls code stated intent | Validation rejects the incomplete ownership or unsupported basis before publication. |
 | Open a review, select code, follow evidence, and reload | Groups begin collapsed, code selection explains its group, evidence reveals its target, and progress restores. |
 | Use a narrow viewport, no JavaScript, printing, or unavailable storage | The reader remains usable; all code and inline reasons are retained, with progress export/import. |
@@ -214,3 +216,21 @@ exclude model analysis and, for the synthetic example, network time.
 Release decision: keep the unreleased 7.2.0 minor increment from 7.1.0. No
 installed plugin was replaced. Native installed-skill invocation remains
 unverified; package and runtime checks do not establish it.
+
+### Reading order and explanation depth
+
+The follow-up puts behavior before grouped code and the optional understanding
+check after code. Analysis guidance now asks for the previous trigger, new
+mechanism, consequential boundary, and meaning of test inputs and assertions.
+The bilingual Ky example applies that guidance with group paragraphs and
+part-specific notes, including the distinction between blocking another request
+and cancelling a running hook. Its redundant implementation sequence was removed.
+
+The full browser suite passed 41 scenarios after the reading-order change.
+Direct checks of both regenerated examples through `file://` confirmed the
+section order, all 486 changed lines, separate explanation paragraphs, selected
+part notes, and a relocated mobile detail panel without horizontal overflow at
+375 pixels. Light README captures and dark desktop/mobile views were inspected.
+These are authored-example and runtime checks; native model adherence to the
+revised explanation guidance remains unverified. The release remains the
+unreleased 7.2.0 minor version.
