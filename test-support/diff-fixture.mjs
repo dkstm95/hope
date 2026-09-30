@@ -246,6 +246,7 @@ export function makeTeachingBehavior({
 
 export function makeAnalysis(snapshot, runId) {
   return {
+    groups: [{ id: "g-error", title: "Keep the final error", text: "Preserve the failure so callers can inspect its cause.", basis: "inferred", evidence: [reference("source-3", 2, 4)], parts: snapshot.files.map((file) => ({ fileId: file.id })) }],
     codeSteps: [
       {
         basis: "code",
@@ -340,7 +341,7 @@ export function makeAnalysis(snapshot, runId) {
       },
     ],
     runId,
-    schemaVersion: 4,
+    schemaVersion: 5,
     snapshotDigest: snapshot.digest,
   };
 }

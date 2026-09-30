@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hope Diff Deep"
-  short_description: "Read grouped PR changes with details for the selection"
-  default_prompt: "Use $hope:diff-deep to organize this pull request into meaningful change groups and explain the selected group."
-policy:
-  allow_implicit_invocation: false

@@ -1065,7 +1065,21 @@ export function makeDiffAnalysis(snapshot) {
   ];
   const boundaryEvidence = [...budgetEvidence, ...boundaryTestEvidence];
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
+    groups: [
+      { id: "g-shared-budget", title: text(locale, "Share one deadline across requests and waits", "요청과 대기가 하나의 마감 시각을 공유"),
+        text: text(locale, "The documented timeout applies to the whole operation. Record its start once, pass only the remaining budget to each request, and stop retry waits when that budget runs out. Tests cover both bounded operations and timeout disabled; the error-body test ensures a stalled response also terminates.", "문서에 약속된 시간 제한은 작업 전체에 적용됩니다. 시작 시각을 한 번 기록하고 각 요청에 남은 예산만 전달하며, 예산이 끝나면 재시도 대기도 중단합니다. 시간 제한의 적용·해제 조건과 끝나지 않는 오류 응답 본문을 테스트해 같은 경계를 확인합니다."),
+        basis: "stated", evidence: [reference("source-2", 1), ...budgetEvidence],
+        parts: [{ fileId: "file-1", startLine: 1, endLine: 28 }, { fileId: "file-1", startLine: 113, endLine: 142 }, { fileId: "file-4", startLine: 42, endLine: 243 }, { fileId: "file-3" }] },
+      { id: "g-retry-boundaries", title: text(locale, "Recheck the budget around hooks and forced retries", "훅과 강제 재시도에서도 남은 예산 확인"),
+        text: text(locale, "Hook work can spend time before the next request begins. Rechecking after hooks and at forced-retry boundaries prevents those paths from starting another request after the shared budget is exhausted. The paired tests specify the intended boundary; this review does not establish that they ran.", "훅이 실행되는 동안에도 전체 예산은 줄어듭니다. 훅 이후와 강제 재시도 경계에서 예산을 다시 확인해 시간이 끝난 뒤 새 요청이 시작되는 경로를 막으려는 변경입니다. 함께 배치한 테스트는 의도한 경계를 설명하며, 실행 성공을 입증하지는 않습니다."),
+        basis: "inferred", evidence: hookEvidence,
+        parts: [{ fileId: "file-1", startLine: 58, endLine: 112 }, { fileId: "file-2" }, { fileId: "file-4", startLine: 244, endLine: 301 }] },
+      { id: "g-retry-after", title: text(locale, "Keep invalid Retry-After values out of delay calculations", "잘못된 Retry-After 값을 대기 계산에서 제외"),
+        text: text(locale, "An invalid Retry-After value must not propagate NaN into the delay or shared-timeout calculation. Normalize the failed conversion and retain bounded waits for valid values. The adjacent retry tests describe the affected response-header cases.", "잘못된 Retry-After 값에서 생긴 NaN이 대기 시간과 전체 예산 계산으로 퍼지지 않도록 변환 실패를 처리합니다. 유효한 값에는 제한된 대기를 적용하고, 관련 응답 헤더 테스트를 함께 읽도록 배치했습니다."),
+        basis: "inferred", evidence: [sourceReference(snapshot, "source-4", "Number.isFinite(after)")],
+        parts: [{ fileId: "file-1", startLine: 29, endLine: 57 }, { fileId: "file-4", startLine: 1, endLine: 41 }] },
+    ],
     runId: DIFF_RUN_ID,
     snapshotDigest: snapshot.digest,
     locale,
@@ -1080,7 +1094,7 @@ export function makeDiffAnalysis(snapshot) {
     coreChange: {
       before: claim(locale, "Each retry received the original request timeout after earlier attempts and delays.", "이전 시도와 대기 뒤에도 각 재시도가 원래 요청 시간 제한을 새로 받았다.", [sourceReference(snapshot, "source-4", "-\t\treturn timeout(this.#originalRequest")]),
       after: claim(locale, "The call records one start time and gives delays and later requests only the remaining budget.", "호출 시작 시각을 한 번 기록하고 대기와 다음 요청에는 남은 예산만 준다.", budgetEvidence),
-      why: claim(locale, "Retries can no longer make one operation exceed its configured timeout.", "재시도로 한 작업이 설정한 시간 제한을 계속 넘기지 않게 한다.", [reference("source-2", 1)], "stated"),
+      why: claim(locale, "Attempts and waits consume one shared timeout budget.", "시도와 대기가 하나의 시간 제한 예산을 함께 쓴다.", [reference("source-2", 1)], "stated"),
       details: [
         claim(locale, "A delay that consumes the remaining budget ends at the deadline without a new request.", "재시도 대기가 남은 예산을 모두 쓰면 새 요청 없이 마감 시각에 끝난다.", budgetEvidence),
         claim(locale, "Disabling timeout still permits the configured retry.", "시간 제한을 끄면 설정한 재시도를 계속 허용한다.", retryEvidence),

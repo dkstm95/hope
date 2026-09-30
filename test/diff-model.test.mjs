@@ -65,12 +65,12 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(validated.sourceIndex.length, snapshot.sources.length);
   assert.equal("text" in validated.sourceIndex[0], false);
   assert.deepEqual(validated.resources, {
-    analysisCanonicalBytes: 2563,
-    analysisFileBytes: 2563,
-    authoredProseBytes: 887,
+    analysisCanonicalBytes: 2798,
+    analysisFileBytes: 2798,
+    authoredProseBytes: 961,
     evidenceBytes: 178,
     evidenceLines: 5,
-    evidenceReferences: 10,
+    evidenceReferences: 11,
     codeEvidenceLines: 8,
     uniqueEvidenceRanges: 4,
   });
@@ -517,7 +517,7 @@ test("analysis splits one authored evidence interval into bounded excerpts", () 
   const longSource = {
     ...snapshot.sources[2],
     lineCount: 30,
-    text: Array.from({ length: 30 }, (_, index) => `line ${index + 1}`).join("\n"),
+    text: [`@@ -0,0 +1,29 @@`, ...Array.from({ length: 29 }, (_, index) => `+line ${index + 1}`)].join("\n"),
   };
   const longSnapshot = {
     ...snapshot,
@@ -548,7 +548,7 @@ test("analysis rejects an unfocused authored evidence interval", () => {
   const longSource = {
     ...snapshot.sources[2],
     lineCount: 100,
-    text: Array.from({ length: 100 }, (_, index) => `line ${index + 1}`).join("\n"),
+    text: [`@@ -0,0 +1,99 @@`, ...Array.from({ length: 99 }, (_, index) => `+line ${index + 1}`)].join("\n"),
   };
   const longSnapshot = {
     ...snapshot,
@@ -764,7 +764,7 @@ test("analysis rejects bidirectional controls in user-facing prose", () => {
 
 test("the published analysis schema matches runtime lexical rules", async () => {
   const schema = JSON.parse(await readFile(new URL(
-    "../plugins/hope/skills/diff/scripts/analysis-v4.schema.json",
+    "../plugins/hope/skills/diff/scripts/analysis-v5.schema.json",
     import.meta.url,
   ), "utf8"));
   const pattern = new RegExp(schema.$defs.text.pattern, "u");
@@ -841,7 +841,7 @@ test("core and optional schemas resolve offline and agree on review bounds", asy
     await visit(schema);
     return schema;
   }
-  const schema = await checkDocument(new URL("analysis-v4.schema.json", root));
+  const schema = await checkDocument(new URL("analysis-v5.schema.json", root));
   assert.equal(schema.properties.contextChecks.minItems ?? 0, 0);
   assert.equal(schema.properties.background.maxItems, 1);
 });
@@ -919,7 +919,7 @@ test("analysis rejects excessive evidence references before rendering", () => {
       ? {
         ...source,
         lineCount: 6,
-        text: Array.from({ length: 6 }, (_, index) => `line ${index + 1}`).join("\n"),
+        text: [`@@ -0,0 +1,5 @@`, ...Array.from({ length: 5 }, (_, index) => `+line ${index + 1}`)].join("\n"),
       }
       : source
   ));
@@ -955,7 +955,7 @@ test("analysis rejects excessive unique evidence bytes before rendering", () => 
       ? {
         ...source,
         lineCount: 120,
-        text: Array.from({ length: 120 }, () => line).join("\n"),
+        text: ["@@ -0,0 +1,119 @@", ...Array.from({ length: 119 }, () => `+${line}`)].join("\n"),
       }
       : source
   ));
@@ -989,7 +989,7 @@ test("overlapping evidence ranges count every rendered code line", () => {
       ? {
         ...source,
         lineCount: 60,
-        text: Array.from({ length: 60 }, (_, index) => `line ${index + 1}`).join("\n"),
+        text: [`@@ -0,0 +1,59 @@`, ...Array.from({ length: 59 }, (_, index) => `+line ${index + 1}`)].join("\n"),
       }
       : source
   ));

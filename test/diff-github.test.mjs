@@ -308,13 +308,11 @@ test("an incomplete patch falls back to exact before and after files", async () 
       `/repos/example/repo/contents/src/error.js?ref=${"c".repeat(40)}`,
     ].sort(),
   );
-  assert.equal(snapshot.files[0].sourceIds.length, 2);
-  const beforeSource = snapshot.sources.find((source) => source.kind === "before-file");
-  const afterSource = snapshot.sources.find((source) => source.kind === "after-file");
-  assert.equal(beforeSource.revision, "c".repeat(40));
-  assert.equal(beforeSource.text, "old");
-  assert.equal(afterSource.revision, "b".repeat(40));
-  assert.equal(afterSource.text, "new");
+  assert.equal(snapshot.files[0].sourceIds.length, 1);
+  const patch = snapshot.sources.find((source) => source.kind === "patch");
+  assert.equal(patch.revision, "b".repeat(40));
+  assert.match(patch.text, /-old\n/u);
+  assert.match(patch.text, /\+new\n/u);
 });
 
 test("independent GitHub collection requests start concurrently", async () => {
@@ -429,7 +427,7 @@ test("an oversized safe-text body becomes a visible metadata-only limit", async 
   assert.equal(snapshot.limits.at(-1).reasonKind, "safe-size-limit");
 });
 
-for (const [side, providerFile, sourceKind, revision] of [
+for (const [side, providerFile] of [
   [
     "before",
     {
@@ -438,8 +436,6 @@ for (const [side, providerFile, sourceKind, revision] of [
       filename: "src/error.js",
       status: "removed",
     },
-    "before-file",
-    "c".repeat(40),
   ],
   [
     "after",
@@ -449,8 +445,6 @@ for (const [side, providerFile, sourceKind, revision] of [
       filename: "src/error.js",
       status: "added",
     },
-    "after-file",
-    "b".repeat(40),
   ],
 ]) {
   test(`the ${side} fallback body at the safe-text boundary remains included`, async () => {
@@ -469,8 +463,8 @@ for (const [side, providerFile, sourceKind, revision] of [
 
     assert.equal(snapshot.files[0].bodyState, "included");
     assert.equal(snapshot.files[0].sourceIds.length, 1);
-    const fileSource = snapshot.sources.find((source) => source.kind === sourceKind);
-    assert.equal(fileSource.revision, revision);
+    const fileSource = snapshot.sources.find((source) => source.kind === "patch");
+    assert.equal(fileSource.revision, "b".repeat(40));
   });
 }
 
@@ -490,7 +484,7 @@ test("fallback bodies at the combined safe-text boundary remain included", async
   );
 
   assert.equal(snapshot.files[0].bodyState, "included");
-  assert.equal(snapshot.files[0].sourceIds.length, 2);
+  assert.equal(snapshot.files[0].sourceIds.length, 1);
 });
 
 test("fallback bodies over the combined safe-text limit become metadata-only", async () => {

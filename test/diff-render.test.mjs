@@ -55,8 +55,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 20);
-  assert.equal(first.designVersion, 25);
+  assert.equal(first.rendererVersion, 21);
+  assert.equal(first.designVersion, 26);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -81,7 +81,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /font-family: "Hope Code"/u);
   assert.equal((html.match(/@font-face/gu) ?? []).length, 3);
   assert.match(html, /aria-label="Switch to dark mode"/u);
-  assert.doesNotMatch(html, /aria-pressed=/u);
+  assert.doesNotMatch(html.match(/<button class="theme-button"[^>]+>/u)[0], /aria-pressed=/u);
   assert.doesNotMatch(html, /data-copy-section/u);
   assert.doesNotMatch(html, /class="copy-link"/u);
   assert.doesNotMatch(html, />Change theme</u);
@@ -174,12 +174,12 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   const main = html.match(/<main class="main"[^>]*>([\s\S]*?)<\/main>/u)?.[1] ?? "";
   assert.deepEqual(
     [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
-    ["01", "02", "03", "04"],
+    ["01", "02", "03", "04", "05"],
   );
   const toc = html.match(/<nav class="toc-desktop rail-navigation"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
   assert.deepEqual(
     [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
-    ["01", "02", "03", "04"],
+    ["01", "02", "03", "04", "05"],
   );
   assert.doesNotMatch(html, /<a href="#follow-code">/u);
   assert.match(
@@ -429,7 +429,7 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.doesNotMatch(html, />코드<\/div>|>코드<\/span>|>코드<\/p>/u);
   assert.match(html, /<span class="item-basis">근거에서 추론<\/span>/u);
   assert.match(html, /aria-label="라이트 모드로 전환"/u);
-  assert.doesNotMatch(html, /aria-pressed=/u);
+  assert.doesNotMatch(html.match(/<button class="theme-button"[^>]+>/u)[0], /aria-pressed=/u);
   assert.match(html, /data-theme-icon="dark"[^>]* hidden/u);
   assert.match(html, /data-theme-icon="light"[^>]*>/u);
   assert.doesNotMatch(html, />테마 변경</u);
@@ -548,7 +548,7 @@ test("quiz responses stay visually unlabeled and separate from the answer", asyn
   const html = (await renderReview(review)).bytes.toString("utf8");
 
   assert.equal((html.match(/<details class="quiz-question"/gu) ?? []).length, 3);
-  assert.equal((html.match(/<textarea/gu) ?? []).length, 3);
+  assert.equal((html.match(/<textarea\s+aria-labelledby="quiz-/gu) ?? []).length, 3);
   assert.equal((html.match(/class="quiz-answer"/gu) ?? []).length, 3);
   assert.equal((html.match(/>답과 근거 보기<\/summary>/gu) ?? []).length, 3);
   assert.match(

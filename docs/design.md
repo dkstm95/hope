@@ -686,35 +686,33 @@ Each feature owns its concrete HTML, state, and publication boundary. Shared
 implementation stays focused on the exact visual tokens used by multiple
 features.
 
-## Diff Deep reader
+## Diff's grouped code reader
 
-Diff Deep uses a code inspector layout independently of Diff's Technical Record.
+Every Diff Technical Record includes the grouped code reader after its overall
+summary. Keep the overview prose at a readable width while allowing the code
+section more horizontal room. Use the same navigation, locale, theme, and
+self-contained document; do not add a second brand header or reader mode.
+
 The model arranges all captured code into meaningful groups on the left, with
-a compact, sticky detail panel for the selected group on the right. Groups may
-span files or split one file. Preserve paths, before/after line numbers, and
-each captured row exactly once. Shared code is linked as evidence. Unassigned
-changes remain in visible pending sections, not hidden behind a filter.
+a compact, sticky detail panel on the right. Groups may span files or split one
+file. Preserve paths, before/after line numbers, and each captured row exactly
+once. Shared code is linked as evidence. Complete coverage is required before
+publication; unavailable content remains an explicit file entry.
 
 Groups start collapsed. Each title toggles its code and selects the group for
-the detail panel. Expansion is independent for each group, works by keyboard
-and without JavaScript, and is remembered alongside reading progress. Evidence
-links expand their target group; printing includes every group.
+the detail panel. Expansion is independent, works by keyboard and without
+JavaScript, and is remembered alongside reading progress. Evidence links expand
+their target group; printing includes every group and inline explanation.
 
-A code selection also highlights
-its location and shows its optional contextual note in the detail panel. On
-narrow screens the panel follows the selected group's heading inline. Keep
-code and prose wrapping without page-level overflow. Reloading after regrouping
-follows the selected code and viewport; it must not transfer read markers to
-new or revised explanations.
+Selecting code highlights its location and shows any contextual note in the
+panel. On narrow screens the panel follows the selected heading inline, even
+when its code is collapsed. Wrap code and prose without page-level overflow.
+Restored progress follows the captured code; revised groups lose their read
+marks. Provide export/import when browser storage is unavailable.
 
-Use the compact monospace `diff-deep` wordmark, quiet file boundaries, mint
-selection accents, and shared semantic artifact colors. Light, dark, and system
-controls expose their selected state and accessible names. No remote assets
-are required.
-
-Each group has a short title, prose that leads with why, and collapsed evidence.
-Show stated, inferred, or unknown basis. Keep previous group, position, next
-group, and reversible group read status in one small row. Reading progress is
-separate from grouping coverage; unavailable code cannot count as fully read.
-Retain all code and inline explanations for printing and JavaScript-disabled
-reading, with keyboard focus, forced colors, and narrow viewport support.
+Use quiet file boundaries, mint selection accents, shared semantic artifact
+colors, and the review's light/dark/system appearance. Each group has a short
+title, prose that leads with why, a stated/inferred/unknown basis, and folded
+evidence. Previous group, position, next group, and reversible read status share
+one small row. Unavailable code cannot count as fully read. Preserve keyboard
+focus, forced colors, and narrow viewport support.

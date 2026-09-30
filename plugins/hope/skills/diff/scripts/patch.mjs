@@ -1,56 +1,4 @@
-import { createHash } from "node:crypto";
-
-export const digest = (value) => createHash("sha256").update(
-  typeof value === "string" ? value : JSON.stringify(value),
-).digest("hex");
-
-export const LIMITS = Object.freeze({
-  files: 500,
-  lines: 20_000,
-  fileBytes: 256 * 1024,
-  totalBytes: 1024 * 1024,
-  sourceBytes: 64 * 1024,
-  snapshotBytes: 8 * 1024 * 1024,
-  artifactBytes: 24 * 1024 * 1024,
-  inputBytes: 512 * 1024,
-});
-
-export function text(value, name, maximum = 4_000) {
-  if (typeof value !== "string" || value.length > maximum || !value.trim()) {
-    throw new TypeError(`${name} must be nonempty text of at most ${maximum} characters`);
-  }
-  if (!value.isWellFormed() || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) {
-    throw new TypeError(`${name} contains invalid text`);
-  }
-  return value;
-}
-
-export function safePath(value) {
-  text(value, "file path", 4_096);
-  if (/[\r\n\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u.test(value)) {
-    throw new TypeError("A file path contains display control characters");
-  }
-  return value;
-}
-
-export function exposeControls(value) {
-  return String(value).replace(
-    /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu,
-    (character) => `\\u${character.codePointAt(0).toString(16).padStart(4, "0")}`,
-  );
-}
-
-export function restriction(path, bodies = []) {
-  const name = path.split("/").at(-1).toLowerCase();
-  if (
-    /^(?:\.env(?:\.|$)|(?:credentials|secrets?)(?:\.|$)|(?:id_|ssh_host_).*(?:rsa|dsa|ecdsa|ed25519))/u.test(name)
-    && !/(?:example|sample|template)/u.test(name)
-  ) return "private-file";
-  if (bodies.some((body) => (
-    /-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----|\bgh[pousr]_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b|\bAKIA[0-9A-Z]{16}\b|\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/u.test(body)
-  ))) return "credential";
-  return undefined;
-}
+import { LIMITS } from "./constants.mjs";
 
 function natural(value) {
   return Number.isSafeInteger(value) && value >= 0;
@@ -59,7 +7,7 @@ function natural(value) {
 /** Parse a file's unified patch, including content beginning with +++ or ---. */
 export function parsePatch(patch, expected) {
   if (typeof patch !== "string" || !patch.isWellFormed()) throw new TypeError("Invalid patch text");
-  if (Buffer.byteLength(patch) > LIMITS.fileBytes) throw new Error("Patch exceeds the per-file limit");
+  if (Buffer.byteLength(patch) > LIMITS.safePatchBytes) throw new Error("Patch exceeds the per-file limit");
   const lines = patch.split("\n");
   if (lines.at(-1) === "") lines.pop();
   const hunks = [];
@@ -123,13 +71,3 @@ export function parsePatch(patch, expected) {
   return { hunks, additions, deletions };
 }
 
-/** File identity is scoped by the captured snapshot; no per-line IDs are needed. */
-export function identifyFiles(files) {
-  const result = files.map((file) => ({
-    ...file, id: `f-${digest([file.path, file.previousPath ?? ""]).slice(0, 20)}`,
-  }));
-  if (new Set(result.map((file) => file.id)).size !== result.length) {
-    throw new Error("Changed files contain duplicate identities");
-  }
-  return result;
-}

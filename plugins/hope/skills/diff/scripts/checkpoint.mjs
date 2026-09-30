@@ -9,7 +9,7 @@ import { containsBidiControl } from "./text.mjs";
 
 const OBSERVATION_KINDS = new Set(["fact", "risk", "question"]);
 const SOURCE_BASIS = Object.freeze({
-  code: new Set(["after-file", "before-file", "context-file", "patch"]),
+  code: new Set(["context-file", "patch"]),
   stated: new Set([
     "commit-title",
     "pull-request-description",

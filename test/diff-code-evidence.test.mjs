@@ -6,7 +6,7 @@ import { renderCodeEvidence } from "../plugins/hope/skills/diff/scripts/code-evi
 test("code evidence stays escaped and line-addressable", () => {
   const rendered = renderCodeEvidence({
     excerpt: 'const answer = "<script>alert(1)</script>";\nreturn answer;',
-    sourceKind: "after-file",
+    sourceKind: "context-file",
   });
 
   assert.equal((rendered.match(/class="code-line"/gu) ?? []).length, 2);
@@ -42,7 +42,7 @@ test("patch evidence without coordinates does not reserve a number column", () =
 test("bidirectional controls are shown instead of changing visual order", () => {
   const rendered = renderCodeEvidence({
     excerpt: "const safe = true; // \u202E } hidden",
-    sourceKind: "after-file",
+    sourceKind: "context-file",
   });
 
   assert.match(rendered, /\\u202E/u);

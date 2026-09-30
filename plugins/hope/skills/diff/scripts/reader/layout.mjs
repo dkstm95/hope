@@ -1,4 +1,5 @@
-import { digest, parsePatch } from "./changes.mjs";
+import { digestJson as digest } from "../hash.mjs";
+import { parsePatch } from "../patch.mjs";
 
 /** Project model-authored ranges onto the captured rows. Never rewrite source. */
 export function buildLayout(snapshot, groups) {

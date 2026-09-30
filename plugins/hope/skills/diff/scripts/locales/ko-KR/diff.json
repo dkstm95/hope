@@ -139,5 +139,6 @@
   "visual.case": "상황",
   "visual.connections": "관계",
   "visual.participants": "참여 요소",
-  "visual.route": "{from}에서 {to} 방향"
+  "visual.route": "{from}에서 {to} 방향",
+  "section.changes": "변경 코드 읽기"
 }

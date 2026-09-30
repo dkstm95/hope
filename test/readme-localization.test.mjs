@@ -15,6 +15,7 @@ const captureNames = [
   "diff",
   "diff-core",
   "diff-microworld",
+  "diff-reader",
   "diagram",
 ];
 const detailCaptureNames = captureNames.filter((name) => ![
@@ -63,10 +64,10 @@ test("README examples keep English and Korean assets separate", async () => {
     .map((path) => access(new URL(path, root))));
 
   assert.match(english, /docs\/alignments\/rescene-fan-calendar-default-run\.en\.html/u);
-  assert.match(english, /docs\/diffs\/ky-825-default-run\.en\.html/u);
+  assert.match(english, /docs\/diffs\/ky-825-total-timeout\.en\.html/u);
   assert.match(english, /docs\/visualizations\/parcel-handoff\.html/u);
   assert.match(korean, /docs\/alignments\/rescene-fan-calendar-default-run\.ko\.html/u);
-  assert.match(korean, /docs\/diffs\/ky-825-default-run\.ko\.html/u);
+  assert.match(korean, /docs\/diffs\/ky-825-total-timeout\.ko\.html/u);
   assert.match(korean, /docs\/visualizations\/parcel-handoff\.html/u);
   await access(new URL("docs/visualizations/parcel-handoff.html", root));
 });
@@ -97,7 +98,7 @@ test("README detail captures preserve a readable wide layout", async () => {
   }
 });
 
-test("READMEs use preserved runtime artifacts with their actual available sections", async () => {
+test("preserved runtime artifacts retain their original available sections", async () => {
   for (const [suffix, locale] of [["en", "en-US"], ["ko", "ko-KR"]]) {
     const align = await read(`docs/alignments/rescene-fan-calendar-default-run.${suffix}.html`);
     const diff = await read(`docs/diffs/ky-825-default-run.${suffix}.html`);

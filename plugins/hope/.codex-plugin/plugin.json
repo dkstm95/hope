@@ -9,12 +9,12 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["alignment", "design", "mockups", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "diff-deep", "pull-request", "visualization", "diagram", "writing"],
+  "keywords": ["alignment", "design", "mockups", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "pull-request", "visualization", "diagram", "writing"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
     "shortDescription": "Practical ways for people and AI to work better together",
-    "longDescription": "PR Writing automatically prepares PR and MR titles and descriptions using Write. Select other Hope skills explicitly. Align builds shared intent and consequential decisions before implementation and can preserve them in a durable record. Design turns goals and ordinary-language feedback into inspectable interface mockups, independently or when invoked alongside Align. Sweep removes proven codebase waste while preserving customer-observed behavior. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can understand consequences and discover follow-up work. Diff Deep independently shows the complete captured diff beside an explanation for each changed file, with file navigation and reading progress. Diagram makes explanatory diagrams and data charts clear without taking over the active task. Write improves language without changing its meaning.",
+    "longDescription": "PR Writing automatically prepares PR and MR titles and descriptions using Write. Select other Hope skills explicitly. Align builds shared intent and consequential decisions before implementation and can preserve them in a durable record. Design turns goals and ordinary-language feedback into inspectable interface mockups, independently or when invoked alongside Align. Sweep removes proven codebase waste while preserving customer-observed behavior. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can understand consequences and discover follow-up work. Every Diff review also groups the full captured diff by purpose with contextual explanations and reading progress. Diagram makes explanatory diagrams and data charts clear without taking over the active task. Write improves language without changing its meaning.",
     "developerName": "SeungIl",
     "category": "Engineering",
     "capabilities": ["Read", "Write", "Interactive"],
@@ -24,7 +24,6 @@
       "Use $hope:sweep to remove proven codebase waste without changing customer-observed behavior.",
       "Use $hope:toxic-review to challenge this plan.",
       "Use $hope:diff to explain the current pull request.",
-      "Use $hope:diff-deep to organize this PR into meaningful change groups and explain why they changed.",
       "Use $hope:diagram to make this explanatory diagram or data chart clear, faithful, and accessible."
     ],
     "brandColor": "#087EA4",

@@ -10,6 +10,6 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["alignment", "design", "mockups", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "diff-deep", "pull-request", "visualization", "diagram", "writing"],
+  "keywords": ["alignment", "design", "mockups", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "pull-request", "visualization", "diagram", "writing"],
   "skills": "./skills/"
 }

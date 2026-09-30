@@ -504,11 +504,12 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
     (links) => links.map((link) => link.getAttribute("href")),
   )).toEqual([
     "#synopsis",
+    "#changes",
     "#explore",
     "#judge",
     "#evidence-and-scope",
   ]);
-  await expect(page.locator(".main > [id]")).toHaveCount(4);
+  await expect(page.locator(".main > [id]")).toHaveCount(5);
   await expect(page.locator("#review-title")).toContainText(
     "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
   );
@@ -736,7 +737,7 @@ test("contents tracks the current section and keeps sticky navigation clear", as
 }) => {
   await openArtifact(page, viewports.desktop);
   const judge = page.locator("#judge");
-  await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("1 / 4");
+  await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("1 / 5");
   await expect(judge).not.toHaveAttribute("open", "");
   await page.locator('.toc-desktop a[href="#judge"]').click();
   await expect(judge).toBeFocused();
@@ -745,7 +746,7 @@ test("contents tracks the current section and keeps sticky navigation clear", as
   const currentLinks = page.locator('.toc-desktop a[aria-current="location"]');
   await expect(currentLinks).toHaveCount(1);
   await expect(currentLinks).toHaveAttribute("href", "#judge");
-  await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("3 / 4");
+  await expect(page.locator(".toc-desktop .toc-progress")).toHaveText("4 / 5");
   const currentStyle = await currentLinks.evaluate((element) => ({
     borderLeftWidth: getComputedStyle(element).borderLeftWidth,
   }));

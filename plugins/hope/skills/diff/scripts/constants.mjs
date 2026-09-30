@@ -1,7 +1,7 @@
 export const CONTRACT_VERSION = 1;
-export const ANALYSIS_VERSION = 4;
-export const RENDERER_VERSION = 20;
-export const RUN_VERSION = 7;
+export const ANALYSIS_VERSION = 5;
+export const RENDERER_VERSION = 21;
+export const RUN_VERSION = 8;
 export const CHECKPOINT_VERSION = 1;
 export const CHECKPOINT_WINDOW_VERSION = 2;
 export const MICROWORLD_SKELETON_VERSION = 6;
@@ -9,7 +9,7 @@ export const MICROWORLD_SKELETON_VERSION = 6;
 export const LIMITS = Object.freeze({
   analysisProseBytes: 48 * 1024,
   authoredEvidenceLines: 96,
-  artifactBytes: 6 * 1024 * 1024,
+  artifactBytes: 24 * 1024 * 1024,
   changedFiles: 500,
   changedLines: 20_000,
   checkpointBytes: 32 * 1024,
@@ -48,6 +48,7 @@ export const LIMITS = Object.freeze({
   pullRequestBodyBytes: 32 * 1024,
   reviewTitleCharacters: 80,
   reviewItems: 80,
+  safePatchBytes: 512 * 1024,
   safeBodyBytes: 256 * 1024,
   safeBodyTotalBytes: 768 * 1024,
   snapshotBytes: 8 * 1024 * 1024,

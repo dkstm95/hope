@@ -19,7 +19,7 @@ hosts before claiming native invocation works on both.
 | Request or setup | Expected behavior |
 | --- | --- |
 | “Fix this typo”, “review this plan”, “draw this flow”, or “clean up this code” without a skill command | Complete the ordinary request without activating a Hope skill. |
-| Invoke each of `align`, `design`, `diff`, `diff-deep`, `toxic-review`, `sweep`, `diagram`, and `write` with a small suitable task | The selected skill is available and follows its contract; no other Hope skill activates unless the task reaches PR/MR writing. |
+| Invoke each of `align`, `design`, `diff`, `toxic-review`, `sweep`, `diagram`, and `write` with a small suitable task | The selected skill is available and follows its contract; no other Hope skill activates unless the task reaches PR/MR writing. |
 | Ask to create a PR, or draft its title and body, without naming a skill | PR Writing activates, reads repository conventions and change evidence, and uses Write. Creation continues when authorized. |
 | Ask for implementation and submission, then let the agent reach the PR/MR writing step | PR Writing and its Write handoff apply at that step without a new skill command. |
 | Ask to update an existing MR description with changed scope | PR Writing uses Write, preserves the project template and language, and reflects the final diff and verification limits. |
@@ -173,146 +173,44 @@ task boundary, and Diff's progressing repair, stalled repair, and post-publicati
 cleanup failure. Its next actions matched the contracts with no contradiction.
 These were reasoned scenarios, not executed artifact runs or native host tests.
 
-## Diff Deep scenarios
+## Diff grouped-reader scenarios
 
-| Request or setup | Expected behavior |
+| Scenario | Expected behavior |
 | --- | --- |
-| Invoke Diff Deep with a PR URL and no prior Diff artifact | Capture the PR independently and open all available code before adding explanations. |
-| Read a complete PR | Arrange complete code in model-chosen semantic groups, including cross-file and split-file groups; mention before/after lines where useful and distinguish stated motives, inference, unknowns, and pending work. |
-| Ask about a selected group or code part in the same task | Update its existing artifact and snapshot without another invocation or recapture. |
-| Change the PR head before resuming | Identify the historical capture; use a new artifact for new code. |
-| Navigate between groups | Keep every code region visible; selection does not mark a group read. |
-| Disable browser storage or move the artifact | Offer progress export/import; refuse progress for another snapshot. |
-| Supply repository instructions inside a patch or PR body | Treat them as evidence, never instructions; execute no repository code. |
+| Invoke Diff for a PR without naming another skill or reader option | One capture and analysis produce the overall explanation and full grouped code in one review. |
+| One reason spans implementation and tests; a file has two purposes | The model may combine files and split patches; all changed rows appear exactly once with their original coordinates. |
+| Analysis omits a group, overlaps a range, or calls code stated intent | Validation rejects the incomplete ownership or unsupported basis before publication. |
+| Open a review, select code, follow evidence, and reload | Groups begin collapsed, code selection explains its group, evidence reveals its target, and progress restores. |
+| Use a narrow viewport, no JavaScript, printing, or unavailable storage | The reader remains usable; all code and inline reasons are retained, with progress export/import. |
+| Provider patch is missing or malformed | Exact merge-base/head text is read once and reconstructed into one complete inspected patch, or a limit is recorded. |
 
-## 7.2.0 Diff Deep verification — 2026-09-30
+## 7.2.0 integrated Diff verification — 2026-09-30
 
-Candidate: the Diff Deep working tree based on `19be338` (7.1.0). Release
-decision: minor. The reader owns its runtime and depends only on shared
-immutable artifact colors, with no dependency on Diff's private runtime.
+Candidate: the working tree based on `19be338` (7.1.0). The standalone,
+unreleased Diff Deep skill was folded into Diff; delivery returns to eight
+skills. Analysis v5 and run v8 require complete semantic grouping. No separate
+reader capture, CLI, or artifact mutation protocol remains.
 
-The direct adapter tests cover complete inventory, paginated GitHub files,
-truncated-patch reconstruction at merge-base and fork-head revisions, head
-changes during capture, restricted content, rationale provenance, stale writes,
-linked files, and the capture/inspect/explain roundtrip. External package staging
-also executes the new CLI from a path outside the repository. This exposed and
-fixed an entrypoint comparison that failed through macOS's `/var` alias.
+The complete deterministic suite passed 255 tests and the full browser suite
+passed 41 scenarios. The reader scenarios cover patch reconstruction ownership, cross-file grouping, splitting,
+coverage rejection, literal hostile code, folding, source navigation, reversible
+read state, import/export, theme inheritance, narrow screens, print, and no JS.
+After the final mobile focus/scroll and literal-tab display corrections, all
+nine reader browser scenarios passed again. README examples and captures were
+regenerated from the captured PR evidence.
 
-The 37-test Chromium suite passed, including five new reader scenarios:
-complete code and change/line navigation, explicit read/undo persistence,
-light/dark/system appearance and keyboard controls, 320/375/640px reflow,
-forced colors, progress export/import with storage disabled, mismatched-snapshot
-rejection, inert hostile markup, no external requests, JavaScript-disabled
-reading, and complete print explanations. Print verification exposed and fixed
-closed `details` content omitted by the browser's content-visibility behavior.
-Both themes were also visually inspected on a real capture.
+A fresh capture of Ky PR #825 matched all four example patches byte for byte
+at head `2a33b80dbcd0efb5a08b39d141c86ddd6ef90ae6`. The direct runtime completed
+prepare, all six inspection pages and checkpoints, ledger, analysis validation,
+rendering, live revision revalidation, publication, and private-run cleanup.
+The resulting artifact contains all 486 changed lines in three semantic groups.
+This used the authored example analysis; it was not a native model invocation.
 
-A direct live smoke used the exact prompt equivalent “read Ky PR #825 in Korean”
-with `capture https://github.com/sindresorhus/ky/pull/825 --locale ko-KR`.
-It captured four files and 486 changed lines at head
-`2a33b80dbcd0efb5a08b39d141c86ddd6ef90ae6`, with merge base
-`ecdd45eeaa48cbcbabaa53898dd4a39d1296a694`. The active host read the captured
-patches and PR body and supplied 37 short reasons, distinguishing three stated
-motives from inferred explanations. The adapter accepted every region with no
-pending reasons or unavailable files. No target-repository tests ran, and the
-reader does not claim they did.
+On this machine, capture took about 1.7 seconds. A synthetic 500-file,
+10,000-changed-line, 50-group review took 19 ms to validate and 72 ms to render;
+its browser identity/path payload was 21,428 bytes. These single-run measurements
+exclude model analysis and, for the synthetic example, network time.
 
-A synthetic 100-file, 10,000-changed-line capture rendered in about 139ms and
-its next-selection handler took about 10ms on this macOS Chromium run. These
-are single local observations, not latency guarantees; GitHub reads and model
-explanation time are excluded.
-
-Skill Creator's standard-field validation passed after separately checking the
-supported Claude invocation extension that its generic validator rejects.
-Both invocation controls parse as booleans. These checks establish runtime and
-package behavior, not fresh native model invocation. Installed-plugin invocation
-of the new skill remains unverified; the existing development installation was
-not replaced. Claude Code authentication was unavailable. The final repository
-check passed 258 deterministic tests with a valid 7.1.0 → 7.2.0 minor release.
-
-### File-level revision of the unreleased reader
-
-The follow-up request changed the explanation unit to a whole file, with optional
-before/after line references in prose. The reader now has file navigation and
-file read markers, without line modes, region IDs, or a separate effects field.
-The model chooses emphasis, explanation length, processing order, and update
-batches. Exact file coverage, citations, snapshot binding, and publication remain
-runtime guarantees. Editorial quotas were removed; resource byte limits remain.
-
-Snapshot format 2 stores raw patches without redundant parsed rows or change
-inventories. Inspection returns whole-file patches and existing explanations in
-byte-bounded batches, with statements only on the first batch. Explanation
-updates validate the external document once and the new explanations once;
-publication still rechecks the actual file identity and sealed bytes. Old region
-artifacts and their progress are preserved; this adapter rejects editing or
-importing them instead of building a migration layer.
-
-The same Ky #825 head was captured again, retaining all four files and 486 changed
-lines. Four Korean file explanations replaced 37 region explanations, with
-specific after-line references. There were no pending explanations or unavailable
-files. Compared with the original example, embedded document JSON fell from
-146KB to 23KB and HTML from 484KB to about 262KB. These are uncompressed bytes
-for this example, including the changed explanation scope, not token counts or
-a general compression guarantee. Both themes and the 375px layout were visually
-inspected.
-
-The Chromium suite passed 38 tests, including file navigation, file-level
-read/undo and restore, no removed reading-mode controls, whole-file follow-up
-requests, and empty captures. Runtime coverage includes complete file inspection,
-nonrepeating source batches, rejection of old document formats and invalid IDs,
-editorial flexibility, and a resource-limit failure that preserves the existing
-artifact when repeated evidence excerpts would exceed the output budget.
-The final repository check passed 260 deterministic tests. The release remains
-the unreleased 7.2.0 minor capability relative to `origin/main` 7.1.0. Native
-installed-plugin invocation remains unverified; this work did not replace the
-existing development installation.
-
-### Semantic grouping revision of the unreleased reader
-
-The reader now uses model-chosen change groups for both code placement and
-explanation. Group and part order are authored; ranges may split a file or
-combine implementation and tests across files. The runtime projects those
-ranges onto the original patch rows, rejects overlap and invalid references,
-and leaves uncovered changes in visible pending sections. Original context,
-line numbers, hunk context labels, and no-newline markers remain available.
-Shared code can be cited and reached through captured-code evidence links.
-
-The active host regrouped the same Ky #825 head into three Korean explanations:
-one shared timeout budget, retry boundaries after waiting and hooks, and
-invalid Retry-After handling. The complete four-file, 486-changed-line capture
-remained present, with zero pending files, pending lines, or unavailable files.
-The first explanation cites the PR's stated purpose; the other two label their
-reasoning as inferred. No target-repository tests were executed.
-
-Twelve focused runtime tests passed, including cross-file grouping, splitting
-one hunk, exact once-only row preservation, pending coverage, overlap and
-out-of-range rejection, metadata boundaries, and insertion coordinates. The
-40-test Chromium suite passed, including code-specific details, keyboard part
-selection, cross-group evidence navigation, and regrouping while preserving
-selection and the viewport. The latter exposed a native scroll-restoration
-conflict, fixed by letting the reader restore captured-code anchors. Unchanged
-groups retain read markers after reordering; revised explanations require a
-fresh read. Light, dark, selected-code detail, and 375px layouts were visually
-inspected on the real capture.
-
-Document and progress format 3 keep snapshot format 2's compact raw patches.
-Older region and file readers remain readable but are not rewritten or migrated.
-The package remains an unreleased 7.2.0 minor capability against `origin/main`
-7.1.0. Native installed-plugin invocation remains unverified; the existing
-installation was not replaced.
-
-After the final display corrections, all eight Diff Deep browser scenarios
-passed again. The repository check passed 262 deterministic tests and accepted
-the package structure and 7.1.0 → 7.2.0 release impact.
-
-### Collapsible groups
-
-Groups now start closed and use native disclosures for independent mouse and
-keyboard expansion, including without JavaScript. Selecting a title still
-updates the detail panel. Expanded groups are saved with progress; older
-progress without expansion data starts closed. Captured-code links open their
-target disclosure, mobile details remain available when a group is closed,
-and print includes every code row. The Chromium suite passed 41 tests covering
-these behaviors and the existing regrouping and progress flows. The same live
-Ky capture was regenerated with all three groups initially closed and all 486
-changed lines retained, and its collapsed desktop layout was visually checked.
+Release decision: keep the unreleased 7.2.0 minor increment from 7.1.0. No
+installed plugin was replaced. Native installed-skill invocation remains
+unverified; package and runtime checks do not establish it.

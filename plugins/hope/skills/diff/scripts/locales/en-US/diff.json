@@ -139,5 +139,6 @@
   "visual.case": "Case",
   "visual.connections": "Relationships",
   "visual.participants": "Participants",
-  "visual.route": "{from} to {to}"
+  "visual.route": "{from} to {to}",
+  "section.changes": "Read the changes"
 }

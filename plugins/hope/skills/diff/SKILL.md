@@ -1,6 +1,6 @@
 ---
 name: diff
-description: Explain or review a GitHub pull request with captured evidence and an optional offline HTML record. Use only when explicitly invoked.
+description: Explain or review a GitHub pull request with captured evidence and an offline HTML review with grouped code. Use only when explicitly invoked.
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,9 @@ from another skill do not activate this skill; continue authorized work through
 the ordinary workflow. Reading a shared reference does not invoke its skill.
 
 Resolve one exact GitHub pull request, analyze its captured evidence, and
-report its artifact. Diff covers the captured PR snapshot; local staged,
+report one artifact with the overall explanation and the complete diff organized
+into meaningful change groups. This reader is always part of a generated review;
+do not offer a separate skill, mode, or opt-in. Diff covers the captured PR snapshot; local staged,
 unstaged, and untracked changes are outside its scope.
 
 ## Resolve the request

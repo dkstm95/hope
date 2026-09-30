@@ -63,8 +63,9 @@ material actions grounded in the captured change.
   actor or thing and state the practical result.
 - Use zero or one `background` item for context a new reader needs before the
   comparison.
-- Keep the main path understandable without code identifiers. Put technical
-  mechanics and implementation sequence in collapsed `codeSteps`.
+- Keep the overall explanation understandable without code identifiers. Put
+  implementation reasons beside their code in `groups`. Leave `codeSteps` empty
+  unless a distinct guided sequence adds understanding beyond those groups.
 - Use one to four `coreChange.details` for distinct observable outcomes or
   preserved conditions. Do not turn them into a file or identifier inventory.
 - Connect every material behavior-bearing changed surface to a visible claim,
@@ -80,6 +81,35 @@ material actions grounded in the captured change.
   documentation, dependency, development, or test effect.
 - Give each included file exactly one `explained`, `supporting`, or `mechanical`
   disposition.
+
+## Organize all changed code by meaning
+
+Author `groups` in the same analysis as the overall explanation. Choose the
+units and reading order by shared purpose: one group may combine implementation
+and tests across files, or use only part of one file. A small PR can need only
+one group. Do not mechanically create one group per file or line, and do not
+repeat the overview in every group.
+
+Each group has a stable `g-...` ID, a short `title`, and `text` that leads with
+why the change exists, then explains the relevant before/after difference.
+Choose the needed depth; there is no target number of groups or sentences.
+Distinguish `stated`, `inferred`, and `unknown`. A stated reason needs captured
+PR or commit prose; it may also cite code that shows its implementation.
+Code alone cannot establish stated intent. For unavailable content, explain
+the visible metadata and the limit without claiming to have read its body.
+
+Use `parts` in reading order. Each part names a captured `fileId`. Omit both
+`startLine` and `endLine` for the whole file; otherwise use an inclusive range
+of lines in that file's captured **patch source**, including its hunk headers.
+These are inspection source coordinates, not old/new code line numbers. An
+optional `note` adds context specific to that part when code is selected.
+
+Assign every changed line and every non-text file entry exactly once. Shared
+code belongs to one group and can be cited by others. The runtime preserves
+remaining context beside the nearest change, original file paths, and exact
+before/after line numbers. It rejects overlaps, gaps, and context-only parts.
+Group titles start collapsed; selecting a title or code shows the right-hand
+explanation. No separate analysis pass or reader payload is needed.
 
 ## Account for context and limits
 
@@ -127,7 +157,7 @@ without removing evidence needed by a distinct claim.
 
 Keep each prose value to one semantic paragraph unless a real paragraph
 boundary is needed. Normally use at most 12 review items, four core details,
-and 12 code steps; do not fill maxima for their own sake.
+and only distinct code steps; do not fill maxima for their own sake.
 
 ## Use teaching aids when useful
 
@@ -158,3 +188,6 @@ Target at most 480 rendered code-evidence line occurrences so validation
 repairs have room. If validation reports an overage, use its field
 contributions, largest ranges, and overlap list to remove the largest
 repetition first.
+
+The complete grouped diff does not consume the citation excerpt budget. That
+budget bounds supporting excerpts, not the code the reader can inspect.
