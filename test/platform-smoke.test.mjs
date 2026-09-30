@@ -99,5 +99,13 @@ test("the staged plugin runs from an external platform path", async (context) =>
   assert.match(diffHelp.stdout, /Use Hope Diff through its private Skill adapter/u);
   assert.doesNotMatch(diffHelp.stderr, /\S/u);
 
+  const deepHelp = spawnSync(
+    process.execPath,
+    [join(destination, "skills", "diff-deep", "scripts", "cli.mjs"), "--help"],
+    { cwd: outsideRepository, encoding: "utf8" },
+  );
+  assert.equal(deepHelp.status, 0, deepHelp.stderr);
+  assert.match(deepHelp.stdout, /Use Hope Diff Deep through its private Skill adapter/u);
+
   assert.notEqual(resolve(destination), resolve(root, "plugins", "hope"));
 });

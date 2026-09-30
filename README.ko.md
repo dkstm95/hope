@@ -30,14 +30,14 @@ AI와 함께 이해하고 책임질 수 있는 일의 범위를 넓히는 것입
 
 ## 기능
 
-Hope는 개발 작업의 여러 부분을 돕는 여덟 스킬을 제공합니다. 의도를 맞추고,
+Hope는 개발 작업의 여러 부분을 돕는 아홉 스킬을 제공합니다. 의도를 맞추고,
 인터페이스를 구체화하고, 변경을 이해·검토하고, 코드를 정리하고, 결과를 그림과
 글로 설명할 때 사용할 수 있습니다. 작업에 맞는 스킬을 하나씩 쓰거나 함께
 선택할 수 있습니다.
 
 Codex에서는 `$hope:<이름>`, Claude Code에서는 `/hope:<이름>`, 다른 도구에서는
 스킬 호출 명령이나 선택 메뉴로 스킬을 선택합니다. 이름은 `align`, `design`,
-`diff`, `toxic-review`, `sweep`, `diagram`, `write`, `pr-writing`입니다.
+`diff`, `diff-deep`, `toxic-review`, `sweep`, `diagram`, `write`, `pr-writing`입니다.
 같은 작업의 후속 요청에는 명령을 반복할 필요가 없습니다. PR Writing은 PR·MR
 글을 준비할 때 자동으로도 적용되며 Write를 호출합니다. 그 외에는 직접 선택한
 스킬만 시작합니다.
@@ -133,6 +133,23 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 | [![변경 개요와 번호가 매겨진 동작 흐름을 구분한 Diff 결과물](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![시간 상태에 따른 재시도 동작을 비교하는 Diff 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
 
 </details>
+
+---
+
+### 🔎 Diff Deep — 모든 변경을 이유와 함께 읽습니다
+
+GitHub PR과 함께 `$hope:diff-deep`을 호출하면 독립적인 코드 리더를 엽니다.
+왼쪽에는 캡처한 전체 diff가 남고, 오른쪽의 작은 패널은 선택한 변경의 이유를
+설명합니다. 코드를 먼저 보여 준 뒤 파일별로 설명을 채웁니다. 작성자가 밝힌
+이유, 코드에서 추론한 목적, 확인되지 않은 이유를 구분합니다.
+
+변경 단위나 변경된 줄 단위로 이동하고, 읽은 부분을 표시하며,
+라이트·다크·시스템 테마를 선택할 수 있습니다. 읽음 상태는 캡처한 버전에
+연결되며 내보낼 수 있습니다. 별도 서버나 브라우저의 AI 호출 없이 HTML
+한 파일로 동작합니다. 수집하지 못한 코드와 아직 없는 설명도 표시합니다.
+
+사용 흐름은 [Diff Deep 스킬](plugins/hope/skills/diff-deep/SKILL.md)에
+정의되어 있습니다.
 
 ---
 

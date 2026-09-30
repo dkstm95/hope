@@ -34,13 +34,13 @@ better decisions, and direct their next steps.
 
 ## Features
 
-Hope offers eight skills for different parts of development work: agreeing on
+Hope offers nine skills for different parts of development work: agreeing on
 intent, shaping interfaces, understanding and reviewing changes, cleaning up
 code, and explaining results through visuals and writing. Use them individually
 or select a combination for the task.
 
 Select a skill with `$hope:<name>` in Codex, `/hope:<name>` in Claude Code, or
-another host's skill command or picker. Names are `align`, `design`, `diff`,
+another host's skill command or picker. Names are `align`, `design`, `diff`, `diff-deep`,
 `toxic-review`, `sweep`, `diagram`, `write`, and `pr-writing`. Follow-ups within
 an invoked task continue without repeating the command. PR Writing also
 applies automatically when preparing PR or MR text and calls Write; the other
@@ -146,6 +146,22 @@ Ky PR #825.](docs/diffs/ky-825-default-run.en.html)
 | [![Diff output separating the change overview from the numbered behavior flow](assets/readme/hope-diff-core-en.png)](assets/readme/hope-diff-core-en.png) | [![A Diff microworld comparing retry behavior under different time states](assets/readme/hope-diff-microworld-en.png)](assets/readme/hope-diff-microworld-en.png) |
 
 </details>
+
+---
+
+### 🔎 Diff Deep — Read every change beside its reason
+
+Invoke `$hope:diff-deep` with a GitHub PR to open an independent reader. The
+complete captured diff stays on the left; a compact panel explains why the
+selected change was made. Code appears first, and reasons are added file by
+file. Stated motives, inferred purposes, and unknown reasons stay distinct.
+
+Navigate by change or changed line, mark what you have read, and switch between
+light, dark, and system appearance. Progress belongs to the captured revision
+and can be exported. The reader is one HTML file with no running server or
+browser AI calls. Missing text and pending explanations remain visible.
+
+See [the Diff Deep Skill](plugins/hope/skills/diff-deep/SKILL.md) for its workflow.
 
 ---
 
