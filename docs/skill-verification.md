@@ -172,3 +172,80 @@ Align without Design, Design without Diagram, Write's follow-up and unrelated
 task boundary, and Diff's progressing repair, stalled repair, and post-publication
 cleanup failure. Its next actions matched the contracts with no contradiction.
 These were reasoned scenarios, not executed artifact runs or native host tests.
+
+## Diff grouped-reader scenarios
+
+| Scenario | Expected behavior |
+| --- | --- |
+| Invoke Diff for a PR without naming another skill or reader option | One capture and analysis produce the overall explanation and full grouped code in one review. |
+| One reason spans implementation and tests; a file has two purposes | The model may combine files and split patches; all changed rows appear exactly once with their original coordinates. |
+| Read an unfamiliar change from the beginning | Summary and behavior precede grouped code; an optional understanding check follows the code. |
+| Explain a behavior-bearing edit and its tests | The explanation connects the old trigger, new mechanism, boundary, and test inputs/assertions to the selected code without claiming unobserved test execution. |
+| Analysis omits a group, overlaps a range, or calls code stated intent | Validation rejects the incomplete ownership or unsupported basis before publication. |
+| Open a review, select code, follow evidence, and reload | Groups begin collapsed, code selection explains its group, evidence reveals its target, and progress restores. |
+| Use a narrow viewport, no JavaScript, printing, or unavailable storage | The reader remains usable; all code and inline reasons are retained, with progress export/import. |
+| Provider patch is missing or malformed | Exact merge-base/head text is read once and reconstructed into one complete inspected patch, or a limit is recorded. |
+
+## 7.2.0 integrated Diff verification — 2026-09-30
+
+Candidate: the working tree based on `19be338` (7.1.0). The standalone,
+unreleased Diff Deep skill was folded into Diff; delivery returns to eight
+skills. Analysis v5 and run v8 require complete semantic grouping. No separate
+reader capture, CLI, or artifact mutation protocol remains.
+
+The complete deterministic suite passed 255 tests and the full browser suite
+passed 41 scenarios. The reader scenarios cover patch reconstruction ownership, cross-file grouping, splitting,
+coverage rejection, literal hostile code, folding, source navigation, reversible
+read state, import/export, theme inheritance, narrow screens, print, and no JS.
+After the final mobile focus/scroll and literal-tab display corrections, all
+nine reader browser scenarios passed again. README examples and captures were
+regenerated from the captured PR evidence.
+
+A fresh capture of Ky PR #825 matched all four example patches byte for byte
+at head `2a33b80dbcd0efb5a08b39d141c86ddd6ef90ae6`. The direct runtime completed
+prepare, all six inspection pages and checkpoints, ledger, analysis validation,
+rendering, live revision revalidation, publication, and private-run cleanup.
+The resulting artifact contains all 486 changed lines in three semantic groups.
+This used the authored example analysis; it was not a native model invocation.
+
+On this machine, capture took about 1.7 seconds. A synthetic 500-file,
+10,000-changed-line, 50-group review took 19 ms to validate and 72 ms to render;
+its browser identity/path payload was 21,428 bytes. These single-run measurements
+exclude model analysis and, for the synthetic example, network time.
+
+Release decision: keep the unreleased 7.2.0 minor increment from 7.1.0. No
+installed plugin was replaced. Native installed-skill invocation remains
+unverified; package and runtime checks do not establish it.
+
+### Reading order and explanation depth
+
+The follow-up puts behavior before grouped code and the optional understanding
+check after code. Analysis guidance now asks for the previous trigger, new
+mechanism, consequential boundary, and meaning of test inputs and assertions.
+The bilingual Ky example applies that guidance with group paragraphs and
+part-specific notes, including the distinction between blocking another request
+and cancelling a running hook. Its redundant implementation sequence was removed.
+
+The full browser suite passed 41 scenarios after the reading-order change.
+Direct checks of both regenerated examples through `file://` confirmed the
+section order, all 486 changed lines, separate explanation paragraphs, selected
+part notes, and a relocated mobile detail panel without horizontal overflow at
+375 pixels. Light README captures and dark desktop/mobile views were inspected.
+These are authored-example and runtime checks; native model adherence to the
+revised explanation guidance remains unverified. The release remains the
+unreleased 7.2.0 minor version.
+
+### Review corrections
+
+Renames without a text patch now retain the unavailable-content warning and
+cannot count as read. The regression fixture covers both text and binary paths.
+Keyboard regression scenarios at 1280 and 375 pixels verify repeated group
+navigation, focus at disabled endpoints, one Tab stop per code part, directional
+line movement, Enter/Space selection, and the exact line in copied follow-up
+requests. All six reader unit tests and eleven reader browser scenarios passed.
+
+The bilingual explorer now gives the quick-error/no-wait case an explicit
+remaining-budget outcome. The overview and behavior table describe error-body
+handling as a test expectation with an uncaptured implementation, consistent
+with the detailed note. Regenerated light reader and dark explorer captures were
+visually inspected. These corrections add no dependency or secondary workflow.

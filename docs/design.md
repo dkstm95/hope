@@ -147,13 +147,14 @@ comparison.
 Keep internal source IDs, model details, token counts, processing state, and
 capture time out of the first screen.
 
-Use four top-level reading areas and omit a conditional area when it adds no
+Use five top-level reading areas and omit a conditional area when it adds no
 value:
 
 1. Summary
 2. Behavior change
-3. Review items
-4. Evidence and scope
+3. Changed code
+4. Review items
+5. Evidence and scope
 
 Summary previews the most important review items. Keep the complete **Review
 items** section in a native disclosure that starts closed; a fragment link to a
@@ -165,9 +166,10 @@ Behavior change with one **Change overview** subsection. Lead with the behavior
 summary and use the core details to support it. Follow with a separate **Behavior
 flow** subsection for the optional behavior model, so its numbered steps are
 distinct from overview details. Give the lead and details the same body type
-scale. Keep the understanding check as its own subsection because it asks the
-reader to act. The behavior summary adds the condition, state, or relationship
-that makes its flow useful.
+scale. Put the understanding check after the grouped code, as its own subsection
+within Changed code, because it asks the reader to apply what they have read.
+The behavior summary adds the condition, state, or relationship that makes its
+flow useful.
 Present a visual's authored title as its figure caption so it identifies the
 visual within that model. Include only aids that help explain the change;
 unused aids need no visible placeholder or decision record.
@@ -178,19 +180,19 @@ Let the reading path answer these questions in order:
 2. Why does it matter?
 3. How do previous and new behavior differ?
 4. Under which conditions does the outcome change?
-5. What did the review find, and what limited the judgment?
-6. What implementation and evidence support that explanation?
+5. How do the changed lines implement that behavior, and where are its limits?
+6. What did the review find, and what evidence supports or limits the judgment?
 
 This is a reader-question order, not a fixed six-question template. Omit a
 question that does not apply instead of creating an empty or repetitive block.
 
-Explain behavior before code. Keep functions, types, file mechanics, and code
-steps in a collapsed **Implementation details** group inside Evidence and
-scope. In the main path, translate source states and callback return values into
-the human choice, condition, and outcome they represent.
-
-Show only the code excerpts needed for understanding instead of reproducing the
-full diff.
+Explain behavior before code. The grouped reader then owns the full captured
+diff and the implementation explanation beside it. Reserve the collapsed
+**Implementation details** group in Evidence and scope for a distinct guided
+sequence that adds understanding beyond the reader. Omit it otherwise. In the
+overview, translate source states and callback return values into the human
+choice, condition, and outcome they represent. Evidence previews show bounded
+excerpts from their canonical source.
 
 Put a quiet numbered reference such as `[1]` immediately after every grounded
 claim, including the document title. Keep title references in the title's inline
@@ -685,3 +687,43 @@ fixed assets, and small helpers.
 Each feature owns its concrete HTML, state, and publication boundary. Shared
 implementation stays focused on the exact visual tokens used by multiple
 features.
+
+## Diff's grouped code reader
+
+Every Diff Technical Record includes the grouped code reader after its summary
+and behavior explanation. Keep the overview prose at a readable width while
+allowing the code section more horizontal room. Use the same navigation, locale, theme, and
+self-contained document; do not add a second brand header or reader mode.
+
+The model arranges all captured code into meaningful groups on the left, with
+a compact, sticky detail panel on the right. Groups may span files or split one
+file. Preserve paths, before/after line numbers, and each captured row exactly
+once. Shared code is linked as evidence. Complete coverage is required before
+publication; unavailable content remains an explicit file entry.
+An absent text patch on a renamed file does not prove unchanged content. Keep
+that entry unavailable unless captured evidence establishes a pure rename.
+
+Groups start collapsed. Each title toggles its code and selects the group for
+the detail panel. Expansion is independent, works by keyboard and without
+JavaScript, and is remembered alongside reading progress. Evidence links expand
+their target group; printing includes every group and inline explanation.
+
+Selecting code highlights its location and shows any contextual note in the
+panel. On narrow screens the panel follows the selected heading inline, even
+when its code is collapsed. Wrap code and prose without page-level overflow.
+Keep keyboard focus on group navigation controls when the panel moves; at a
+disabled navigation endpoint, focus the selected group heading. Each code part
+has one line in the Tab order. Up/Down and Home/End move line focus, and
+Enter/Space select the focused line with the same explanation and follow-up
+anchor as a pointer selection.
+Restored progress follows the captured code; revised groups lose their read
+marks. Provide export/import when browser storage is unavailable.
+
+Use quiet file boundaries, mint selection accents, shared semantic artifact
+colors, and the review's light/dark/system appearance. Each group has a short
+title, prose that leads with why, a stated/inferred/unknown basis, and folded
+evidence. Explain the relevant previous behavior, mechanism, and boundary beside
+the code. Use separate paragraphs and part-specific notes when needed, following
+Diff's analysis guidance. Previous group, position, next group, and reversible
+read status share one small row. Unavailable code cannot count as fully read. Preserve keyboard
+focus, forced colors, and narrow viewport support.

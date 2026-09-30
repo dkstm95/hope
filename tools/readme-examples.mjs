@@ -1025,7 +1025,13 @@ function makeTimeoutMicroworld(locale, evidence) {
             text(locale, "Recalculate the remaining operation budget.", "남은 작업 예산을 다시 계산한다."),
             text(locale, "Stop when no budget remains.", "예산이 없으면 중단한다."),
           ],
-        } : "unchanged",
+        } : {
+          outcome: text(locale, "A retry starts with only the remaining operation budget.", "재시도는 작업 전체의 남은 시간만 받아 시작한다."),
+          steps: [
+            text(locale, "Subtract time spent on the first attempt.", "첫 시도에 사용한 시간을 뺀다."),
+            text(locale, "Start the next request with the time still available.", "남아 있는 시간으로 다음 요청을 시작한다."),
+          ],
+        },
         lesson: budgetExpired
           ? text(locale, "Attempts and waits spend one shared timeout budget.", "시도와 대기는 하나의 시간 제한 예산을 함께 쓴다.")
           : text(locale, "A quick failure can still retry when enough budget remains.", "빠른 실패 뒤 예산이 충분하면 여전히 재시도할 수 있다."),
@@ -1065,7 +1071,51 @@ export function makeDiffAnalysis(snapshot) {
   ];
   const boundaryEvidence = [...budgetEvidence, ...boundaryTestEvidence];
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
+    groups: [
+      {
+        id: "g-shared-budget",
+        title: text(locale, "Keep one timeout budget across attempts", "모든 요청 시도가 하나의 시간 예산을 공유"),
+        text: text(locale,
+          "The PR describes timeout as a limit on the whole operation. Previously, the request timer received the original timeout on every attempt, so a retry could receive a fresh allowance after earlier requests and waits had already used time.\n\nThe new #startTime is recorded once for a numeric timeout. #getRemainingTimeout subtracts elapsed time from that same starting point and clamps the result to zero. Immediately before the timed fetch, an exhausted budget raises TimeoutError; otherwise only the remaining time is passed to the timer. With timeout: false the helper returns undefined, preserving the path without a shared deadline.\n\nThe changed tests distinguish exhaustion from an allowed retry: an exhausted operation expects one request even when retryOnTimeout or shouldRetry permits retries, while a quick failure with enough time left still expects two requests. The error-body test now expects TimeoutError after one request instead of a successful second response. These assertions describe the intended behavior; this review has not executed them.",
+          "PR 설명에서 timeout은 작업 전체의 한도입니다. 이전에는 매 요청 타이머에 원래 timeout을 그대로 전달했기 때문에, 앞선 요청과 대기가 시간을 사용한 뒤에도 재시도는 새 시간 한도를 받을 수 있었습니다.\n\n이제 숫자 timeout이면 #startTime을 한 번 기록합니다. #getRemainingTimeout은 이 시작점부터 지난 시간을 빼고 결과가 음수이면 0으로 맞춥니다. 타이머를 적용하는 fetch 직전에 예산이 소진됐으면 TimeoutError를 던지고, 남아 있으면 그 시간만 타이머에 전달합니다. timeout: false이면 계산 결과를 undefined로 반환해 전체 시간 제한을 적용하지 않는 경로를 유지합니다.\n\n테스트는 예산 소진과 재시도 허용을 구분합니다. 시간이 끝나면 retryOnTimeout이나 shouldRetry가 재시도를 허용해도 요청은 한 번이어야 하고, 빠른 실패 뒤 시간이 남아 있으면 두 번째 요청은 성공해야 합니다. 오류 본문 테스트도 두 번째 응답의 성공 대신 첫 요청 뒤 TimeoutError를 기대하도록 바뀝니다. 이는 테스트에 적힌 기대 동작이며, 이 리뷰에서 실행한 결과는 아닙니다."),
+        basis: "stated",
+        evidence: [reference("source-2", 1), reference("source-4", 13, 16), reference("source-4", 113, 139), reference("source-7", 46, 81), reference("source-7", 87, 110), reference("source-7", 126, 168), reference("source-7", 174, 209), reference("source-7", 212, 241), reference("source-6", 13, 30)],
+        parts: [
+          { fileId: "file-1", startLine: 1, endLine: 28, note: text(locale, "The undefined guard prevents a repeated entry from resetting the start time. Only numeric timeout values start the clock; the new field stores that origin, not a separate budget for each attempt.", "undefined 검사로 이 경로에 다시 들어와도 시작 시각을 초기화하지 않습니다. 숫자 timeout일 때만 시계를 시작하며, 새 필드는 시도별 예산이 아니라 계산의 기준 시각을 보관합니다.") },
+          { fileId: "file-1", startLine: 113, endLine: 142, note: text(locale, "The old call forwarded this.#options unchanged. The replacement overrides only timeout with the remaining budget. Before a start time exists the helper returns the configured timeout; after it exists, Math.max(0, timeout - elapsed) makes exhaustion explicit. The next group's wait and hook checks reuse this helper.", "이전 호출은 this.#options를 그대로 전달했습니다. 새 호출은 timeout만 남은 예산으로 덮어씁니다. 시작 시각이 없으면 설정값을 반환하고, 기록된 뒤에는 Math.max(0, timeout - elapsed)로 소진 상태를 0으로 나타냅니다. 다음 묶음의 대기·훅 검사도 이 함수를 재사용합니다.") },
+          { fileId: "file-4", startLine: 42, endLine: 243, note: text(locale, "For a server delay of 1000 ms and timeout of 500 ms, the updated assertions expect TimeoutError and requestCount === 1. shouldRetry still receives TimeoutError but cannot replenish the budget. The disabled-timeout and sufficient-budget cases expect the response fixture and two requests, showing that retries remain possible.", "서버가 1000ms 지연되고 timeout이 500ms인 경우 TimeoutError와 requestCount === 1을 기대합니다. shouldRetry에 TimeoutError가 전달되어도 예산이 새로 생기지는 않습니다. 시간 제한을 끈 경우와 예산이 충분한 경우에는 응답 fixture와 요청 두 번을 기대해 재시도가 여전히 가능함을 구분합니다.") },
+          { fileId: "file-3", note: text(locale, "This test changes its expected outcome from 'ok' after two requests to TimeoutError after one. It sets a zero retry delay and a 1000 ms timeout, with a loose elapsed-time assertion below 3000 ms. That assertion does not establish an exact 1000 ms completion time or reveal the body-handling implementation omitted from this patch.", "이 테스트는 요청 두 번 뒤 'ok'를 받던 기대를 요청 한 번 뒤 TimeoutError로 바꿉니다. 재시도 지연은 0, timeout은 1000ms이며 총 소요 시간은 3000ms 미만으로만 검사합니다. 따라서 정확히 1000ms에 끝난다는 보장이나 이 패치에 없는 본문 처리 구현까지 입증하지는 않습니다.") },
+        ],
+      },
+      {
+        id: "g-retry-boundaries",
+        title: text(locale, "Recheck time after waits and hooks", "대기와 훅 이후 남은 시간을 다시 확인"),
+        text: text(locale,
+          "A retry wait or hook can consume the time left before another request starts. The old catch path waited for the calculated retry delay without comparing it with a shared budget; the new path checks the budget before and after waiting and again after beforeRetry returns.\n\nIf the requested delay equals or exceeds the remaining time, it waits only for that remainder and then throws TimeoutError without starting another request. Rechecking after await accounts for the time actually spent waiting or running hooks. Delay cancellation continues to use the caller's signal, as the adjacent comment specifies, rather than the internal request abort controller.\n\nThe checks do not cancel a hook while it runs. The beforeRetry test uses a 1000 ms timeout and a 2000 ms hook, then checks TimeoutError and a single fetch after the hook returns. It establishes the intended block on the next request, not completion of the whole call at the deadline. beforeRequest and forced-retry tests cover other routes to the next request; their inputs and limits are explained with each part.",
+          "재시도 대기나 훅이 실행되는 동안에도 다음 요청에 쓸 시간은 줄어듭니다. 이전 catch 경로는 계산한 재시도 지연을 전체 예산과 비교하지 않고 기다렸습니다. 이제 대기 전후와 beforeRetry 반환 뒤에 남은 시간을 확인합니다.\n\n요청한 지연이 남은 시간과 같거나 길면 남은 시간만 기다린 뒤, 새 요청을 시작하지 않고 TimeoutError를 던집니다. await 뒤의 재검사는 실제 대기와 훅 실행에 소비된 시간을 반영합니다. 대기 취소에는 인접 주석이 명시한 대로 내부 요청용 abort controller 대신 호출자가 제공한 signal을 계속 사용합니다.\n\n이 검사는 실행 중인 훅을 취소하지 않습니다. beforeRetry 테스트는 timeout 1000ms에 2000ms짜리 훅을 두고, 훅 반환 뒤 TimeoutError와 fetch 한 번을 확인합니다. 다음 요청을 막는 기대는 보여 주지만, 호출 전체가 마감 시각에 끝난다는 보장은 아닙니다. beforeRequest와 강제 재시도 테스트가 확인하는 다른 진입 경로도 각 코드 부분에서 입력과 한계를 함께 설명합니다."),
+        basis: "inferred",
+        evidence: [reference("source-4", 65, 110), reference("source-5", 26, 44), reference("source-5", 59, 82), reference("source-5", 105, 128), reference("source-5", 147, 169), reference("source-7", 255, 270), reference("source-7", 278, 300)],
+        parts: [
+          { fileId: "file-1", startLine: 58, endLine: 112, note: text(locale, "The >= comparison also rejects a delay that exactly consumes the remaining budget. With timeout disabled the helper returns undefined, so these exhaustion checks are skipped. The after-delay and after-hook checks prevent a later request from using a budget calculated before those awaits; neither check races or interrupts the await itself.", "지연이 남은 예산과 정확히 같아도 >= 조건에 걸려 다음 요청을 시작하지 않습니다. timeout을 끄면 계산값이 undefined라 이 소진 검사를 건너뜁니다. 대기 후와 훅 후의 검사는 await 이전에 계산한 예산으로 다음 요청이 실행되는 것을 막지만, await 자체를 중단시키지는 않습니다.") },
+          { fileId: "file-2", note: text(locale, "A 200 ms beforeRequest hook against a 100 ms timeout expects zero fetches initially and one on a retry path. beforeRetry instead waits 2000 ms with a 1000 ms budget and expects one hook and one fetch. The afterResponse case requests a 200 ms forced delay against 100 ms and asserts at most one server request. The tests distinguish entry prevention from cancellation of hook work.", "beforeRequest는 timeout 100ms보다 긴 200ms 훅을 두고, 최초 경로에서는 fetch 0회, 재시도 경로에서는 1회를 기대합니다. beforeRetry는 예산 1000ms에 훅 2000ms를 두고 훅 1회와 fetch 1회를 기대합니다. afterResponse는 예산 100ms에 200ms 강제 지연을 요청하며 서버 요청이 최대 1회인지 검사합니다. 이 단언들은 다음 요청의 진입 차단과 훅 작업 자체의 취소를 구분합니다.") },
+          { fileId: "file-4", startLine: 244, endLine: 301, note: text(locale, "Both Retry-After forms ask for roughly five seconds while timeout is 1000 ms. The tests expect duration near 1000 ms through withPerformance, TimeoutError, and one request despite a retry limit of 15. Unlike the hook tests, these include a duration check for the bounded wait.", "두 Retry-After 형식은 약 5초의 대기를 요구하지만 timeout은 1000ms입니다. retry limit이 15여도 withPerformance의 1000ms 소요 시간 검사, TimeoutError, 요청 1회를 기대합니다. 훅 테스트와 달리 제한된 대기 시간도 검사하는 사례입니다.") },
+        ],
+      },
+      {
+        id: "g-retry-after",
+        title: text(locale, "Fall back when Retry-After is invalid", "잘못된 Retry-After는 기본 재시도 지연으로 대체"),
+        text: text(locale,
+          "An invalid Retry-After conversion can produce NaN. Previously, passing that value to Math.min left the result non-finite, so it could reach the retry wait. Number.isFinite now detects the failed conversion and falls back to #calculateDelay, preserving the configured retry-delay policy.\n\nBoth the fallback and a valid server value pass through #clampRetryDelayToMax, which applies maxRetryAfter when it is set. Valid negative values are clamped to zero, and the explicit server-timing path still avoids jitter as its comment requires. This caps an individual retry delay; the shared-timeout checks in the previous group separately decide whether that delay fits the whole operation.\n\nThe added test sends a 429 with 'not-a-valid-value', disables timeout, and sets the retry delay to 10 ms. It expects the response fixture and two requests before a 500 ms failure guard wins. That covers recovery from an invalid header without relying on the new timeout budget; it does not assert an exact 10 ms delay or test every maxRetryAfter boundary.",
+          "Retry-After 변환에 실패하면 NaN이 나올 수 있습니다. 이전에는 이 값을 Math.min에 전달해도 유한한 수가 되지 않아 재시도 대기까지 전달될 수 있었습니다. 이제 Number.isFinite로 변환 실패를 확인하고 #calculateDelay로 되돌아가 설정된 재시도 지연 정책을 적용합니다.\n\n대체 지연과 유효한 서버 값 모두 #clampRetryDelayToMax를 거쳐, maxRetryAfter가 설정돼 있으면 그 상한을 적용받습니다. 유효하지만 음수인 값은 0으로 맞추고, 서버가 시간을 명시한 경로에는 주석대로 jitter를 추가하지 않습니다. 이 상한은 한 번의 재시도 지연을 제한하며, 전체 작업의 남은 시간 안에 들어가는지는 앞 묶음의 시간 예산 검사가 따로 판단합니다.\n\n추가 테스트는 429 응답에 'not-a-valid-value'를 넣고 timeout을 끈 채 재시도 지연을 10ms로 설정합니다. 500ms 실패 감시가 먼저 끝나기 전에 응답 fixture와 요청 두 번을 기대합니다. 새 시간 예산에 기대지 않고 잘못된 헤더에서 복구하는 사례이며, 정확한 10ms 지연이나 모든 maxRetryAfter 경계를 검사하지는 않습니다."),
+        basis: "inferred",
+        evidence: [reference("source-4", 29, 54), reference("source-7", 5, 36)],
+        parts: [
+          { fileId: "file-1", startLine: 29, endLine: 57, note: text(locale, "When maxRetryAfter is undefined the helper returns the calculated delay unchanged; otherwise it takes the smaller value. Reusing it for the fallback prevents invalid headers from bypassing that configured cap. Normalization happens before the shared budget comparison so that comparison receives a usable delay.", "maxRetryAfter가 undefined이면 계산한 지연을 그대로 반환하고, 설정돼 있으면 둘 중 작은 값을 택합니다. 변환 실패 경로에도 같은 함수를 적용해 잘못된 헤더가 상한을 우회하지 않게 합니다. 전체 예산과 비교하기 전에 값을 정리하므로 그 비교에 사용할 수 있는 지연이 전달됩니다.") },
+          { fileId: "file-4", startLine: 1, endLine: 41, note: text(locale, "The first request receives the malformed header; the second returns the fixture. Promise.race provides a 500 ms failure guard. The response and request-count assertions demonstrate successful recovery, but a separate timing assertion would be needed to establish the precise fallback delay.", "첫 요청은 잘못된 헤더를 받고 두 번째 요청은 fixture를 반환합니다. Promise.race의 500ms 감시는 멈추지 않고 복구하는지 확인하는 장치입니다. 응답과 요청 횟수 단언은 복구 성공을 보여 주지만, 정확한 대체 지연을 입증하려면 별도의 시간 단언이 필요합니다.") },
+        ],
+      },
+    ],
     runId: DIFF_RUN_ID,
     snapshotDigest: snapshot.digest,
     locale,
@@ -1080,16 +1130,16 @@ export function makeDiffAnalysis(snapshot) {
     coreChange: {
       before: claim(locale, "Each retry received the original request timeout after earlier attempts and delays.", "이전 시도와 대기 뒤에도 각 재시도가 원래 요청 시간 제한을 새로 받았다.", [sourceReference(snapshot, "source-4", "-\t\treturn timeout(this.#originalRequest")]),
       after: claim(locale, "The call records one start time and gives delays and later requests only the remaining budget.", "호출 시작 시각을 한 번 기록하고 대기와 다음 요청에는 남은 예산만 준다.", budgetEvidence),
-      why: claim(locale, "Retries can no longer make one operation exceed its configured timeout.", "재시도로 한 작업이 설정한 시간 제한을 계속 넘기지 않게 한다.", [reference("source-2", 1)], "stated"),
+      why: claim(locale, "Attempts and waits consume one shared timeout budget.", "시도와 대기가 하나의 시간 제한 예산을 함께 쓴다.", [reference("source-2", 1)], "stated"),
       details: [
         claim(locale, "A delay that consumes the remaining budget ends at the deadline without a new request.", "재시도 대기가 남은 예산을 모두 쓰면 새 요청 없이 마감 시각에 끝난다.", budgetEvidence),
         claim(locale, "Disabling timeout still permits the configured retry.", "시간 제한을 끄면 설정한 재시도를 계속 허용한다.", retryEvidence),
         claim(locale, "Focused tests place initial and retry beforeRequest hooks and afterResponse forced retries under the shared budget.", "집중 테스트는 최초·재시도 beforeRequest 훅과 afterResponse 강제 재시도에 공유 예산을 적용한다.", [...beforeRequestEvidence, ...forcedRetryEvidence]),
-        claim(locale, "A never-ending error response body now ends with TimeoutError after one request.", "끝나지 않는 오류 응답 본문은 한 번의 요청 뒤 TimeoutError로 끝난다.", errorBodyEvidence),
+        claim(locale, "The error-body test now expects TimeoutError after one request; the captured patch does not show its body-handling implementation.", "오류 본문 테스트는 요청 한 번 뒤 TimeoutError를 기대하도록 바뀌었다. 수집한 패치에는 본문 처리 구현이 없다.", errorBodyEvidence),
       ],
     },
     behavior: {
-      summary: claim(locale, "The remaining budget is recalculated at different points across hooks, waits, forced retries, and error-body handling.", "훅, 대기, 강제 재시도, 오류 본문 처리 경로마다 남은 예산을 다시 계산하는 시점이 다르다.", boundaryEvidence),
+      summary: claim(locale, "The code checks remaining time around waits and hooks; focused tests describe forced-retry and error-body expectations.", "코드는 대기와 훅 전후에 남은 시간을 확인한다. 집중 테스트는 강제 재시도와 오류 본문의 기대 동작을 설명한다.", boundaryEvidence),
       steps: [
         claim(locale, "A numeric timeout records the operation start once.", "숫자 시간 제한이면 작업 시작 시각을 한 번 기록한다.", [sourceReference(snapshot, "source-4", "Track start time", "Date.now")]),
         claim(locale, "Retry delay is compared with the remaining time.", "재시도 대기를 남은 시간과 비교한다.", budgetEvidence),
@@ -1098,7 +1148,7 @@ export function makeDiffAnalysis(snapshot) {
       visual: {
         basis: "code",
         evidence: boundaryEvidence,
-        caption: text(locale, "The shared budget reaches every material path that can delay or start another request.", "공유 예산이 다음 요청을 늦추거나 시작할 수 있는 모든 주요 경로에 적용된다."),
+        caption: text(locale, "The table separates visible budget checks from the error-body test expectation, whose implementation is not captured.", "표는 코드에서 확인한 예산 검사와, 구현이 수집되지 않은 오류 본문 테스트의 기대를 구분한다."),
         columns: [
           text(locale, "When the budget is checked", "예산을 확인하는 때"),
           text(locale, "When the budget is zero", "예산이 0이면"),
@@ -1111,7 +1161,7 @@ export function makeDiffAnalysis(snapshot) {
           { case: text(locale, "After retry wait", "재시도 대기 후"), cells: [text(locale, "Recalculate after elapsed time", "경과 시간을 반영해 다시 계산"), text(locale, "TimeoutError without a new request", "새 요청 없이 TimeoutError")] },
           { case: "beforeRetry hook", cells: [text(locale, "Recalculate only after the hook returns", "hook이 반환된 뒤에만 다시 계산"), text(locale, "Cannot end the call before it returns", "반환 전에는 호출을 끝내지 못함")] },
           { case: text(locale, "afterResponse forced retry", "afterResponse 강제 재시도"), cells: [text(locale, "Apply its requested delay to the shared budget", "요청한 대기에 공유 예산을 적용"), text(locale, "TimeoutError before another request", "다음 요청 전에 TimeoutError")] },
-          { case: text(locale, "Error response body", "오류 응답 본문"), cells: [text(locale, "Keep body handling under the operation deadline", "본문 처리를 작업 마감 시각 안에 포함"), text(locale, "TimeoutError after one request", "한 번의 요청 뒤 TimeoutError")] },
+          { case: text(locale, "Error response body (test)", "오류 응답 본문(테스트)"), cells: [text(locale, "Check location is unknown; body-handling implementation is not captured", "검사 위치는 확인 불가: 본문 처리 구현이 수집되지 않음"), text(locale, "Test expects TimeoutError and one request; its 3000 ms bound does not establish the exact 1000 ms deadline", "TimeoutError와 요청 1회를 기대함. 3000ms 미만 단언은 정확한 1000ms 마감 시각을 입증하지 않음")] },
           { case: text(locale, "Next request", "다음 요청"), cells: [text(locale, "Pass only remaining timeout to the request timer", "남은 timeout만 요청 타이머에 전달"), text(locale, "Do not start the request", "요청을 시작하지 않고 TimeoutError")] },
         ],
         title: text(locale, "Where the shared timeout budget is checked", "공통 시간 예산을 확인하는 지점"),
@@ -1123,7 +1173,7 @@ export function makeDiffAnalysis(snapshot) {
         subject: text(locale, "Shared timeout boundaries", "공유 시간 제한 경계"),
         status: "checked",
         basis: "code",
-        explanation: text(locale, "The core path and focused tests cover delays, disabled timeout, hooks, forced retries, error-body handling, exhausted budget, and a successful retry.", "핵심 경로와 집중 테스트가 대기, 시간 제한 해제, 훅, 강제 재시도, 오류 본문 처리, 예산 소진, 성공하는 재시도를 확인한다."),
+        explanation: text(locale, "The core path and focused tests cover delays, disabled timeout, hooks, forced retries, exhausted budget, and a successful retry. Error-body coverage is limited to the test expectation; its implementation is absent.", "핵심 경로와 집중 테스트는 대기, 시간 제한 해제, 훅, 강제 재시도, 예산 소진, 성공하는 재시도를 다룬다. 오류 본문은 구현 없이 테스트의 기대 동작만 확인했다."),
         evidence: boundaryEvidence,
         limitIds: [],
       },
@@ -1136,11 +1186,7 @@ export function makeDiffAnalysis(snapshot) {
         limitIds: [],
       },
     ],
-    codeSteps: [
-      { title: text(locale, "Record one operation start", "작업 시작을 한 번 기록"), text: text(locale, "Store the start time when timeout is numeric.", "시간 제한이 숫자이면 시작 시각을 저장한다."), basis: "code", evidence: [sourceReference(snapshot, "source-4", "Track start time", "Date.now")] },
-      { title: text(locale, "Spend the remaining budget", "남은 예산 사용"), text: text(locale, "Cap waits and later request timers by the time left.", "대기와 다음 요청 타이머를 남은 시간으로 제한한다."), basis: "code", evidence: budgetEvidence },
-      { title: text(locale, "Cover the timing branches", "시간 분기 확인"), text: text(locale, "Focused tests cover hooks, forced retries, error bodies, disabled timeout, exhausted budget, sufficient budget, and Retry-After.", "집중 테스트가 훅, 강제 재시도, 오류 본문, 시간 제한 해제, 소진·충분한 예산, Retry-After를 확인한다."), basis: "code", evidence: [...boundaryTestEvidence, ...retryEvidence] },
-    ],
+    codeSteps: [],
     reviewItems: [{
       kind: "verify",
       importance: "medium",

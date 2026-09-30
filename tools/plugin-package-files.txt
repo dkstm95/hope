@@ -50,7 +50,7 @@ skills/diff/references/analysis.md
 skills/diff/references/runtime.md
 skills/diff/references/teaching-aids.md
 skills/diff/references/workflow.md
-skills/diff/scripts/analysis-v4.schema.json
+skills/diff/scripts/analysis-v5.schema.json
 skills/diff/scripts/artifact.mjs
 skills/diff/scripts/checkpoint-window-v2.schema.json
 skills/diff/scripts/checkpoint.mjs
@@ -69,6 +69,14 @@ skills/diff/scripts/locales/en-US/diff.json
 skills/diff/scripts/locales/index.mjs
 skills/diff/scripts/locales/ko-KR/common.json
 skills/diff/scripts/locales/ko-KR/diff.json
+skills/diff/scripts/patch.mjs
+skills/diff/scripts/reader/client.mjs
+skills/diff/scripts/reader/layout.mjs
+skills/diff/scripts/reader/locales.mjs
+skills/diff/scripts/reader/render.mjs
+skills/diff/scripts/reader/snapshot.mjs
+skills/diff/scripts/reader/style.css
+skills/diff/scripts/reconstruct-patch.mjs
 skills/diff/scripts/redact.mjs
 skills/diff/scripts/render.mjs
 skills/diff/scripts/run.mjs

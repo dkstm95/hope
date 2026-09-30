@@ -1,3 +1,4 @@
+import { renderReader } from "./reader/render.mjs";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
@@ -25,14 +26,10 @@ const fontUrls = Object.freeze({
 });
 const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
 const renderedCodeSources = new Set([
-  "after-file",
-  "before-file",
   "context-file",
   "patch",
 ]);
 const linkedCodeSources = new Set([
-  "after-file",
-  "before-file",
   "context-file",
 ]);
 
@@ -1026,7 +1023,7 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
   });
 }
 
-function buildSections(review, dictionary, codeRenderer) {
+function buildSections(review, dictionary, codeRenderer, reader) {
   const sections = [];
   const coreDetails = review.coreChange.details.map(
     (item) => claimBlock(item, dictionary, review, codeRenderer, "core-detail"),
@@ -1123,7 +1120,7 @@ function buildSections(review, dictionary, codeRenderer) {
   let number = 2;
   sections.push({
     html: section({
-      content: `${changeOverview}${behaviorModel}${quiz}`,
+      content: `${changeOverview}${behaviorModel}`,
       id: "explore",
       number,
       title: label(dictionary, "section.explore"),
@@ -1132,6 +1129,9 @@ function buildSections(review, dictionary, codeRenderer) {
     number,
     title: label(dictionary, "section.explore"),
   });
+  number += 1;
+  sections.push({ id: "changes", number, title: label(dictionary, "section.changes"),
+    html: section({ id: "changes", number, title: label(dictionary, "section.changes"), content: `${reader.content}${quiz}` }) });
   number += 1;
   if (review.reviewItems.length > 0) {
     sections.push({
@@ -1503,7 +1503,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
 
 .layout {
   display: grid;
-  max-width: ${LAYOUT.documentWidth}px;
+  max-width: 1680px;
   min-height: 100vh;
   margin: auto;
   grid-template-columns: ${LAYOUT.tableOfContentsWidth}px minmax(0, 1fr);
@@ -1516,6 +1516,7 @@ bdi[dir="auto"] { overflow-wrap: anywhere; }
   padding: ${space7}px ${space8}px 80px;
   background: var(--panel);
 }
+.main > :not(#changes), #changes > .review-subsection { max-width: 1000px; margin-inline: 0; }
 .locale-warning {
   margin: 0 0 ${space4}px;
   padding: ${space3}px ${space4}px;
@@ -2669,6 +2670,7 @@ td:first-child {
     display: block;
   }
   [id]:target { scroll-margin-top: 76px; }
+  .diff-reader { --reader-scroll-offset: 76px; }
   .topbar { position: sticky; height: ${LAYOUT.topbarHeight}px; border-right: 0; border-bottom: 1px solid var(--border); }
   .topbar-inner { height: ${LAYOUT.topbarInnerHeight}px; padding: 0 ${space4}px; flex-direction: row; align-items: center; gap: ${space3}px; }
   .rail-divider, .rail-navigation, .rail-footer { display: none; }
@@ -3071,14 +3073,15 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
     evidenceRecords: new Map(),
     render: renderCodeEvidence,
   });
-  const script = clientScript(dictionary);
+  const reader = await renderReader(review);
+  const script = `${clientScript(dictionary)}\n${reader.script}`;
   const title = review.title.text;
   const documentTitleHtml = documentTitle(review.title, dictionary, review, codeRenderer);
   const synopsisHtml = synopsis(review, dictionary, codeRenderer, { number: 1 });
-  const sections = buildSections(review, dictionary, codeRenderer);
+  const sections = buildSections(review, dictionary, codeRenderer, reader);
   const styles = css(Object.fromEntries(Object.entries(fontBytes).map(
     ([name, bytes]) => [name, bytes.toString("base64")],
-  )));
+  ))) + "\n" + reader.styles;
   const { owner, name } = review.snapshot.repository;
   const prUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
     + `/pull/${review.snapshot.pullRequest.number}`;

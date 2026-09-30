@@ -106,6 +106,12 @@ AI는 큰 코드 변경을 빠르게 만들 수 있습니다. Diff는 엔지니�
 
 Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명하고 중요한 주장에 근거를 연결합니다.
 
+모든 Diff 결과물에는 전체 변경 코드도 함께 들어갑니다. 모델이 여러 파일의
+구현과 테스트를 목적에 따라 모으거나 한 파일을 나누어 배치합니다. 처음에는
+모든 묶음이 접혀 있으며, 제목이나 코드를 선택하면 오른쪽에 변경 이유와
+근거를 보여 줍니다. 읽음 표시를 되돌리거나 진행 상태를 내보낼 수 있습니다.
+별도 스킬이나 옵션 없이 기존 분석과 같은 PR 스냅샷을 사용합니다.
+
 변경을 이해하는 데 도움이 될 때 시각 자료, 마이크로월드, 퀴즈를 활용합니다.
 현재 대화에서 분석할 수 있으며, 독립적인 관점이 필요하거나 사용자가 요청하면
 별도 리뷰어를 활용합니다.
@@ -117,13 +123,13 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 > 없으면 저장소에서 사용자가 만든 최신 열린 PR을 선택합니다.
 > PR이 바뀌면 Diff를 다시 실행하세요.
 
-아래 이미지는 [Ky PR #825](https://github.com/sindresorhus/ky/pull/825)을 실제로
-분석해 생성한 HTML을 다크·라이트 모드에서 캡처했습니다. 이번 결과물에는 동작 흐름과
-마이크로월드가 포함되어 있습니다.
+아래 이미지는 [Ky PR #825](https://github.com/sindresorhus/ky/pull/825)에서 수집한
+근거를 현재 Diff 렌더러로 만든 뒤 다크·라이트 모드에서 캡처했습니다.
+이 결과물에는 의미별 코드 묶음, 동작 흐름, 마이크로월드가 포함되어 있습니다.
 
-**전체 HTML:** [Ky PR #825의 재시도 시간 예산을 설명한 Diff 결과물을 엽니다.](docs/diffs/ky-825-default-run.ko.html)
+**전체 HTML:** [Ky PR #825의 재시도 시간 예산을 설명한 Diff 결과물을 엽니다.](docs/diffs/ky-825-total-timeout.ko.html)
 
-![제목에 붙은 근거, 변경 요약, 검토 항목을 보여 주는 실제 Diff 결과물](assets/readme/hope-diff-ko.png)
+![제목에 붙은 근거, 변경 요약, 검토 항목을 보여 주는 Diff 결과물](assets/readme/hope-diff-ko.png)
 
 <details>
 <summary>Diff 세부 이미지 보기</summary>
@@ -133,6 +139,8 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 | [![변경 개요와 번호가 매겨진 동작 흐름을 구분한 Diff 결과물](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![시간 상태에 따른 재시도 동작을 비교하는 Diff 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
 
 </details>
+
+![전체 변경을 의미별 묶음과 오른쪽 설명으로 보여 주는 Diff 코드 리더](assets/readme/hope-diff-reader-ko.png)
 
 ---
 

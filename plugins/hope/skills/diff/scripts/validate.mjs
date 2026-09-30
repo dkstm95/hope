@@ -1,3 +1,5 @@
+import { readerSnapshot } from "./reader/snapshot.mjs";
+import { buildLayout } from "./reader/layout.mjs";
 import {
   ANALYSIS_VERSION,
   BASIS,
@@ -15,7 +17,7 @@ import {
 } from "./teaching-aids.mjs";
 import { containsBidiControl } from "./text.mjs";
 
-const changeSources = new Set(["patch", "before-file", "after-file"]);
+const changeSources = new Set(["patch"]);
 const codeSources = new Set([...changeSources, "context-file"]);
 const statedSources = new Set([
   "pull-request-title",
@@ -46,6 +48,7 @@ const proseFields = new Set([
   "outcome",
   "question",
   "reason",
+  "note",
   "simplifies",
   "steps",
   "subject",
@@ -60,6 +63,7 @@ const analysisFields = Object.freeze([
   "title",
   "purpose",
   "coreChange",
+  "groups",
   "contextChecks",
   "background",
   "beginnerPrimer",
@@ -432,7 +436,7 @@ function evidenceList(
   });
 }
 
-function claim(value, name, sourceMap, { title = false } = {}) {
+function claim(value, name, sourceMap, { title = false, statedCodeEvidence = false } = {}) {
   const keys = title
     ? ["title", "text", "basis", "evidence"]
     : ["text", "basis", "evidence"];
@@ -449,7 +453,9 @@ function claim(value, name, sourceMap, { title = false } = {}) {
   }
   if (
     basis === "stated"
-    && evidence.some((item) => !statedSources.has(item.sourceKind))
+    && (statedCodeEvidence
+      ? !evidence.some((item) => statedSources.has(item.sourceKind))
+      : evidence.some((item) => !statedSources.has(item.sourceKind)))
   ) {
     throw new Error(`${name} uses code as a stated-source basis`);
   }
@@ -1018,6 +1024,30 @@ function validateCodeStep(value, index, sourceMap, fileMap) {
   return Object.freeze({ ...validatedClaim, fileIds: Object.freeze([...fileIds]) });
 }
 
+function validateGroups(values, snapshot, sourceMap) {
+  const groups = array(values, "groups", LIMITS.changedLines + LIMITS.changedFiles).map((value, index) => {
+    const name = `groups[${index}]`;
+    object(value, name, ["id", "title", "text", "basis", "evidence", "parts"]);
+    const id = identifier(value.id, `${name}.id`);
+    if (!id.startsWith("g-")) throw new Error(`${name}.id must start with g-`);
+    const explanation = claim({ title: value.title, text: value.text, basis: value.basis, evidence: value.evidence }, name, sourceMap, { title: true, statedCodeEvidence: true });
+    if (explanation.basis === "code") throw new Error(`${name} must distinguish stated, inferred, or unknown reasons`);
+    const parts = boundedArray(value.parts, `${name}.parts`, 1, LIMITS.changedLines + LIMITS.changedFiles).map((part, partIndex) => {
+      const path = `${name}.parts[${partIndex}]`;
+      object(part, path, ["fileId", "startLine", "endLine", "note"]);
+      if ((part.startLine === undefined) !== (part.endLine === undefined)) throw new Error(`${path} needs both range endpoints`);
+      return { fileId: part.fileId, ...(part.startLine === undefined ? {} : { startLine: part.startLine, endLine: part.endLine }),
+        ...(part.note === undefined ? {} : { note: text(part.note, `${path}.note`) }) };
+    });
+    return { id, ...explanation, parts };
+  });
+  if (new Set(groups.map((group) => group.id)).size !== groups.length) throw new Error("Duplicate group IDs");
+  const captured = readerSnapshot(snapshot);
+  const layout = buildLayout(captured, groups);
+  if (layout.pendingFiles) throw new Error(`groups leave ${layout.pendingFiles} files and ${layout.pendingLines} changed lines unassigned`);
+  return { snapshot: captured, groups, layout };
+}
+
 function validateAnalysisIdentity(analysis, snapshot, runId) {
   if (snapshot?.schemaVersion !== CONTRACT_VERSION) {
     throw new RangeError("Unsupported Hope snapshot schema");
@@ -1193,6 +1223,7 @@ function validateAnalysisValue(analysis, snapshot, {
       throw new Error("The core change cannot be grounded without an included file");
     }
   });
+  const reader = capture("groups", () => validateGroups(analysis.groups, snapshot, sourceMap));
   const codeSteps = items(
     analysis.codeSteps, "codeSteps", 0, 20,
     (value, index) => validateCodeStep(value, index, sourceMap, fileMap),
@@ -1230,6 +1261,7 @@ function validateAnalysisValue(analysis, snapshot, {
       ["codeSteps", codeSteps],
       ["contextChecks", contextChecks],
       ["coreChange", coreChange],
+      ["groups", reader?.groups],
       ["beginnerPrimer", beginnerPrimer],
       ["purpose", purpose],
       ["quiz", quiz],
@@ -1261,6 +1293,7 @@ function validateAnalysisValue(analysis, snapshot, {
   );
   return Object.freeze({
     analysisSchemaVersion: ANALYSIS_VERSION,
+    reader,
     background: Object.freeze(background),
     beginnerPrimer: Object.freeze(beginnerPrimer),
     behavior,
@@ -1299,7 +1332,7 @@ function validateAnalysisValue(analysis, snapshot, {
 function analysisIssue(error, path) {
   const message = error instanceof Error ? error.message : String(error);
   const inferredPath = message.match(
-    /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|fileDispositions|limitImpacts|purpose|quiz|reviewItems|title)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
+    /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|groups|fileDispositions|limitImpacts|purpose|quiz|reviewItems|title)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
   )?.[0] ?? "analysis";
   let code = "ANALYSIS_CONTRACT";
   if (

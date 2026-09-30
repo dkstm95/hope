@@ -52,3 +52,28 @@ publish a partial review.
 A retryable publication failure preserves the validated run. After successful
 publication, Diff removes it. If cleanup then fails, Diff reports both the
 published artifact and the remaining cleanup work instead of publishing again.
+
+## One capture, analysis, and reader
+
+Diff owns the reader under `scripts/reader`. It has no separate collector,
+CLI, model document, publication boundary, or feature interface. A missing or
+incomplete provider patch is reconstructed once from merge-base/head text with
+isolated `git diff --no-index`; no repository configuration or code runs. Only
+the complete patch enters inspection. Bodies are capped at 256 KiB; reconstructed
+patches allow up to 512 KiB for diff framing, within the total capture budget.
+
+Analysis v5 requires semantic groups. Validation checks their claim evidence,
+unique IDs, code ownership, and complete coverage. It prepares one row layout
+for rendering. Grouping and ordering are model judgments; the runtime never
+infers purpose from filenames or mechanically chooses explanation units.
+
+The reader shares the review's document, locale, theme, CSP, revalidation, and
+publication. It serializes only the small identity/path payload needed for
+browser progress; code and explanations already exist in the DOM. Read status
+is scoped to the snapshot and group fingerprint, is reversible, and can be
+exported when local storage is unavailable. It conveys no PR approval.
+Files without a complete text patch retain an unavailable-content limit even
+when the provider reports a rename; that status does not establish a pure rename.
+Old HTML remains readable, but previous analysis/run formats are not accepted
+by this runtime. Follow-up questions use the captured artifact; changed code
+or a revised review requires a new publication, preserving the old one.

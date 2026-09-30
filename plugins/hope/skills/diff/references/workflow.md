@@ -72,6 +72,10 @@ Read every ledger page through `next` and confirm that coverage accounts for
 every delivered page. Treat `reviewContext` as the complete analysis handoff
 and check model-authored notes against their extracted evidence.
 
+Use the same inspected patch sources to assign every changed line and every
+automatic file to a semantic group. Do not recapture the PR or run a separate
+reader workflow. Group ranges use the original inspection source line numbers.
+
 Give every `classifiable-file` one disposition and no disposition to an
 `automatic-file`. Resolve an automatic file's `limitId` through its matching
 limit entry.
@@ -111,3 +115,8 @@ repeats without progress, cancel once and report it.
 On success, return the reviewed pull request, exact head, result scope, and
 absolute artifact path to the coordinating session. If the person cancels
 before completion, run `cancel --run <run-path>` once.
+
+For a follow-up about a saved review, reuse its captured group and evidence.
+Read only the relevant content; embedded fonts, styling, and client scripts
+are not analysis input. Answer narrow questions directly. A revised artifact
+uses a new run and output path instead of overwriting a published review.

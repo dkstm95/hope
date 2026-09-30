@@ -3,6 +3,8 @@ import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 
 import { CONTRACT_VERSION, LIMITS } from "./constants.mjs";
+import { parsePatch } from "./patch.mjs";
+import { diffText } from "./reconstruct-patch.mjs";
 import { digestJson } from "./hash.mjs";
 import { redactionKind } from "./redact.mjs";
 import { containsBidiControl, exposeBidiControls } from "./text.mjs";
@@ -235,14 +237,9 @@ async function readContent(owner, repository, path, revision, options) {
 }
 
 function patchIsComplete(file) {
-  if (typeof file.patch !== "string") return false;
-  let additions = 0;
-  let deletions = 0;
-  for (const line of cleanText(file.patch).split("\n")) {
-    if (line.startsWith("+") && !line.startsWith("+++")) additions += 1;
-    if (line.startsWith("-") && !line.startsWith("---")) deletions += 1;
-  }
-  return additions === file.additions && deletions === file.deletions;
+  if (typeof file.patch !== "string" || file.additions + file.deletions === 0) return false;
+  try { parsePatch(cleanText(file.patch), file); return true; }
+  catch { return false; }
 }
 
 function source(id, kind, text, extra = {}) {
@@ -275,6 +272,7 @@ async function collectFileBodies(pull, mergeBase, providerFiles, options) {
       || containsBidiControl(file.filename)
       || containsBidiControl(file.previous_filename)
       || !Number.isSafeInteger(file.additions)
+      || file.additions < 0 || file.deletions < 0
       || !Number.isSafeInteger(file.deletions)
       || !githubFileStatuses.has(file.status)
     ) {
@@ -389,20 +387,34 @@ async function collectFileBodies(pull, mergeBase, providerFiles, options) {
         reasonKind: "safe-size-limit",
       }
       : undefined;
-    const bodyState = redaction
+    let bodyState = redaction
       ? "redacted"
       : unavailable || safeSizeUnavailable
         ? "metadata-only"
         : "included";
+    let patch;
+    let patchFailure;
+    if (bodyState === "included") {
+      try {
+        patch = await diffText(before.text ?? "", after.text ?? "");
+        parsePatch(patch, file);
+        const revisedTotal = total + byteLength(patch) - fileBytes;
+        if (revisedTotal > LIMITS.safeBodyTotalBytes) throw new Error("Reconstructed patch exceeds the total capture limit");
+        total = revisedTotal;
+      } catch (error) {
+        if (error.code === "HOPE_PATCH_CLEANUP_FAILED") throw error;
+        bodyState = "metadata-only";
+        patchFailure = { reason: "A complete patch could not be reconstructed and verified", reasonKind: "patch-incomplete" };
+      }
+    }
     values.push({
       additions: file.additions,
-      after: bodyState === "included" ? after.text : undefined,
-      before: bodyState === "included" ? before.text : undefined,
+      patch: bodyState === "included" ? patch : undefined,
       bodyReason: redaction
         ? unavailableReason(redaction)
-        : (unavailable ?? safeSizeUnavailable)?.reason,
+        : (unavailable ?? safeSizeUnavailable ?? patchFailure)?.reason,
       bodyReasonKind: redaction
-        ?? (unavailable ?? safeSizeUnavailable)?.reasonKind,
+        ?? (unavailable ?? safeSizeUnavailable ?? patchFailure)?.reasonKind,
       bodyState,
       deletions: file.deletions,
       filename: file.filename,
@@ -518,17 +530,6 @@ export async function collectGitHubPullRequest(value, {
     const sourceIds = [];
     if (file.patch) {
       sourceIds.push(addSource(sources, "patch", file.patch, {
-        fileId: id,
-        path: file.filename,
-        revision: pull.head.sha,
-      }));
-    } else if (file.bodyState === "included") {
-      sourceIds.push(addSource(sources, "before-file", file.before, {
-        fileId: id,
-        path: file.previousFilename ?? file.filename,
-        revision: mergeBase,
-      }));
-      sourceIds.push(addSource(sources, "after-file", file.after, {
         fileId: id,
         path: file.filename,
         revision: pull.head.sha,

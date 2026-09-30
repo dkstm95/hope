@@ -36,6 +36,7 @@ const captureNames = [
   "align-decisions",
   "diff",
   "diff-core",
+  "diff-reader",
   "diff-microworld",
   "diagram",
 ];
@@ -294,11 +295,11 @@ async function renderHtmlExamples(page, locations, fonts) {
   }
 }
 
-async function captureReadmeAssets(browser, outputDirectory) {
+async function captureReadmeAssets(browser, outputDirectory, exampleRoot) {
   for (const { locale, suffix } of examples) {
     const page = await browser.newPage();
     try {
-      await captureRuntimeExamples(page, outputDirectory, suffix);
+      await captureRuntimeExamples(page, outputDirectory, suffix, exampleRoot);
       await captureDiagramExample(page, locale, join(outputDirectory, `hope-diagram-${suffix}.png`));
     } finally {
       await page.close();
@@ -306,10 +307,11 @@ async function captureReadmeAssets(browser, outputDirectory) {
   }
 }
 
-async function captureRuntimeExamples(page, outputDirectory, suffix) {
+async function captureRuntimeExamples(page, outputDirectory, suffix, exampleRoot) {
   const alignPath = join(root, `docs/alignments/rescene-fan-calendar-default-run.${suffix}.html`);
-  const diffPath = join(root, `docs/diffs/ky-825-default-run.${suffix}.html`);
-  // Preserve the published run bytes. Captures change only viewport, theme,
+  const diffPath = join(exampleRoot, `docs/diffs/ky-825-total-timeout.${suffix}.html`);
+  // Align retains its published run; Diff renders the captured PR with the current renderer.
+  // Captures change only viewport, theme,
   // scroll position, and native disclosure state; never the document's styles.
   await capturePage(page, alignPath, join(outputDirectory, `hope-align-${suffix}.png`), { colorScheme: "dark" });
   await page.locator("#decisions").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-align-decisions-${suffix}.png`) });
@@ -321,6 +323,7 @@ async function captureRuntimeExamples(page, outputDirectory, suffix) {
     expectedTopSection: "#synopsis",
   });
   await loadPage(page, diffPath, { colorScheme: "light" });
+  await page.locator("#changes").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-diff-reader-${suffix}.png`) });
   await page.locator("#explore").screenshot({ animations: "disabled", path: join(outputDirectory, `hope-diff-core-${suffix}.png`) });
   await loadPage(page, diffPath, { colorScheme: "dark" });
   await page.locator(".microworld-disclosure > summary").click();
@@ -341,7 +344,7 @@ async function generateExamples(destinationRoot) {
     } finally {
       await renderPage.close();
     }
-    await captureReadmeAssets(browser, locations.outputDirectory);
+    await captureReadmeAssets(browser, locations.outputDirectory, destinationRoot);
   } finally {
     await browser?.close();
   }
