@@ -99,6 +99,10 @@ create a new grouped reader rather than overwriting or migrating their progress.
 
 ## Progress and completion
 
+Groups start collapsed; their titles toggle code and select the detail panel.
+Expanded groups are remembered with browser progress and JSON exports. Evidence
+links open their target group, and printing includes all code.
+
 Read markers apply to explained groups. Groups with unavailable content cannot
 be marked fully read. Selection and the viewport refer to captured code, so
 reloading after regrouping follows the same code into its new position. Read

@@ -695,7 +695,12 @@ span files or split one file. Preserve paths, before/after line numbers, and
 each captured row exactly once. Shared code is linked as evidence. Unassigned
 changes remain in visible pending sections, not hidden behind a filter.
 
-Group titles and code select the same group. A code selection also highlights
+Groups start collapsed. Each title toggles its code and selects the group for
+the detail panel. Expansion is independent for each group, works by keyboard
+and without JavaScript, and is remembered alongside reading progress. Evidence
+links expand their target group; printing includes every group.
+
+A code selection also highlights
 its location and shows its optional contextual note in the detail panel. On
 narrow screens the panel follows the selected group's heading inline. Keep
 code and prose wrapping without page-level overflow. Reloading after regrouping

@@ -304,3 +304,15 @@ installation was not replaced.
 After the final display corrections, all eight Diff Deep browser scenarios
 passed again. The repository check passed 262 deterministic tests and accepted
 the package structure and 7.1.0 → 7.2.0 release impact.
+
+### Collapsible groups
+
+Groups now start closed and use native disclosures for independent mouse and
+keyboard expansion, including without JavaScript. Selecting a title still
+updates the detail panel. Expanded groups are saved with progress; older
+progress without expansion data starts closed. Captured-code links open their
+target disclosure, mobile details remain available when a group is closed,
+and print includes every code row. The Chromium suite passed 41 tests covering
+these behaviors and the existing regrouping and progress flows. The same live
+Ky capture was regenerated with all three groups initially closed and all 486
+changed lines retained, and its collapsed desktop layout was visually checked.

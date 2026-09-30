@@ -157,7 +157,8 @@ can combine implementation and tests across files, or use part of a file. The
 right panel explains the selected group; selecting code adds its specific
 context. Stated motives, inferred purposes, and unknown reasons stay distinct.
 
-Code appears first; unassigned changes remain visible until grouped. Navigate
+Groups start collapsed and expand from their titles. Code is captured first;
+unassigned changes remain listed until grouped. Navigate
 and mark groups read, and switch between light, dark, and system appearance.
 Regrouping retains the selected code and reading position; changed groups need
 to be read again. Progress belongs to the captured revision and can be exported.

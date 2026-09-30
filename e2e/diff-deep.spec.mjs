@@ -111,6 +111,7 @@ test("JavaScript-disabled and print readers retain complete code and explanation
   const staticPage = await context.newPage();
   await staticPage.goto(url);
   await expect(staticPage.locator(".code-row")).toHaveCount(9);
+  await staticPage.locator(".group-select").first().click();
   await staticPage.locator(".inline-reason summary").first().click();
   await expect(staticPage.locator(".inline-reason").first().locator("h3")).toBeVisible();
   await context.close();
@@ -151,10 +152,13 @@ test("code selection shows group details and code evidence links across groups",
   await writeFile(inputPath, JSON.stringify(input));
   await explainArtifact(artifact.artifactPath, inputPath, artifact.digest);
   await page.goto(pathToFileURL(artifact.artifactPath).href);
+  await page.locator("#g-expiration .group-select").click();
   await page.locator('#g-expiration .code-row[data-source-line="3"]').first().click();
   await expect(page.locator("#selected-reason .selected-context")).toContainText("만료 시각과 같은 경우");
   await expect(page.locator("#selected-reason .related-evidence")).toHaveCount(1);
   await expect(page.locator(".selected-code")).toHaveCount(1);
+  await page.locator("#g-expiration .group-select").click();
+  await page.locator("#g-label .group-select").click();
   await page.locator('#g-label .part-select').focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("#selected-reason h3")).toHaveText(input.groups[1].title);
@@ -175,6 +179,7 @@ test("regrouping follows selected code and viewport while invalidating revised r
   let current = await explainArtifact(artifact.artifactPath, inputPath, artifact.digest);
   await page.setViewportSize({ width: 1280, height: 450 });
   await page.goto(pathToFileURL(artifact.artifactPath).href);
+  for (const heading of await page.locator(".group-select").all()) await heading.click();
   const selected = page.locator('#g-label .code-row[data-source-line="6"]');
   await selected.click();
   await page.locator("#read-group").click();
@@ -196,4 +201,31 @@ test("regrouping follows selected code and viewport while invalidating revised r
   await expect(page.locator("#read-progress")).toContainText("0/3");
   await expect(page.locator(".code-row")).toHaveCount(9);
   expect((await artifactStatus(artifact.artifactPath)).pendingLines).toBe(0);
+});
+
+
+test("groups start collapsed, toggle independently by keyboard, and retain detail selection", async ({ page }) => {
+  await page.goto(url);
+  await expect(page.locator(".group-disclosure[open]")).toHaveCount(0);
+  await expect(page.locator(".code-row:visible")).toHaveCount(0);
+  const heading = page.locator("#g-label .group-select");
+  await heading.focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator("#g-label .group-disclosure")).toHaveAttribute("open", "");
+  await expect(page.locator(".group-disclosure[open]")).toHaveCount(1);
+  await expect(page.locator("#selected-reason h3")).toHaveText("유효 기간이 남았다는 뜻을 이름에 반영");
+  await expect(page.locator("#read-progress")).toContainText("0/3");
+  await page.reload();
+  await expect(page.locator(".group-disclosure[open]")).toHaveCount(1);
+  await heading.click();
+  await expect(page.locator(".group-disclosure[open]")).toHaveCount(0);
+  await expect(page.locator("#selected-reason h3")).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 800 });
+  await expect(page.locator("#selected-reason h3")).toBeVisible();
+  await heading.click();
+  await expect(page.locator("#g-label .code-row").first()).toBeVisible();
+  await heading.click();
+  await expect(page.locator("#selected-reason h3")).toBeVisible();
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator(".code-row:visible")).toHaveCount(9);
 });

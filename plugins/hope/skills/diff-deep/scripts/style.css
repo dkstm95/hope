@@ -132,7 +132,7 @@ footer code { font: inherit; }
   footer { padding: 12px; }
 }
 @media (pointer: coarse) { .icon-button, .capture-info > summary { width: 44px; height: 44px; } .part-select, .evidence summary { min-height: 44px; } }
-@media (forced-colors: active) { .selected-group > .group-heading { outline: 2px solid Highlight; } .icon-button[aria-pressed="true"] { outline: 2px solid Highlight; } }
+@media (forced-colors: active) { .selected-group > .group-disclosure > .group-heading { outline: 2px solid Highlight; } .icon-button[aria-pressed="true"] { outline: 2px solid Highlight; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 @media print {
   :root { color-scheme: light !important; }
@@ -153,12 +153,12 @@ footer code { font: inherit; }
 .part-select { padding: 0; border: 0; background: transparent; font: inherit; color: inherit; text-align: left; overflow-wrap: anywhere; }
 .part-select:hover { color: var(--accent); }
 .group-read { color: var(--accent); font-size: 12px; }
-.selected-group > .group-heading { background: var(--soft); box-shadow: inset 2px 0 var(--accent); }
+.selected-group > .group-disclosure > .group-heading { background: var(--soft); box-shadow: inset 2px 0 var(--accent); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .change-group { margin-bottom: 28px; scroll-margin-top: 12px; }
 .group-heading { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 10px; border-radius: 6px; }
-.group-heading h2 { flex: 1; min-width: 0; margin: 0; font-size: 14px; line-height: 1.6; }
+.group-title { flex: 1; min-width: 0; margin: 0; font-size: 14px; line-height: 1.6; }
 .group-number { font: 11px ui-monospace, monospace; color: var(--quiet); }
 .group-select { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: left; overflow-wrap: anywhere; }
 .group-select:hover { color: var(--accent); }
@@ -175,3 +175,11 @@ footer code { font: inherit; }
 .enhanced .part-note { display: none; }
 @media (pointer: coarse) { .group-select, .source-jump { min-height: 44px; } }
 @media print { .enhanced .part-note { display: block; } .group-heading { break-after: avoid; } }
+
+.group-disclosure > summary { list-style: none; cursor: pointer; }
+.group-disclosure > summary::-webkit-details-marker { display: none; }
+.group-chevron { display: inline-flex; color: var(--quiet); }
+.group-chevron svg { width: 13px; height: 13px; }
+.group-disclosure[open] > summary .group-chevron { transform: rotate(90deg); }
+.group-heading.group-select { width: 100%; padding: 10px 12px; }
+@media print { .group-chevron { display: none; } }

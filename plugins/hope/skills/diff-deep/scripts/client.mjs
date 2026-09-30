@@ -39,13 +39,21 @@ export function mount() {
       || (value.viewport !== null && (!elementFor(value.viewport?.anchor) || !Number.isFinite(value.viewport?.offset)))) {
       throw new Error(labels.invalidProgress);
     }
+    const expanded = value.expanded ?? [];
+    if (!Array.isArray(expanded) || expanded.length > 20_500 || expanded.some((entry) => !elementFor(entry))) throw new Error(labels.invalidProgress);
+    const openGroups = new Set(expanded.map((entry) => elementFor(entry).closest(".change-group").id));
+    for (const group of groups) group.querySelector(".group-disclosure").open = openGroups.has(group.id);
     anchor = value.anchor;
     detail = value.detail;
     viewport = value.viewport;
     selected = elementFor(anchor)?.closest(".change-group").id ?? null;
     read = new Set(value.read.filter((id) => readable.has(id)));
   }
-  function progress() { return { schemaVersion: 3, snapshotId: snapshot.id, anchor, detail, viewport, read: [...read] }; }
+  function progress() {
+    const expanded = groups.filter((group) => group.querySelector(".group-disclosure").open)
+      .map((group) => reference(group.querySelector(".diff-part")));
+    return { schemaVersion: 3, snapshotId: snapshot.id, anchor, detail, viewport, expanded, read: [...read] };
+  }
   function storageMessage() {
     $("storage-warning").textContent = storageOK ? "" : labels.storageUnavailable;
     $("storage-description").textContent = storageOK ? labels.restored : labels.storageUnavailable;
@@ -61,7 +69,10 @@ export function mount() {
 
   function movePanel() {
     const panel = document.querySelector(".reason-aside");
-    if (narrow.matches && selected) $(selected).querySelector(".group-heading").after(panel);
+    if (narrow.matches && selected) {
+      const disclosure = $(selected).querySelector(".group-disclosure");
+      (disclosure.open ? disclosure.querySelector(".group-heading") : disclosure).after(panel);
+    }
     else document.querySelector(".workspace").append(panel);
   }
   function updateRead() {
@@ -79,10 +90,11 @@ export function mount() {
     document.querySelectorAll(".selected-group, .selected-part, .selected-code").forEach((item) => {
       item.classList.remove("selected-group", "selected-part", "selected-code");
     });
-    for (const group of groups) group.querySelector(".group-select").setAttribute("aria-pressed", String(group.id === id));
+    for (const group of groups) group.querySelector(".group-select").setAttribute("aria-current", String(group.id === id));
     selected = id;
     const group = $(id);
     group.classList.add("selected-group");
+    if (element && scroll) group.querySelector(".group-disclosure").open = true;
     detail = Boolean(element);
     anchor = reference(element ?? group.querySelector(".diff-part"));
     const index = groupIds.indexOf(id);
@@ -114,7 +126,10 @@ export function mount() {
     updateRead(); movePanel();
     if (scroll) (element ?? group).scrollIntoView({ block: "start", behavior: "instant" });
   }
-  for (const group of groups) group.querySelector(".group-select").addEventListener("click", () => { select(group.id); save(); });
+  for (const group of groups) {
+    group.querySelector(".group-select").addEventListener("click", () => { select(group.id); save(); });
+    group.querySelector(".group-disclosure").addEventListener("toggle", () => { movePanel(); save(); });
+  }
   for (const part of parts) {
     part.querySelector(".part-select").addEventListener("click", () => { select(part.dataset.group, part); save(); });
     part.addEventListener("click", (event) => {
@@ -152,7 +167,10 @@ export function mount() {
   });
   $("import-progress").addEventListener("click", () => $("progress-file").click());
   function restoreViewport() {
-    if (viewport) window.scrollBy(0, elementFor(viewport.anchor).getBoundingClientRect().top - viewport.offset);
+    if (viewport) {
+      const element = elementFor(viewport.anchor);
+      if (element.closest(".group-disclosure").open) window.scrollBy(0, element.getBoundingClientRect().top - viewport.offset);
+    }
   }
   $("progress-file").addEventListener("change", async (event) => {
     const file = event.target.files[0];
