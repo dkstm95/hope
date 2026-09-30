@@ -16,9 +16,11 @@ decision. Prepare the authorized work so any needed approval concerns a
 concrete, reviewable result.
 
 Apply the shared [writing standard](plugins/hope/skills/write/references/writing-standard.md).
-Invoke Hope skills only when the person explicitly selects them. Keep updates
-and results concise; report the change, relevant evidence, and any verification
-gap.
+Invoke Hope skills when the person explicitly selects them, with two exceptions:
+PR Writing applies when drafting or updating PR/MR titles and descriptions,
+including during an authorized submission workflow; it calls Write through
+their public handoff. Keep updates and results concise; report the change,
+relevant evidence, and any verification gap.
 
 These collaboration rules draw on the
 [GPT-6 Astra prompting guide](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra#prompting-best-practices).

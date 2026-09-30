@@ -19,7 +19,12 @@ hosts before claiming native invocation works on both.
 | Request or setup | Expected behavior |
 | --- | --- |
 | “Fix this typo”, “review this plan”, “draw this flow”, or “clean up this code” without a skill command | Complete the ordinary request without activating a Hope skill. |
-| Invoke each of `align`, `design`, `diff`, `toxic-review`, `sweep`, `diagram`, and `write` with a small suitable task | The selected skill is available and follows its contract; no other Hope skill activates automatically. |
+| Invoke each of `align`, `design`, `diff`, `toxic-review`, `sweep`, `diagram`, and `write` with a small suitable task | The selected skill is available and follows its contract; no other Hope skill activates unless the task reaches PR/MR writing. |
+| Ask to create a PR, or draft its title and body, without naming a skill | PR Writing activates, reads repository conventions and change evidence, and uses Write. Creation continues when authorized. |
+| Ask for implementation and submission, then let the agent reach the PR/MR writing step | PR Writing and its Write handoff apply at that step without a new skill command. |
+| Ask to update an existing MR description with changed scope | PR Writing uses Write, preserves the project template and language, and reflects the final diff and verification limits. |
+| Ask only to review a PR, summarize a diff, or write a standalone commit message | PR Writing and Write do not activate automatically. |
+| Invoke PR Writing directly | The same grounded writing workflow and Write handoff apply. |
 | Invoke Align for an already agreed implementation with no unresolved consequential choice | Continue authorized implementation without a new approval round or unnecessary artifact. |
 | Invoke Align for a visual decision without invoking Design | Use available evidence and ordinary tools; do not invoke Design or stop solely to request it. |
 | Invoke Align and Design for the same visual decision | Use their public handoff and preserve settled choices without a second product interview. |
@@ -41,15 +46,83 @@ Use a captured fixture and validation results; no live publication is needed.
 
 ## Platform references
 
-Codex uses `policy.allow_implicit_invocation: false` in `agents/openai.yaml`;
-Claude Code uses `disable-model-invocation: true` in `SKILL.md` frontmatter.
-Keep user invocation available. Other hosts rely on their own controls and the
-explicit-invocation rule in each skill; do not assume either native setting is
-portable enforcement.
+PR Writing and Write permit model invocation: Codex uses
+`policy.allow_implicit_invocation: true` in `agents/openai.yaml`, and Claude Code
+uses the default enabled setting in `SKILL.md`. Write's description and public
+contract restrict automatic use to the PR Writing handoff; native metadata
+cannot express a caller-specific allowlist. Verify that ordinary writing does
+not activate it.
+
+The other six skills use `policy.allow_implicit_invocation: false` in Codex and
+`disable-model-invocation: true` in Claude Code. Keep user invocation available.
+Other hosts rely on their controls and each skill's contract; do not assume
+either native setting is portable enforcement.
 
 Sources: [Codex skills](https://learn.chatgpt.com/docs/build-skills),
 [Claude Code skills](https://code.claude.com/docs/en/skills#control-who-invokes-a-skill),
 and [Rethinking skills and prompts for GPT-6 Astra](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra).
+
+## 7.1.0 verification — 2026-09-30
+
+Candidate: the PR Writing working tree based on `ff3dfa2` (7.0.0). Release
+decision: minor. The final package fingerprint is
+`ea9997ef3bd325d2ad0ef80a30c8b326016f0e9f29884d847fa66e9171d055a1`:
+SHA-256 over the sorted package allowlist, updating the hash with each relative
+path, a NUL byte, then its file contents. The repository check passed all 250
+tests, including staged invocation metadata and the public Write dependency.
+Both changed skills passed Skill Creator validation.
+
+Codex CLI 0.153.4 ran fresh ephemeral sessions in isolated Git repositories.
+The fixture changes a login return-path function from accepting any truthy value
+to accepting strings beginning with `/`, but not `//` or containing backslashes.
+Five focused tests passed. These are fixture claims, not a full security review.
+
+First, baseline and candidate skills were copied into separate `.agents/skills`
+directories. Both used `--ignore-user-config --sandbox read-only --json`; the
+model ID was not captured in these JSON events. The exact prompt was:
+
+> 현재 브랜치 변경으로 PR 제목과 본문을 작성해줘. 대상 브랜치는 main이고 실제 게시하지 말고 초안만 보여줘. 필요한 검증을 실행해도 돼.
+
+The baseline drafted without reading a Hope skill. The candidate read PR Writing,
+Write, and its writing standard, ran the focused tests, and drafted a Korean
+title and body grounded in the diff and observed results. A fresh ordinary
+rewrite request (the same sentence used in the 7.0.0 check below) read neither
+skill. A fresh request to review the local PR diff also read neither skill and
+reported a verified correctness finding without changing PR metadata.
+
+Then `npm run plugin:dev:install` installed and byte-verified the candidate.
+Fresh Codex sessions used the installed `hope:pr-writing` and `hope:write` from
+the plugin cache, with no repository skill files or Hope-specific instructions.
+The startup header reported `gpt-6-astra`. Read-only sessions covered creation
+and MR editing; the implementation case used a workspace-write sandbox.
+Publication was simulated by a local CLI with `pr view/create/edit` and
+`mr view/edit` commands; no GitHub or GitLab request was sent.
+
+| Case | Prompt and observed behavior |
+| --- | --- |
+| Direct creation | “PR 생성해. 대상 브랜치는 main이야.” Both skills and the writing standard were read. After confirming no existing PR, the agent passed the grounded title and body to the simulated create command and reported simulation success. |
+| Existing PR | The same request with an existing PR response updated that PR's stale title and body rather than creating a duplicate. Unsupported performance and integration-test claims were removed. |
+| Implementation reaches submission | “로그인 복귀 경로 함수가 외부 URL도 그대로 반환해. 로컬 경로만 반환하도록 수정해줘. 슬래시 두 개로 시작하거나 역슬래시가 들어간 입력도 홈 경로로 보내야 해. 쿼리가 있는 로컬 경로는 유지해줘.” Repository instructions required tests and submission to `main`. Without a skill command or PR mention in the user prompt, the agent loaded both skills, implemented the change, passed four tests it added, and invoked simulated PR creation. |
+| MR update | “기존 MR 17의 제목과 본문을 현재 브랜치 변경에 맞춰 수정해줘. 대상 브랜치는 main이야.” After the discovery correction below, both skills were read and the edit preserved the required `fix(auth):` title, Korean language, and all four template sections. It recorded five passing tests and the unavailable SSO integration. |
+
+The publication prompts also specified the offline CLI replacement, prohibited
+network use, and treated the branch as already pushed. The implementation
+fixture's repository instructions supplied those same constraints. The MR
+prompt documented the mock's `mr view/edit` and title/body options.
+
+The first MR run missed `CONTRIBUTING.md` and a hidden template excluded from
+ordinary file search. PR Writing now names these known instruction and template
+paths and requires checking them despite an empty search. After reinstalling
+and byte-verifying the corrected package, a fresh run on the same fixture
+preserved those conventions. Earlier positive runs preceded this discovery
+correction; the handoff and writing policy were unchanged.
+
+Claude Code 2.1.156 remained logged out (`claude auth status`); its model behavior
+was not tested. Native metadata is checked, but automatic discovery is not a
+guarantee across hosts or repeated runs. The generic Plugin Creator validator
+rejected the six unchanged `disable-model-invocation: true` fields; these are
+documented Claude Code fields and remain required by Hope's explicit-only
+contracts. No GUI changed, so browser verification was not applicable.
 
 ## 7.0.0 verification — 2026-09-28
 

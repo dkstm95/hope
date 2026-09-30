@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hope PR Writing"
+  short_description: "Write grounded PR and MR titles and descriptions"
+  default_prompt: "Use $hope:pr-writing to prepare the title and description for this change."
+policy:
+  allow_implicit_invocation: true

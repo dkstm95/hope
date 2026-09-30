@@ -79,6 +79,9 @@ skills/diff/scripts/teaching-aids.mjs
 skills/diff/scripts/text.mjs
 skills/diff/scripts/transitions.mjs
 skills/diff/scripts/validate.mjs
+skills/pr-writing/SKILL.md
+skills/pr-writing/agents/openai.yaml
+skills/pr-writing/references/sources.md
 skills/sweep/SKILL.md
 skills/sweep/agents/openai.yaml
 skills/toxic-review/SKILL.md
