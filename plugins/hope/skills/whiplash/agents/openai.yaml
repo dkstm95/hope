@@ -1,0 +1,7 @@
+interface:
+  display_name: "Hope Whiplash"
+  short_description: "Review, fix, and repeat until material issues are resolved"
+  brand_color: "#087EA4"
+  default_prompt: "Use $hope:whiplash to review this work, fix supported issues, and repeat until no material issue remains."
+policy:
+  allow_implicit_invocation: false

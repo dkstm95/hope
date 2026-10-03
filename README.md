@@ -41,7 +41,7 @@ or select a combination for the task.
 
 Select a skill with `$hope:<name>` in Codex, `/hope:<name>` in Claude Code, or
 another host's skill command or picker. Names are `align`, `design`, `diff`,
-`toxic-review`, `sweep`, `diagram`, `write`, and `pr-writing`. Follow-ups within
+`whiplash`, `sweep`, `diagram`, `write`, and `pr-writing`. Follow-ups within
 an invoked task continue without repeating the command. PR Writing also
 applies automatically when preparing PR or MR text and calls Write; the other
 skills start only when selected.
@@ -159,15 +159,28 @@ Ky PR #825.](docs/diffs/ky-825-total-timeout.en.html)
 
 ---
 
-### ⚖️ Toxic Review — Critically examine a work product
+### 🥁 Whiplash — Review, fix, repeat
 
-Toxic Review challenges important flaws and unsupported assumptions against the
-work's purpose and evidence. It tests its own criticisms before recommending
-proportionate changes. The task determines the depth and format; independent
-reviewers join when their perspective is worth the time or you request them.
+> “Not quite my tempo.”
 
-See [the Toxic Review Skill](plugins/hope/skills/toxic-review/SKILL.md) for its
-review guidance.
+Named after the rehearsal scene in *Whiplash* (2014): listen closely, correct,
+and try again.
+
+![Fletcher critiques Neiman in Whiplash](assets/readme/whiplash-not-my-tempo.jpg)
+
+*Image: [Hulu’s official “Not My Tempo” clip](https://www.youtube.com/watch?v=gfceCnMJZ3c).*
+
+Invoke `$hope:whiplash` once to critically review the work, fix supported material
+issues, verify the changes, and review again. It finishes when no material issue
+remains in scope and required checks are complete. Findings are tested against
+evidence before edits; unresolved decisions or stalled fixes remain visible.
+Independent reviewers join when useful or requested.
+
+Whiplash replaces Toxic Review. Invocation authorizes reversible local fixes to
+the target; ask for “review only” when you want findings without edits.
+
+See [the Whiplash Skill](plugins/hope/skills/whiplash/SKILL.md) for scope and
+completion criteria.
 
 ---
 
