@@ -1,7 +1,7 @@
 {
   "name": "hope",
-  "version": "7.2.0",
-  "description": "Align intent and consequential decisions before implementation and optionally preserve the shared understanding, sweep codebase maintenance, challenge work with evidence, understand pull requests and the reasons for each change, design interfaces and mockups, create clear explanatory visuals, improve writing, and automatically prepare PR and MR titles and descriptions. Requires Node.js 22 or newer.",
+  "version": "8.0.0",
+  "description": "Align intent and consequential decisions before implementation and optionally preserve the shared understanding, sweep codebase maintenance, review and fix work through repeated verification, understand pull requests and the reasons for each change, design interfaces and mockups, create clear explanatory visuals, improve writing, and automatically prepare PR and MR titles and descriptions. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -14,17 +14,14 @@
   "interface": {
     "displayName": "Hope",
     "shortDescription": "Practical ways for people and AI to work better together",
-    "longDescription": "PR Writing automatically prepares PR and MR titles and descriptions using Write. Select other Hope skills explicitly. Align builds shared intent and consequential decisions before implementation and can preserve them in a durable record. Design turns goals and ordinary-language feedback into inspectable interface mockups, independently or when invoked alongside Align. Sweep removes proven codebase waste while preserving customer-observed behavior. Toxic Review challenges work with evidence and clear priorities. Diff explains code changes so you can understand consequences and discover follow-up work. Every Diff review also groups the full captured diff by purpose with contextual explanations and reading progress. Diagram makes explanatory diagrams and data charts clear without taking over the active task. Write improves language without changing its meaning.",
+    "longDescription": "PR Writing automatically prepares PR and MR titles and descriptions using Write. Select other Hope skills explicitly. Align builds shared intent and consequential decisions before implementation and can preserve them in a durable record. Design turns goals and ordinary-language feedback into inspectable interface mockups, independently or when invoked alongside Align. Sweep removes proven codebase waste while preserving customer-observed behavior. Whiplash reviews work, fixes supported material issues, and repeats verification and review until no material issue remains. Diff explains code changes so you can understand consequences and discover follow-up work. Every Diff review also groups the full captured diff by purpose with contextual explanations and reading progress. Diagram makes explanatory diagrams and data charts clear without taking over the active task. Write improves language without changing its meaning.",
     "developerName": "SeungIl",
     "category": "Engineering",
     "capabilities": ["Read", "Write", "Interactive"],
     "defaultPrompt": [
       "Use $hope:align to build a shared understanding before implementation.",
-      "Use $hope:design to turn this interface goal and feedback into a considered mockup.",
-      "Use $hope:sweep to remove proven codebase waste without changing customer-observed behavior.",
-      "Use $hope:toxic-review to challenge this plan.",
-      "Use $hope:diff to explain the current pull request.",
-      "Use $hope:diagram to make this explanatory diagram or data chart clear, faithful, and accessible."
+      "Use $hope:whiplash to review this work, fix supported issues, and review again.",
+      "Use $hope:sweep to remove proven codebase waste without changing customer-observed behavior."
     ],
     "brandColor": "#087EA4",
     "composerIcon": "./assets/hope-icon.png",

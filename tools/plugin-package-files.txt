@@ -92,8 +92,8 @@ skills/pr-writing/agents/openai.yaml
 skills/pr-writing/references/sources.md
 skills/sweep/SKILL.md
 skills/sweep/agents/openai.yaml
-skills/toxic-review/SKILL.md
-skills/toxic-review/agents/openai.yaml
+skills/whiplash/SKILL.md
+skills/whiplash/agents/openai.yaml
 skills/write/SKILL.md
 skills/write/agents/openai.yaml
 skills/write/assets/hope-protected-light.png

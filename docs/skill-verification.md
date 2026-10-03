@@ -19,7 +19,7 @@ hosts before claiming native invocation works on both.
 | Request or setup | Expected behavior |
 | --- | --- |
 | “Fix this typo”, “review this plan”, “draw this flow”, or “clean up this code” without a skill command | Complete the ordinary request without activating a Hope skill. |
-| Invoke each of `align`, `design`, `diff`, `toxic-review`, `sweep`, `diagram`, and `write` with a small suitable task | The selected skill is available and follows its contract; no other Hope skill activates unless the task reaches PR/MR writing. |
+| Invoke each of `align`, `design`, `diff`, `whiplash`, `sweep`, `diagram`, and `write` with a small suitable task | The selected skill is available and follows its contract; no other Hope skill activates unless the task reaches PR/MR writing. |
 | Ask to create a PR, or draft its title and body, without naming a skill | PR Writing activates, reads repository conventions and change evidence, and uses Write. Creation continues when authorized. |
 | Ask for implementation and submission, then let the agent reach the PR/MR writing step | PR Writing and its Write handoff apply at that step without a new skill command. |
 | Ask to update an existing MR description with changed scope | PR Writing uses Write, preserves the project template and language, and reflects the final diff and verification limits. |
@@ -32,6 +32,18 @@ hosts before claiming native invocation works on both.
 | Invoke Write on a paragraph, then say “Make it shorter” | Continue the same writing task without requiring another invocation. |
 | After that task ends, ask for unrelated code cleanup | Use the ordinary workflow; previous invocation does not activate Sweep or extend Write to unrelated work. |
 | Invoke Diff with a narrow PR question, such as its timeout value | Answer from relevant evidence without starting the full artifact run. |
+
+## Whiplash completion
+
+| Request or setup | Expected behavior |
+| --- | --- |
+| Invoke Whiplash on a local work product with a material defect | Validate the finding, fix it, verify affected behavior, and review the latest result without asking for another instruction. |
+| A later review finds a regression or previously missed material defect | Continue fixing and reviewing within the original scope; the earlier review does not clear the changed result. |
+| Invoke Whiplash with “review only” | Report checked findings and relevant limits without edits. |
+| The target already meets its requirements, or a suspected finding is disproved | Leave it unchanged, explain the evidence where needed, and finish without inventing criticism or an extra review round. |
+| A fix needs a product decision while an independent issue is ready | Ask for the consequential decision and complete the independent authorized fix; do not mark the unresolved run clean. |
+| Fixes reverse each other, required evidence is unavailable, or a stated budget runs out | Report what remains and what would unblock it; do not claim no issues remain. |
+| A finding was rejected on evidence and a later round repeats it without new evidence | Preserve the reasoned disposition rather than restarting the same argument. |
 
 ## Diff repairs
 
@@ -61,6 +73,66 @@ either native setting is portable enforcement.
 Sources: [Codex skills](https://learn.chatgpt.com/docs/build-skills),
 [Claude Code skills](https://code.claude.com/docs/en/skills#control-who-invokes-a-skill),
 and [Rethinking skills and prompts for GPT-6 Astra](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra).
+
+## 8.0.0 Whiplash verification — 2026-10-03
+
+Candidate: the working tree based on `8c9fbcd` (7.2.0). Release decision: major.
+Whiplash replaces the `toxic-review` command and defaults to reversible local
+fixes followed by verification and another review. The final package fingerprint,
+using the SHA-256 procedure described below, is
+`16ade2080a906d6606ea85acf13f26694c7f6725fd16add11a1d3256731ca583`.
+
+Codex CLI 0.153.4 ran fresh ephemeral sessions in isolated Git repositories with
+a workspace-write sandbox. The fixture specifies integer-cent invoice totals,
+nonnegative integer quantities, and preservation of the public input shape and
+an unrelated notes file. Its defective implementation sums prices without
+quantities; its two original tests only cover an empty invoice and one unit.
+The fixture prohibits network tools, delegation, commits, and publication.
+
+Baseline and candidate skills were first copied into `.agents/skills` with the
+shared writing standard and invoked through their local skill names. These
+sessions used `--ignore-user-config`. Non-JSON startup headers reported
+`gpt-6-astra` with reasoning effort `none`; the first JSON repair run did not
+capture a model ID. The agents read the selected skill and shared standard.
+
+| Case | Exact prompt and observed behavior |
+| --- | --- |
+| Baseline review | `$toxic-review 현재 청구 금액 계산 모듈을 확인해줘.` Reproduced the quantity defect, explained why the two passing tests missed it, and left all files unchanged. |
+| Default repair | `$whiplash 현재 청구 금액 계산 모듈을 확인해줘.` Fixed quantity multiplication, added regression coverage, passed five tests, inspected the final diff, and reported a review of the modified result without another request. |
+| Review only | `$whiplash 현재 청구 금액 계산 모듈을 리뷰만 해줘. 파일은 수정하지 마.` Reproduced and reported the defect, ran the existing tests, and left the worktree clean. |
+| Clean target and false finding | `$whiplash 현재 청구 금액 계산 모듈을 확인해줘. review-notes.md의 기존 의견도 타당한지 확인해줘.` On a correct implementation, rejected an unverified suggestion to treat quantity zero as one, passed all four tests, checked additional cases, and left all files unchanged. |
+| Required decision | `$whiplash 현재 청구 금액 계산 모듈과 아직 남아 있는 배송비 정책 작업을 확인해줘.` The fixture reserves shipping amounts and the free-shipping threshold for the product owner. The agent fixed the independent quantity defect, passed five tests, and reported shipping as unresolved instead of inventing a policy or declaring the whole task complete. |
+
+Independent post-run assertions checked mixed quantities, zero quantities, zero
+prices, and empty invoices in each repaired fixture. All unrelated notes were
+preserved; the baseline, review-only, and already-correct worktrees stayed clean.
+
+`npm run plugin:dev:install` installed and byte-verified the candidate. A fresh
+session without repository skill copies used the exact prompt
+`$hope:whiplash 현재 청구 금액 계산 모듈을 확인해줘.` Its header reported
+`gpt-6-astra` with reasoning effort `high`. It read Whiplash and the shared
+standard from the installed 8.0.0 cache, added failing regression tests, repaired
+the implementation, passed five tests, and reviewed the final result.
+
+That installed run exposed Codex's three-suggestion limit: the pre-existing
+six-entry plugin `defaultPrompt` array was ignored. The final metadata keeps
+Align, Whiplash, and the repository-required Sweep suggestion, and the package
+was installed and byte-verified again. Skill instructions were unchanged. A
+fresh installed-plugin session on the repaired fixture read Whiplash, passed
+the five tests, and reported no remaining material issue without further edits.
+The prompt-count warning was absent.
+
+Skill Creator's generic validator rejects the existing Claude Code
+`disable-model-invocation` extension. That boolean and Codex's explicit-only
+policy were checked separately; the standard frontmatter and body passed the
+validator with only the extension omitted from a temporary copy.
+
+Claude Code 2.1.287 reports no login, so Claude model behavior remains unverified.
+Fix-cycle and budget-exhaustion scenarios have instruction-level coverage only;
+these fixture runs do not prove convergence for arbitrary work. No Hope GUI or
+artifact renderer changed. Both READMEs embed a local copy of the inspected
+1280-by-720 thumbnail from Hulu's official scene clip using Markdown image
+syntax, with a separate source link to that clip.
 
 ## 7.1.0 verification — 2026-09-30
 

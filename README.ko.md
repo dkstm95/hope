@@ -37,7 +37,7 @@ Hope는 개발 작업의 여러 부분을 돕는 여덟 스킬을 제공합니�
 
 Codex에서는 `$hope:<이름>`, Claude Code에서는 `/hope:<이름>`, 다른 도구에서는
 스킬 호출 명령이나 선택 메뉴로 스킬을 선택합니다. 이름은 `align`, `design`,
-`diff`, `toxic-review`, `sweep`, `diagram`, `write`, `pr-writing`입니다.
+`diff`, `whiplash`, `sweep`, `diagram`, `write`, `pr-writing`입니다.
 같은 작업의 후속 요청에는 명령을 반복할 필요가 없습니다. PR Writing은 PR·MR
 글을 준비할 때 자동으로도 적용되며 Write를 호출합니다. 그 외에는 직접 선택한
 스킬만 시작합니다.
@@ -144,14 +144,27 @@ Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명�
 
 ---
 
-### ⚖️ Toxic Review — 결과물을 냉정하게 검토합니다
+### 🥁 Whiplash — 리뷰하고, 고치고, 다시 확인합니다
 
-Toxic Review는 작업의 목적과 근거에 비추어 중요한 결함과 뒷받침되지 않은
-전제를 검토합니다. 자신의 비판도 다시 의심하고, 실제 영향에 맞는 수정만
-제안합니다. 검토 깊이와 형식은 작업에 맞게 정합니다. 독립적인 관점이 추가
-시간을 들일 가치가 있거나 사용자가 요청하면 별도 리뷰어를 활용합니다.
+> “Not quite my tempo.”
 
-검토 지침은 [Toxic Review 스킬](plugins/hope/skills/toxic-review/SKILL.md)에
+영화 *위플래시* (2014)의 합주 장면에서 이름을 따왔습니다. 주의 깊게 듣고,
+잘못된 부분을 고치고, 다시 시도합니다.
+
+![위플래시에서 니먼을 지적하는 플레처](assets/readme/whiplash-not-my-tempo.jpg)
+
+*이미지 출처: [Hulu 공식 “Not My Tempo” 클립](https://www.youtube.com/watch?v=gfceCnMJZ3c).*
+
+`$hope:whiplash`를 한 번 호출하면 결과물을 냉정하게 검토하고, 근거가 있는
+중요한 문제를 수정하고, 변경을 검증한 뒤 다시 리뷰합니다. 범위 안에 미해결
+중요 문제가 없고 필요한 검증이 끝나면 완료합니다. 지적의 타당성을 확인한 뒤
+수정하며, 결정이 필요하거나 수정이 진전되지 않는 문제는 드러냅니다.
+독립적인 관점이 도움이 되거나 사용자가 요청하면 별도 리뷰어를 활용합니다.
+
+Whiplash는 Toxic Review를 대체합니다. 호출하면 대상에 대한 되돌릴 수 있는
+로컬 수정까지 수행합니다. 수정 없이 의견만 받으려면 “리뷰만 해줘”라고 요청하세요.
+
+범위와 완료 기준은 [Whiplash 스킬](plugins/hope/skills/whiplash/SKILL.md)에
 정의되어 있습니다.
 
 ---
