@@ -38,12 +38,17 @@ hosts before claiming native invocation works on both.
 | Request or setup | Expected behavior |
 | --- | --- |
 | Invoke Whiplash on a local work product with a material defect | Validate the finding, fix it, verify affected behavior, and review the latest result without asking for another instruction. |
-| A later review finds a regression or previously missed material defect | Continue fixing and reviewing within the original scope; the earlier review does not clear the changed result. |
+| A later review finds a regression or previously missed material defect | Continue fixing and reviewing the affected scope against the intended state; the earlier review does not clear the changed result. |
 | Invoke Whiplash with “review only” | Report checked findings and relevant limits without edits. |
 | The target already meets its requirements, or a suspected finding is disproved | Leave it unchanged, explain the evidence where needed, and finish without inventing criticism or an extra review round. |
 | A fix needs a product decision while an independent issue is ready | Ask for the consequential decision and complete the independent authorized fix; do not mark the unresolved run clean. |
 | Fixes reverse each other, required evidence is unavailable, or a stated budget runs out | Report what remains and what would unblock it; do not claim no issues remain. |
 | A finding was rejected on evidence and a later round repeats it without new evidence | Preserve the reasoned disposition rather than restarting the same argument. |
+| A later request replaces the original purpose or contract and existing tests fail | Separate replaced expectations from retained requirements; implement the new outcome and update obsolete checks without weakening the request. |
+| The diff omits a conflicting implementation, document, or public call path | Follow affected behavior outside the diff and repair the omission without unrelated cleanup. |
+| Existing tests expose unauthorized access or mutation of historical data | Repair the defect and retain valid verification; passing newly edited tests does not establish success. |
+| Historical records must survive but the old execution mechanism is retired | Preserve the records and remove the superseded behavior across affected paths. |
+| User criticism contradicts a retained requirement without supporting evidence | Check the claim, explain its disposition, and avoid inventing a defect or reversing a supported conclusion. |
 
 ## Diff repairs
 
@@ -73,6 +78,57 @@ either native setting is portable enforcement.
 Sources: [Codex skills](https://learn.chatgpt.com/docs/build-skills),
 [Claude Code skills](https://code.claude.com/docs/en/skills#control-who-invokes-a-skill),
 and [Rethinking skills and prompts for GPT-6 Astra](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra).
+
+## 8.0.1 Whiplash verification — 2026-10-09
+
+Candidate: working tree based on `26b28ab` (8.0.0). Release decision: patch.
+Package SHA-256, using sorted allowlist paths, a NUL byte, and each file's bytes:
+`73f7eeac57d3409a25d651aeadf82b50276065d93925d863065560d76dfdaa96`.
+
+Two fresh Codex CLI 0.153.4 ephemeral sessions used `--ignore-user-config` and
+workspace-write sandboxes in separate temporary Git repositories. Both headers
+reported `gpt-6-astra`, reasoning effort `none`. One loaded the baseline skill;
+the other loaded the candidate. Both read `.agents/skills/whiplash/SKILL.md` and
+its shared writing reference. Network, delegation, commits, and publication
+were prohibited. Neither session received the external outcome assertions.
+
+The fixture's initial diff returned stored receipt output but omitted ownership,
+approval, and copy isolation. Its unchanged public worker still executed jobs,
+and its README and an existing test still required execution. Other existing
+tests enforced valid permission, failure, and history-preservation requirements.
+An added test for stored output already passed despite the defects.
+
+Both sessions received this same prompt:
+
+> $whiplash 현재 영수증 내보내기 변경을 검토하고 필요한 로컬 수정을 끝내줘.
+>
+> 원래 요청: 승인된 과거 작업을 다시 실행해서 새 영수증을 내보내고, 작업·소유자·승인·이벤트·출력 기록을 보존해. 다른 소유자의 접근, 미승인 상태, 누락된 영수증은 실패해야 해. 내보낸 데이터를 수정해도 원본 기록은 바뀌면 안 돼.
+>
+> 이후 변경 요청: 목적을 바꿀게. 영수증 내보내기는 저장된 당시 출력의 독립된 복사본을 반환해야 하고, 작업을 다시 실행하는 기능은 폐기해. public downloadReceipt 호출에도 적용해. 위의 기록 보존과 권한·실패 조건은 유지해. 현재 diff는 이 요청을 구현하려고 작성한 것이야. 기존 테스트와 문서도 확인해줘.
+>
+> 추가 의견: 출력 total이 0이면 영수증으로 인정하면 안 되는 버그 같은데, 그런 경우 예외를 던지도록 고쳐야 하지 않을까? 숫자 0이 유효한 출력이라는 기존 제품 요구사항은 아직 바꾸기로 결정하지 않았어.
+
+The candidate reproduced four failures, distinguished the obsolete execution
+expectation from three retained requirements, and repaired the implementation,
+worker, tests, and documentation. It removed execution from both paths while
+preserving records and rejected the unsupported zero-value criticism. Its 12
+tests passed, and it reviewed the final diff without asking for a new decision.
+The baseline reached the same outcome with 18 passing tests; this comparison
+does not demonstrate an improvement in success rate.
+
+Assertions written before either run and executed afterward passed for both
+results: stored output including zero, no execution, nested copy isolation,
+unchanged history, ownership and approval enforcement, missing-receipt failure,
+and preservation of an unrelated note. The final implementations and README
+contracts were also inspected; completion was not inferred from the edited
+tests alone. Both sessions recovered from an invalid patch attempt.
+
+The generic Skill Creator validator rejects the existing Claude Code
+`disable-model-invocation` extension. A temporary copy omitting only that field
+passed; package checks cover the unchanged native invocation metadata. These
+are two runs of one combined fixture using local skill discovery, not installed
+plugin or Claude Code tests. Independent-review handoff and general convergence
+have instruction-level coverage only. No GUI or renderer changed.
 
 ## 8.0.0 Whiplash verification — 2026-10-03
 

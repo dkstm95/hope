@@ -171,9 +171,12 @@ and try again.
 *Image: [Hulu’s official “Not My Tempo” clip](https://www.youtube.com/watch?v=gfceCnMJZ3c).*
 
 Invoke `$hope:whiplash` once to critically review the work, fix supported material
-issues, verify the changes, and review again. It finishes when no material issue
-remains in scope and required checks are complete. Findings are tested against
-evidence before edits; unresolved decisions or stalled fixes remain visible.
+issues, verify the changes, and review again. It follows the requested outcome
+through affected parts, including those outside the diff, and distinguishes
+replaced requirements from those that still apply. It finishes when the final
+result meets that outcome, no material issue remains, and required checks are
+complete. Findings are tested against evidence before edits; unresolved
+decisions or stalled fixes remain visible.
 Independent reviewers join when useful or requested.
 
 Whiplash replaces Toxic Review. Invocation authorizes reversible local fixes to
