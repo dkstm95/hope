@@ -1,6 +1,6 @@
 export const CONTRACT_VERSION = 2;
 export const ANALYSIS_VERSION = 6;
-export const RENDERER_VERSION = 24;
+export const RENDERER_VERSION = 25;
 export const RUN_VERSION = 9;
 
 export const LIMITS = Object.freeze({

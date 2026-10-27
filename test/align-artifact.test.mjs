@@ -668,11 +668,11 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
     /<header class="print-identity">[\s\S]*?<strong>ALIGN \/ SPEC-001<\/strong>[\s\S]*?<span><bdi dir="auto">acme\/storage<\/bdi><\/span>[\s\S]*?<span>v1 · 현재 합의 · <time datetime="2026-08-14T00:00:00\.000Z">2026-08-14<\/time><\/span>[\s\S]*?<\/header>/u,
   );
   assert.match(first, /<path d="M3 7\.5h6l2 2h10v9\.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"><\/path><path d="M3 9\.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"><\/path>/u);
-  assert.match(first, /font-family: "Hope Sans"/u);
-  assert.match(first, /font-family: "Hope Code"/u);
+  assert.match(first, /@font-face\{font-family:"Hope Sans"/u);
+  assert.match(first, /@font-face\{font-family:"Hope Code"/u);
   assert.equal((first.match(/@font-face/gu) ?? []).length, 3);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="33"/u);
+  assert.match(first, /name="hope-align-design-version" content="34"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>문서 목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
@@ -758,7 +758,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
     withAlternateLocale,
     /<a class="locale-option" href="upload-recovery\.en\.html" hreflang="en-US" lang="en-US">English<\/a>/u,
   );
-  assert.match(withAlternateLocale, /<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu">[\s\S]*?<button class="theme-button"/u);
+  assert.match(withAlternateLocale, /<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu"[\s\S]*?<button class="theme-button"/u);
   assert.throws(
     () => renderAlignArtifact(data, {
       alternateLocale: { href: "..\/outside.html", locale: "en-US" },

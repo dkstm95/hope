@@ -1,30 +1,25 @@
-import { renderReader } from "./reader/render.mjs";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
 
 import {
-  CODE_THEME,
-  COLORS,
-  DESIGN_VERSION,
-  LAYOUT,
-  SPACE,
-  TYPE,
-} from "./design/tokens.mjs";
-import { label, loadLocale } from "./locales/index.mjs";
+  readStylesheet,
+  renderDocument,
+  sectionOrdinal,
+} from "../../../assets/artifact-shell/document.mjs";
 import {
-  LIMITS,
-  RENDERER_VERSION,
-} from "./constants.mjs";
+  authoredParagraphs as userParagraphs,
+  authoredText as userText,
+  escapeAttribute as htmlAttribute,
+  escapeHtml as html,
+} from "../../../assets/artifact-shell/text.mjs";
+import { mountDiff } from "./client.mjs";
 import { renderCodeEvidence } from "./code-evidence.mjs";
+import { LIMITS, RENDERER_VERSION } from "./constants.mjs";
+import { CODE_THEME, COLORS, DESIGN_VERSION } from "./design/tokens.mjs";
 import { sha256 } from "./hash.mjs";
-import { exposeBidiControls } from "./text.mjs";
+import { label, loadLocale } from "./locales/index.mjs";
+import { renderReader } from "./reader/render.mjs";
 
-const fontUrls = Object.freeze({
-  code: new URL("../../../assets/fonts/HopeCode.woff2", import.meta.url),
-  sansBold: new URL("../../../assets/fonts/HopeSansBold.woff2", import.meta.url),
-  sansMedium: new URL("../../../assets/fonts/HopeSansMedium.woff2", import.meta.url),
-});
-const iconUrl = new URL("../../../assets/hope-icon.png", import.meta.url);
+const stylesheetUrl = new URL("./design/diff.css", import.meta.url);
 const renderedCodeSources = new Set([
   "context-file",
   "patch",
@@ -33,22 +28,6 @@ const linkedCodeSources = new Set([
   "context-file",
 ]);
 
-function html(value) {
-  return exposeBidiControls(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function htmlAttribute(value) {
-  return html(value)
-    .replaceAll("\r", "&#13;")
-    .replaceAll("\n", "&#10;")
-    .replaceAll("\t", "&#9;");
-}
-
 function summaryLabelElement(value) {
   const text = String(value);
   const balanced = /^(\p{Script=Hangul}{2}) (\p{Script=Hangul}{2})$/u.exec(text);
@@ -56,24 +35,6 @@ function summaryLabelElement(value) {
   return `<h3><span class="summary-label-stacked"><span>${html(
     balanced[1],
   )}</span> <span>${html(balanced[2])}</span></span></h3>`;
-}
-
-function hashSource(value) {
-  return createHash("sha256").update(value).digest("base64");
-}
-
-function userText(value, className = "") {
-  const text = String(value).split(/\r?\n/u).map(html).join("<br>");
-  return `<bdi dir="auto"${className ? ` class="${className}"` : ""}>${text}</bdi>`;
-}
-
-function userParagraphs(value, suffix = "") {
-  const paragraphs = String(value).split(/\r?\n+/u);
-  return paragraphs.map(
-    (paragraph, index) => `<p>${userText(paragraph.trim())}${
-      index === paragraphs.length - 1 ? suffix : ""
-    }</p>`,
-  ).join("");
 }
 
 function basisKey(basis) {
@@ -180,7 +141,7 @@ function evidenceBlock(
       context,
       `${label(dictionary, "common.evidence")} [${record.number}]: ${record.title}`,
     );
-    return `<a class="evidence-marker" href="#${record.target}" data-evidence-target="${record.target}" aria-controls="evidence-popover" aria-expanded="false" aria-haspopup="dialog" aria-label="${html(accessible)}">[${record.number}]</a>`;
+    return `<a class="reference-marker evidence-marker" href="#${record.target}" data-reference-target="${record.target}" data-reference-title="${html(`[${record.number}] ${record.title}`)}" aria-controls="reference-popover" aria-expanded="false" aria-haspopup="dialog" aria-label="${html(accessible)}">[${record.number}]</a>`;
   }).join("")}</sup>`;
 }
 
@@ -209,14 +170,6 @@ function evidenceFootnotes(review, dictionary, codeRenderer) {
       </li>`;
     }).join("")}</ol></div>
   </details>`;
-}
-
-function evidencePopover(dictionary) {
-  return `<aside class="evidence-popover" id="evidence-popover" popover="auto" role="dialog" aria-labelledby="evidence-popover-title">
-    <header class="evidence-popover-head"><strong id="evidence-popover-title"></strong><button class="evidence-popover-close" type="button" aria-label="${html(label(dictionary, "evidence.closePreview"))}" title="${html(label(dictionary, "evidence.closePreview"))}">×</button></header>
-    <div class="evidence-popover-body" data-evidence-popover-body></div>
-    <a class="evidence-popover-more" data-evidence-popover-more href="#evidence-references">${html(label(dictionary, "evidence.viewList"))}</a>
-  </aside>`;
 }
 
 function claimBlock(
@@ -394,18 +347,15 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
   const defaultKey = world.controls.map(
     (control) => `${control.id}=${control.defaultOptionId}`,
   ).join("|");
-  return `<aside class="microworld" data-microworld aria-labelledby="microworld-title">
+  return `<section class="microworld" data-microworld aria-labelledby="microworld-title" data-label-no-scenario="${html(label(dictionary, "microworld.noScenario"))}" data-label-selection="${html(label(dictionary, "microworld.selection"))}">
     <header>
       <p class="microworld-eyebrow">${html(label(dictionary, "microworld.tryIt"))}</p>
       <h3 id="microworld-title">${userText(world.title)}</h3>
       ${userParagraphs(world.instructions, evidenceSuffix)}
-      <p class="microworld-notice">${html(label(dictionary, "microworld.notice"))}</p>
     </header>
-    <details class="microworld-disclosure">
-      <summary>${html(label(dictionary, "microworld.controls"))}</summary>
-      <div class="microworld-content">
+    <div class="microworld-stage">
         <div class="microworld-controls" role="group" aria-labelledby="microworld-controls-title">
-          <p class="sr-only" id="microworld-controls-title">${html(label(dictionary, "microworld.controls"))}</p>
+          <p class="microworld-controls-title" id="microworld-controls-title">${html(label(dictionary, "microworld.controls"))}</p>
           <div>${world.controls.map((control) => `<fieldset
         class="microworld-control-group"
         data-control-id="${html(control.id)}"
@@ -460,6 +410,10 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
         </div>
       </article>`).join("")}
         </div>
+      </div>
+      <p class="microworld-notice">${html(label(dictionary, "microworld.notice"))}</p>
+      <details class="microworld-disclosure">
+        <summary>${html(label(dictionary, "microworld.limits"))}</summary>
         <dl class="microworld-boundary">
           <div>
             <dt>${html(label(dictionary, "microworld.simplifies"))}</dt>
@@ -470,9 +424,8 @@ function microworldBlock(world, dictionary, review, codeRenderer) {
             <dd>${userParagraphs(world.omits)}</dd>
           </div>
         </dl>
-      </div>
-    </details>
-  </aside>`;
+      </details>
+  </section>`;
 }
 
 function kindLabel(kind, dictionary) {
@@ -509,7 +462,7 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
     { context: item.title },
   );
   const basis = compact ? "" : visibleBasisLabel(item.basis, dictionary);
-  return `<article class="${className}" id="${html(id)}">
+  return `<article class="${className}" id="${html(id)}" data-importance="${html(item.importance)}">
     <div class="item-head">
       <span class="status kind-${html(item.kind)}">${html(kindLabel(item.kind, dictionary))}</span>
       <span class="importance">${html(importanceLabel(item.importance, dictionary))}</span>
@@ -534,14 +487,6 @@ function reviewItem(item, dictionary, review, codeRenderer, { compact = false } 
       </dl>
     `}
   </article>`;
-}
-
-function sectionOrdinal(number) {
-  return String(number).padStart(2, "0");
-}
-
-function tocHeading(dictionary, count) {
-  return `<h2 class="toc-heading"><span>${html(label(dictionary, "common.index"))}</span><span class="toc-progress"><span data-toc-current>1</span> / ${count}</span></h2>`;
 }
 
 function sectionHeading(title, number, id = "") {
@@ -620,6 +565,66 @@ function limitText(limit, dictionary) {
   return { reason: limit.reason, subject: limit.subject };
 }
 
+const changeMapKinds = Object.freeze(["explained", "supporting", "mechanical", "pending"]);
+
+function changedLines(group) {
+  return group.parts.reduce((total, part) => total + (part.file.availability === "text"
+    ? part.segments.reduce((sum, segment) => sum + segment.rows.filter((row) => row.kind !== "context").length, 0)
+    : part.file.additions + part.file.deletions), 0);
+}
+
+/**
+ * One bar per review: each segment is a code-reader group, sized by its changed
+ * lines and colored by group kind. Geometry uses SVG attributes so the CSP needs
+ * no inline style; every segment is a link with a text name.
+ */
+function changeMap(review, dictionary) {
+  const groups = review.reader?.layout.groups ?? [];
+  if (groups.length === 0) return "";
+  const files = review.reader.snapshot.files;
+  const lines = groups.map((group) => changedLines(group));
+  const width = 1000;
+  const gap = 6;
+  const usable = width - gap * (groups.length - 1);
+  const minimum = Math.min(28, usable / groups.length);
+  const total = lines.reduce((sum, value) => sum + Math.max(1, value), 0);
+  const raw = lines.map((value) => Math.max(minimum, (usable * Math.max(1, value)) / total));
+  const scale = usable / raw.reduce((sum, value) => sum + value, 0);
+  let x = 0;
+  const segments = groups.map((group, index) => {
+    const kind = group.pending ? "pending" : group.kind;
+    const segmentWidth = raw[index] * scale;
+    const name = label(dictionary, "synopsis.shapeGroup")
+      .replace("{number}", () => String(index + 1).padStart(2, "0"))
+      .replace("{title}", () => group.title)
+      .replace("{lines}", () => String(lines[index]));
+    const segment = `<a class="change-map-link" href="#${html(group.id)}" aria-label="${html(name)}"><title>${html(name)}</title><rect class="change-map-hit" x="${x.toFixed(1)}" y="0" width="${segmentWidth.toFixed(1)}" height="44"></rect><rect class="change-map-segment kind-${html(kind)}" x="${x.toFixed(1)}" y="14" width="${segmentWidth.toFixed(1)}" height="16"></rect></a>`;
+    x += segmentWidth + gap;
+    return segment;
+  }).join("");
+  const kinds = changeMapKinds.map((kind) => ({
+    count: groups.filter((group) => (group.pending ? "pending" : group.kind) === kind).length,
+    kind,
+  })).filter((entry) => entry.count > 0);
+  const additions = files.reduce((sum, file) => sum + file.additions, 0);
+  const deletions = files.reduce((sum, file) => sum + file.deletions, 0);
+  const counts = label(dictionary, "synopsis.shapeCounts")
+    .replace("{groups}", () => String(groups.length))
+    .replace("{files}", () => String(files.length));
+  return `<div class="synopsis-row synopsis-shape">
+        ${summaryLabelElement(label(dictionary, "synopsis.shape"))}
+        <div class="synopsis-value change-map">
+          <svg class="change-map-bar" viewBox="0 0 ${width} 44" preserveAspectRatio="none" role="group" aria-label="${html(label(dictionary, "synopsis.shapeMap"))}">${segments}</svg>
+          <div class="change-map-summary">
+            <span class="change-map-counts">${html(counts)} <span class="change-map-lines"><span class="added">+${additions}</span> <span class="removed">−${deletions}</span></span></span>
+            <ul class="change-map-legend">${kinds.map(({ count, kind }) => (
+              `<li class="kind-${kind}"><span class="change-map-swatch" aria-hidden="true"></span>${html(kind === "pending" ? label(dictionary, "synopsis.shapePending") : label(dictionary, `file.use.${kind}`))} ${count}</li>`
+            )).join("")}</ul>
+          </div>
+        </div>
+      </div>`;
+}
+
 function synopsis(review, dictionary, codeRenderer, { number }) {
   const visibleItems = review.reviewItems.slice(0, 3);
   const hiddenItems = review.reviewItems.length - visibleItems.length;
@@ -693,6 +698,7 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
         )}</div>
       </div>
       ${background}
+      ${changeMap(review, dictionary)}
       <div class="synopsis-row synopsis-review${review.reviewItems.length === 0 ? " synopsis-review-empty" : ""}">
         <div class="synopsis-value synopsis-review-value">
           ${review.reviewItems.length === 0
@@ -981,8 +987,8 @@ function buildSections(review, dictionary, codeRenderer, reader) {
   const quiz = review.quiz.length === 0
     ? ""
     : subsection({
-      content: `<div class="quiz">${review.quiz.map((item) => `<details class="quiz-question" id="${html(item.id)}">
-        <summary id="${html(`${item.id}-question`)}">${userText(item.question)}</summary>
+      content: `<div class="quiz">${review.quiz.map((item) => `<article class="quiz-question" id="${html(item.id)}">
+        <h4 id="${html(`${item.id}-question`)}">${userText(item.question)}</h4>
         <div class="quiz-workspace">
           <label class="sr-only" id="${html(`${item.id}-response-label`)}" for="${html(`${item.id}-response`)}">${html(label(dictionary, "quiz.responseLabel"))}</label>
           <textarea
@@ -1006,7 +1012,7 @@ function buildSections(review, dictionary, codeRenderer, reader) {
             </div>
           </details>
         </div>
-      </details>`).join("")}</div>`,
+      </article>`).join("")}</div>`,
       id: "quiz",
       title: label(dictionary, "section.quiz"),
     });
@@ -1056,2024 +1062,79 @@ function buildSections(review, dictionary, codeRenderer, reader) {
   return sections;
 }
 
-function themeVariables(colors) {
-  return [
-    `--accent:${colors.accent}`,
-    `--bg:${colors.background}`,
-    `--border:${colors.border}`,
-    `--component-border:${colors.componentBorder}`,
-    `--decide:${colors.decide}`,
-    `--link:${colors.link}`,
-    `--muted:${colors.muted}`,
-    `--panel:${colors.panel}`,
-    `--rail:${colors.rail}`,
-    `--resolve:${colors.resolve}`,
-    `--scope:${colors.scope}`,
-    `--text:${colors.text}`,
-    `--verify:${colors.verify}`,
-    `--visited:${colors.visited}`,
-  ].join(";");
+function railFooter(review, dictionary) {
+  const { change } = review.snapshot;
+  const head = review.snapshot.snapshot.head;
+  return `<div class="top-context">${repositoryIcon()}<span>${html(repositoryLabel(review.snapshot))}</span></div>
+        <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(head)}"><code>${html(head.slice(0, 8))}</code></span>
+        ${pullRequestLink(change, dictionary)}`;
 }
 
-function codeThemeVariables(colors) {
-  return [
-    `--code-added-bg:${colors.addedBackground}`,
-    `--code-bg:${colors.background}`,
-    `--code-fg:${colors.foreground}`,
-    `--code-hunk-bg:${colors.hunkBackground}`,
-    `--code-removed-bg:${colors.removedBackground}`,
-  ].join(";");
+function repositoryIcon() {
+  return '<svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 9.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"></path></svg>';
 }
 
-function css(fontBase64) {
-  const [space1, space2, space3, space4, space5, space6, space7, space8, space9] = SPACE;
-  const wide = TYPE.body.wide;
-  const narrow = TYPE.body.narrow;
-  const wideCode = TYPE.code.wide;
-  const narrowCode = TYPE.code.narrow;
-  const widePageTitle = TYPE.pageTitle.wide;
-  const narrowPageTitle = TYPE.pageTitle.narrow;
-  const wideSection = TYPE.sectionTitle.wide;
-  const narrowSection = TYPE.sectionTitle.narrow;
-  const wideSubsection = TYPE.subsectionTitle.wide;
-  const narrowSubsection = TYPE.subsectionTitle.narrow;
-
-  return `@font-face {
-  font-family: "Hope Sans";
-  src: url(data:font/woff2;base64,${fontBase64.sansMedium}) format("woff2");
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Hope Sans";
-  src: url(data:font/woff2;base64,${fontBase64.sansBold}) format("woff2");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Hope Code";
-  src: url(data:font/woff2;base64,${fontBase64.code}) format("woff2");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
+function pullRequestLink(change, dictionary, className = "") {
+  if (change.kind !== "github") return "";
+  const text = label(dictionary, "artifact.openPullRequest").replace("{number}", String(change.number));
+  return `<a class="pull-request-link${className}" href="${html(change.url)}" aria-label="${html(text)}" title="${html(text)}"><span>PR #${change.number}</span><svg class="external-link-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 5h5v5"></path><path d="M19 5l-8 8"></path><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg></a>`;
 }
 
-:root {
-  color-scheme: light;
-  ${themeVariables(COLORS.light)};
-  ${codeThemeVariables(CODE_THEME.light)};
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    ${themeVariables(COLORS.dark)};
-    ${codeThemeVariables(CODE_THEME.dark)};
-  }
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  ${themeVariables(COLORS.dark)};
-  ${codeThemeVariables(CODE_THEME.dark)};
-}
-
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 500 ${wide.fontSize}px/${wide.lineHeight} "Hope Sans", sans-serif;
-  text-rendering: optimizeLegibility;
-}
-h1,
-h2,
-h3,
-strong,
-b { font-weight: 700; }
-p,
-ul,
-ol,
-dl { margin-block: 0; }
-code,
-pre {
-  font-family: "Hope Code", ui-monospace, monospace;
-  font-weight: 400;
-}
-a {
-  color: var(--link);
-  text-decoration-thickness: 1px;
-  text-underline-offset: .2em;
-}
-a:visited { color: var(--visited); }
-[id]:target { scroll-margin-top: 24px; }
-.evidence-item:target,
-.scope-limit:target,
-.scope-limit-item:target {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-button,
-select,
-textarea,
-summary {
-  font-family: "Hope Sans", sans-serif;
-  font-weight: 500;
-}
-button,
-select { color: inherit; }
-
-.skip {
-  position: fixed;
-  z-index: 40;
-  top: ${space2}px;
-  left: ${space2}px;
-  transform: translateY(-160%);
-  padding: ${space2}px ${space3}px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-}
-.skip:focus { transform: none; }
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-bdi[dir="auto"] { overflow-wrap: anywhere; }
-.claim > p + p,
-.behavior-visual figcaption > p + p,
-.microworld header > p + p,
-.review-item > p + p,
-.item-actions dd > p + p,
-.scope-limit dd > p + p,
-.quiz-answer-content > p + p { margin-top: ${space2}px; }
-
-.topbar {
-  position: sticky;
-  z-index: 30;
-  top: 0;
-  height: 100vh;
-  border-right: 1px solid var(--border);
-  background: var(--rail);
-}
-.topbar-inner {
-  display: flex;
-  position: relative;
-  height: 100vh;
-  padding: ${space7}px ${space6}px ${space5}px;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-}
-.brand {
-  display: flex;
-  align-items: baseline;
-  gap: ${space2}px;
-  color: var(--muted);
-  font: 400 ${TYPE.brand.wide.fontSize}px/${TYPE.brand.wide.lineHeight} "Hope Code", ui-monospace, monospace;
-  letter-spacing: .06em;
-  white-space: nowrap;
-}
-.brand-product { color: var(--accent); }
-.brand-separator { color: var(--muted); }
-.brand-record { color: var(--text); }
-.rail-divider { height: 1px; margin: ${space6}px 0 ${space5}px; background: var(--border); }
-.rail-navigation { min-height: 0; overflow-y: auto; }
-.rail-footer { display: grid; margin-top: auto; padding-top: ${space5}px; gap: ${space2}px; border-top: 1px solid var(--border); }
-.top-context {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: ${space2}px;
-  color: var(--text);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-}
-.repository-icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  stroke: var(--muted);
-}
-.commit-status {
-  color: var(--muted);
-  font: 400 ${TYPE.micro.compactFontSize}px/1.45 "Hope Code", ui-monospace, monospace;
-}
-.commit-status code {
-  font: inherit;
-}
-.topbar-actions {
-  display: flex;
-  margin-top: ${space3}px;
-  align-items: center;
-  gap: ${space2}px;
-}
-.pull-request-link {
-  display: inline-flex;
-  min-height: 32px;
-  padding: 0;
-  align-items: center;
-  gap: ${space1}px;
-  color: var(--accent);
-  flex: 0 0 auto;
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.pull-request-link:hover,
-.pull-request-link:focus-visible { color: var(--text); }
-.mobile-pull-request-link { display: none; }
-.external-link-icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  stroke: currentColor;
-}
-.display-controls {
-  display: flex;
-  height: 44px;
-  flex: 0 0 auto;
-  align-items: center;
-  border: 0;
-  background: transparent;
-}
-.locale-menu { position: relative; }
-.locale-menu > summary {
-  display: flex;
-  height: 44px;
-  min-width: 80px;
-  padding: 0 ${space2}px 0 ${space3}px;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${space2}px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-  list-style: none;
-}
-.locale-menu > summary::-webkit-details-marker { display: none; }
-.locale-chevron {
-  width: 14px;
-  height: 14px;
-  stroke: currentColor;
-  transition: transform 120ms ease;
-}
-.locale-menu[open] .locale-chevron { transform: rotate(180deg); }
-.locale-options {
-  position: absolute;
-  z-index: 32;
-  right: 0;
-  bottom: calc(100% + ${space1}px);
-  display: grid;
-  min-width: 124px;
-  margin: 0;
-  padding: ${space1}px;
-  gap: 2px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--text) 14%, transparent);
-  list-style: none;
-}
-.locale-option,
-.locale-current {
-  display: flex;
-  min-height: 44px;
-  padding: ${space2}px ${space3}px;
-  align-items: center;
-  border-radius: 4px;
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-  text-decoration: none;
-}
-.locale-current { color: var(--muted); }
-.locale-option,
-.locale-option:visited { color: var(--text); }
-.locale-option:hover,
-.locale-option:focus-visible { background: var(--bg); }
-.theme-button {
-  display: inline-grid;
-  width: 44px;
-  height: 44px;
-  padding: ${space1}px;
-  place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  cursor: pointer;
-}
-.display-controls.has-locale-menu .theme-button {
-  margin-left: -1px;
-  border-radius: 0 6px 6px 0;
-}
-.display-controls.has-locale-menu .locale-menu > summary { border-radius: 6px 0 0 6px; }
-.theme-button:hover { background: var(--panel); }
-.theme-icon {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-}
-.theme-icon[hidden] { display: none; }
-.toc-icon {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-}
-
-.layout {
-  display: grid;
-  max-width: 1680px;
-  min-height: 100vh;
-  margin: auto;
-  grid-template-columns: ${LAYOUT.tableOfContentsWidth}px minmax(0, 1fr);
-  gap: 0;
-}
-.main {
-  width: 100%;
-  min-width: 0;
-  min-height: 100vh;
-  padding: ${space7}px ${space8}px 80px;
-  background: var(--panel);
-}
-.main > :not(#changes), #changes > .review-subsection { max-width: 1000px; margin-inline: 0; }
-.locale-warning {
-  margin: 0 0 ${space4}px;
-  padding: ${space3}px ${space4}px;
-  border: 1px solid var(--component-border);
-  border-left: 4px solid var(--scope);
-  background: var(--panel);
-}
-.toc-desktop {
-  display: block;
-}
-.toc-desktop h2,
-.toc-mobile-panel h2 {
-  margin: 0 0 ${space4}px;
-  font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.toc-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: ${space2}px;
-}
-.toc-progress {
-  display: none;
-  color: var(--muted);
-  font-size: ${TYPE.micro.fontSize}px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-.toc-list {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  gap: 2px;
-  list-style: none;
-}
-.toc-link {
-  display: grid;
-  min-height: 46px;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: center;
-  gap: ${space2}px;
-  padding: ${space2}px;
-  border-left: 3px solid transparent;
-  color: var(--muted);
-  font-size: ${TYPE.body.wide.fontSize}px;
-  font-weight: 500;
-  text-decoration: none;
-}
-.toc-link:visited { color: var(--muted); }
-.toc-number {
-  color: var(--muted);
-  font: 400 ${TYPE.supporting.wide.fontSize}px/1.55 "Hope Code", ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .04em;
-}
-.toc-link[aria-current="location"],
-.toc-link[aria-current="location"]:visited {
-  border-left-color: var(--accent);
-  color: var(--text);
-  font-weight: 700;
-}
-.toc-link[aria-current="location"] .toc-number { color: var(--accent); }
-.toc-link:hover,
-.toc-link:focus { background: var(--panel); color: var(--text); }
-.toc-mobile { display: none; }
-
-.document-title { max-width: ${LAYOUT.proseWidth}; padding-top: ${space1}px; }
-.document-title + .synopsis { margin-top: ${space5}px; padding-top: ${space4}px; }
-.synopsis { margin: 0; }
-.section-number {
-  color: var(--accent);
-  font: 400 1em/1.4 "Hope Code", ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .04em;
-}
-.document-title h1 {
-  min-width: 0;
-  margin: 0;
-  font-size: ${widePageTitle.fontSize}px;
-  line-height: ${widePageTitle.lineHeight};
-  letter-spacing: -.04em;
-  overflow-wrap: anywhere;
-}
-.document-title-meta { margin-top: ${space3}px; }
-.document-state { display: flex; align-items: center; gap: ${space2}px; margin: 0; color: var(--accent); }
-.document-state code { color: inherit; font-size: .9em; }
-.document-state-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
-.title-evidence { display: inline-block; font-size: ${TYPE.supporting.wide.fontSize}px; line-height: 1; letter-spacing: normal; vertical-align: middle; }
-.synopsis-grid > div > h3,
-.synopsis-background > h3,
-.synopsis-review-head > h3,
-.before-after > div > h3 {
-  margin: 0;
-  color: var(--text);
-  font-size: inherit;
-  line-height: inherit;
-  font-weight: 700;
-}
-.status-row,
-.item-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${space2}px;
-  align-items: center;
-}
-.status,
-.importance {
-  display: inline-flex;
-  padding: ${space1}px ${space2}px;
-  align-items: center;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  font-size: ${TYPE.micro.fontSize}px;
-  line-height: ${TYPE.micro.lineHeight};
-  font-weight: 500;
-}
-.status.kind-resolve { color: var(--resolve); }
-.status.kind-decide { color: var(--decide); }
-.status.kind-verify { color: var(--verify); }
-.synopsis-grid {
-  display: grid;
-}
-.before-after {
-  display: grid;
-  gap: 0;
-}
-.change-shift {
-  position: relative;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  border-bottom: 1px solid var(--border);
-}
-.change-shift::after {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  padding: ${space1}px;
-  background: var(--panel);
-  color: var(--muted);
-  content: "→";
-  font: 400 ${TYPE.subsectionTitle.wide.fontSize}px/1 "Hope Code", ui-monospace, monospace;
-  transform: translate(-50%, -50%);
-}
-.change-shift > .shift-card {
-  display: block;
-  padding: ${space4}px ${space2}px ${space5}px;
-}
-.change-shift > .shift-card > h3 { margin-bottom: ${space2}px; color: var(--accent); }
-.change-shift > .shift-card + .shift-card {
-  padding-left: ${space5}px;
-  border-left: 1px solid var(--border);
-}
-.synopsis-row {
-  display: grid;
-  grid-template-columns: 148px minmax(0, 1fr);
-  gap: ${space4}px;
-  align-items: start;
-  padding: ${space3}px ${space2}px;
-  border-bottom: 1px solid var(--border);
-}
-.synopsis-background {
-  display: grid;
-  grid-template-columns: 148px minmax(0, 1fr);
-  gap: ${space4}px;
-  padding: ${space3}px ${space2}px;
-  border-bottom: 1px solid var(--border);
-}
-.synopsis-background > h3 {
-  margin: 0;
-  padding-top: 2px;
-}
-.synopsis-background-content { min-width: 0; }
-.synopsis-row > h3 { padding-top: 2px; }
-.summary-label-stacked { display: inline-flex; flex-direction: column; align-items: flex-start; }
-.synopsis-value {
-  min-width: 0;
-}
-.review-empty { margin: 0; }
-.claim p,
-.summary-line,
-.synopsis-grid > div > p,
-.item-actions dd,
-.scope-limit dd,
-.quiz p {
-  max-width: ${LAYOUT.proseWidth};
-}
-.claim p,
-.summary-line { margin: 0; }
-.more-link { margin: ${space2}px 0 0; }
-.claim-basis {
-  margin-left: ${space2}px;
-  color: var(--muted);
-  font-size: ${TYPE.micro.fontSize}px;
-  line-height: ${TYPE.micro.lineHeight};
-  font-weight: 500;
-}
-.item-basis {
-  color: var(--muted);
-  font-size: ${TYPE.micro.fontSize}px;
-  line-height: ${TYPE.micro.lineHeight};
-  font-weight: 500;
-}
-
-.evidence-markers { display: inline-flex; gap: 2px; margin-left: ${space1}px; white-space: nowrap; font-size: .78em; line-height: 1; vertical-align: .3em; }
-.title-evidence .evidence-markers { margin-left: 0; font-size: ${TYPE.supporting.wide.fontSize}px; vertical-align: 0; }
-.evidence-marker { display: inline-grid; min-width: 24px; min-height: 24px; place-items: center; margin-block: -6px; color: var(--accent); font-weight: 500; text-decoration: none; }
-.evidence-marker:visited { color: var(--accent); }
-.evidence-marker:hover { text-decoration: underline; }
-.evidence-footnote-list { margin: 0; padding: 0; list-style: none; }
-.evidence-footnote-list > li { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: ${space3}px; padding: ${space4}px 0; border-top: 1px solid var(--border); }
-.evidence-number { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
-.evidence-item {
-  min-width: 0;
-  max-width: 100%;
-  border: 1px solid var(--component-border);
-  background: var(--panel);
-}
-.evidence-meta a:visited { color: var(--visited); }
-.evidence-meta {
-  padding: ${space2}px;
-  border-bottom: 1px solid var(--border);
-  font: 400 ${TYPE.supporting.wide.fontSize}px/${TYPE.supporting.wide.lineHeight} "Hope Code", ui-monospace, monospace;
-  overflow-wrap: anywhere;
-}
-.evidence-item pre {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: ${space3}px;
-  background: var(--panel);
-  color: var(--text);
-  overflow: auto;
-  font: 400 ${wideCode.fontSize}px/${wideCode.lineHeight} "Hope Code", ui-monospace, monospace;
-}
-.evidence-item code {
-  display: block;
-  width: max-content;
-  min-width: 100%;
-}
-.evidence-item pre.code-evidence {
-  background: var(--code-bg);
-  color: var(--code-fg);
-}
-.evidence-popover { position: fixed; inset: unset; top: 0; left: 0; width: min(520px, calc(100vw - ${space6}px)); max-height: min(72vh, 680px); margin: 0; padding: 0; overflow: visible; border: 1px solid var(--component-border); border-radius: 8px; background: var(--panel); color: var(--text); box-shadow: 0 18px 48px color-mix(in srgb, var(--text) 22%, transparent); }
-.evidence-popover:popover-open { display: flex; flex-direction: column; }
-.evidence-popover::backdrop { background: transparent; }
-.evidence-popover::before { position: absolute; left: var(--popover-arrow-x, 50%); width: 12px; height: 12px; border: 1px solid var(--component-border); background: var(--panel); content: ""; transform: translateX(-50%) rotate(45deg); }
-.evidence-popover[data-placement="below"]::before { top: -7px; border-right: 0; border-bottom: 0; }
-.evidence-popover[data-placement="above"]::before { bottom: -7px; border-top: 0; border-left: 0; }
-.evidence-popover[data-placement="sheet"]::before { display: none; }
-.evidence-popover-head { position: relative; z-index: 1; flex: none; display: flex; align-items: center; justify-content: space-between; gap: ${space3}px; padding: ${space3}px ${space4}px; border-bottom: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--panel); }
-.evidence-popover-head strong { min-width: 0; overflow-wrap: anywhere; }
-.evidence-popover-close { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; font-size: 20px; }
-.evidence-popover-close:hover { background: var(--bg); }
-.evidence-popover-body { min-height: 0; padding: ${space4}px; overflow: auto; }
-.evidence-popover-body .evidence-item { border: 0; }
-.evidence-popover-body .evidence-meta { padding-inline: 0; }
-.evidence-popover-body pre { max-height: 42vh; }
-.evidence-popover-more { flex: none; display: flex; min-height: 44px; align-items: center; margin: 0 ${space4}px ${space4}px; font-weight: 700; }
-.code-line {
-  display: inline;
-}
-.code-line-patch {
-  display: inline;
-}
-.code-line-patch::before {
-  display: inline-block;
-  position: sticky;
-  left: 0;
-  width: 8ch;
-  padding-right: 1ch;
-  border-right: 1px solid var(--border);
-  background: var(--code-bg);
-  color: var(--muted);
-  content: attr(data-old-line) " " attr(data-new-line);
-  text-align: right;
-  user-select: none;
-}
-.code-line-patch.code-line-unlocated::before { display: none; }
-.code-content { white-space: pre; }
-.code-line-patch .code-content { padding-left: 1ch; }
-.code-prefix {
-  display: inline-block;
-  width: 2ch;
-  font-weight: 700;
-}
-.code-line-added { background: var(--code-added-bg); }
-.code-line-removed { background: var(--code-removed-bg); }
-.code-line-hunk { background: var(--code-hunk-bg); }
-
-.review-section {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.synopsis + .review-section,
-.review-section + .review-section { margin-top: ${space6}px; padding-top: ${space4}px; }
-.review-section-collapsible:not([open]) {
-  padding-bottom: 0;
-}
-.review-section-collapsible > .section-heading {
-  min-height: 44px;
-  cursor: pointer;
-  list-style: none;
-}
-.review-section-collapsible:not([open]) > .section-heading { margin-bottom: 0; }
-.review-section-collapsible > .section-heading::-webkit-details-marker { display: none; }
-.review-section-collapsible > .section-heading::after {
-  display: inline-block;
-  margin-left: auto;
-  content: "›";
-  flex: 0 0 auto;
-  transition: transform 120ms ease;
-}
-.review-section-collapsible[open] > .section-heading::after {
-  transform: rotate(90deg);
-}
-.beginner-primer {
-  margin-top: ${space4}px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.beginner-primer-summary {
-  display: flex;
-  min-height: 44px;
-  padding: ${space2}px ${space3}px;
-  align-items: center;
-  gap: ${space2}px;
-  cursor: pointer;
-  list-style: none;
-  font-weight: 600;
-}
-.beginner-primer-summary::-webkit-details-marker { display: none; }
-.beginner-primer-summary::after {
-  margin-left: auto;
-  content: "›";
-  color: var(--accent);
-  transition: transform 120ms ease;
-}
-.beginner-primer[open] > .beginner-primer-summary::after {
-  transform: rotate(90deg);
-}
-.beginner-primer-hint {
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 400;
-}
-.beginner-primer-content {
-  padding: 0 ${space3}px ${space3}px;
-}
-.beginner-primer-content > .titled-claim-list,
-.beginner-primer-content > .explanation-step {
-  margin-top: ${space2}px;
-}
-.section-heading {
-  display: flex;
-  position: relative;
-  margin-bottom: ${space4}px;
-  padding-bottom: ${space3}px;
-  border-bottom: 1px solid var(--component-border);
-  align-items: center;
-  gap: ${space2}px;
-}
-.section-heading h2 {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: baseline;
-  gap: ${space4}px;
-  margin: 0;
-  color: var(--text);
-  font: 400 ${wideSection.fontSize}px/${wideSection.lineHeight} "Hope Code", ui-monospace, monospace;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.review-subsection {
-  margin-top: ${space5}px;
-  padding-top: ${space4}px;
-  border-top: 1px solid var(--border);
-}
-.review-section > .section-heading + .review-subsection {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
-}
-.subsection-heading {
-  display: flex;
-  min-height: 28px;
-  margin-bottom: ${space3}px;
-  align-items: center;
-  gap: ${space2}px;
-}
-.subsection-heading h3 {
-  margin: 0;
-  font-size: ${wideSubsection.fontSize}px;
-  line-height: ${wideSubsection.lineHeight};
-}
-.review-subsection-collapsible > .subsection-heading {
-  min-height: 44px;
-  margin-bottom: 0;
-  cursor: pointer;
-  list-style: none;
-}
-.review-subsection-collapsible { padding-top: 0; }
-.review-subsection-collapsible > .subsection-heading::-webkit-details-marker {
-  display: none;
-}
-.review-subsection-collapsible > .subsection-heading::after {
-  margin-left: auto;
-  color: var(--muted);
-  content: "›";
-  transition: transform 120ms ease;
-}
-.review-subsection-collapsible[open] > .subsection-heading::after {
-  transform: rotate(90deg);
-}
-.subsection-content {
-  padding-top: ${space2}px;
-}
-.explanation-step + .explanation-step { margin-top: ${space4}px; }
-.behavior-summary + .core-change { margin-top: ${space3}px; }
-.core-details { margin: 0; }
-.claim-list,
-.code-step-list,
-.titled-claim-list,
-.review-items {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.claim-list > li {
-  position: relative;
-  padding-left: 20px;
-}
-.claim-list > li + li { margin-top: ${space2}px; }
-.claim-list > li::before,
-.titled-claim-list > li::before {
-  position: absolute;
-  top: .72em;
-  left: 4px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  content: "";
-}
-.titled-claim-list > li {
-  position: relative;
-  padding-left: 20px;
-}
-.titled-claim-list > li + li { margin-top: ${space4}px; }
-.review-items-full > li + li { margin-top: ${space4}px; }
-.scope-impact-list {
-  margin: 0;
-  padding-left: 20px;
-}
-.scope-impact-list > li {
-  padding-left: ${space1}px;
-}
-.scope-impact-list > li + li { margin-top: ${space1}px; }
-.scope-impact-list > li::marker { color: var(--scope); }
-.code-step-list {
-  counter-reset: code-step;
-}
-.code-step-list > li {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: ${space2}px;
-  counter-increment: code-step;
-}
-.code-step-list > li + li { margin-top: ${space4}px; }
-.code-step-list > li::before {
-  color: var(--muted);
-  content: counter(code-step, decimal-leading-zero);
-  font: 400 ${TYPE.supporting.wide.fontSize}px/${wideSubsection.lineHeight} "Hope Code", ui-monospace, monospace;
-}
-.code-step-list .explanation-step { min-width: 0; }
-.explanation-step h3,
-.review-item h3,
-.scope-limit h3 {
-  margin: 0 0 ${space2}px;
-  font-size: ${wideSubsection.fontSize}px;
-  line-height: ${wideSubsection.lineHeight};
-}
-.evidence-group + .evidence-group,
-.evidence-group + .scope-limits,
-.scope-limits + .evidence-group { margin-top: ${space4}px; }
-.evidence-group {
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.evidence-group > summary {
-  display: flex;
-  min-height: 44px;
-  padding: ${space3}px 0;
-  align-items: center;
-  cursor: pointer;
-  font-weight: 500;
-  list-style: none;
-}
-.evidence-group > summary h3 {
-  margin: 0;
-  font-size: ${wideSubsection.fontSize}px;
-  line-height: ${wideSubsection.lineHeight};
-}
-.evidence-group-content { padding: 0 0 ${space3}px ${space4}px; }
-.flow {
-  display: grid;
-  margin: ${space3}px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: behavior-step;
-}
-.flow > li {
-  position: relative;
-  display: grid;
-  min-width: 0;
-  min-height: 56px;
-  margin: 0;
-  padding: 0 0 ${space4}px;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: ${space3}px;
-  counter-increment: behavior-step;
-}
-.flow > li::before {
-  position: relative;
-  z-index: 1;
-  width: 28px;
-  background: var(--bg);
-  color: var(--accent);
-  content: counter(behavior-step, decimal-leading-zero);
-  font: 700 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Sans", sans-serif;
-  font-variant-numeric: tabular-nums;
-}
-.flow > li:not(:last-child)::after {
-  position: absolute;
-  top: 22px;
-  bottom: ${space1}px;
-  left: 13px;
-  width: 1px;
-  background: var(--border);
-  content: "";
-}
-
-.behavior-visual,
-.microworld {
-  min-width: 0;
-  margin: ${space4}px 0;
-  padding: ${space4}px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  overflow-wrap: anywhere;
-}
-.behavior-summary {
-  max-width: ${LAYOUT.proseWidth};
-}
-.behavior-visual > figcaption .visual-title,
-.microworld > header h3 {
-  display: block;
-  margin: 0;
-  font-size: ${wide.fontSize}px;
-  line-height: ${wide.lineHeight};
-}
-.microworld > header h3 {
-  font-size: ${wideSubsection.fontSize}px;
-  line-height: ${wideSubsection.lineHeight};
-}
-.behavior-visual > figcaption p,
-.microworld > header > p {
-  max-width: ${LAYOUT.proseWidth};
-  margin: ${space2}px 0 0;
-}
-.visual-flow,
-.visual-sequence {
-  display: grid;
-  margin: ${space3}px 0 0;
-  padding: 0;
-  gap: ${space2}px;
-  list-style: none;
-  counter-reset: visual-step;
-}
-.visual-flow > li,
-.visual-sequence > li {
-  position: relative;
-  min-height: 56px;
-  padding: ${space3}px 0 ${space4}px 44px;
-  border-bottom: 1px solid var(--border);
-  counter-increment: visual-step;
-}
-.visual-flow > li::before,
-.visual-sequence > li::before {
-  position: absolute;
-  top: ${space3}px;
-  left: ${space3}px;
-  color: var(--muted);
-  content: counter(visual-step, decimal-leading-zero);
-  font: 400 ${TYPE.supporting.wide.fontSize}px/${wide.lineHeight} "Hope Code", ui-monospace, monospace;
-}
-.visual-flow > li:not(:last-child)::after,
-.visual-sequence > li:not(:last-child)::after {
-  position: absolute;
-  top: 34px;
-  bottom: -1px;
-  left: 15px;
-  width: 1px;
-  background: var(--component-border);
-  content: "";
-}
-.visual-flow p,
-.visual-sequence p {
-  margin: ${space1}px 0 0;
-}
-.visual-table {
-  min-width: 0;
-  max-width: 100%;
-  margin-top: ${space3}px;
-}
-.decision-table th {
-  text-align: left;
-  font-weight: 500;
-}
-.decision-table tbody th {
-  overflow-wrap: anywhere;
-}
-.visual-participants {
-  display: flex;
-  margin: ${space3}px 0 0;
-  padding: 0;
-  flex-wrap: wrap;
-  gap: ${space2}px;
-  list-style: none;
-}
-.visual-participants li {
-  padding: ${space1}px ${space2}px;
-  border: 1px solid var(--component-border);
-  border-radius: 999px;
-  font-weight: 500;
-}
-.visual-route {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: ${space2}px;
-}
-.visual-components {
-  display: grid;
-  margin-top: ${space3}px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: ${space2}px;
-}
-.visual-components article {
-  padding: ${space3}px 0 ${space3}px ${space3}px;
-  border-left: 2px solid var(--component-border);
-}
-.visual-components h4,
-.visual-connections h4 {
-  margin: 0;
-}
-.visual-components p {
-  margin: ${space1}px 0 0;
-}
-.visual-connections {
-  margin-top: ${space3}px;
-}
-.visual-connections ul {
-  display: grid;
-  margin: ${space2}px 0 0;
-  padding-left: 20px;
-  gap: ${space2}px;
-}
-.visual-connections li > span + span {
-  display: block;
-  margin-top: ${space1}px;
-}
-
-.microworld {
-  padding-left: ${space4}px;
-  border-left: 3px solid var(--accent);
-}
-.microworld-eyebrow {
-  color: var(--accent);
-  font-size: ${TYPE.micro.fontSize}px;
-  line-height: ${TYPE.micro.lineHeight};
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-}
-.microworld-notice {
-  padding: ${space2}px ${space3}px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-}
-.microworld-disclosure { margin-top: ${space3}px; }
-.microworld-disclosure > summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  color: var(--accent);
-  cursor: pointer;
-  font-weight: 700;
-  list-style: none;
-}
-.microworld-disclosure > summary::-webkit-details-marker { display: none; }
-.microworld-disclosure > summary::after {
-  margin-left: ${space2}px;
-  content: "›";
-  transition: transform 120ms ease;
-}
-.microworld-disclosure[open] > summary::after { transform: rotate(90deg); }
-.microworld-content { padding-bottom: ${space2}px; }
-.microworld-controls {
-  min-width: 0;
-  margin: ${space2}px 0 0;
-  padding: 0;
-  border: 0;
-}
-.microworld-control-group {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-.microworld-control-group legend {
-  margin-bottom: ${space2}px;
-  font-weight: 500;
-}
-.microworld-controls > div {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: ${space3}px;
-}
-.microworld-options {
-  display: grid;
-  min-width: 0;
-  gap: ${space1}px;
-}
-.microworld-option {
-  display: grid;
-  min-height: 44px;
-  padding: ${space2}px ${space3}px;
-  border: 1px solid var(--component-border);
-  grid-template-columns: 20px minmax(0, 1fr);
-  align-items: center;
-  gap: ${space2}px;
-  font-weight: 500;
-}
-.microworld-control {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  accent-color: var(--accent);
-}
-.microworld-noscript {
-  margin: ${space3}px 0;
-  color: var(--scope);
-  font-weight: 500;
-}
-.microworld-scenarios {
-  margin-top: ${space4}px;
-}
-.microworld-scenario[hidden] {
-  display: none !important;
-}
-.microworld-scenario > h4 {
-  margin: 0 0 ${space3}px;
-  font-size: ${wideSubsection.fontSize}px;
-  line-height: ${wideSubsection.lineHeight};
-}
-.microworld-comparison {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: ${space3}px;
-}
-.microworld-trace {
-  padding: ${space3}px;
-  border: 1px solid var(--border);
-}
-.microworld-trace h5 {
-  margin: 0;
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  line-height: ${TYPE.supporting.wide.lineHeight};
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-.microworld-trace ol {
-  margin: ${space2}px 0;
-  padding-left: 22px;
-}
-.microworld-unchanged {
-  margin: ${space2}px 0 0;
-  color: var(--ink);
-  font-weight: 500;
-}
-.microworld-outcome,
-.microworld-lesson {
-  margin: ${space2}px 0 0;
-}
-.microworld-outcome > p,
-.microworld-lesson > p { margin-top: ${space1}px; }
-.microworld-outcome > p + p,
-.microworld-lesson > p + p { margin-top: ${space2}px; }
-.microworld-boundary {
-  display: grid;
-  margin: ${space4}px 0 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: ${space3}px;
-}
-.microworld-boundary > div {
-  padding-left: ${space3}px;
-  border-left: 2px solid var(--border);
-}
-.microworld-boundary dt {
-  color: var(--muted);
-  font-weight: 500;
-}
-.microworld-boundary dd {
-  margin: ${space1}px 0 0;
-}
-
-.review-item {
-  padding: ${space5}px 0;
-  border-top: 1px solid var(--border);
-}
-.review-items-full > li:last-child .review-item {
-  border-bottom: 1px solid var(--border);
-}
-.review-item:not(.review-item-compact) .item-head {
-  margin-bottom: ${space2}px;
-}
-.review-items-full > li + li { margin-top: 0; }
-.review-item > p {
-  max-width: ${LAYOUT.proseWidth};
-  margin: ${space2}px 0;
-}
-.review-item-compact {
-  padding: ${space2}px 0;
-  border: 0;
-  background: transparent;
-}
-.review-items-compact > li:first-child .review-item-compact { padding-top: 0; }
-.review-items-compact > li + li { margin-top: ${space2}px; }
-.review-item-compact .item-head {
-  gap: ${space1}px;
-}
-.review-item-compact .status,
-.review-item-compact .importance {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  line-height: ${TYPE.supporting.wide.lineHeight};
-}
-.review-item-compact .status {
-  gap: ${space1}px;
-}
-.review-item-compact .status::before {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: currentColor;
-  content: "";
-}
-.review-item-compact .importance {
-  color: var(--muted);
-}
-.review-item-compact .importance::before {
-  margin-right: ${space1}px;
-  content: "·";
-}
-.review-item-compact h4 {
-  margin: ${space1}px 0 0 14px;
-  font-size: inherit;
-  line-height: inherit;
-  font-weight: 500;
-}
-.review-item-compact h4 a {
-  color: var(--verify);
-  text-decoration: underline;
-}
-.review-item-compact h4 a:hover,
-.review-item-compact h4 a:focus-visible {
-  color: var(--text);
-}
-.review-item-compact > p { display: none; }
-.synopsis-review {
-  grid-template-columns: 1fr;
-  margin-top: ${space4}px;
-  padding: ${space4}px ${space5}px;
-  border: 1px solid color-mix(in srgb, var(--verify) 70%, var(--border));
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--verify) 5%, var(--panel));
-}
-.synopsis-review-empty {
-  border-color: var(--border);
-  background: transparent;
-}
-.item-actions {
-  display: grid;
-  margin: ${space3}px 0;
-  gap: ${space2}px;
-}
-.item-actions > div {
-  display: grid;
-  min-width: 0;
-  padding: ${space3}px 0;
-  gap: ${space1}px;
-  border-top: 1px solid var(--border);
-}
-.item-actions > .item-next {
-  border-top-color: var(--accent);
-}
-.scope-limit dl > div,
-.artifact-details dl > div {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: ${space3}px;
-}
-.item-actions > div,
-.scope-limit dl > div,
-.artifact-details dl > div {
-  overflow-wrap: anywhere;
-}
-.item-actions dt,
-.scope-limit dt,
-.artifact-details dt {
-  color: var(--muted);
-  font-weight: 500;
-}
-.item-actions dd,
-.scope-limit dd,
-.artifact-details dd { margin: 0; }
-.related-limits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${space1}px;
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-}
-
-.scope-limits {
-  display: grid;
-  gap: ${space3}px;
-}
-.context-checks {
-  display: grid;
-  gap: ${space3}px;
-}
-.context-check,
-.scope-limit {
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-.context-check-head,
-.scope-limit-head {
-  display: flex;
-  min-height: 44px;
-  padding: ${space3}px 0;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: ${space2}px;
-  cursor: pointer;
-  list-style: none;
-}
-.context-check h4,
-.scope-limit-head h3 { margin: 0; }
-.disclosure-content { padding: 0 0 ${space3}px ${space4}px; }
-.disclosure-content > p { margin: 0 0 ${space2}px; }
-.context-status,
-.scope-impact {
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-}
-.context-checked { color: var(--accent); }
-.context-limited { color: var(--scope); }
-.scope-limit dl { margin: 0; }
-.scope-shared-reason { margin-bottom: ${space3}px !important; }
-.scope-context-notes {
-  display: grid;
-  margin: ${space3}px 0;
-  gap: ${space3}px;
-}
-.scope-context-note {
-  padding-left: ${space3}px;
-  border-left: 2px solid var(--border);
-}
-.scope-context-note h4 {
-  margin: 0 0 ${space1}px;
-}
-.scope-context-note > p {
-  margin: 0;
-}
-.scope-group-items {
-  border: 1px solid var(--border);
-  background: var(--panel);
-}
-.scope-limit-item + .scope-limit-item {
-  border-top: 1px solid var(--border);
-}
-.scope-limit-item > summary {
-  display: flex;
-  min-height: 44px;
-  padding: ${space2}px ${space3}px;
-  align-items: center;
-  cursor: pointer;
-  list-style: none;
-}
-.scope-limit-item h4 {
-  margin: 0;
-  font-size: inherit;
-}
-.scope-limit-item-content {
-  padding: 0 ${space3}px ${space3}px;
-}
-.table-scroll {
-  overflow: auto;
-  border: 1px solid var(--component-border);
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--panel);
-}
-th,
-td {
-  padding: ${space2}px ${space3}px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-th {
-  color: var(--muted);
-  font-size: ${TYPE.supporting.wide.fontSize}px;
-  font-weight: 500;
-}
-td:first-child {
-  font-family: "Hope Code", ui-monospace, monospace;
-  font-weight: 400;
-  overflow-wrap: anywhere;
-}
-.artifact-details { margin-top: ${space3}px; }
-.evidence-group > summary,
-.context-check > summary,
-.scope-limit > summary,
-.scope-limit-item > summary,
-.artifact-details > summary,
-.quiz > details > summary,
-.quiz-answer > summary {
-  display: flex;
-  min-height: 44px;
-  gap: ${space1}px;
-  align-items: center;
-  cursor: pointer;
-  font-weight: 500;
-  list-style: none;
-}
-.evidence-group > summary::-webkit-details-marker,
-.context-check > summary::-webkit-details-marker,
-.scope-limit > summary::-webkit-details-marker,
-.scope-limit-item > summary::-webkit-details-marker,
-.artifact-details > summary::-webkit-details-marker,
-.quiz > details > summary::-webkit-details-marker,
-.quiz-answer > summary::-webkit-details-marker {
-  display: none;
-}
-.evidence-group > summary::before,
-.context-check > summary::before,
-.scope-limit > summary::before,
-.scope-limit-item > summary::before,
-.artifact-details > summary::before,
-.quiz > details > summary::before,
-.quiz-answer > summary::before {
-  content: "›";
-  display: inline-block;
-  flex: 0 0 auto;
-  transition: transform 120ms ease;
-}
-.evidence-group[open] > summary::before,
-.context-check[open] > summary::before,
-.scope-limit[open] > summary::before,
-.scope-limit-item[open] > summary::before,
-.artifact-details[open] > summary::before,
-.quiz > details[open] > summary::before,
-.quiz-answer[open] > summary::before {
-  transform: rotate(90deg);
-}
-.artifact-details dl {
-  display: grid;
-  gap: ${space2}px;
-}
-.quiz {
-  display: grid;
-  gap: ${space2}px;
-}
-.quiz > details {
-  padding: 0;
-  border-top: 1px solid var(--border);
-}
-.quiz > details:last-child { border-bottom: 1px solid var(--border); }
-.quiz-workspace {
-  display: grid;
-  padding-top: ${space2}px;
-  gap: ${space2}px;
-}
-.quiz textarea {
-  width: 100%;
-  max-width: ${LAYOUT.proseWidth};
-  min-height: 96px;
-  padding: ${space2}px ${space3}px;
-  resize: vertical;
-  border: 1px solid var(--component-border);
-  background: var(--bg);
-  color: var(--text);
-  line-height: inherit;
-}
-.quiz textarea::placeholder {
-  color: var(--muted);
-  opacity: 1;
-}
-.quiz-answer {
-  border-top: 1px solid var(--border);
-}
-.quiz-answer > summary {
-  color: var(--accent);
-}
-.quiz-answer-content {
-  padding: 0 0 ${space2}px ${space3}px;
-}
-.quiz-answer-content > p {
-  max-width: ${LAYOUT.proseWidth};
-  margin: 0 0 ${space2}px;
-}
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-
-@media (max-width: ${LAYOUT.tocBreakpoint - 1}px) {
-  html:has(.toc-mobile[open]),
-  body:has(.toc-mobile[open]) {
-    overflow: hidden;
-  }
-  .layout {
-    display: block;
-  }
-  [id]:target { scroll-margin-top: 76px; }
-  .diff-reader { --reader-scroll-offset: 76px; }
-  .topbar { position: sticky; height: ${LAYOUT.topbarHeight}px; border-right: 0; border-bottom: 1px solid var(--border); }
-  .topbar-inner { height: ${LAYOUT.topbarInnerHeight}px; padding: 0 ${space4}px; flex-direction: row; align-items: center; gap: ${space3}px; }
-  .rail-divider, .rail-navigation, .rail-footer { display: none; }
-  .locale-options { top: calc(100% + ${space1}px); bottom: auto; }
-  .topbar-actions { margin: 0 0 0 auto; }
-  .mobile-pull-request-link { display: inline-flex; min-height: 44px; }
-  .main { padding: ${space7}px ${space7}px 80px; }
-  .toc-mobile {
-    display: block;
-    position: relative;
-  }
-  .toc-mobile > summary {
-    display: grid;
-    width: 44px;
-    height: 44px;
-    padding: ${space1}px;
-    place-items: center;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    list-style: none;
-  }
-  .toc-mobile > summary:hover {
-    border-color: var(--border);
-    background: var(--panel);
-  }
-  .toc-mobile > summary::-webkit-details-marker { display: none; }
-  .toc-mobile-panel {
-    position: fixed;
-    z-index: 20;
-    top: ${LAYOUT.topbarHeight}px;
-    right: 0;
-    width: min(360px, 100vw);
-    max-height: calc(100vh - ${LAYOUT.topbarHeight}px);
-    max-height: calc(100dvh - ${LAYOUT.topbarHeight}px);
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding: ${space4}px;
-    border-bottom: 1px solid var(--border);
-    border-left: 1px solid var(--border);
-    background: var(--panel);
-    box-shadow: -16px 20px 36px rgb(0 0 0 / 12%);
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
-  }
-  .toc-mobile-panel .toc-link {
-    min-height: 44px;
-    padding: ${space2}px ${space3}px;
-  }
-  .toc-mobile .toc-link:hover,
-  .toc-mobile .toc-link:focus-visible { color: var(--text); }
-}
-
-@media (max-width: ${LAYOUT.narrowBreakpoint - 1}px) {
-  body {
-    font-size: ${narrow.fontSize}px;
-    line-height: ${narrow.lineHeight};
-  }
-  .topbar-inner {
-    padding: 0 ${space4}px;
-    gap: ${space3}px;
-  }
-  .brand {
-    font-size: ${TYPE.brand.narrow.fontSize}px;
-    line-height: ${TYPE.brand.narrow.lineHeight};
-  }
-  .top-context {
-    overflow: hidden;
-    font-size: ${TYPE.supporting.narrow.fontSize}px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .pull-request-link {
-    font-size: ${TYPE.supporting.narrow.fontSize}px;
-  }
-  .document-title h1 {
-    font-size: ${narrowPageTitle.fontSize}px;
-    line-height: ${narrowPageTitle.lineHeight};
-  }
-  .main { padding: ${space8}px ${space4}px ${space9}px; }
-  .document-title + .synopsis,
-  .synopsis + .review-section,
-  .review-section + .review-section { margin-top: ${space5}px; padding-top: ${space4}px; }
-  .evidence-markers { font-size: ${TYPE.micro.compactFontSize}px; }
-  .synopsis-grid > div > h3,
-  .synopsis-background > h3,
-  .before-after > div > h3 {
-    font-size: ${TYPE.supporting.narrow.fontSize}px;
-    line-height: ${TYPE.supporting.narrow.lineHeight};
-  }
-  .status-row { margin-top: ${space3}px; }
-  .section-heading h2 {
-    font-size: ${narrowSection.fontSize}px;
-    line-height: ${narrowSection.lineHeight};
-  }
-  .explanation-step h3,
-  .review-item h3 {
-    font-size: ${narrowSubsection.fontSize}px;
-    line-height: ${narrowSubsection.lineHeight};
-  }
-  .review-item-compact h4 {
-    font-size: inherit;
-    line-height: inherit;
-  }
-  .review-item-compact .status,
-  .review-item-compact .importance,
-  .review-empty,
-  .beginner-primer-hint {
-    font-size: ${TYPE.supporting.narrow.fontSize}px;
-    line-height: ${TYPE.supporting.narrow.lineHeight};
-  }
-  .code-step-list > li::before,
-  .flow > li::before {
-    font-size: ${TYPE.supporting.narrow.fontSize}px;
-  }
-  .evidence-item pre {
-    font-size: ${narrowCode.fontSize}px;
-    line-height: ${narrowCode.lineHeight};
-  }
-  .evidence-footnote-list > li { grid-template-columns: 36px minmax(0,1fr); }
-  .evidence-popover { width: min(520px, calc(100vw - ${space6}px)); max-height: 76vh; }
-  .change-shift,
-  .visual-components,
-  .microworld-comparison,
-  .microworld-boundary {
-    grid-template-columns: 1fr;
-  }
-  .change-shift > .shift-card + .shift-card {
-    padding-left: ${space2}px;
-    border-top: 1px solid var(--border);
-    border-left: 0;
-  }
-  .change-shift::after { display: none; }
-  .item-actions > div,
-  .scope-limit dl > div,
-  .artifact-details dl > div {
-    grid-template-columns: 1fr;
-    gap: ${space1}px;
-  }
-  .toc-mobile-panel ol {
-    grid-template-columns: 1fr;
-  }
-  .visual-decision-table .visual-table {
-    border: 0;
-    overflow: visible;
-  }
-  .decision-table,
-  .decision-table tbody,
-  .decision-table tr,
-  .decision-table th[scope="row"],
-  .decision-table td {
-    display: block;
-    width: 100%;
-  }
-  .decision-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    border: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .decision-table tbody {
-    display: grid;
-    gap: ${space3}px;
-  }
-  .decision-table tr {
-    border: 1px solid var(--component-border);
-    background: var(--panel);
-  }
-  .decision-table th[scope="row"],
-  .decision-table td {
-    display: grid;
-    padding: ${space2}px ${space3}px;
-    grid-template-columns: minmax(88px, 1fr) minmax(0, 2fr);
-    gap: ${space3}px;
-    align-items: start;
-  }
-  .decision-table th[scope="row"]::before,
-  .decision-table td::before {
-    color: var(--muted);
-    content: attr(data-label);
-    font-size: ${TYPE.supporting.narrow.fontSize}px;
-    font-weight: 500;
-  }
-  .decision-table tbody tr:last-child > :last-child {
-    border-bottom: 0;
-  }
-}
-
-@media (max-width: ${LAYOUT.compactBreakpoint}px) {
-  .behavior-visual,
-  .microworld { padding: ${space3}px; }
-  .topbar-inner {
-    padding: 0 ${space3}px;
-    gap: ${space2}px;
-  }
-  .brand { gap: ${space1}px; }
-  .brand-record { display: none; }
-  .status,
-  .importance,
-  .claim-basis,
-  .item-basis { font-size: ${TYPE.micro.compactFontSize}px; }
-  .synopsis-row,
-  .synopsis-background { grid-template-columns: 1fr; gap: ${space1}px; }
-  .synopsis-row > h3 { padding-top: 0; }
-  .synopsis-background > h3 { padding-top: 0; }
-}
-
-@media (max-width: ${LAYOUT.tightProductBarBreakpoint}px) {
-  .topbar-inner {
-    padding-inline: ${space2}px;
-    gap: ${space1}px;
-  }
-  .topbar-actions { gap: ${space1}px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  * {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-@media (forced-colors: active) {
-  .status,
-  .commit-status,
-  .display-controls,
-  .locale-options,
-  .locale-warning,
-  .behavior-visual,
-  .microworld,
-  .review-item,
-  .synopsis,
-  .scope-limit { forced-color-adjust: auto; }
-  .claim-list > li::before,
-  .titled-claim-list > li::before {
-    background: CanvasText;
-  }
-}
-
-@media print {
-  :root,
-  :root[data-theme],
-  :root:not([data-theme="light"]) {
-    color-scheme: light;
-    ${themeVariables(COLORS.light)};
-    ${codeThemeVariables(CODE_THEME.light)};
-    --bg: #fff;
-    --border: #bbb;
-    --muted: #555;
-    --panel: #fff;
-    --text: #000;
-  }
-  .topbar,
-  .toc-desktop,
-  .toc-mobile,
-  .theme-button,
-  .microworld-controls,
-  .microworld-noscript,
-  .skip,
-  .evidence-popover { display: none !important; }
-  .layout {
-    display: block;
-    max-width: none;
-    padding: 0;
-  }
-  .main { max-width: none; }
-  .review-section,
-  .review-item,
-  .evidence-item,
-  .behavior-visual,
-  .microworld,
-  .quiz-question { break-inside: avoid; }
-  .review-section-collapsible > .section-content,
-  .review-subsection-collapsible > .subsection-content,
-  .microworld-disclosure > .microworld-content,
-  .beginner-primer > .beginner-primer-content,
-  .evidence-group > .evidence-group-content,
-  .context-check > .disclosure-content,
-  .scope-limit > .disclosure-content,
-  .scope-limit-item > .scope-limit-item-content {
-    display: block !important;
-  }
-  .beginner-primer::details-content {
-    content-visibility: visible;
-  }
-  .review-section-collapsible::details-content,
-  .microworld-disclosure::details-content,
-  .review-subsection-collapsible::details-content,
-  .evidence-group::details-content {
-    content-visibility: visible;
-  }
-  .quiz-question > .quiz-workspace,
-  .quiz-answer > .quiz-answer-content {
-    display: block !important;
-  }
-  .quiz-question::details-content,
-  .quiz-answer::details-content {
-    content-visibility: visible;
-  }
-  .quiz textarea,
-  .quiz-answer > summary {
-    display: none !important;
-  }
-  a {
-    color: inherit;
-    text-decoration: none;
-  }
-}
-`;
-}
-
-function clientScript(dictionary) {
-  const labels = JSON.stringify({
-    dark: label(dictionary, "common.useDarkTheme"),
-    light: label(dictionary, "common.useLightTheme"),
-    microworldNoScenario: label(dictionary, "microworld.noScenario"),
-    microworldSelection: label(dictionary, "microworld.selection"),
-  });
-  return `(()=>{"use strict";
-const labels=${labels};
-const root=document.documentElement;
-const theme=document.getElementById("theme-toggle");
-const toc=document.querySelector(".toc-mobile");
-const evidencePopover=document.getElementById("evidence-popover");
-const evidencePopoverTitle=document.getElementById("evidence-popover-title");
-const evidencePopoverBody=document.querySelector("[data-evidence-popover-body]");
-const evidencePopoverMore=document.querySelector("[data-evidence-popover-more]");
-const evidencePopoverClose=evidencePopover?.querySelector(".evidence-popover-close");
-const navLinks=[...document.querySelectorAll('nav a[href^="#"]')];
-const sections=[...document.querySelectorAll(".main > [id]")];
-const progress=[...document.querySelectorAll("[data-toc-current]")];
-let currentFrame=0;
-let popoverFrame=0;
-let activeEvidenceMarker;
-const currentTheme=()=>root.dataset.theme==="dark"||(!root.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
-const syncTheme=()=>{if(!theme)return;const next=currentTheme()==="dark"?"light":"dark";theme.setAttribute("aria-label",labels[next]);theme.setAttribute("title",labels[next]);for(const icon of theme.querySelectorAll("[data-theme-icon]"))icon.toggleAttribute("hidden",icon.dataset.themeIcon!==next);};
-const revealTarget=target=>{if(target.tagName==="DETAILS")target.open=true;for(let parent=target.parentElement;parent;parent=parent.parentElement)if(parent.tagName==="DETAILS")parent.open=true;};
-const focusTarget=target=>{const hadTabindex=target.hasAttribute("tabindex");if(!hadTabindex)target.setAttribute("tabindex","-1");target.focus({preventScroll:true});if(!hadTabindex)target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});};
-const syncCurrent=()=>{if(sections.length===0)return;let current=sections[0];if(innerHeight+scrollY>=document.documentElement.scrollHeight-2)current=sections[sections.length-1];else for(const section of sections){if(section.getBoundingClientRect().top<=96)current=section;else break;}const index=sections.indexOf(current);for(const item of progress)item.textContent=String(index+1);for(const link of navLinks){if(link.hash==="#"+current.id)link.setAttribute("aria-current","location");else link.removeAttribute("aria-current");}};
-const positionEvidencePopover=()=>{if(!activeEvidenceMarker||!evidencePopover?.matches(":popover-open"))return;const marker=activeEvidenceMarker.getBoundingClientRect();if(marker.bottom<0||marker.top>innerHeight){evidencePopover.hidePopover();return;}const margin=12;const gap=10;const width=Math.min(520,innerWidth-margin*2);evidencePopover.style.width=width+"px";evidencePopover.style.maxHeight="none";const naturalHeight=evidencePopover.scrollHeight;const below=innerHeight-marker.bottom-gap-margin;const above=marker.top-gap-margin;let placement;let available;if(innerWidth<${LAYOUT.narrowBreakpoint}&&Math.max(below,above)<240){placement="sheet";available=innerHeight-margin*2;}else if(below>=Math.min(naturalHeight,240)||below>=above){placement="below";available=below;}else{placement="above";available=above;}evidencePopover.dataset.placement=placement;evidencePopover.style.maxHeight=Math.max(96,Math.min(available,680))+"px";const height=evidencePopover.getBoundingClientRect().height;let left=Math.min(Math.max(marker.left+marker.width/2-width/2,margin),innerWidth-margin-width);let top;if(placement==="sheet"){left=margin;top=innerHeight-margin-height;}else if(placement==="above")top=marker.top-gap-height;else top=marker.bottom+gap;evidencePopover.style.left=Math.round(left)+"px";evidencePopover.style.top=Math.round(Math.max(margin,top))+"px";const arrow=Math.min(Math.max(marker.left+marker.width/2-left,20),width-20);evidencePopover.style.setProperty("--popover-arrow-x",arrow+"px");evidencePopover.style.visibility="";};
-const schedulePopoverPosition=()=>{if(popoverFrame||!evidencePopover?.matches(":popover-open"))return;popoverFrame=requestAnimationFrame(()=>{popoverFrame=0;positionEvidencePopover();});};
-syncTheme();
-theme?.addEventListener("click",()=>{root.dataset.theme=currentTheme()==="dark"?"light":"dark";syncTheme();});
-toc?.addEventListener("click",event=>{const link=event.target.closest("a");if(!link)return;toc.open=false;const target=document.getElementById(link.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({behavior:"instant",block:"start"});});});
-document.addEventListener("click",event=>{const marker=event.target.closest?.(".evidence-marker");if(!marker||!evidencePopover?.showPopover)return;const target=document.getElementById(marker.dataset.evidenceTarget);if(!target)return;event.preventDefault();if(activeEvidenceMarker&&activeEvidenceMarker!==marker)activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=marker;marker.setAttribute("aria-expanded","true");evidencePopoverTitle.textContent=marker.textContent+" "+(target.querySelector(".evidence-meta")?.textContent||"");const preview=target.cloneNode(true);preview.removeAttribute("id");preview.removeAttribute("data-evidence-entry");evidencePopoverBody.replaceChildren(preview);evidencePopoverMore.href="#"+target.id;evidencePopover.style.visibility="hidden";if(!evidencePopover.matches(":popover-open"))evidencePopover.showPopover();positionEvidencePopover();evidencePopoverClose?.focus();});
-evidencePopoverClose?.addEventListener("click",()=>{evidencePopover.hidePopover();activeEvidenceMarker?.focus();});
-evidencePopoverMore?.addEventListener("click",()=>{if(evidencePopover.matches(":popover-open"))evidencePopover.hidePopover();});
-evidencePopover?.addEventListener("toggle",event=>{if(event.newState==="closed"&&activeEvidenceMarker){activeEvidenceMarker.setAttribute("aria-expanded","false");activeEvidenceMarker=undefined;evidencePopover.removeAttribute("data-placement");evidencePopover.removeAttribute("style");}});
-addEventListener("keydown",event=>{if(event.key!=="Escape"||!toc?.open)return;event.preventDefault();toc.open=false;toc.querySelector(":scope > summary")?.focus();});
-matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",syncTheme);
-for(const world of document.querySelectorAll("[data-microworld]")){const groups=[...world.querySelectorAll(".microworld-control-group")];const controls=[...world.querySelectorAll(".microworld-control")];const scenarios=[...world.querySelectorAll(".microworld-scenario")];const status=world.querySelector("[data-microworld-status]");const sentence=value=>/[.!?。？！]$/u.test(value)?value:value+".";const scenarioStatus=scenario=>{const traces=[...scenario.querySelectorAll(".microworld-trace")].map(trace=>{const heading=trace.querySelector("h5")?.textContent.trim()||"";const outcome=trace.querySelector(".microworld-outcome p, .microworld-unchanged")?.textContent.trim()||"";return heading+": "+sentence(outcome);});const lesson=scenario.querySelector(".microworld-lesson p")?.textContent.trim()||"";return [...traces,lesson].filter(Boolean).join(" ");};const updateWorld=()=>{const selectedControls=groups.map(group=>group.querySelector(".microworld-control:checked"));if(selectedControls.some(control=>!control)){if(status)status.textContent=labels.microworldNoScenario;return;}const key=selectedControls.map(control=>control.dataset.controlId+"="+control.value).join("|");let active;for(const scenario of scenarios){const selected=scenario.dataset.selectionKey===key;scenario.hidden=!selected;if(selected)active=scenario;}if(!status)return;if(!active){status.textContent=labels.microworldNoScenario;return;}const selection=selectedControls.map(control=>control.dataset.controlLabel+": "+control.dataset.optionLabel).join("; ");status.textContent=labels.microworldSelection+": "+selection+". "+scenarioStatus(active);};for(const control of controls){control.disabled=false;control.addEventListener("change",updateWorld);}updateWorld();}
-const openTarget=()=>{if(!location.hash)return;const target=document.getElementById(location.hash.slice(1));if(!target)return;revealTarget(target);requestAnimationFrame(()=>{focusTarget(target);target.scrollIntoView({behavior:"instant",block:"start"});});};
-addEventListener("hashchange",openTarget);
-addEventListener("click",event=>{const link=event.target.closest?.('a[href^="#"]');if(link&&link.hash===location.hash)requestAnimationFrame(openTarget);});
-addEventListener("resize",schedulePopoverPosition);
-addEventListener("scroll",()=>{schedulePopoverPosition();if(currentFrame)return;currentFrame=requestAnimationFrame(()=>{currentFrame=0;syncCurrent();});},{passive:true});
-openTarget();
-syncCurrent();
-})();`;
-}
-
-function localeMenu(value, currentLocale, dictionary) {
-  if (value === undefined) return "";
-  if (
-    value === null
-    || typeof value !== "object"
-    || !["en-US", "ko-KR"].includes(value.locale)
-    || typeof value.href !== "string"
-    || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.html$/u.test(value.href)
-  ) {
-    throw new TypeError("alternateLocale must name a supported locale and sibling HTML file");
-  }
-  const currentText = currentLocale === "ko-KR" ? "한국어" : "English";
-  const alternateText = value.locale === "ko-KR" ? "한국어" : "English";
-  return `<details class="locale-menu">
-    <summary aria-label="${html(label(dictionary, "common.language"))}" title="${html(label(dictionary, "common.language"))}"><span lang="${html(currentLocale)}">${currentText}</span><svg class="locale-chevron" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m8 10 4 4 4-4"></path></svg></summary>
-    <ul class="locale-options"><li><span class="locale-current" aria-current="page" lang="${html(currentLocale)}">${currentText}</span></li><li><a class="locale-option" href="${html(value.href)}" hreflang="${html(value.locale)}" lang="${html(value.locale)}">${alternateText}</a></li></ul>
-  </details>`;
+function featureColors(theme) {
+  const { decide, resolve, scope, verify } = COLORS[theme];
+  const code = Object.entries(CODE_THEME[theme]).map(([name, value]) => [
+    `code-${name.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`,
+    value,
+  ]);
+  return { decide, resolve, scope, verify, ...Object.fromEntries(code) };
 }
 
 export async function renderReview(review, { alternateLocale, fonts } = {}) {
-  const dictionary = await loadLocale(review.snapshot.settings.locale);
-  const locale = localeMenu(alternateLocale, review.snapshot.settings.locale, dictionary);
-  const fontBytes = fonts ?? Object.fromEntries(await Promise.all(
-    Object.entries(fontUrls).map(async ([name, url]) => [name, await readFile(url)]),
-  ));
-  const iconBytes = await readFile(iconUrl);
-  const iconDataUrl = `data:image/png;base64,${iconBytes.toString("base64")}`;
+  const settings = review.snapshot.settings;
+  const dictionary = await loadLocale(settings.locale);
   const codeRenderer = Object.freeze({
     evidenceRecords: new Map(),
     render: renderCodeEvidence,
   });
   const reader = await renderReader(review);
-  const script = `${clientScript(dictionary)}\n${reader.script}`;
-  const title = review.title.text;
   const documentTitleHtml = documentTitle(review.title, dictionary, review, codeRenderer);
   const synopsisHtml = synopsis(review, dictionary, codeRenderer, { number: 1 });
   const sections = buildSections(review, dictionary, codeRenderer, reader);
-  const styles = css(Object.fromEntries(Object.entries(fontBytes).map(
-    ([name, bytes]) => [name, bytes.toString("base64")],
-  ))) + "\n" + reader.styles;
   const { change } = review.snapshot;
-  const openPullRequestLabel = change.kind === "github"
-    ? label(dictionary, "artifact.openPullRequest").replace("{number}", String(change.number))
+  const head = review.snapshot.snapshot.head;
+  const localeWarning = settings.localeSource === "default"
+    ? `<aside class="locale-warning" role="note">${html(label(dictionary, "locale.fallbackWarning"))}</aside>`
     : "";
-  const pullRequestLink = (className = "") => change.kind !== "github" ? "" : `<a class="pull-request-link${className}" href="${html(change.url)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
-          <span>PR #${change.number}</span>
-          <svg class="external-link-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-            <path d="M14 5h5v5"></path>
-            <path d="M19 5l-8 8"></path>
-            <path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path>
-          </svg>
-        </a>`;
-  const localeWarning = review.snapshot.settings.localeSource === "default"
-    ? `<aside class="locale-warning" role="note">${html(
-      label(dictionary, "locale.fallbackWarning"),
-    )}</aside>`
-    : "";
-  const theme = review.snapshot.settings.theme;
-  const themeAttribute = theme === "system" ? "" : ` data-theme="${html(theme)}"`;
-  const tocItems = [{
-    id: "synopsis",
-    number: 1,
-    title: label(dictionary, "section.synopsis"),
-  }, ...sections];
-  const toc = `<ol class="toc-list">${tocItems.map(
-    (item) => `<li><a class="toc-link" href="#${html(item.id)}"><span class="toc-number">${sectionOrdinal(item.number)}</span><span>${html(item.title)}</span></a></li>`,
-  ).join("")}</ol>`;
-  const document = `<!doctype html>
-<html lang="${html(review.snapshot.settings.locale)}"${themeAttribute}>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src data:; font-src data:; style-src 'sha256-${hashSource(styles)}'; script-src 'sha256-${hashSource(script)}'">
-  <link rel="icon" type="image/png" sizes="128x128" href="${iconDataUrl}">
-  <title>${html(title)} · Hope Diff</title>
-  <style>${styles}</style>
-</head>
-<body>
-  <a class="skip" href="#review">${html(label(dictionary, "common.skip"))}</a>
-  <div class="layout">
-    <aside class="rail topbar">
-    <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
-      <div class="brand"><span class="brand-product">DIFF</span><span class="brand-separator">/</span><span class="brand-record">${html(changeRecord(change))}</span></div>
-      <div class="rail-divider" aria-hidden="true"></div>
-      <nav class="toc-desktop rail-navigation" aria-label="${html(label(dictionary, "common.menu"))}">
-        ${tocHeading(dictionary, tocItems.length)}
-        ${toc}
-      </nav>
-      <div class="rail-footer">
-        <div class="top-context">
-          <svg class="repository-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-            <path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <path d="M3 9.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"></path>
-          </svg>
-          <span>${html(repositoryLabel(review.snapshot))}</span>
-        </div>
-        <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(review.snapshot.snapshot.head)}"><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></span>
-        ${pullRequestLink()}
-      </div>
-      <div class="topbar-actions">
-        ${pullRequestLink(" mobile-pull-request-link")}
-        <div class="display-controls${locale === "" ? "" : " has-locale-menu"}">
-${locale === "" ? "" : `          ${locale}\n`}          <button class="theme-button" id="theme-toggle" type="button" aria-label="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}" title="${html(label(dictionary, theme === "dark" ? "common.useLightTheme" : "common.useDarkTheme"))}">
-          <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${theme === "dark" ? " hidden" : ""}>
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79"></path>
-          </svg>
-          <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${theme === "dark" ? "" : " hidden"}>
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path>
-          </svg>
-          </button>
-        </div>
-        <details class="toc-mobile">
-          <summary>
-            <svg class="toc-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
-              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
-            </svg>
-            <span class="sr-only">${html(label(dictionary, "common.menu"))}</span>
-          </summary>
-          <nav class="toc-mobile-panel" aria-label="${html(label(dictionary, "common.menu"))}">
-            ${tocHeading(dictionary, tocItems.length)}
-            ${toc}
-          </nav>
-        </details>
-      </div>
-    </div>
-    </aside>
-    <main class="main" id="review">
-      ${localeWarning}
-      ${documentTitleHtml}
-      ${synopsisHtml}
-      ${sections.map((item) => item.html).join("")}
-    </main>
-  </div>
-  ${codeRenderer.evidenceRecords.size === 0 ? "" : evidencePopover(dictionary)}
-  <script>${script}</script>
-</body>
-</html>
-`;
+  const tocItems = [{ id: "synopsis", number: 1, title: label(dictionary, "section.synopsis") }, ...sections];
+  const document = renderDocument({
+    alternateLocale,
+    colors: { dark: featureColors("dark"), light: featureColors("light") },
+    fonts,
+    identity: { name: "Diff", product: "DIFF", record: changeRecord(change) },
+    locale: settings.locale,
+    main: {
+      content: `${localeWarning}${documentTitleHtml}${synopsisHtml}${sections.map((item) => item.html).join("")}`,
+      id: "review",
+    },
+    navigation: { label: label(dictionary, "common.menu") },
+    popover: codeRenderer.evidenceRecords.size === 0
+      ? undefined
+      : { href: "#evidence-references", label: label(dictionary, "evidence.viewList") },
+    printIdentity: [
+      html(repositoryLabel(review.snapshot)),
+      `${html(changeReference(change))} · <code>${html(head.slice(0, 12))}</code> · <time datetime="${html(review.snapshot.capturedAt)}">${html(formatTimestamp(review.snapshot.capturedAt))}</time>`,
+    ],
+    rail: {
+      actions: pullRequestLink(change, dictionary, " mobile-pull-request-link"),
+      footer: railFooter(review, dictionary),
+    },
+    scripts: [`(${mountDiff.toString()})();`, reader.script],
+    skip: { label: label(dictionary, "common.skip"), target: "review" },
+    styles: [readStylesheet(stylesheetUrl), reader.styles],
+    theme: settings.theme,
+    title: review.title.text,
+    toc: { items: tocItems, label: label(dictionary, "common.menu") },
+  });
   const bytes = Buffer.from(document, "utf8");
   if (bytes.length > LIMITS.artifactBytes) {
     throw new Error(`Hope review exceeds ${LIMITS.artifactBytes} bytes`);

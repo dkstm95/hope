@@ -153,7 +153,7 @@ test("hostile code stays literal and document makes no external request", async 
   const hostile = '</script><img src="https://example.com/trap" onerror="window.pwned=true">';
   const data = await fixture({ files: [{ ...providerFiles[1], additions: 1, patch: `@@ -0,0 +1 @@\n+${hostile}` }] });
   const analysis = analysisFor(data);
-  analysis.groups = [{ id: "g-hostile", title: "Literal source", text: "Source text", basis: "unknown", evidence: [], parts: [{ fileId: data.files[0].id }] }];
+  analysis.groups = [{ id: "g-hostile", kind: "explained", title: "Literal source", text: "Source text", basis: "unknown", evidence: [], parts: [{ fileId: data.files[0].id }] }];
   // This fixture has one source line: bound the existing macro claims to it too.
   const trim = (value) => { if (!value || typeof value !== "object") return; if (value.sourceId === "source-3") { value.startLine = 2; value.endLine = 2; } for (const child of Object.values(value)) trim(child); };
   trim(analysis);

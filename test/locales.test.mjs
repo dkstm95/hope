@@ -20,8 +20,13 @@ import {
 import { dictionary as readerDictionary } from "../plugins/hope/skills/diff/scripts/reader/locales.mjs";
 import { readerSnapshot } from "../plugins/hope/skills/diff/scripts/reader/snapshot.mjs";
 import { pluginPackageFiles } from "../tools/plugin-files.mjs";
+import {
+  checkDictionaryParity,
+  checkShellParity,
+} from "../plugins/hope/assets/artifact-shell/locales.mjs";
 
 const scripts = new URL("../plugins/hope/skills/diff/scripts/", import.meta.url);
+const alignLocales = new URL("../plugins/hope/skills/align/scripts/locales/", import.meta.url);
 
 // Reason kinds the runtime records on file-unavailable and context-unavailable limits.
 const fileReasonKinds = [
@@ -83,19 +88,33 @@ function sortedSet(values) {
   return [...new Set(values)].sort();
 }
 
-test("Diff owns its locale sources and packaged locale paths", () => {
+test("each artifact owner packages its own locale dictionaries", () => {
   const sources = [
+    "assets/artifact-shell/locales.mjs",
+    "assets/artifact-shell/locales/en-US/shell.json",
+    "assets/artifact-shell/locales/ko-KR/shell.json",
+    "skills/align/scripts/locales/en-US/align.json",
+    "skills/align/scripts/locales/ko-KR/align.json",
     "skills/diff/scripts/locales/en-US/common.json",
     "skills/diff/scripts/locales/en-US/diff.json",
+    "skills/diff/scripts/locales/en-US/reader.json",
     "skills/diff/scripts/locales/index.mjs",
     "skills/diff/scripts/locales/ko-KR/common.json",
     "skills/diff/scripts/locales/ko-KR/diff.json",
+    "skills/diff/scripts/locales/ko-KR/reader.json",
+    "skills/diff/scripts/reader/locales.mjs",
   ];
 
   assert.deepEqual(
-    pluginPackageFiles.filter((path) => path.includes("/locales/")),
+    pluginPackageFiles.filter((path) => /\/locales[/.]/u.test(path)),
     sources,
   );
+});
+
+test("shell, Align, and reader dictionaries have identical keys in every locale", () => {
+  assert.ok(checkShellParity().includes("shell.useDarkTheme"));
+  assert.ok(checkDictionaryParity(alignLocales, ["align"]).includes("intent"));
+  assert.ok(checkDictionaryParity(new URL("locales/", scripts), ["reader"]).includes("reader.reason.binary"));
 });
 
 test("the supported locale dictionaries have identical keys", async () => {

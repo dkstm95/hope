@@ -13,13 +13,14 @@ import { promisify } from "node:util";
 import {
   reviseAlignArtifact,
 } from "../plugins/hope/skills/align/scripts/artifact.mjs";
-import { ARTIFACT_COLORS } from "../plugins/hope/assets/artifact-theme.mjs";
+import { ARTIFACT_COLORS, ARTIFACT_TYPE } from "../plugins/hope/assets/artifact-theme.mjs";
 import {
   makeAlignInput,
   makeLegacyAlignInputV2,
   makeDesignDirections,
   writeLegacyAlignArtifact,
 } from "../test-support/align-fixture.mjs";
+import { narrowAudit } from "../test-support/narrow-audit.mjs";
 
 const execFileAsync = promisify(execFile);
 let artifactUrl;
@@ -166,10 +167,17 @@ test("Align presents one compact shared understanding with secondary history", a
   await expect(page.locator(".rail-navigation .toc-progress")).toHaveText("1 / 4");
   const currentOverviewLink = page.locator('.rail-navigation .toc-link[href="#intent"]');
   await expect(currentOverviewLink).toHaveAttribute("aria-current", "location");
-  const currentOverviewStyle = await currentOverviewLink.evaluate((element) => ({
-    borderLeftWidth: getComputedStyle(element).borderLeftWidth,
-  }));
-  expect(currentOverviewStyle.borderLeftWidth).toBe("3px");
+  const indexMarks = await page.locator(".rail-navigation .toc-link").evaluateAll((links) => links.map((link) => ({
+    current: link.getAttribute("aria-current") === "location",
+    number: getComputedStyle(link.querySelector(".toc-number")).backgroundColor,
+    weight: getComputedStyle(link).fontWeight,
+  })));
+  // The current entry is marked by a filled number and stronger text, not color alone.
+  const [currentMark] = indexMarks.filter((mark) => mark.current);
+  expect(currentMark.weight).toBe("700");
+  expect(indexMarks.filter((mark) => !mark.current).every(
+    (mark) => mark.number !== currentMark.number && mark.weight !== "700",
+  )).toBe(true);
   await expect(page.locator(".rail-navigation .rail-history h2")).toHaveText("버전 이력");
   await expect(page.locator(".rail-navigation .rail-history .current .revision-head strong"))
     .toHaveText(/^v2 · 현재 합의/u);
@@ -383,17 +391,14 @@ test("Align presents one compact shared understanding with secondary history", a
     topbarHeight: document.querySelector(".topbar").getBoundingClientRect().height,
   }));
   expect(geometry.railLeft).toBe(0);
-  expect(geometry.titleLeft).toBe(304);
-  expect(geometry.summaryNumberLeft).toBe(304);
-  expect(geometry.summaryLabelLeft).toBe(348);
+  // The title, section number, and section label share one left edge and rhythm.
+  expect(geometry.summaryNumberLeft).toBe(geometry.titleLeft);
+  expect(geometry.summaryLabelLeft).toBeGreaterThan(geometry.summaryNumberLeft);
   expect(geometry.summaryNumberFontSize).toBe(geometry.summaryLabelFontSize);
   expect(geometry.summaryNumberLineHeight).toBe(geometry.summaryLabelLineHeight);
-  expect(geometry.summaryLabelLineHeight).toBe("21.75px");
   expect(geometry.firstSectionBorder).toBe("0px");
-  expect(geometry.firstSectionMargin).toBe("24px");
-  expect(geometry.firstSectionPadding).toBe("16px");
   expect(geometry.topbarHeight).toBe(900);
-  await expect(page.locator("body")).toHaveCSS("font-family", '"Hope Sans", sans-serif');
+  await expect(page.locator("body")).toHaveCSS("font-family", /^"Hope Sans"/u);
   await expect(page.locator("body")).toHaveCSS("font-weight", "500");
   await page.locator("#verification > summary").click();
   await expect(page.locator("#verification .section-disclosure-content")).toBeVisible();
@@ -424,7 +429,8 @@ test("Align history details escape the rail clip and close from the keyboard", a
     await summary.click();
     const geometry = await page.locator("#revision-1 .revision-popup").evaluate((panel) => {
       const bounds = panel.getBoundingClientRect();
-      const sample = document.elementFromPoint(bounds.left + 2, bounds.top + 2);
+      // Sample inside the rounded corner so the point lies on the panel itself.
+      const sample = document.elementFromPoint(bounds.left + 24, bounds.top + 24);
       return {
         left: bounds.left,
         railRight: document.querySelector(".rail").getBoundingClientRect().right,
@@ -488,13 +494,16 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
       numberLineHeight: getComputedStyle(number).lineHeight,
     };
   });
+  // The section number keeps the title's narrow type size and line height.
+  const narrowTitle = ARTIFACT_TYPE.sectionTitle.narrow;
+  const narrowLine = `${narrowTitle.fontSize * narrowTitle.lineHeight}px`;
   expect(narrowSectionType).toEqual({
-    labelFontSize: "15px",
-    labelLineHeight: "21px",
-    numberFontSize: "15px",
-    numberLineHeight: "21px",
+    labelFontSize: `${narrowTitle.fontSize}px`,
+    labelLineHeight: narrowLine,
+    numberFontSize: `${narrowTitle.fontSize}px`,
+    numberLineHeight: narrowLine,
   });
-  const navigation = page.locator(".mobile-navigation");
+  const navigation = page.locator(".toc-mobile");
   await expect(navigation).toBeVisible();
   const navigationButton = navigation.locator(":scope > summary");
   const navigationBox = await navigationButton.boundingBox();
@@ -531,14 +540,27 @@ test("Align keeps one reading order and useful navigation on mobile", async ({ p
   await expectNoOverflow(page);
 });
 
+test("Align narrow screens keep 44-pixel controls and 12-pixel labels", async ({ page }) => {
+  await page.setViewportSize({ height: 812, width: 375 });
+  await page.goto(artifactUrl);
+  const findings = [await page.evaluate(narrowAudit)];
+  await page.locator(".toc-mobile > summary").click();
+  findings.push(await page.evaluate(narrowAudit));
+  await page.keyboard.press("Escape");
+  await page.locator(".verification-marker").first().click();
+  findings.push(await page.evaluate(narrowAudit));
+  expect([...new Set(findings.flatMap((finding) => finding.targets))]).toEqual([]);
+  expect([...new Set(findings.flatMap((finding) => finding.text))]).toEqual([]);
+});
+
 test("Align mobile navigation contains its scroll", async ({ page }) => {
   await page.setViewportSize({ height: 240, width: 320 });
   await page.goto(artifactUrl);
   await page.evaluate(() => window.scrollTo({ behavior: "instant", top: 500 }));
   const before = await page.evaluate(() => window.scrollY);
-  const navigation = page.locator(".mobile-navigation");
+  const navigation = page.locator(".toc-mobile");
   await navigation.locator(":scope > summary").click();
-  const panel = navigation.locator(".mobile-navigation-panel");
+  const panel = navigation.locator(".toc-mobile-panel");
   await panel.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });

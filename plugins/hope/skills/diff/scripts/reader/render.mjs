@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { ARTIFACT_COLORS } from "../../../../assets/artifact-theme.mjs";
 import { exposeBidiControls } from "../text.mjs";
 import { dictionary } from "./locales.mjs";
 import { mount } from "./client.mjs";
@@ -63,10 +62,7 @@ export async function renderReader(review) {
   const labels = dictionary(review.snapshot.settings.locale);
   const sources = review;
   const unavailable = snapshot.files.filter((file) => file.availability === "unavailable");
-  const colors = Object.entries(ARTIFACT_COLORS.light).map(([name, light]) => (
-    `--hope-${name}:light-dark(${light},${ARTIFACT_COLORS.dark[name]});`
-  )).join("");
-  const styles = `.diff-reader{${colors}}\n${await readFile(new URL("./style.css", import.meta.url), "utf8")}`;
+  const styles = await readFile(new URL("./style.css", import.meta.url), "utf8");
   const script = `(${mount.toString()})();`;
   const firstPart = new Map();
   const groups = layout.groups.map((group, index) => {

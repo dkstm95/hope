@@ -13,13 +13,16 @@ The Align, Diff, and Diagram Skills own their feature judgment and prose.
 
 The Technical Record is a compact, dual-mode technical memo. One shared token
 source defines its common color, type, spacing, document, and navigation roles.
-Align and Diff use the same document rail and reading surface. Diagram inherits
-the same roles inside another record and embeds their current values in a
-standalone HTML visual.
+Align and Diff use the same document shell: rail, top bar, index, display
+controls, reference preview, print identity, and reading surface. Diagram
+inherits the same roles inside another record and embeds their current values
+in a standalone HTML visual.
 
 `plugins/hope/assets/artifact-theme.mjs` owns the exact common token values.
-Feature-local tokens add roles such as Diff status and code colors. Feature
-renderers continue to own content structure, interaction, and publication.
+`plugins/hope/assets/artifact-shell/` assembles every Technical Record from
+those tokens and owns the shared stylesheet and client script. Feature-local
+tokens add roles such as Diff status and code colors. Feature renderers own
+content structure, feature interaction, their own stylesheet, and publication.
 
 ## Project GUI layout
 
@@ -75,22 +78,24 @@ each section number the same type size and line height as its title.
 
 Give every numbered area an accent section number, text-colored title, and one
 clear divider directly below its title. Do not add a second rule above the
-area. Use 40 pixels between the document title and Summary, then 48 pixels
-between later areas on a wide screen and 40 pixels on a narrow screen. Use the
-smaller steps in this shared spacing scale within an area:
+area. Use 48 pixels between the document title and the first area, then 72
+pixels between later areas on a wide screen and 56 pixels on a narrow screen.
+Use the smaller steps in this shared spacing scale within an area:
 
 ```text
 4 · 8 · 12 · 16 · 24 · 32 · 40 · 48 · 64
 ```
 
-On a wide screen, place a 256-pixel document rail on the left. Start it with the
+On a wide screen, place a 248-pixel document rail on the left. Start it with the
 artifact identity, then show the numbered document index. Keep version or
 review identity secondary near the bottom. Place repository identity and the
 language and theme controls in the rail footer. Mark the current index entry
-with one accent line and stronger text.
+with a filled accent number and stronger text. A thin track beside the index
+fills with reading progress.
 
-On a narrow screen, turn the rail into a compact top bar and move the same
-navigation into a bounded panel beside the display controls. Preserve the
+Below 1,100 pixels, turn the rail into a compact top bar and move the same
+navigation into a bounded panel beside the display controls. A two-pixel accent
+line along the bottom of the top bar shows reading progress. Preserve the
 reading order and access to every item.
 
 Put the artifact state directly below the document title. This keeps the
@@ -103,17 +108,30 @@ horizontal columns only for direct comparison.
 
 Give the document title enough emphasis to establish the reading path, then
 keep body type compact and readable. Use thin dividers instead of enclosing
-ordinary content in cards. Omit an optional area instead of rendering an empty
-box.
+ordinary content in cards. Reserve a bordered surface for a comparison, a task
+the reader performs, or a separate state region. Omit an optional area instead
+of rendering an empty box.
+
+Show structure through a few strong shapes rather than repeated labels: the
+before-and-after comparison, the change shape, review importance, reading
+progress, and the section rhythm. Labels sit in a quiet gutter and values carry
+the weight.
+
+Motion answers an action or marks the one first-screen moment: the new behavior
+slides into the comparison once, a reference preview grows from its marker, a
+microworld scenario and a quiz answer fade in when chosen, and the theme switch
+reveals the new theme from the control. Every animation and transition turns off
+under `prefers-reduced-motion`.
 
 ## Diff artifact direction
 
 The Diff artifact should feel:
 
-- direct;
-- compact;
-- calm;
-- easy to scan; and
+- direct and compact;
+- intuitive, with one clear reading path;
+- balanced between text and a few strong visuals;
+- highly readable and easy to scan;
+- distinct and memorable on the first screen; and
 - clearly divided without looking boxed in.
 
 Use familiar words, short sentences, and one clear reading path.
@@ -133,16 +151,23 @@ The first screen should explain the shape and limits of the change in about 30
 seconds.
 
 Show a plain-language title written from the changed behavior, reviewed commit,
-goal, previous and new behavior, practical impact, the top one to three review
-items or a clear empty result, and material review limits. Keep the provider's
+goal, previous and new behavior, practical impact, the change shape, the top one
+to three review items or a clear empty result, and material review limits. Keep the provider's
 pull-request title in the collapsed review information instead of using it as
 the document title. Let the title name one decisive result; keep secondary
 mechanics in the summary when they make the title harder to scan.
 
 Compare the brief previous and new behavior summaries side by side on a wide
-screen and stack them in that order on a narrow screen. Keep the practical
-impact and every longer explanation in the single reading flow below the
-comparison.
+screen and stack them in that order on a narrow screen. Draw the previous
+behavior on a dashed outline in quieter text and the new behavior on the accent
+surface with an arrow between them. Keep the practical impact and every longer
+explanation in the single reading flow below the comparison.
+
+Show the change shape as one bar with a segment for each code-reader group,
+sized by its changed lines and colored by group kind, followed by the group,
+file, and line counts and a kind legend in text. Each segment links to its group
+in the reader and has a text name. Draw the bar with SVG geometry attributes so
+the artifact needs no inline style.
 
 Keep internal source IDs, model details, token counts, processing state, and
 capture time out of the first screen.
@@ -165,9 +190,10 @@ Keep background in Summary after the direct before-and-after explanation. Open
 Behavior change with one **Change overview** subsection. Lead with the behavior
 summary and use the core details to support it. Follow with a separate **Behavior
 flow** subsection for the optional behavior model, so its numbered steps are
-distinct from overview details. Give the lead and details the same body type
-scale. Put the understanding check after the grouped code, as its own subsection
-within Changed code, because it asks the reader to apply what they have read.
+distinct from overview details. End Behavior flow with the microworld when one
+exists: it is the reading path's main place to try the behavior. Put the
+understanding check after the grouped code, as its own subsection within Changed
+code, because it asks the reader to apply what they have read.
 The behavior summary adds the condition, state, or relationship that makes its
 flow useful.
 Present a visual's authored title as its figure caption so it identifies the
@@ -358,14 +384,20 @@ summary. Open earlier detail from that history instead of repeating it in the
 document. On narrower layouts, include the history in the common navigation
 panel opened by one 44-pixel control to the right of the theme control.
 
-Keep detailed goals in **Intent** and consequential decisions in
-**Decisions**, within one reading column. Present **Outside scope** inside
+Lead **Intent** with the goal in the stronger lead style and the problem below it
+as quieter context. Keep detailed goals in **Intent** and consequential
+decisions in **Decisions**, within one reading column. Mark each detailed goal
+with a check outline; show each decision on its own surface with an accent bar
+and diamond mark so the decisions read as commitments. Draw the version history
+as a timeline whose current entry is filled. Present **Outside scope** inside
 **Boundary and evidence** as one compact list in two columns on a wide screen
 and one column on a narrow screen. The positive agreement statements already
 serve the included scope.
 
-Nest an optional core flow below the detailed goals. Attach its results directly
-to the sequence as final branches in their original order. Phase groups and
+Nest an optional core flow below the detailed goals as one connected numbered
+sequence. Attach its results directly to the sequence as final branch cards in
+their original order: a completion on the accent surface and a cancellation on a
+dashed outline. Phase groups and
 branches reflect artifact data directly.
 
 Keep each material reason directly below the decision it explains. Together,
@@ -456,16 +488,19 @@ source licenses reserve their original family names.
 Keep their source hashes, build commands, and licenses beside the shared fonts
 under `plugins/hope/assets/fonts/`.
 
-Use the same compact prose scale as Align and adjust it only through named
-tokens. Diff keeps a separate code scale:
+Use the same prose scale as Align and adjust it only through named tokens. The
+shell emits them as custom properties, with the narrow values below 760
+pixels:
 
 | Use | Wide screen | Narrow screen |
 | --- | --- | --- |
-| Main body | 14px / 1.58 | 13px / 1.6 |
-| Supporting text | 12px / 1.55 | 12px / 1.55 |
-| Code | 12px / 1.35 | 13px / 1.35 |
-| Page title | 28px / 1.16 | 24px / 1.2 |
-| Section title | 15px / 1.45 | 15px / 1.4 |
+| Main body | 15px / 1.65 | 16px / 1.6 |
+| Lead statement | 17px / 1.55 | 17px / 1.55 |
+| Supporting text | 13px / 1.5 | 13px / 1.5 |
+| Small labels | 12px / 1.4 | 12px / 1.4 |
+| Code | 13px / 1.55 | 13px / 1.5 |
+| Page title | 36px / 1.14 | 27px / 1.2 |
+| Section title | 21px / 1.3 | 19px / 1.3 |
 
 Keep prose near 60–80 characters per line. Long paths and code may scroll
 inside their own region. Text-bearing controls use a minimum height and grow
@@ -485,7 +520,8 @@ previous block's bottom border with the next block's top border.
 
 Do not draw a strong rule between every sentence or row.
 
-Do not nest full component borders inside the first-screen summary.
+Do not nest full component borders inside the first-screen summary. The
+before-and-after comparison is its only bordered shape.
 
 Compact summary items use rows; their detailed versions may use cards later in
 the document.
@@ -499,10 +535,11 @@ Use one quiet marker gutter to help the eye follow body content:
   not paired with another generic bullet; and
 - nested lists stop after one level and use a neutral marker inside.
 
-Keep the first-screen review result especially compact. Group the previews in
-one quiet verification region and render each as a small kind marker, plain
-importance text, and title. Do not add a representative status, total, or kind
-counts. When no item exists, show one plain empty-result sentence.
+Keep the first-screen review result especially compact. Render each preview as
+one row: a vertical bar in the kind color, the kind label, a three-step
+importance meter with its importance text, and the linked title. Do not add a
+representative status, total, or kind counts. When no item exists, show one
+plain empty-result sentence.
 
 Show concrete material scope limits in the same label-and-value grid as the
 other synopsis rows, without a generic scope badge. Omit the row when no
@@ -514,11 +551,13 @@ Render the goal as the first label-and-value row in Summary. Keep the
 provider's pull-request title and capture time in collapsed review information.
 
 In each full review item, align kind, importance, and any visible basis on one
-visual centerline.
+visual centerline. Mark the item with an inset bar in the kind color, and put its
+effect, next step, and completion condition in three short columns on a wide
+screen.
 
-Keep kind and importance as outlined markers. When basis changes how the reader
-should judge the item, show it as quieter plain text; omit a code basis that the
-numbered evidence already makes visible.
+Use the same kind label and importance meter as the summary preview. When basis
+changes how the reader should judge the item, show it as quieter plain text;
+omit a code basis that the numbered evidence already makes visible.
 
 ## Hope artifact themes
 
@@ -528,11 +567,16 @@ themes. The initial theme comes from the artifact input or resolved display opti
 it does not write host configuration or browser storage. Reload restores the
 generated initial theme, and print uses the light surface.
 
-The light view uses a near-white canvas, a white reading surface, charcoal
+The light view uses a cool near-white canvas, a white reading surface, charcoal
 text, quiet neutral rules, and deep teal emphasis. The dark view uses graphite
 paper, a slightly brighter reading surface, warm white text, quiet gray rules,
-and mint emphasis. Blue identifies links in both views. Print uses the light
-surface.
+and mint emphasis. A soft accent surface marks the new behavior, the current
+selection, and the reader's place. Blue identifies links in both views. Print
+uses the light surface.
+
+A token test computes WCAG contrast from the token source: every text and status
+role keeps 4.5:1 on each surface and component boundaries keep 3:1, in both
+themes.
 
 Exact shared values live in `plugins/hope/assets/artifact-theme.mjs`.
 
@@ -586,12 +630,17 @@ the marker, flip above when needed, and clamp it to the viewport. Reposition it
 after scrolling or resizing while the marker remains visible. On a narrow
 screen, use a bottom sheet only when neither side has enough usable height.
 
-Keep a microworld's title, instructions, and model warning visible. Fold its
-controls, scenarios, simplifying assumptions, omissions, and evidence into one
-native disclosure. These are optional exploration details, not prerequisites
-for understanding the behavior summary and flow.
+Present a microworld as the reading path's main interactive panel. Keep its
+title, instructions, controls, selected scenario, and model warning visible.
+Show each control as a group of pill-shaped native radio buttons and the
+selected scenario as the previous and new traces side by side, with what to
+notice below. Fold only the simplifying assumptions and omissions into a
+**Model limits** disclosure. Without JavaScript, the controls stay disabled,
+the default scenario shows, and a note explains how to change it.
 
-Use the visible quiz question as the response field's persistent label. When
+Show each quiz question as its own visible card with its response field and a
+separate answer disclosure. Use the visible quiz question as the response
+field's persistent label. When
 that question and a clear placeholder make the purpose evident, do not repeat a
 generic label such as **My answer** or **Selection**. Keep the question
 programmatically associated with the field, and give repeated controls unique
@@ -622,8 +671,8 @@ Keep the collapsed interface compact. A closed disclosure occupies only its
 summary row and borders; it does not reserve body padding or leave unused parent
 spacing.
 
-Keep the understanding-check subsection visible when it is present. Let each
-question and its answer open independently instead of collapsing the whole
+Keep the understanding-check subsection and its questions visible when it is
+present. Let each answer open independently instead of collapsing the whole
 subsection.
 
 Expanded details must still account for every source, file, and limit.
@@ -681,9 +730,14 @@ data URL or SVG as a design-direction image.
 Design code may contain shared Technical Record tokens, feature-local tokens,
 fixed assets, and small helpers.
 
-Each feature owns its concrete HTML, state, and publication boundary. Shared
-implementation stays focused on the exact visual tokens used by multiple
-features.
+The artifact shell owns what Align and Diff share: document assembly with the
+CSP hashes, embedded fonts and icon, the rail and top bar, index, display
+controls, reference preview, print identity, shared stylesheet, shell client
+script, escaping helpers, and locale loading from JSON dictionaries. Each
+feature owns its concrete content HTML, feature interaction, stylesheet,
+dictionaries, state, and publication boundary. Stylesheets are static files that
+read tokens as custom properties; their media queries repeat the shared
+breakpoints, which a test ties to the token source.
 
 ## Diff's grouped code reader
 
@@ -716,8 +770,8 @@ anchor as a pointer selection.
 Restored progress follows the captured code; revised groups lose their read
 marks. Provide export/import when browser storage is unavailable.
 
-Use quiet file boundaries, mint selection accents, shared semantic artifact
-colors, and the review's light/dark/system appearance. Each group has a short
+Use Hope Sans and Hope Code, quiet file boundaries, accent selection marks,
+shared semantic artifact colors, and the review's light/dark/system appearance. Each group has a short
 title, prose that leads with why, a stated/inferred/unknown basis, and folded
 evidence. Explain the relevant previous behavior, mechanism, and boundary beside
 the code. Use separate paragraphs and part-specific notes when needed, following
