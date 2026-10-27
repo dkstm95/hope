@@ -7,10 +7,7 @@ import {
   revalidateGitHubSnapshot,
 } from "../plugins/hope/skills/diff/scripts/github.mjs";
 import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
-
-function response(value) {
-  return { stdout: JSON.stringify(value) };
-}
+import { fakeGitHub, response } from "../test-support/diff-github-fake.mjs";
 
 function smallChangedFiles(count) {
   return Array.from({ length: count }, (_, index) => ({
@@ -20,85 +17,6 @@ function smallChangedFiles(count) {
     patch: "@@ -1 +1 @@\n-old\n+new",
     status: "modified",
   }));
-}
-
-function fakeGitHub({
-  afterContent = "new",
-  beforeContent = "old",
-  body = "Keep the real error.",
-  commitMessage = "Keep the error\n\nBody",
-  contentSize,
-  headFullName = "example/repo",
-  incompletePatch = false,
-  missingFiles = false,
-  providerFile,
-  providerFiles,
-  secretFile = false,
-  title = "Keep the error",
-} = {}) {
-  const changedFile = providerFile ?? {
-    additions: 1,
-    deletions: 1,
-    filename: secretFile ? ".env" : "src/error.js",
-    patch: incompletePatch ? undefined : "@@ -1 +1 @@\n-old\n+new",
-    status: "modified",
-  };
-  const changedFiles = providerFiles ?? [changedFile];
-  return async (command, arguments_) => {
-    assert.equal(command, "gh");
-    assert.deepEqual(arguments_.slice(0, 3), ["api", "--hostname", "github.com"]);
-    const path = arguments_.at(-1);
-    if (path === "/repos/example/repo/pulls/1") {
-      return response({
-        additions: changedFiles.reduce((sum, file) => sum + file.additions, 0),
-        base: {
-          repo: { full_name: "example/repo" },
-          sha: "a".repeat(40),
-        },
-        body,
-        changed_files: changedFiles.length,
-        commits: 1,
-        deletions: changedFiles.reduce((sum, file) => sum + file.deletions, 0),
-        head: {
-          repo: { full_name: headFullName },
-          sha: "b".repeat(40),
-        },
-        number: 1,
-        state: "open",
-        title,
-        user: { login: "octocat" },
-      });
-    }
-    if (path.includes("/compare/")) {
-      return response({ merge_base_commit: { sha: "c".repeat(40) } });
-    }
-    if (path.includes("/pulls/1/files?")) {
-      const page = Number.parseInt(
-        new URL(path, "https://github.com").searchParams.get("page") ?? "1",
-        10,
-      );
-      const values = missingFiles ? [] : changedFiles;
-      return response(values.slice((page - 1) * 100, page * 100));
-    }
-    if (path.includes("/pulls/1/commits?")) {
-      return response([{
-        commit: { message: commitMessage },
-        sha: "b".repeat(40),
-      }]);
-    }
-    if (path.includes("/contents/")) {
-      const text = path.endsWith(`ref=${"c".repeat(40)}`)
-        ? beforeContent
-        : afterContent;
-      return response({
-        content: Buffer.from(text).toString("base64"),
-        encoding: "base64",
-        size: contentSize ?? Buffer.byteLength(text),
-        type: "file",
-      });
-    }
-    throw new Error(`Unexpected GitHub path: ${path}`);
-  };
 }
 
 test("GitHub URL parsing is canonical and rejects lookalikes", () => {
@@ -152,6 +70,15 @@ test("GitHub collection binds the exact snapshot and all changed files", async (
     owner: "example",
   });
   assert.match(snapshot.digest, /^[a-f0-9]{64}$/u);
+  assert.equal("pullRequest" in snapshot, false);
+  assert.deepEqual(snapshot.change, {
+    author: "octocat",
+    kind: "github",
+    number: 1,
+    state: "open",
+    title: "Keep the error",
+    url: "https://github.com/example/repo/pull/1",
+  });
 });
 
 test("GitHub collection accepts 500 small changed files", async () => {

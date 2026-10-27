@@ -55,16 +55,6 @@ test.beforeAll(async () => {
     evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
     text: "마지막 재시도 오류가 호출자에게 그대로 전달됩니다.",
   };
-  analysis.beginnerPrimer = [{
-    basis: "code",
-    evidence: [{
-      endLine: 4,
-      sourceId: "source-3",
-      startLine: 2,
-    }],
-    text: "재시도 경계는 마지막 오류가 호출자에게 전달되는 지점입니다.",
-    title: "처음 보는 독자를 위한 재시도 경계",
-  }];
   const behaviorRanges = [
     [1, 1],
     [2, 2],
@@ -595,16 +585,6 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   await expect(page.locator("#synopsis .scope-impact-list")).toBeVisible();
   await expect(page.locator("#explore .flow")).toHaveCount(1);
   await expect(page.locator("#explore .flow-short")).toHaveCount(0);
-  const primer = page.locator("#beginner-primer");
-  await expect(primer).toHaveCount(1);
-  await expect(primer).not.toHaveAttribute("open", "");
-  await expect(primer.locator(".beginner-primer-content")).not.toBeVisible();
-  await primer.locator(":scope > summary").click();
-  await expect(primer).toHaveAttribute("open", "");
-  await expect(primer.locator(".beginner-primer-content")).toBeVisible();
-  await primer.locator(":scope > summary").click();
-  await expect(primer).not.toHaveAttribute("open", "");
-  await expect(page.locator(".code-step-list > li")).toHaveCount(1);
   const itemHeadAlignment = await page.locator(
     ".review-items-full .item-head",
   ).evaluateAll((heads) => heads.map((head) => {
@@ -686,7 +666,6 @@ test("desktop and mobile keep wide content inside the document", async ({ page }
   expect(narrowFlow.scrollWidth).toBeLessThanOrEqual(narrowFlow.clientWidth);
 
   await page.emulateMedia({ media: "print" });
-  await expect(page.locator("#beginner-primer .beginner-primer-content")).toBeVisible();
   await expect(page.locator("#judge .section-content")).toBeVisible();
   await expect(page.locator(".microworld-content")).toBeVisible();
   await expect(page.locator(".artifact-details .evidence-group-content")).toBeVisible();
@@ -1342,7 +1321,7 @@ test("the evidence appendix and its groups start closed", async ({
   await expect(section).not.toHaveAttribute("open", "");
 
   const nested = section.locator(
-    "details.evidence-group, details.context-check, details.scope-limit, "
+    "details.evidence-group, details.scope-limit, "
       + "details.scope-limit-item, details.artifact-details",
   );
   expect(await nested.count()).toBeGreaterThan(4);
@@ -1401,13 +1380,14 @@ test("code evidence preserves source line breaks in the DOM", async ({ page }) =
 
 test("fragment navigation opens details that contain the target", async ({ page }) => {
   await openArtifact(page, viewports.desktop);
-  await page.goto(`${artifactUrl}#beginner-primer`);
-  await expect(page.locator("#beginner-primer")).toHaveAttribute("open", "");
-  await expect(page.locator("#beginner-primer")).toBeFocused();
+  await page.goto(`${artifactUrl}#scope-limit-1`);
+  await expect(page.locator("#evidence-and-scope")).toHaveAttribute("open", "");
+  await expect(page.locator("#scope-limit-1")).toHaveAttribute("open", "");
+  await expect(page.locator("#scope-limit-1")).toBeFocused();
 
   await openArtifact(page, viewports.desktop);
   const reference = page.locator(
-    '.code-step-list .evidence-marker[href^="#evidence-"]',
+    '.review-items-full .evidence-marker[href^="#evidence-"]',
   ).first();
   await reference.evaluate((element) => {
     let details = element.closest("details");
@@ -1462,12 +1442,6 @@ test("the offline artifact remains readable without JavaScript", async ({ browse
     await page.goto(artifactUrl);
     await expect(page.locator("h1")).toBeVisible();
     await expect(page.locator("#synopsis")).toBeVisible();
-    const primer = page.locator("#beginner-primer");
-    await expect(primer).toBeVisible();
-    await expect(primer).not.toHaveAttribute("open", "");
-    await expect(primer.locator(".beginner-primer-content")).not.toBeVisible();
-    await primer.locator(":scope > summary").click();
-    await expect(primer.locator(".beginner-primer-content")).toBeVisible();
     const evidenceSection = page.locator("#evidence-and-scope");
     await expect(evidenceSection).not.toHaveAttribute("open", "");
     await evidenceSection.locator(":scope > summary").click();

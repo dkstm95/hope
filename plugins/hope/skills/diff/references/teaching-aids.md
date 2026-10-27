@@ -15,8 +15,8 @@ commands, expressions, URLs, or scripts, and never imply that the microworld
 ran repository code or produced a test result.
 
 Choose one to three controls with two to four options each and no more than 12
-total combinations. Run `microworld-skeleton` as directed by `workflow.md` and
-provide one grounded scenario for every returned combination.
+total combinations. Provide one grounded scenario with its own lowercase `id`
+for every combination of options; validation names any missing combination.
 
 Use `"after": "unchanged"` when the represented steps and outcome stay exactly
 the same. Do not copy the `before` trace into `after`.

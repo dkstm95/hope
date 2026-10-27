@@ -6,13 +6,11 @@ import { fileURLToPath } from "node:url";
 
 import { isEntrypoint } from "./entrypoint.mjs";
 import { buildPlugin } from "./build-plugin.mjs";
-import {
-  incrementVersion,
-  parseStableVersion,
-} from "./release-impact.mjs";
 
 const root = new URL("../", import.meta.url);
 const fromRoot = (path) => new URL(path, root);
+const stableVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
+const releaseTypes = new Set(["patch", "minor", "major"]);
 
 const versionFiles = Object.freeze([
   "package.json",
@@ -20,6 +18,30 @@ const versionFiles = Object.freeze([
   "plugins/hope/.codex-plugin/plugin.json",
   "plugins/hope/.claude-plugin/plugin.json",
 ]);
+
+export function parseStableVersion(version) {
+  const match = stableVersion.exec(version);
+  if (!match) throw new Error(`Expected a stable semantic version, received: ${version}`);
+  return match.slice(1).map((part) => BigInt(part));
+}
+
+export function incrementVersion(version, releaseType) {
+  if (!releaseTypes.has(releaseType)) {
+    throw new Error(`Expected patch, minor, or major, received: ${releaseType}`);
+  }
+  let [major, minor, patch] = parseStableVersion(version);
+  if (releaseType === "major") {
+    major += 1n;
+    minor = 0n;
+    patch = 0n;
+  } else if (releaseType === "minor") {
+    minor += 1n;
+    patch = 0n;
+  } else {
+    patch += 1n;
+  }
+  return `${major}.${minor}.${patch}`;
+}
 
 export function replaceVersion(content, version) {
   parseStableVersion(version);
@@ -134,7 +156,7 @@ if (isEntrypoint(import.meta.url)) {
   if (
     arguments_.length < 1
     || arguments_.length > 2
-    || !["patch", "minor", "major"].includes(releaseType)
+    || !releaseTypes.has(releaseType)
   ) {
     process.stderr.write(
       "Usage: npm run release:prepare -- <patch|minor|major> [base-ref]\n",

@@ -1,7 +1,4 @@
-import {
-  LIMITS,
-  MICROWORLD_SKELETON_VERSION,
-} from "./constants.mjs";
+import { LIMITS } from "./constants.mjs";
 import { containsBidiControl } from "./text.mjs";
 
 const CONTROL_KINDS = Object.freeze(["input", "condition", "state"]);
@@ -127,20 +124,4 @@ export function microworldSelections(controls) {
     throw new RangeError("microworld.controls produce more than 12 combinations");
   }
   return Object.freeze(combinations);
-}
-
-export function createMicroworldSkeleton(value) {
-  const input = exactObject(value, "microworld skeleton", ["controls"]);
-  const controls = normalizeMicroworldControls(input.controls);
-  const scenarios = microworldSelections(controls).map((when, index) => (
-    Object.freeze({
-      id: `scenario-${index + 1}`,
-      when,
-    })
-  ));
-  return Object.freeze({
-    controls,
-    scenarios: Object.freeze(scenarios),
-    version: MICROWORLD_SKELETON_VERSION,
-  });
 }

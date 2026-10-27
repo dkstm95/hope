@@ -50,10 +50,9 @@ skills/diff/references/analysis.md
 skills/diff/references/runtime.md
 skills/diff/references/teaching-aids.md
 skills/diff/references/workflow.md
-skills/diff/scripts/analysis-v5.schema.json
+skills/diff/scripts/analysis-v6.schema.json
 skills/diff/scripts/artifact.mjs
-skills/diff/scripts/checkpoint-window-v2.schema.json
-skills/diff/scripts/checkpoint.mjs
+skills/diff/scripts/bundle.mjs
 skills/diff/scripts/cli.mjs
 skills/diff/scripts/code-evidence.mjs
 skills/diff/scripts/constants.mjs
@@ -64,6 +63,7 @@ skills/diff/scripts/evidence-range.mjs
 skills/diff/scripts/github.mjs
 skills/diff/scripts/hash.mjs
 skills/diff/scripts/index.mjs
+skills/diff/scripts/local.mjs
 skills/diff/scripts/locales/en-US/common.json
 skills/diff/scripts/locales/en-US/diff.json
 skills/diff/scripts/locales/index.mjs
@@ -85,7 +85,6 @@ skills/diff/scripts/target.mjs
 skills/diff/scripts/teaching-aids-v1.schema.json
 skills/diff/scripts/teaching-aids.mjs
 skills/diff/scripts/text.mjs
-skills/diff/scripts/transitions.mjs
 skills/diff/scripts/validate.mjs
 skills/pr-writing/SKILL.md
 skills/pr-writing/agents/openai.yaml

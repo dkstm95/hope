@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
@@ -7,6 +8,7 @@ import { renderReview } from "../plugins/hope/skills/diff/scripts/render.mjs";
 import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
 import {
   makeAnalysis,
+  makeLocalSnapshot,
   makeSnapshot,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
@@ -55,7 +57,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 23);
+  assert.equal(first.rendererVersion, 24);
   assert.equal(first.designVersion, 28);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
@@ -182,10 +184,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     ["01", "02", "03", "04", "05"],
   );
   assert.doesNotMatch(html, /<a href="#follow-code">/u);
-  assert.match(
-    html,
-    /<details class="evidence-group" id="implementation-details">/u,
-  );
+  assert.doesNotMatch(html, /id="implementation-details"|class="context-check"|class="beginner-primer"/u);
   const artifactDetails = html.match(
     /<details class="evidence-group artifact-details">[\s\S]*?<\/details>/u,
   )?.[0] ?? "";
@@ -249,7 +248,6 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(coreChange, /class="claim core-detail"/u);
   assert.match(html, /<ul class="claim-list core-detail-list">/u);
   assert.match(html, /class="synopsis-background-content">\s*<article/u);
-  assert.match(html, /<ol class="code-step-list">/u);
   assert.match(html, /<ul class="scope-impact-list"><li><a href="#scope-limit-1">/u);
   assert.equal((html.match(/id="review-item-1"/gu) ?? []).length, 1);
   assert.match(html, /<span class="item-basis">Inferred from evidence<\/span>/u);
@@ -266,10 +264,6 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<details class="evidence-group(?: [^"]*)?" open>/u,
   );
   assert.ok((html.match(/<details class="evidence-group(?: [^"]*)?">/gu) ?? []).length >= 4);
-  assert.equal(
-    (html.match(/<details class="context-check">/gu) ?? []).length,
-    review.contextChecks.filter((check) => check.status !== "limited").length,
-  );
   assert.match(html, /class="evidence-marker" href="#evidence-[a-f0-9]{12}"/u);
   assert.match(html, /\.code-line-patch\.code-line-unlocated/u);
   assert.match(html, /id="evidence-references"/u);
@@ -280,11 +274,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.match(html, /<caption class="sr-only">/u);
   assert.match(html, /<time datetime="[^"]+" title="[^"]+">/u);
   assert.match(html, />Other captured sources</u);
-  assert.match(html, />Relevant context</u);
   assert.match(html, />Changed files</u);
-  assert.match(html, />Checked</u);
-  assert.doesNotMatch(html, />Check limited</u);
-  assert.match(html, />Not applicable</u);
   assert.match(html, /href="#scope-limit-1"/u);
   assert.match(html, />pull request description</u);
   const otherSources = html.match(
@@ -421,7 +411,6 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.match(html, new RegExp("c".repeat(40), "u"));
   assert.match(html, /핵심 설명/u);
   assert.match(html, /그 밖의 수집 출처/u);
-  assert.match(html, /관련 맥락/u);
   assert.match(html, /변경 파일/u);
   assert.match(html, /판단에 영향을 주는 제한/u);
   assert.match(html, /수집한 맥락 밖의 기존 코드/u);
@@ -437,39 +426,6 @@ test("Korean and dark theme are reflected without a header language badge", asyn
   assert.doesNotMatch(html, /class="language-badge"/u);
   assert.doesNotMatch(html, />modified</u);
   assert.doesNotMatch(html, />explained</u);
-});
-
-test("beginner primer stays closed, localized, linkable, and print-visible", async () => {
-  const snapshot = makeSnapshot({ locale: "ko-KR" });
-  const analysis = makeAnalysis(snapshot, runId);
-  analysis.background = [{
-    basis: "code",
-    evidence: [{ endLine: 2, sourceId: "source-3", startLine: 2 }],
-    text: "The current branch forwards the failure after the retry.",
-    title: "현재 동작",
-  }];
-  analysis.beginnerPrimer = [{
-    basis: "code",
-    evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
-    text: "재시도 경계는 한 단계의 실패가 다음 호출자에게 전달되는 지점입니다.",
-    title: "처음 보는 독자를 위한 개념",
-  }];
-  const review = validateAnalysis(analysis, snapshot, { runId });
-  const html = (await renderReview(review)).bytes.toString("utf8");
-  const background = html.match(
-    /<section class="synopsis-background" id="background">[\s\S]*?<\/section>/u,
-  )?.[0] ?? "";
-
-  assert.match(background, /<details class="beginner-primer" id="beginner-primer">/u);
-  assert.match(background, /aria-label="처음 보는 독자를 위한 설명"/u);
-  assert.match(background, />처음 보는 독자를 위한 설명<\/span>/u);
-  assert.match(background, /처음 보는 독자를 위한 개념/u);
-  assert.doesNotMatch(background, /<details class="beginner-primer"[^>]* open>/u);
-  assert.match(html, /id="beginner-primer"/u);
-
-  const absent = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
-  const absentHtml = (await renderReview(absent)).bytes.toString("utf8");
-  assert.doesNotMatch(absentHtml, /class="beginner-primer"/u);
 });
 
 test("the artifact renders selected aids without a decision report", async () => {
@@ -845,14 +801,6 @@ test("unavailable-file reasons use the review language", async () => {
     limitId: "limit-2",
     material: true,
   });
-  analysis.contextChecks.push({
-    basis: "unknown",
-    evidence: [],
-    explanation: "환경 설정 파일 본문을 확인하지 않았습니다.",
-    limitIds: ["limit-2"],
-    status: "limited",
-    subject: "실제 환경 설정 값",
-  });
   const review = validateAnalysis(analysis, snapshot, { runId });
   const rendered = await renderReview(review);
   const html = rendered.bytes.toString("utf8");
@@ -886,14 +834,6 @@ test("unavailable exact context uses a trusted localized reason", async () => {
     limitId: "limit-2",
     material: true,
   });
-  analysis.contextChecks.push({
-    basis: "unknown",
-    evidence: [],
-    explanation: "요청한 호출자 맥락을 수집 한도 안에서 가져오지 못했습니다.",
-    limitIds: ["limit-2"],
-    status: "limited",
-    subject: "직접 호출자",
-  });
 
   const html = (
     await renderReview(validateAnalysis(analysis, snapshot, { runId }))
@@ -923,14 +863,8 @@ test("exact-revision context renders as code evidence from its fork repository",
   ];
   const snapshot = { ...value, digest: digestJson(value) };
   const analysis = makeAnalysis(snapshot, runId);
-  analysis.contextChecks.push({
-    basis: "code",
-    evidence: [{ endLine: 2, sourceId: "source-4", startLine: 1 }],
-    explanation: "The exact head caller was checked.",
-    limitIds: [],
-    status: "checked",
-    subject: "Head caller",
-  });
+  analysis.reviewItems[0].basis = "code";
+  analysis.reviewItems[0].evidence = [{ endLine: 2, sourceId: "source-4", startLine: 1 }];
 
   const html = (
     await renderReview(validateAnalysis(analysis, snapshot, { runId }))
@@ -1004,14 +938,6 @@ test("scope limits with one reason are grouped without losing member links", asy
       material: false,
     },
   );
-  analysis.contextChecks.push({
-    basis: "unknown",
-    evidence: [],
-    explanation: "Deployment secret values were deliberately excluded.",
-    limitIds: ["limit-2", "limit-3"],
-    status: "limited",
-    subject: "Deployment secret values",
-  });
   const review = validateAnalysis(analysis, snapshot, { runId });
   const html = (await renderReview(review)).bytes.toString("utf8");
 
@@ -1022,7 +948,6 @@ test("scope limits with one reason are grouped without losing member links", asy
   );
   assert.match(html, /<details class="scope-limit-item" id="scope-limit-2">/u);
   assert.match(html, /<details class="scope-limit-item" id="scope-limit-3">/u);
-  assert.equal((html.match(/Deployment secret values were deliberately excluded\./gu) ?? []).length, 1);
   assert.match(html, /Other exclusions · 2/u);
 });
 
@@ -1097,14 +1022,6 @@ test("a file whose reconstructed patch could not be verified renders as a scope 
       limitId: "limit-2",
       material: false,
     });
-    analysis.contextChecks.push({
-      basis: "unknown",
-      evidence: [],
-      explanation: "The bundle patch was not available.",
-      limitIds: ["limit-2"],
-      status: "limited",
-      subject: "Generated bundle",
-    });
     const review = validateAnalysis(analysis, snapshot, { runId });
     const html = (await renderReview(review)).bytes.toString("utf8");
     const scopeLimit = html.match(/<details class="scope-limit" id="scope-limit-2">[\s\S]*?<\/details>/u);
@@ -1112,4 +1029,44 @@ test("a file whose reconstructed patch could not be verified renders as a scope 
     assert.ok(scopeLimit, `${locale} lists the unverified patch as a scope limit`);
     assert.ok(scopeLimit[0].includes(reason), `${locale} shows the patch-incomplete reason`);
   }
+});
+
+test("a local review names its base commit and links only remote-served revisions", async () => {
+  const plain = makeLocalSnapshot();
+  const plainHtml = (await renderReview(validateAnalysis(makeAnalysis(plain, runId), plain, { runId }))).bytes.toString("utf8");
+  assert.match(plainHtml, /<span class="brand-record">LOCAL-ccccccc<\/span>/u);
+  assert.doesNotMatch(plainHtml, /class="pull-request-link/u);
+  assert.doesNotMatch(plainHtml, /https:\/\/github\.com/u);
+  assert.match(plainHtml, /<dt>Compared with<\/dt><dd><code>origin\/main<\/code><\/dd>/u);
+  assert.match(plainHtml, /Includes uncommitted changes/u);
+  assert.match(plainHtml, /<dt>Provider<\/dt><dd>Local Git repository<\/dd>/u);
+  assert.doesNotMatch(plainHtml, /Pull request title/u);
+
+  const repository = { name: "hope", owner: "example", provider: "github" };
+  const { digest: _digest, ...value } = makeLocalSnapshot({ repository });
+  value.sources = [...value.sources, {
+    id: "source-4", kind: "context-file", lineCount: 2, path: "src/caller.js",
+    revision: value.snapshot.mergeBase, text: "export function callRetry() {\n  return retry()",
+  }];
+  const linked = { ...value, digest: digestJson(value) };
+  const analysis = makeAnalysis(linked, runId);
+  analysis.reviewItems[0].basis = "code";
+  analysis.reviewItems[0].evidence = [
+    { endLine: 2, sourceId: "source-4", startLine: 1 },
+    { endLine: 4, sourceId: "source-3", startLine: 2 },
+  ];
+  const html = (await renderReview(validateAnalysis(analysis, linked, { runId }))).bytes.toString("utf8");
+  assert.match(html, new RegExp(`https://github\\.com/example/hope/blob/${"c".repeat(40)}/src/caller\\.js`, "u"));
+  assert.doesNotMatch(html, new RegExp(`blob/${"b".repeat(40)}`, "u"));
+});
+
+test("the changed-file table shows the strongest group kind for each file", async () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.groups[0].kind = "mechanical";
+  const html = (await renderReview(validateAnalysis(analysis, snapshot, { runId }))).bytes.toString("utf8");
+  const changedFiles = html.match(/<summary><h3>Changed files<\/h3><\/summary>[\s\S]*?<\/table>/u)?.[0] ?? "";
+  assert.match(changedFiles, /src\/retry\.js<\/bdi><\/td>\s*<td>[^<]+<\/td>\s*<td>[^<]+<\/td>/u);
+  const dictionary = JSON.parse(await readFile(new URL("../plugins/hope/skills/diff/scripts/locales/en-US/diff.json", import.meta.url), "utf8"));
+  assert.match(changedFiles, new RegExp(`<td>${dictionary["file.use.mechanical"]}</td>`, "u"));
 });

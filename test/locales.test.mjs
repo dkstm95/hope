@@ -35,7 +35,6 @@ const fileReasonKinds = [
 ];
 const contextReasonKinds = [
   "credential-pattern",
-  "inspection-line-limit",
   "invalid-text",
   "not-found",
   "private-path",
@@ -46,7 +45,6 @@ const contextReasonKinds = [
 
 // Every value each dynamic `label(dictionary, `<prefix>.${value}`)` call in render.mjs can receive.
 const dynamicLabels = {
-  context: ["checked", "notApplicable", "limited"],
   "file.status": [...githubFileStatuses],
   "file.use": FILE_DISPOSITIONS,
   importance: IMPORTANCE,
@@ -156,8 +154,8 @@ test("every dynamic renderer label exists in the en-US dictionary", async () => 
 });
 
 test("the covered reason kinds match the kinds the runtime records", async () => {
-  const [github, context, redact] = await Promise.all(
-    ["github.mjs", "context.mjs", "redact.mjs"].map(scriptSource),
+  const [github, local, context, redact] = await Promise.all(
+    ["github.mjs", "local.mjs", "context.mjs", "redact.mjs"].map(scriptSource),
   );
   const redactionKinds = captured(redact, /return "([a-z-]+)";/gu);
   const recordedKind = /(?:[rR]easonKind: |unavailableReason\()"([a-z-]+)"/gu;
@@ -165,9 +163,16 @@ test("the covered reason kinds match the kinds the runtime records", async () =>
     sortedSet([...captured(github, recordedKind), ...redactionKinds]),
     fileReasonKinds,
   );
+  // The local source reuses the GitHub path's reason kinds, so every label stays covered.
+  assert.deepEqual(
+    captured(local, /(?:[rR]easonKind: |unavailableReason\(|unavailableFile\("[a-z-]+", )"([a-z-]+)"/gu)
+      .filter((kind) => !fileReasonKinds.includes(kind)),
+    [],
+  );
   assert.deepEqual(
     sortedSet([
       ...captured(functionSource(github, "readContent"), recordedKind),
+      ...captured(local, recordedKind),
       ...redactionKinds,
       ...captured(context, /unavailable\(\s*[\w.]+,\s*[\w.]+,\s*"([a-z-]+)"/gu),
     ]),

@@ -41,14 +41,6 @@ function analysisWithVerificationLimit(snapshot) {
     limitId: "limit-2",
     material: false,
   });
-  analysis.contextChecks.push({
-    basis: "unknown",
-    evidence: [],
-    explanation: "This review did not collect or run execution results.",
-    limitIds: ["limit-2"],
-    status: "limited",
-    subject: "Execution and CI results",
-  });
   return analysis;
 }
 
@@ -61,18 +53,17 @@ test("analysis validation derives trusted status, scope, evidence, and file use"
   assert.equal(validated.title.text, "The final retry error now reaches the caller.");
   assert.equal(validated.reviewItems[0].evidence[0].excerpt.includes("throw last"), true);
   assert.equal(validated.reviewItems[0].basis, "inferred");
-  assert.equal(validated.contextChecks.length, 3);
   assert.equal(validated.sourceIndex.length, snapshot.sources.length);
   assert.equal("text" in validated.sourceIndex[0], false);
   assert.deepEqual(validated.resources, {
-    analysisCanonicalBytes: 2798,
-    analysisFileBytes: 2798,
-    authoredProseBytes: 961,
-    evidenceBytes: 178,
-    evidenceLines: 5,
-    evidenceReferences: 11,
-    codeEvidenceLines: 8,
-    uniqueEvidenceRanges: 4,
+    analysisCanonicalBytes: 1957,
+    analysisFileBytes: 1957,
+    authoredProseBytes: 654,
+    evidenceBytes: 114,
+    evidenceLines: 4,
+    evidenceReferences: 9,
+    codeEvidenceLines: 4,
+    uniqueEvidenceRanges: 3,
   });
   assert.equal(
     validated.coreChange.after.evidence[0],
@@ -84,7 +75,7 @@ test("review title explains the grounded change instead of copying provider text
   const snapshot = makeSnapshot();
   for (const punctuation of ["", ".", "?", "!", "。", "？", "！"]) {
     const copied = makeAnalysis(snapshot, runId);
-    copied.title.text = `${snapshot.pullRequest.title}${punctuation}`;
+    copied.title.text = `${snapshot.change.title}${punctuation}`;
     assert.throws(
       () => validateAnalysis(copied, snapshot, { runId }),
       /instead of copying the pull request title/u,
@@ -179,77 +170,15 @@ test("analysis rejects exact duplicate sibling claims", () => {
     /coreChange\.details\[1\] duplicates coreChange\.details\[0\]/u,
   );
 
-  const duplicateCodeStep = makeAnalysis(snapshot, runId);
-  duplicateCodeStep.codeSteps.push(
-    structuredClone(duplicateCodeStep.codeSteps[0]),
+  const duplicateStep = makeAnalysis(snapshot, runId);
+  addTeachingBehavior(duplicateStep);
+  duplicateStep.behavior.steps.push(
+    structuredClone(duplicateStep.behavior.steps[0]),
   );
   assert.throws(
-    () => validateAnalysis(duplicateCodeStep, snapshot, { runId }),
-    /codeSteps\[1\] duplicates codeSteps\[0\]/u,
+    () => validateAnalysis(duplicateStep, snapshot, { runId }),
+    /behavior\.steps\[2\] duplicates behavior\.steps\[0\]/u,
   );
-});
-
-test("beginner primer requires grounded items and stays optional", () => {
-  const snapshot = makeSnapshot();
-  const withoutPrimer = validateAnalysis(makeAnalysis(snapshot, runId), snapshot, { runId });
-  assert.deepEqual(withoutPrimer.beginnerPrimer, []);
-
-  const analysis = makeAnalysis(snapshot, runId);
-  analysis.beginnerPrimer = [{
-    basis: "code",
-    evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
-    text: "A retry boundary is the point where the branch passes its final failure to the caller.",
-    title: "Retry boundary",
-  }];
-  const validated = validateAnalysis(analysis, snapshot, { runId });
-  assert.equal(validated.beginnerPrimer.length, 1);
-  assert.equal(validated.beginnerPrimer[0].title, "Retry boundary");
-  assert.ok(validated.resources.authoredProseBytes > withoutPrimer.resources.authoredProseBytes);
-});
-
-test("beginner primer rejects empty, unknown, and mismatched grounding", () => {
-  const snapshot = makeSnapshot();
-  const cases = [
-    {
-      message: /beginnerPrimer needs at least 1 item/u,
-      value: [],
-    },
-    {
-      message: /beginnerPrimer\[0\]\.basis must be one of stated, code, inferred/u,
-      value: [{
-        basis: "unknown",
-        evidence: [],
-        text: "Unknown primer",
-        title: "Unknown",
-      }],
-    },
-    {
-      message: /beginnerPrimer\[0\]\.evidence must include evidence/u,
-      value: [{
-        basis: "inferred",
-        evidence: [],
-        text: "Ungrounded primer",
-        title: "Missing evidence",
-      }],
-    },
-    {
-      message: /beginnerPrimer\[0\] uses code as a stated-source basis/u,
-      value: [{
-        basis: "stated",
-        evidence: [{ endLine: 4, sourceId: "source-3", startLine: 2 }],
-        text: "A stated primer cannot cite a patch.",
-        title: "Wrong source kind",
-      }],
-    },
-  ];
-  for (const { message, value } of cases) {
-    const analysis = makeAnalysis(snapshot, runId);
-    analysis.beginnerPrimer = value;
-    assert.throws(
-      () => validateAnalysis(analysis, snapshot, { runId }),
-      message,
-    );
-  }
 });
 
 test("only material collection limits make the review scope limited", () => {
@@ -316,33 +245,35 @@ test("analysis validation reports a material verification link with other issues
   );
 });
 
-test("analysis cannot omit, duplicate, or classify unavailable files", () => {
+test("file use is the strongest group kind that owns any of its lines", () => {
   const snapshot = makeSnapshot();
-  const missing = makeAnalysis(snapshot, runId);
-  missing.fileDispositions = [];
-  assert.throws(
-    () => validateAnalysis(missing, snapshot, { runId }),
-    /No semantic disposition/u,
-  );
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.groups = [
+    { ...analysis.groups[0], id: "g-mechanical", kind: "mechanical", parts: [{ fileId: "file-1", startLine: 1, endLine: 2 }] },
+    { ...analysis.groups[0], id: "g-supporting", kind: "supporting", parts: [{ fileId: "file-1", startLine: 3, endLine: 4 }] },
+  ];
+  assert.equal(validateAnalysis(analysis, snapshot, { runId }).files[0].disposition, "supporting");
 
-  const duplicate = makeAnalysis(snapshot, runId);
-  duplicate.fileDispositions.push({ ...duplicate.fileDispositions[0] });
+  analysis.groups[0].kind = "explained";
+  assert.equal(validateAnalysis(analysis, snapshot, { runId }).files[0].disposition, "explained");
+
+  const unknownKind = makeAnalysis(snapshot, runId);
+  unknownKind.groups[0].kind = "metadata-only";
   assert.throws(
-    () => validateAnalysis(duplicate, snapshot, { runId }),
-    /repeats/u,
+    () => validateAnalysis(unknownKind, snapshot, { runId }),
+    /groups\[0\]\.kind must be one of explained, supporting, mechanical/u,
   );
 
   const unavailableValue = { ...snapshot };
-  unavailableValue.files = [{
-    ...snapshot.files[0],
-    bodyState: "redacted",
-    bodyReason: "secret",
-    sourceIds: [],
-  }];
+  unavailableValue.files = [
+    snapshot.files[0],
+    { ...snapshot.files[0], id: "file-2", path: "secret.env", bodyState: "redacted", bodyReason: "secret", sourceIds: [] },
+  ];
   const unavailable = makeAnalysis(unavailableValue, runId);
-  assert.throws(
-    () => validateAnalysis(unavailable, unavailableValue, { runId }),
-    /cannot classify/u,
+  unavailable.groups[0].parts = [{ fileId: "file-1" }, { fileId: "file-2" }];
+  assert.deepEqual(
+    validateAnalysis(unavailable, unavailableValue, { runId }).files.map((file) => file.disposition),
+    ["explained", "redacted"],
   );
 });
 
@@ -369,35 +300,12 @@ test("analysis rejects invented evidence, cross-run data, and fake basis", () =>
   );
 });
 
-test("every code step is backed by code evidence for its listed files", () => {
-  const snapshot = makeSnapshot();
-  const analysis = makeAnalysis(snapshot, runId);
-  analysis.codeSteps[0] = {
-    ...analysis.codeSteps[0],
-    basis: "stated",
-    evidence: [{ endLine: 1, sourceId: "source-2", startLine: 1 }],
-  };
-
-  assert.throws(
-    () => validateAnalysis(analysis, snapshot, { runId }),
-    /needs code evidence/u,
-  );
-});
-
-test("code step file IDs are derived from evidence", () => {
-  const snapshot = makeSnapshot();
-  const analysis = makeAnalysis(snapshot, runId);
-
-  const validated = validateAnalysis(analysis, snapshot, { runId });
-  assert.deepEqual(validated.codeSteps[0].fileIds, ["file-1"]);
-});
-
 test("analysis validation reports independent repair issues together", () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
   analysis.coreChange.before.basis = "unknown";
   analysis.coreChange.before.evidence = [];
-  analysis.codeSteps[0].evidence = [{
+  analysis.reviewItems[0].evidence = [{
     endLine: 1,
     sourceId: "source-99",
     startLine: 1,
@@ -409,7 +317,7 @@ test("analysis validation reports independent repair issues together", () => {
       assert.ok(Array.isArray(error.issues));
       assert.ok(error.issues.length >= 2);
       assert.ok(error.issues.some((issue) => issue.code === "CHANGE_GROUNDING"));
-      assert.ok(error.issues.some((issue) => issue.path === "codeSteps[0]"));
+      assert.ok(error.issues.some((issue) => issue.path === "reviewItems[0]"));
       return true;
     },
   );
@@ -423,7 +331,7 @@ test("analysis validation keeps an uncollected first error", () => {
     evidence: [],
     question: "Which error reaches the caller?",
   }];
-  analysis.codeSteps[0].evidence = [{
+  analysis.reviewItems[0].evidence = [{
     endLine: 1,
     sourceId: "source-99",
     startLine: 1,
@@ -436,18 +344,19 @@ test("analysis validation keeps an uncollected first error", () => {
         (issue) => issue.path === "quiz[0].evidence",
       ));
       assert.ok(error.issues.some(
-        (issue) => issue.path === "codeSteps[0]",
+        (issue) => issue.path === "reviewItems[0]",
       ));
       return true;
     },
   );
 });
 
-test("analysis validation reports the actual code-step index", () => {
+test("analysis validation reports the actual review-item index", () => {
   const snapshot = makeSnapshot();
   const analysis = makeAnalysis(snapshot, runId);
-  analysis.codeSteps.push(structuredClone(analysis.codeSteps[0]));
-  analysis.codeSteps[1].evidence = [{
+  analysis.reviewItems.push(structuredClone(analysis.reviewItems[0]));
+  analysis.reviewItems[1].title = "Check another caller";
+  analysis.reviewItems[1].evidence = [{
     endLine: 1,
     sourceId: "source-99",
     startLine: 1,
@@ -459,7 +368,7 @@ test("analysis validation reports the actual code-step index", () => {
       assert.ok(error.issues.length > 0);
       assert.ok(error.issues.every((issue) => (
         issue.code === "EVIDENCE_SOURCE_UNKNOWN"
-        && issue.path.startsWith("codeSteps[1]")
+        && issue.path.startsWith("reviewItems[1]")
       )));
       return true;
     },
@@ -471,7 +380,7 @@ test("analysis fails closed on unsupported schemas and model-owned URLs", () => 
   assert.throws(
     () => validateAnalysis(
       makeAnalysis(snapshot, runId),
-      { ...snapshot, schemaVersion: 2 },
+      { ...snapshot, schemaVersion: 1 },
       { runId },
     ),
     /Unsupported Hope snapshot schema/u,
@@ -524,7 +433,7 @@ test("analysis splits one authored evidence interval into bounded excerpts", () 
     sources: [snapshot.sources[0], snapshot.sources[1], longSource],
   };
   const analysis = makeAnalysis(longSnapshot, runId);
-  analysis.codeSteps[0].evidence = [{
+  analysis.reviewItems[0].evidence = [{
     endLine: 25,
     sourceId: "source-3",
     startLine: 1,
@@ -532,7 +441,7 @@ test("analysis splits one authored evidence interval into bounded excerpts", () 
 
   const validated = validateAnalysis(analysis, longSnapshot, { runId });
   assert.deepEqual(
-    validated.codeSteps[0].evidence.map(({ startLine, endLine }) => ({
+    validated.reviewItems[0].evidence.map(({ startLine, endLine }) => ({
       endLine,
       startLine,
     })),
@@ -555,7 +464,7 @@ test("analysis rejects an unfocused authored evidence interval", () => {
     sources: [snapshot.sources[0], snapshot.sources[1], longSource],
   };
   const analysis = makeAnalysis(longSnapshot, runId);
-  analysis.codeSteps[0].evidence = [{
+  analysis.reviewItems[0].evidence = [{
     endLine: 97,
     sourceId: "source-3",
     startLine: 1,
@@ -617,7 +526,6 @@ test("analysis fails when the core change is unknown or no file body is availabl
     })),
   };
   const unavailable = makeAnalysis(unavailableSnapshot, runId);
-  unavailable.fileDispositions = [];
   assert.throws(
     () => validateAnalysis(unavailable, unavailableSnapshot, { runId }),
     /cannot be grounded without an included file/u,
@@ -646,58 +554,6 @@ test("purpose basis is limited to stated, inferred, or unknown", () => {
   );
 });
 
-test("context checks account for limits with status-specific evidence", () => {
-  const snapshot = makeSnapshot();
-
-  const checkedWithoutEvidence = makeAnalysis(snapshot, runId);
-  checkedWithoutEvidence.contextChecks[0].evidence = [];
-  assert.throws(
-    () => validateAnalysis(checkedWithoutEvidence, snapshot, { runId }),
-    /needs evidence when checked/u,
-  );
-
-  const limitedWithoutLimit = makeAnalysis(snapshot, runId);
-  limitedWithoutLimit.contextChecks[1].limitIds = [];
-  assert.throws(
-    () => validateAnalysis(limitedWithoutLimit, snapshot, { runId }),
-    /needs at least one limit when limited/u,
-  );
-
-  const missingLimitAccount = makeAnalysis(snapshot, runId);
-  missingLimitAccount.contextChecks = missingLimitAccount.contextChecks.filter(
-    (check) => check.status !== "limited",
-  );
-  assert.throws(
-    () => validateAnalysis(missingLimitAccount, snapshot, { runId }),
-    /No context check accounts for limit-1/u,
-  );
-
-  const notApplicableWithLimit = makeAnalysis(snapshot, runId);
-  notApplicableWithLimit.contextChecks[2].limitIds = ["limit-1"];
-  assert.throws(
-    () => validateAnalysis(notApplicableWithLimit, snapshot, { runId }),
-    /cannot link limits when not applicable/u,
-  );
-
-  const statedWithCode = makeAnalysis(snapshot, runId);
-  statedWithCode.contextChecks[0].basis = "stated";
-  assert.throws(
-    () => validateAnalysis(statedWithCode, snapshot, { runId }),
-    /stated-source basis/u,
-  );
-
-  const codeWithDescription = makeAnalysis(snapshot, runId);
-  codeWithDescription.contextChecks[0].evidence = [{
-    endLine: 1,
-    sourceId: "source-2",
-    startLine: 1,
-  }];
-  assert.throws(
-    () => validateAnalysis(codeWithDescription, snapshot, { runId }),
-    /non-code evidence as a code basis/u,
-  );
-});
-
 test("exact-revision context is code evidence but cannot replace change evidence", () => {
   const original = makeSnapshot();
   const { digest: _digest, ...value } = original;
@@ -717,14 +573,8 @@ test("exact-revision context is code evidence but cannot replace change evidence
     digest: digestJson(value),
   };
   const analysis = makeAnalysis(snapshot, runId);
-  analysis.contextChecks[0] = {
-    basis: "code",
-    evidence: [{ endLine: 2, sourceId: "source-4", startLine: 1 }],
-    explanation: "The exact head revision caller was checked.",
-    limitIds: [],
-    status: "checked",
-    subject: "Direct caller",
-  };
+  analysis.reviewItems[0].basis = "code";
+  analysis.reviewItems[0].evidence = [{ endLine: 2, sourceId: "source-4", startLine: 1 }];
   assert.doesNotThrow(
     () => validateAnalysis(analysis, snapshot, { runId }),
   );
@@ -764,7 +614,7 @@ test("analysis rejects bidirectional controls in user-facing prose", () => {
 
 test("the published analysis schema matches runtime lexical rules", async () => {
   const schema = JSON.parse(await readFile(new URL(
-    "../plugins/hope/skills/diff/scripts/analysis-v5.schema.json",
+    "../plugins/hope/skills/diff/scripts/analysis-v6.schema.json",
     import.meta.url,
   ), "utf8"));
   const pattern = new RegExp(schema.$defs.text.pattern, "u");
@@ -783,20 +633,19 @@ test("the published analysis schema matches runtime lexical rules", async () => 
   }
 });
 
-test("context checks may be empty only when no captured limit needs accounting", () => {
+test("every captured limit needs one impact", () => {
   const snapshot = { ...makeSnapshot(), limits: [] };
   const analysis = makeAnalysis(snapshot, runId);
-  analysis.contextChecks = [];
   analysis.limitImpacts = [];
   analysis.reviewItems = [];
-  assert.deepEqual(validateAnalysis(analysis, snapshot, { runId }).contextChecks, []);
+  assert.deepEqual(validateAnalysis(analysis, snapshot, { runId }).limits, []);
 
   const limitedSnapshot = makeSnapshot();
   const limited = makeAnalysis(limitedSnapshot, runId);
-  limited.contextChecks = [];
+  limited.limitImpacts = [];
   assert.throws(
     () => validateAnalysis(limited, limitedSnapshot, { runId }),
-    /No context check accounts for limit-1/u,
+    /No impact was provided for Unchanged callers/u,
   );
 });
 
@@ -807,11 +656,11 @@ test("background and purpose constraints participate in the same repair pass", (
     ...analysis.coreChange.details[0], title,
   }));
   analysis.purpose = { ...analysis.coreChange.after };
-  analysis.codeSteps[0].evidence = [{ sourceId: "source-99", startLine: 1, endLine: 1 }];
+  analysis.reviewItems[0].evidence = [{ sourceId: "source-99", startLine: 1, endLine: 1 }];
   assert.throws(() => validateAnalysis(analysis, snapshot, { runId }), (error) => {
     assert.ok(error.issues.some((issue) => issue.path === "background"));
     assert.ok(error.issues.some((issue) => issue.path === "purpose"));
-    assert.ok(error.issues.some((issue) => issue.path === "codeSteps[0]"));
+    assert.ok(error.issues.some((issue) => issue.path === "reviewItems[0]"));
     return true;
   });
 });
@@ -841,9 +690,13 @@ test("core and optional schemas resolve offline and agree on review bounds", asy
     await visit(schema);
     return schema;
   }
-  const schema = await checkDocument(new URL("analysis-v5.schema.json", root));
-  assert.equal(schema.properties.contextChecks.minItems ?? 0, 0);
+  const schema = await checkDocument(new URL("analysis-v6.schema.json", root));
+  assert.equal(schema.properties.schemaVersion.const, 6);
   assert.equal(schema.properties.background.maxItems, 1);
+  assert.deepEqual(schema.properties.groups.items.properties.kind.enum, ["explained", "supporting", "mechanical"]);
+  for (const removed of ["codeSteps", "beginnerPrimer", "contextChecks", "fileDispositions"]) {
+    assert.equal(removed in schema.properties, false, removed);
+  }
 });
 
 test("generated prose rejects Markdown backticks while source excerpts keep them", () => {
@@ -964,14 +817,14 @@ test("analysis rejects excessive unique evidence bytes before rendering", () => 
     digest: digestJson(snapshotValue),
   };
   const analysis = makeAnalysis(budgetSnapshot, runId);
-  analysis.codeSteps = Array.from({ length: 5 }, (_, index) => ({
+  analysis.reviewItems = Array.from({ length: 5 }, (_, index) => ({
+    ...analysis.reviewItems[0],
     basis: "code",
     evidence: [{
       endLine: (index + 1) * 24,
       sourceId: "source-3",
       startLine: index * 24 + 1,
     }],
-    text: `Changed code group ${index + 1}.`,
     title: `Code group ${index + 1}`,
   }));
 
@@ -998,7 +851,8 @@ test("overlapping evidence ranges count every rendered code line", () => {
     digest: digestJson(snapshotValue),
   };
   const analysis = makeAnalysis(budgetSnapshot, runId);
-  analysis.codeSteps = Array.from({ length: 3 }, (_, group) => ({
+  analysis.reviewItems = Array.from({ length: 3 }, (_, group) => ({
+    ...analysis.reviewItems[0],
     basis: "code",
     evidence: Array.from({ length: 12 }, (_, index) => {
       const startLine = group * 12 + index + 1;
@@ -1008,7 +862,6 @@ test("overlapping evidence ranges count every rendered code line", () => {
         startLine,
       };
     }),
-    text: `Changed overlapping code group ${group + 1}.`,
     title: `Overlapping code group ${group + 1}`,
   }));
 
@@ -1024,10 +877,10 @@ test("overlapping evidence ranges count every rendered code line", () => {
       assert.equal(issue.details.target, 480);
       assert.ok(issue.details.actual > issue.details.limit);
       assert.ok(issue.details.byField.find(
-        (item) => item.field === "codeSteps" && item.lines >= 864,
+        (item) => item.field === "reviewItems" && item.lines >= 864,
       ));
       assert.equal(issue.details.largestRanges[0].lines, 24);
-      assert.equal(issue.details.largestRanges[0].field, "codeSteps");
+      assert.equal(issue.details.largestRanges[0].field, "reviewItems");
       assert.ok(issue.details.overlappingRanges.length > 0);
       return true;
     },
@@ -1177,7 +1030,7 @@ test("microworld validation rejects unsafe or incomplete state models", () => {
   missing.behavior.microworld.scenarios.pop();
   assert.throws(
     () => validateAnalysis(missing, snapshot, { runId }),
-    /missing a control combination/u,
+    /missing control combinations: /u,
   );
 
   const duplicate = makeAnalysis(snapshot, runId);
