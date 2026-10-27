@@ -18,6 +18,9 @@ It needs fontTools 4.62.1 with Brotli, the same tool that builds the Hope fonts.
 - `mark-<skill>.svg` are the skill marks beside each README heading. One teal
   stroke reads on both GitHub themes, so the marks have no theme variants.
 
+The hero's wordmark comes from `assets/brand/source/render.py`, which shares
+this script's text engine; see [`assets/brand/SOURCE.md`](../brand/SOURCE.md).
+
 The script converts all text to paths from Hope Sans and Hope Code, so GitHub
 renders the artifact type without a web font. Colors come from
 `plugins/hope/assets/artifact-theme.mjs`, with Diff's status roles for the

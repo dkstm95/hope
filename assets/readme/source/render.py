@@ -13,7 +13,9 @@ the fonts under plugins/hope/assets/fonts.
 
 from __future__ import annotations
 
+import importlib.util
 import re
+import sys
 from pathlib import Path
 
 from fontTools.pens.svgPathPen import SVGPathPen
@@ -137,6 +139,8 @@ class Face:
 
 
 FACES = {key: Face(key, path) for key, path in FONT_FILES.items()}
+# The brand generator reuses this text engine; register it so it loads the fonts once.
+sys.modules.setdefault("readme_render", sys.modules[__name__])
 
 
 def glyph_id(face: Face, name: str) -> str:
@@ -325,12 +329,23 @@ def lines(doc: Doc, x: float, y: float, rows: list[str], face: Face, size: float
 # Scenes.
 
 
+def brand():
+    """The mark and wordmark from assets/brand/source/render.py."""
+    spec = importlib.util.spec_from_file_location("hope_brand", ROOT / "assets/brand/source/render.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def hero(L: dict, T: dict) -> Doc:
     doc = Doc(960, 260)
-    doc.text(0, 150, "Hope", FACES["bold"], 132, T["text"], tracking=-4)
+    theme = "dark" if T is THEMES["dark"] else "light"
+    hope = brand()
+    hope.wordmark(doc, 0, 150, 132, theme, key=f"hero-{theme}")
+    decide = hope.BLUE_ON_DARK if theme == "dark" else hope.BLUE
     doc.text(960, 82, L["hero_see"], FACES["light"], 50, T["muted"], anchor="end", tracking=-0.5)
     doc.text(960, 154, L["hero_understand"], FACES["medium"], 50, T["text"], anchor="end", tracking=-0.8)
-    doc.text(960, 226, L["hero_decide"], FACES["bold"], 50, T["accent"], anchor="end", tracking=-1)
+    doc.text(960, 226, L["hero_decide"], FACES["bold"], 50, decide, anchor="end", tracking=-1)
     return doc
 
 

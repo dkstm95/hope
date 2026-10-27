@@ -3,7 +3,7 @@ interface:
   short_description: "Make prompts, prose, and implementation text clear"
   icon_small: "./assets/hope-protected-light.png"
   icon_large: "./assets/hope-protected-light.png"
-  brand_color: "#087EA4"
+  brand_color: "#3157FF"
   default_prompt: "Use $hope:write within this task wherever clearer language would help."
 policy:
   allow_implicit_invocation: true
