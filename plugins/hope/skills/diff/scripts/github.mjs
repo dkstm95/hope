@@ -645,6 +645,7 @@ export async function revalidateGitHubSnapshot(collected, { clock = () => new Da
 }
 
 export {
+  githubFileStatuses,
   unavailableReason as githubUnavailableReason,
   readContent as readGitHubContent,
 };

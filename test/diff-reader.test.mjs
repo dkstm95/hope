@@ -3,6 +3,7 @@ import test from "node:test";
 import { rename, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { registerTestTemporaryDirectoryCleanup } from "../test-support/temporary-directory.mjs";
+import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
 import { parsePatch } from "../plugins/hope/skills/diff/scripts/patch.mjs";
 import { diffText } from "../plugins/hope/skills/diff/scripts/reconstruct-patch.mjs";
 import { buildLayout } from "../plugins/hope/skills/diff/scripts/reader/layout.mjs";
@@ -35,6 +36,12 @@ test("patch parser preserves sign-like content, multiple hunks, and no-newline m
   assert.throws(() => parsePatch("@@ -1 +1 @@\n-a\n+b", { additions: 2, deletions: 1 }), /every reported/);
   assert.throws(() => parsePatch("@@ -1 +1 @@\n-a\n+b\n@@ -1 +1 @@\n-a\n+b"), /overlap/);
   assert.equal((await diffText("a", "b")).includes("No newline"), true);
+});
+test("patch parser bounds the rows in one hunk", () => {
+  const hunk = (rows) => `@@ -1,${rows} +1,${rows} @@\n${" \n".repeat(rows)}`;
+  const limit = LIMITS.changedLines * 4;
+  assert.equal(parsePatch(hunk(limit)).hunks[0].rows.length, limit);
+  assert.throws(() => parsePatch(hunk(limit + 1)), /too many context lines/);
 });
 
 test("semantic groups reorder files and split hunks without duplicating or dropping source rows", async () => {
