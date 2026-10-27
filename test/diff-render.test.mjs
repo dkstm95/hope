@@ -1064,3 +1064,52 @@ test("a captured file source cannot point outside the represented file map", asy
     /Source index refers to an unknown file/u,
   );
 });
+
+test("a file whose reconstructed patch could not be verified renders as a scope limit", async () => {
+  const reasons = {
+    "en-US": "A complete patch could not be reconstructed and verified.",
+    "ko-KR": "모든 변경 줄을 포함한 patch를 복원·검증하지 못했습니다.",
+  };
+  for (const [locale, reason] of Object.entries(reasons)) {
+    const { digest: _digest, ...value } = makeSnapshot({ locale });
+    value.files = [...value.files, {
+      additions: 3,
+      bodyReason: "A complete patch could not be reconstructed and verified",
+      bodyReasonKind: "patch-incomplete",
+      bodyState: "metadata-only",
+      deletions: 1,
+      id: "file-2",
+      path: "vendor/big.min.js",
+      providerStatus: "modified",
+      sourceIds: [],
+    }];
+    value.limits = [...value.limits, {
+      id: "limit-2",
+      kind: "file-unavailable",
+      reason: "A complete patch could not be reconstructed and verified",
+      reasonKind: "patch-incomplete",
+      subject: "vendor/big.min.js",
+    }];
+    const snapshot = Object.freeze({ ...value, digest: digestJson(value) });
+    const analysis = makeAnalysis(snapshot, runId);
+    analysis.limitImpacts.push({
+      impact: "The minified bundle is generated output.",
+      limitId: "limit-2",
+      material: false,
+    });
+    analysis.contextChecks.push({
+      basis: "unknown",
+      evidence: [],
+      explanation: "The bundle patch was not available.",
+      limitIds: ["limit-2"],
+      status: "limited",
+      subject: "Generated bundle",
+    });
+    const review = validateAnalysis(analysis, snapshot, { runId });
+    const html = (await renderReview(review)).bytes.toString("utf8");
+    const scopeLimit = html.match(/<details class="scope-limit" id="scope-limit-2">[\s\S]*?<\/details>/u);
+
+    assert.ok(scopeLimit, `${locale} lists the unverified patch as a scope limit`);
+    assert.ok(scopeLimit[0].includes(reason), `${locale} shows the patch-incomplete reason`);
+  }
+});

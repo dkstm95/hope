@@ -62,7 +62,7 @@ export function parsePatch(patch, expected) {
     if (kind === "add") additions += 1;
     if (kind === "del") deletions += 1;
     current.rows.push(row);
-    if (current.rows.length > LIMITS.lines * 4) throw new Error("Patch has too many context lines");
+    if (current.rows.length > LIMITS.changedLines * 4) throw new Error("Patch has too many context lines");
   }
   finish();
   if (expected && (additions !== expected.additions || deletions !== expected.deletions)) {
