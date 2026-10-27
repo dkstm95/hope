@@ -279,8 +279,8 @@ Show each fact once, in this order:
 2. **Decisions** with consequential decisions and their reasons;
 3. **Design directions** with compared experience directions and the selected
    option, only when the person-facing experience needed visual agreement; and
-4. **Boundary and evidence** with deliberately excluded work, retained legacy
-   boundaries, and supporting evidence when any of them add value.
+4. **Boundary and evidence** with deliberately excluded work and supporting
+   evidence when either adds value.
 
 Positive statements define the agreement. Give each statement one home and
 attach a material reason to the statement it explains. A flow earns its place
@@ -289,12 +289,12 @@ included**.
 
 A ready artifact contains settled, deliberately excluded, or explicitly
 delegated material branches. Research and implementation uncertainty remain
-with the work that owns them. Earlier artifact versions retain their historical
-fields while the current record follows this structure.
+with the work that owns them. The record holds only the current content; git
+keeps earlier content.
 
-Keep earlier versions in the secondary version history navigation. Label the
-current version **current understanding** and keep the record as the single
-authority for confirmed intent and decisions.
+List the record's history entries in the secondary version history navigation.
+Label the current version **current understanding** and keep the record as the
+single authority for confirmed intent and decisions.
 
 Keep detailed goals, consequential choices, their material reasons, exclusions,
 and the core flow visible. Fold judgment methods, option references, and the
@@ -379,10 +379,11 @@ requirements.
 ## Align artifact layout
 
 Give the current understanding most of the page and keep version history secondary. In
-the left document rail, show the current version and at most one prior version
-summary. Open earlier detail from that history instead of repeating it in the
-document. On narrower layouts, include the history in the common navigation
-panel opened by one 44-pixel control to the right of the theme control.
+the left document rail, show the current entry and at most one prior entry,
+each with its version, date, and summary, and fold older entries below them.
+The page does not repeat earlier content. On narrower layouts, include the
+history in the common navigation panel opened by one 44-pixel control to the
+right of the theme control.
 
 Lead **Intent** with the goal in the stronger lead style and the problem below it
 as quieter context. Keep detailed goals in **Intent** and consequential
@@ -723,9 +724,10 @@ Diff inserts repository text only as escaped content. It keeps source lines
 explicit and distinguishes patch additions, deletions, context, and hunk
 headers without a stateful language parser.
 
-Align may embed raster design-direction images only after its runtime verifies
-their supported signature, dimensions, and size. It never treats an authored
-data URL or SVG as a design-direction image.
+Align may embed raster design-direction images only from PNG files inside the
+repository, after its runtime verifies their signature, dimensions, and size at
+render time. It never treats an authored data URL or SVG as a design-direction
+image.
 
 Design code may contain shared Technical Record tokens, feature-local tokens,
 fixed assets, and small helpers.

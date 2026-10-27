@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "alignId": "e9b3bc09-256a-4240-aa8d-0436a3e1aed1",
+  "repository": "dkstm95/hope",
+  "locale": "ko-KR",
+  "theme": "system",
+  "alternateLocale": {
+    "locale": "en-US",
+    "href": "rescene-fan-calendar.en.html"
+  },
+  "createdAt": "2026-08-17T03:52:43.056Z",
+  "updatedAt": "2026-08-17T03:52:43.056Z",
+  "history": [
+    {
+      "at": "2026-08-17T03:52:43.056Z",
+      "summary": "출처 정책에 합의하고 월간 신뢰 지도를 선택했다."
+    }
+  ],
+  "content": {
+    "title": "신뢰할 수 있는 팬 일정",
+    "goal": {
+      "text": "팬이 일정, 투표와 신청 마감, 출처 충돌, 다음 안전한 행동을 한곳에서 신뢰할 수 있게 확인하도록 한다.",
+      "evidenceIds": [
+        "rescene-go",
+        "mnet-plus",
+        "blip-event"
+      ]
+    },
+    "problem": "방송, 공연, 발매, 투표, 신청은 날짜와 출처가 서로 다르다. 팬이 여러 곳을 오가는 동안 마감을 놓치거나 오래된 정보로 행동할 수 있다.",
+    "intent": [
+      {
+        "statement": "데스크톱은 월간 일정과 선택한 날짜를 함께 보여 주고, 모바일은 같은 일정을 날짜순으로 보여 준다.",
+        "verify": "넓은 화면과 좁은 화면에서 일정 순서, 선택 날짜 상세, 정보 누락을 비교한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "각 일정은 KST 시각, 우선 출처, 마지막 확인 시각을 보여 주고 행동이 필요하면 원본 링크를 제공한다.",
+          "evidenceIds": [
+            "rescene-go",
+            "mnet-plus",
+            "blip-event"
+          ]
+        },
+        "verify": "대표 일정 상세에서 필요한 시각과 출처가 모두 보이는지 확인한다.",
+        "by": "agent",
+        "reason": "팬이 행동이 여전히 안전한지 판단하려면 충분한 출처 맥락이 필요하다."
+      },
+      {
+        "statement": "각 출처 관측값은 값과 확인 시각을 함께 보존하고, 출처 우선순위가 표시 일정을 정하며 해결 중인 충돌, 변경, 취소를 계속 보여 준다.",
+        "verify": "대표 일정 기록과 화면에서 보존된 관측값, 결정된 표시값, 보이는 충돌, 가능한 행동을 비교한다.",
+        "by": "agent",
+        "decidedBy": "user",
+        "reason": "출처 관측값을 보존하면 팬에게 하나의 유용한 일정을 제공하면서도 출처 이력과 이후 정정을 이어 갈 수 있다."
+      },
+      {
+        "statement": {
+          "text": "공식 주최사와 아티스트를 가장 높은 출처로 두고, 최근 확인한 행동 링크만 제공한다.",
+          "evidenceIds": [
+            "mnet-plus"
+          ]
+        },
+        "verify": "대표 충돌과 행동 마감을 화면의 출처 순서와 마지막 확인 시각에 대조한다.",
+        "by": "agent",
+        "decidedBy": "user",
+        "reason": "이 출처들은 변경을 직접 확정할 수 있고 투표와 신청 마감은 몇 시간 안에도 바뀔 수 있다."
+      },
+      {
+        "statement": "팬 일정이 비공식 정보임을 밝히고 최종 참여 판단은 연결된 공식 원본에서 하게 한다.",
+        "verify": "일정 안내와 각 참여 행동에서 공식 원본 목적지가 명확한지 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "선택한 방향이 기존 팬 사이트와 어울리고 월간 맥락과 긴급 행동을 쉽게 구분하게 한다.",
+        "verify": "사용자가 두 방향을 비교하고 선택안의 정보 위계와 반응형 전환을 판단한다.",
+        "by": "human"
+      }
+    ],
+    "exclusions": [
+      "푸시, 이메일, 문자 알림",
+      "개인 캘린더 동기화",
+      "팬 사이트 안에서 직접 투표하거나 신청하는 기능",
+      "모든 공식 공지를 수집한다는 보장"
+    ],
+    "designDirections": {
+      "options": [
+        {
+          "id": "month-map",
+          "title": "월간 신뢰 지도",
+          "imagePath": "rescene-fan-calendar.ko.month-map.png",
+          "alt": "선택 날짜 출처 패널과 마감 상태를 보여 주는 월간 팬 일정",
+          "summary": "월간 흐름을 중심에 두고 선택한 날짜의 출처 신뢰도와 행동을 보여 준다.",
+          "strengths": [
+            "팬이 활동 밀도와 겹치는 일정을 빠르게 살필 수 있다.",
+            "선택 날짜 패널이 일정 옆에 근거를 둔다."
+          ],
+          "tradeoffs": [
+            "날짜를 선택하기 전에는 긴급 행동이 덜 두드러진다."
+          ],
+          "references": [
+            {
+              "evidenceId": "rescene-go",
+              "influence": "데스크톱 월간 흐름과 모바일 목록을 반응형 구조에 반영했다."
+            }
+          ]
+        },
+        {
+          "id": "action-radar",
+          "title": "행동 마감 레이더",
+          "imagePath": "rescene-fan-calendar.ko.action-radar.png",
+          "alt": "작은 달력 옆에서 투표와 신청 마감을 우선하는 팬 행동 플래너",
+          "summary": "긴급한 투표와 신청 행동을 먼저 보여 주면서 작은 월간 참고 화면을 유지한다.",
+          "strengths": [
+            "가까운 마감과 공식 링크를 놓치기 어렵다.",
+            "충돌과 취소 경고가 각 행동 옆에 놓인다."
+          ],
+          "tradeoffs": [
+            "한 달 전체의 활동 흐름을 파악하는 데 더 오래 걸린다."
+          ],
+          "references": [
+            {
+              "label": "RESCENE STREAM",
+              "url": "https://rescene.stream/",
+              "influence": "일정과 팬 행동을 나누는 방식에서 행동 우선 그룹을 참고했다."
+            }
+          ]
+        }
+      ],
+      "recommendation": {
+        "optionId": "month-map",
+        "reason": "원래의 월간 일정 목표를 충족하면서 출처 충돌과 행동 링크를 선택 날짜 옆에 유지한다."
+      },
+      "selection": {
+        "optionId": "month-map",
+        "reason": "사용자가 되돌릴 수 있는 선택을 위임하고 월간 맥락을 보존하는 방향을 확정했다.",
+        "decidedBy": "delegated"
+      }
+    },
+    "flow": {
+      "steps": [
+        {
+          "title": "보기 선택",
+          "detail": "오늘, 주, 월 보기를 고르고 일정 종류를 필터링한다."
+        },
+        {
+          "title": "시각과 긴급도 비교",
+          "detail": "월간 흐름과 함께 마감, 변경, 취소를 살핀다."
+        },
+        {
+          "title": "출처 확인",
+          "detail": "일정을 열어 우선 출처, 다른 값, 마지막 확인 시각을 비교한다."
+        },
+        {
+          "title": "원본에서 행동",
+          "detail": "확인된 공식 링크로 이동하거나 충돌이 남으면 출처 정정까지 기다린다."
+        }
+      ],
+      "outcomes": [
+        {
+          "title": "공식 원본으로 이동",
+          "detail": "팬이 최근 확인된 공식 원본에서 계속한다.",
+          "kind": "complete"
+        },
+        {
+          "title": "출처 정정 대기",
+          "detail": "출처 충돌을 계속 보여 주고 팬은 정정까지 기다린다.",
+          "kind": "cancel"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "id": "rescene-go",
+        "label": "RESCENE go",
+        "location": "https://www.rescene.org/schedule"
+      },
+      {
+        "id": "mnet-plus",
+        "label": "RESCENE 공식 Mnet Plus",
+        "location": "https://artist.mnetplus.world/main/stg/rescene-official/home"
+      },
+      {
+        "id": "blip-event",
+        "label": "팬사인회 일정 예시",
+        "location": "https://s.blip.kr/s/9d3b7f37"
+      }
+    ]
+  }
+}

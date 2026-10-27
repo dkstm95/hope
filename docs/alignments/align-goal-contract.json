@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "alignId": "02219e9f-8958-4afb-a798-3e9f7f167a02",
+  "repository": "dkstm95/hope",
+  "locale": "ko-KR",
+  "theme": "system",
+  "createdAt": "2026-08-16T06:54:46.515Z",
+  "updatedAt": "2026-08-16T08:09:58.706Z",
+  "history": [
+    {
+      "at": "2026-08-16T06:54:46.515Z",
+      "summary": "Align의 목표 계약을 goal과 검증 가능한 checks로 단순화하고 실행 책임은 호스트에 남기는 첫 합의를 기록했다."
+    },
+    {
+      "at": "2026-08-16T07:24:49.581Z",
+      "summary": "Toxic Review를 반영해 v2 목표 계약으로 전환하고 호스트 실행 보장 표현을 좁혔다."
+    },
+    {
+      "at": "2026-08-16T08:09:58.706Z",
+      "summary": "합의 문서의 표시 이름을 완료 기준과 결정 사항 중심으로 명확히 함"
+    }
+  ],
+  "content": {
+    "title": "호스트가 소비할 수 있는 Align 목표 계약",
+    "goal": "Align이 하나의 명확한 목표와 검증 방법이 붙은 완료 기준을 합의 문서로 제공해, 구현 호스트가 자체 목표 기능이나 작업 흐름에서 소비할 수 있게 한다.",
+    "problem": "기존 Align은 intent와 success 문자열 목록을 제공해 완료 조건은 드러내지만, 각 완료 기준을 누가 어떻게 확인할지는 구조적으로 표현하지 않아 구현 에이전트가 검증 가능한 종료 조건으로 바로 사용하기 어렵다.",
+    "intent": [
+      {
+        "statement": "새 Align 입력과 inspect 결과가 goal 하나와 checks 목록을 제공하며 각 check가 condition, verify, by를 가진다.",
+        "verify": "v2 입력으로 create와 inspect를 실행하고 반환된 goal과 checks의 세 필드를 비교한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "각 check의 판정 주체는 agent 또는 human이며 에이전트는 human check의 통과를 추정하지 않는다.",
+        "verify": "스키마와 런타임이 두 값만 허용하는지 테스트하고 Align Skill의 human check 경계를 검토한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "Align HTML은 목표와 완료 기준을 한 번씩 보여주고 진행 상태나 실행 결과를 저장하지 않는다.",
+        "verify": "브라우저 테스트에서 현재 합의의 목표, 완료 기준, 판정 주체를 확인하고 데이터에 진행·결과 필드가 없는지 검사한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "기존 intent와 success 기반 Align 산출물을 계속 inspect, revise, render할 수 있다.",
+        "verify": "v1 산출물을 inspect한 뒤 v2로 revise하고 현재 합의와 v1 이력을 단위·브라우저 테스트에서 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "Hope는 목표 실행, 재시도, 진행 상태, 완료 증거를 소유하지 않고 다른 Hope 기능과 자동 연결하지 않는다.",
+        "verify": "Align Skill과 변경 범위에서 호스트 goal 호출, 실행 상태, Sweep·Polish·Diff 자동 연동이 추가되지 않았는지 검토한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "새 계약이 구현 호스트에서 실제로 유용한지 사용자가 판단할 수 있다.",
+        "verify": "생성된 Align HTML에서 목표와 AI 및 사용자가 판단하는 완료 기준의 표현이 구현 계약으로 충분히 명확한지 사용자가 확인한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Hope Align은 사람이 승인할 목표, 완료 기준, 범위와 중요한 결정을 보존한다. Codex나 Claude Code의 목표 기능을 호출하거나 구현 진행과 검증 결과를 추적하지 않으며, 호스트가 계약을 실제로 실행하는 방식은 Hope가 보장하지 않는다.",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Align 입력 스키마와 런타임 검증의 goal 및 checks 계약",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "기존 intent 및 success 산출물의 읽기와 리비전 호환성",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Align HTML의 목표 및 완료 기준 표현",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Align Skill, 산출물 계약, 디자인 계약과 사용자 문서",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "새 계약과 호환성을 직접 검증하는 테스트",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "필요한 공개 패키지 버전 변경",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "공개 목표 이름을 goal로 통일한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "intent보다 구현 호스트의 목표 기능과 직접 대응하고 사용자가 결과의 중심을 더 쉽게 찾을 수 있다."
+      },
+      {
+        "statement": "success 문자열 목록을 checks로 교체한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "완료 조건뿐 아니라 확인 방법과 판정 주체를 한 항목에 묶어 구현 에이전트가 종료 조건으로 사용할 수 있게 한다."
+      },
+      {
+        "statement": "check는 condition, verify, by만 가진다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "통과 조건, 확인 절차, 판정 주체를 구분하면서 목표 계약을 작고 호스트 중립적으로 유지한다."
+      },
+      {
+        "statement": "Hope는 목표 실행을 호스트에 맡긴다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "Hope가 호스트별 실행기와 중복 상태를 만들지 않고 합의된 구현 계약에 집중하기 위해서다."
+      },
+      {
+        "statement": "다른 Hope 기능과 자동 결합하지 않는다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "각 기능의 현재 책임을 유지하고 중요한 미결정이 있을 때만 별도 Align 작업을 선택하게 한다."
+      },
+      {
+        "statement": "표시 이름은 완료 기준, 결정 사항, 확정 사항, 구현 시 결정 사항을 사용한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "내부 스키마 계약은 유지하면서 각 정보의 역할을 포멀하고 직접적인 말로 구분하기 위해서다."
+      }
+    ],
+    "exclusions": [
+      "Hope 내부 구현 에이전트나 범용 루프 실행기",
+      "Codex 또는 Claude Code의 goal 명령 자동 호출",
+      "실행 로그, 테스트 결과, 재시도 횟수와 진행 상태의 Align 저장",
+      "Sweep, Polish, Diff와 Align의 자동 연동",
+      "각 호스트 목표 기능의 동작 보장이나 변경"
+    ],
+    "evidence": [
+      {
+        "label": "Hope 제품 원칙",
+        "location": "PRINCIPLES.md"
+      },
+      {
+        "label": "Align 기능 계약",
+        "location": "plugins/hope/skills/align/SKILL.md"
+      },
+      {
+        "label": "Align 산출물 실행 계약",
+        "location": "plugins/hope/skills/align/references/artifact.md"
+      },
+      {
+        "label": "Hope 산출물 디자인 계약",
+        "location": "docs/design.md"
+      },
+      {
+        "label": "Codex Follow a goal 공식 문서",
+        "location": "https://learn.chatgpt.com/use-cases/follow-goals"
+      },
+      {
+        "label": "Claude Code goal 공식 문서",
+        "location": "https://code.claude.com/docs/ko/goal"
+      }
+    ]
+  }
+}

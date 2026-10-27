@@ -13,57 +13,61 @@ test("Align CLI accepts only complete private adapter commands", () => {
       "--input",
       "/tmp/input.json",
       "--output",
-      "docs/alignments/work.html",
+      "docs/alignments/work.json",
       "--root",
       "/repo",
     ]),
     {
       command: "create",
       inputPath: "/tmp/input.json",
-      outputPath: "docs/alignments/work.html",
+      outputPath: "docs/alignments/work.json",
       root: "/repo",
     },
   );
   assert.deepEqual(
-    parseAlignArguments([
-      "revise",
-      "--artifact",
-      "/repo/work.html",
-      "--expect",
-      "1".repeat(64),
-      "--input",
-      "/tmp/input.json",
-    ]),
+    parseAlignArguments(["revise", "--record", "/repo/work.json", "--input", "/tmp/input.json"]),
     {
-      artifactPath: "/repo/work.html",
       command: "revise",
-      expectedDigest: "1".repeat(64),
       inputPath: "/tmp/input.json",
+      recordPath: "/repo/work.json",
       root: undefined,
     },
   );
   assert.deepEqual(
-    parseAlignArguments(["inspect", "--artifact", "/repo/work.html"]),
-    { artifactPath: "/repo/work.html", command: "inspect" },
+    parseAlignArguments(["inspect", "--record", "/repo/work.json"]),
+    { command: "inspect", recordPath: "/repo/work.json" },
+  );
+  assert.deepEqual(
+    parseAlignArguments(["render", "--record", "/repo/work.json"]),
+    { command: "render", recordPath: "/repo/work.json" },
+  );
+  assert.deepEqual(
+    parseAlignArguments(["migrate", "--artifact", "/repo/work.html"]),
+    { artifactPath: "/repo/work.html", command: "migrate" },
   );
   assert.throws(() => parseAlignArguments(["create", "--input", "x"]), /Internal Skill/u);
   assert.throws(
-    () => parseAlignArguments(["inspect", "--artifact", "x", "--root", "y"]),
-    /Internal Skill/u,
+    () => parseAlignArguments(["inspect", "--record", "x", "--root", "y"]),
+    /Unknown Hope Align option: --root/u,
   );
-  assert.throws(() => parseAlignArguments(["migrate-input", "--input", "x"]), /Internal Skill/u);
+  assert.throws(
+    () => parseAlignArguments(["revise", "--record", "x", "--input", "y", "--expect", "z"]),
+    /Unknown Hope Align option: --expect/u,
+  );
+  assert.throws(() => parseAlignArguments(["inspect", "--artifact", "x"]), /Unknown/u);
+  assert.throws(() => parseAlignArguments(["toString"]), /Internal Skill/u);
 });
 
 test("Align CLI writes structured results", async () => {
   let output = "";
-  const expected = { artifactPath: "/repo/work.html", revision: 1 };
+  const expected = { recordPath: "/repo/work.json", revision: 1 };
   const result = await main(
-    ["inspect", "--artifact", "/repo/work.html"],
+    ["render", "--record", "/repo/work.json"],
     {
-      inspectAlignArtifact: async () => expected,
+      renderAlignRecord: async (path) => ({ ...expected, recordPath: path }),
       stdout: { write: (value) => { output += value; } },
     },
   );
-  assert.equal(result, expected);
+  assert.deepEqual(result, expected);
   assert.deepEqual(JSON.parse(output), expected);
 });

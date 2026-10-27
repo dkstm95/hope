@@ -28,6 +28,8 @@ hosts before claiming native invocation works on both.
 | Invoke Align for an already agreed implementation with no unresolved consequential choice | Continue authorized implementation without a new approval round or unnecessary artifact. |
 | Invoke Align for a visual decision without invoking Design | Use available evidence and ordinary tools; do not invoke Design or stop solely to request it. |
 | Invoke Align and Design for the same visual decision | Use their public handoff and preserve settled choices without a second product interview. |
+| Invoke Align and ask to keep the agreement for another session | Create a JSON record and its HTML page in the project's decision location, report the record path and revision, and have the receiving session inspect the record. |
+| Supply a Hope 8 Align HTML page and ask to update the agreement | Migrate the page to a record beside it, report where legacy fields went, and revise the record after confirming the changed understanding. |
 | Invoke Design for a dashboard without invoking Diagram | Complete the authorized design without automatically invoking Diagram. |
 | Invoke Write on a paragraph, then say “Make it shorter” | Continue the same writing task without requiring another invocation. |
 | After that task ends, ask for unrelated code cleanup | Use the ordinary workflow; previous invocation does not activate Sweep or extend Write to unrelated work. |
@@ -411,3 +413,24 @@ spec covers a local artifact's rail or its layout without a pull request link.
 Native model invocation of the new flow remains unverified.
 
 Release decision: major, 9.0.0.
+
+## 9.0.0 Align record verification — 2026-10-27
+
+Candidate: branch `claude/align-json-record-7b9d7c` based on `5bbf685`. An
+Align agreement now lives in a repository JSON record with a rendered HTML page
+beside it. The commands are `create`, `inspect`, `revise`, `render`, and
+`migrate`; the embedded data, digest seal, hard-link publication, and
+repository identity checks were removed.
+
+`npm run check` passed all 226 deterministic tests. They cover create and
+revise with history entries, refusal to replace a record or page, paths
+outside the repository and through symbolic links, image path and PNG limits,
+rendering after a manual edit, and migration from v1, v2, and v3 fixtures and
+the real data of `docs/alignments/ui-design-directions.html`. `npm run
+test:browser` passed all 37 browser tests.
+
+`migrate` converted all 11 examples in `docs/alignments/`: five v3, five v2,
+and one v1 latest revision. The rescene pair kept its language link, and the
+default-run records share the same PNG files. Rendering every record twice
+produced identical bytes. Native model use of the record workflow remains
+unverified.

@@ -49,10 +49,9 @@ function evidenceMarkers(value, catalog, dictionary) {
 }
 
 function verificationCatalog(content, dictionary) {
-  const entries = content.intent.flatMap((item, intentIndex) => {
-    if (item.verify === undefined) return [];
+  const entries = content.intent.map((item, intentIndex) => {
     const human = item.by === "human";
-    return [Object.freeze({
+    return Object.freeze({
       intent: item,
       intentIndex,
       label: label(dictionary, human ? "checkedByHuman" : "checkedByAgent"),
@@ -61,7 +60,7 @@ function verificationCatalog(content, dictionary) {
         human ? "verificationMarkerHuman" : "verificationMarkerAgent",
       ),
       target: `verification-${intentIndex + 1}`,
-    })];
+    });
   });
   return Object.freeze({
     byIntentIndex: new Map(entries.map((entry) => [entry.intentIndex, entry])),
@@ -96,49 +95,12 @@ function summaryLabelElement(tag, value) {
   )}</span> <span>${escapeHtml(balanced[2])}</span></span></${tag}>`;
 }
 
-function textList(items, {
-  empty,
-  className = "plain-list",
-  catalog,
-  dictionary,
-} = {}) {
-  if (items.length === 0) return `<p class="empty">${escapeHtml(empty)}</p>`;
+function textList(items, { className = "plain-list", catalog, dictionary } = {}) {
   return `<ul class="${className}">${items.map(
     (item) => `<li>${catalog
       ? citedInline(item, catalog, dictionary)
       : authoredText(citedValue(item))}</li>`,
   ).join("")}</ul>`;
-}
-
-function presentationContent(content) {
-  if (Array.isArray(content.intent)) {
-    return Object.freeze({
-      ...content,
-      flow: content.flow,
-      legacy: undefined,
-    });
-  }
-  const checks = content.checks ?? content.success.map((condition) => ({ condition }));
-  const conditions = checks.map((check) => ({
-    statement: check.condition,
-    ...(check.verify === undefined ? {} : { verify: check.verify, by: check.by }),
-  }));
-  const decisions = (content.decisions ?? []).map((decision) => ({
-    statement: decision.decision,
-    reason: decision.reason,
-  }));
-  return Object.freeze({
-    ...content,
-    goal: content.goal ?? content.intent,
-    intent: Object.freeze([...conditions, ...decisions]),
-    exclusions: content.scope?.excluded ?? [],
-    flow: content.behavior,
-    legacy: Object.freeze({
-      boundary: content.boundary,
-      included: content.scope?.included ?? [],
-      openChoices: content.openChoices ?? [],
-    }),
-  });
 }
 
 function sectionTitle(id, title, number, suffix = "") {
@@ -152,34 +114,20 @@ function documentTitle(content, dictionary) {
   </header>`;
 }
 
-function intentList(source, dictionary, catalog, verification) {
-  const entries = Array.isArray(source)
-    ? source
-    : source.intent.map((item, intentIndex) => ({ intentIndex, item }));
+function intentList(entries, dictionary, catalog, verification) {
   return `<ul class="decision-list intent-list">${entries.map(({ item, intentIndex }) => {
-    const marker = verificationMarker(
-      verification?.byIntentIndex.get(intentIndex),
-      dictionary,
-    );
-    const compactMarker = item.by === "human"
-      ? label(dictionary, "verificationMarkerHuman")
-      : label(dictionary, "verificationMarkerAgent");
-    const compactVerification = verification === undefined && item.verify !== undefined
-      ? `<span class="compact-check-verification"><strong>[${escapeHtml(compactMarker)}]</strong> ${authoredText(item.verify)}</span>`
-      : "";
-    const statement = catalog
-      ? citedInline(item.statement, catalog, dictionary)
-      : authoredText(citedValue(item.statement));
+    const marker = verificationMarker(verification.byIntentIndex.get(intentIndex), dictionary);
+    const statement = citedInline(item.statement, catalog, dictionary);
     const decisionSource = item.decidedBy === undefined
       ? ""
       : `<span class="decision-source">${escapeHtml(label(
         dictionary,
         item.decidedBy === "user" ? "decidedByUser" : "decidedByDelegated",
       ))}</span>`;
-    const reason = item.reason === undefined ? "" : `<div class="decision-reason">${catalog
-        ? citedParagraphs(item.reason, catalog, dictionary)
-        : authoredParagraphs(citedValue(item.reason))}</div>`;
-    return `<li><div class="decision-copy"><span class="intent-statement">${statement}${marker}${compactVerification}${decisionSource}</span>${reason}</div></li>`;
+    const reason = item.reason === undefined
+      ? ""
+      : `<div class="decision-reason">${citedParagraphs(item.reason, catalog, dictionary)}</div>`;
+    return `<li><div class="decision-copy"><span class="intent-statement">${statement}${marker}${decisionSource}</span>${reason}</div></li>`;
   }).join("")}</ul>`;
 }
 
@@ -222,7 +170,7 @@ function directionReferences(references, dictionary, catalog) {
   </details>`;
 }
 
-function designDirectionsComparison(directions, dictionary, idPrefix = "", catalog) {
+function designDirectionsComparison(directions, images, dictionary, catalog) {
   const status = (option) => [
     option.id === directions.recommendation.optionId
       ? `<span class="direction-status recommended">${escapeHtml(label(dictionary, "recommended"))}</span>`
@@ -245,11 +193,12 @@ function designDirectionsComparison(directions, dictionary, idPrefix = "", catal
     return rows.length === 0 ? "" : `<dl class="direction-rationales">${rows.join("")}</dl>`;
   };
   const optionList = directions.options.map((option, index) => {
-    const optionId = `${idPrefix}design-direction-${option.id}`;
+    const optionId = `design-direction-${option.id}`;
+    const image = images[index];
     const rationaleHtml = rationale(option);
     return `<li class="design-direction" id="${escapeHtml(optionId)}">
     <header class="direction-head"><span class="direction-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><div class="direction-title-line"><h3 id="${escapeHtml(optionId)}-title">${authoredText(option.title)}</h3><div class="direction-statuses">${status(option)}</div></div></header>
-    <div class="direction-image"><img src="data:${option.image.mimeType};base64,${option.image.data}" alt="${escapeHtml(option.alt)}" width="${option.image.width}" height="${option.image.height}"></div>
+    <div class="direction-image"><img src="data:${image.mimeType};base64,${image.data}" alt="${escapeHtml(option.alt)}" width="${image.width}" height="${image.height}"></div>
     <div class="direction-summary">${authoredParagraphs(option.summary)}</div>
     <div class="direction-details">
       <div><h4>${escapeHtml(label(dictionary, "strengths"))}</h4>${textList(option.strengths)}</div>
@@ -261,11 +210,10 @@ ${rationaleHtml === "" ? "" : `    ${rationaleHtml}\n`}    ${directionReferences
   return `<ol class="design-direction-list design-direction-count-${directions.options.length}">${optionList}</ol>`;
 }
 
-function designDirectionsSection(content, dictionary, number, catalog) {
-  if (!content.designDirections) return undefined;
+function designDirectionsSection(content, images, dictionary, number, catalog) {
   return `<section class="body-section document-section" id="design-directions" aria-labelledby="design-directions-title">
     ${sectionTitle("design-directions-title", label(dictionary, "designDirections"), number)}
-    ${designDirectionsComparison(content.designDirections, dictionary, "", catalog)}
+    ${designDirectionsComparison(content.designDirections, images, dictionary, catalog)}
   </section>`;
 }
 
@@ -301,23 +249,6 @@ function verificationDetails(catalog, dictionary) {
       <div class="reference-entry-copy verification-entry-copy"><strong class="reference-entry-title verification-entry-title">${authoredText(citedValue(entry.intent.statement))}</strong><span class="verification-source">${escapeHtml(entry.label)}</span>${authoredParagraphs(entry.intent.verify)}</div>
     </li>`).join("")}</ol></div>
   </details>`;
-}
-
-function legacyIntentDetails(content, dictionary, catalog) {
-  if (content.legacy === undefined) return "";
-  const boundary = content.legacy.boundary === undefined ? "" : `<div class="legacy-intent-group">
-    <h3 class="subheading">${escapeHtml(label(dictionary, "boundary"))}</h3>
-    ${citedParagraphs(content.legacy.boundary, catalog, dictionary)}
-  </div>`;
-  const includedHtml = content.legacy.included.length === 0 ? "" : `<div class="legacy-intent-group">
-    <h3 class="subheading">${escapeHtml(label(dictionary, "included"))}</h3>
-    ${textList(content.legacy.included, { catalog, dictionary })}
-  </div>`;
-  const questions = content.legacy.openChoices.length === 0 ? "" : `<div class="legacy-intent-group">
-    <h3 class="subheading">${escapeHtml(label(dictionary, "openChoices"))}</h3>
-    ${textList(content.legacy.openChoices, { catalog, dictionary })}
-  </div>`;
-  return `${boundary}${includedHtml}${questions}`;
 }
 
 function decisionsSection(content, dictionary, number, catalog, verification) {
@@ -356,7 +287,6 @@ function boundaryEvidenceSection(content, dictionary, number, catalog) {
   </div>`;
   const groups = [
     exclusions,
-    legacyIntentDetails(content, dictionary, catalog),
     evidenceDetails(catalog, dictionary),
   ].filter(Boolean).join("\n");
   return `<section class="body-section document-section" id="boundary-evidence" aria-labelledby="boundary-evidence-title">
@@ -365,122 +295,69 @@ function boundaryEvidenceSection(content, dictionary, number, catalog) {
   </section>`;
 }
 
-function compactRevisionContent(content, dictionary, idPrefix) {
-  const catalog = evidenceCatalog(content);
-  const flow = content.flow;
-  const flowHtml = flow ? `<div>
-    <dt>${escapeHtml(label(dictionary, "behavior"))}</dt>
-    <dd><ul class="plain-list">${flow.steps.map(
-      (step) => `<li>${authoredText(citedValue(step.title))}${step.detail ? ` <span aria-hidden="true">—</span> ${authoredText(citedValue(step.detail))}` : ""}</li>`,
-    ).join("")}${flow.outcomes.map((outcome) => `<li>${authoredText(`${citedValue(outcome.title)} (${label(
-        dictionary,
-        outcome.kind === "cancel" ? "cancelOutcome" : "completeOutcome",
-      )})`)}${outcome.detail ? ` <span aria-hidden="true">—</span> ${authoredText(citedValue(outcome.detail))}` : ""}</li>`).join("")}</ul></dd>
-  </div>` : "";
-  const designDirectionsHtml = content.designDirections ? `<div>
-    <dt>${escapeHtml(label(dictionary, "designDirections"))}</dt>
-    <dd>${designDirectionsComparison(content.designDirections, dictionary, idPrefix, catalog)}</dd>
-  </div>` : "";
-  const exclusions = content.exclusions;
-  const excluded = exclusions.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "excluded"))}</dt><dd>${textList(exclusions)}</dd></div>`;
-  const legacyBoundary = content.legacy?.boundary === undefined ? "" : `<div><dt>${escapeHtml(label(dictionary, "boundary"))}</dt><dd>${authoredText(citedValue(content.legacy.boundary))}</dd></div>`;
-  const legacyIncluded = !content.legacy || content.legacy.included.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "included"))}</dt><dd>${textList(content.legacy.included)}</dd></div>`;
-  const openChoices = !content.legacy || content.legacy.openChoices.length === 0 ? "" : `<div><dt>${escapeHtml(label(dictionary, "openChoices"))}</dt><dd>${textList(content.legacy.openChoices)}</dd></div>`;
-  const evidence = content.evidence.length === 0 ? "" : `<div>
-    <dt>${escapeHtml(label(dictionary, "evidence"))}</dt>
-    <dd><ul class="plain-list">${content.evidence.map((item) => `<li><strong>${authoredText(item.label)}</strong><br>${evidenceLocation(item)}</li>`).join("")}</ul></dd>
-  </div>`;
-  return `<dl class="revision-content">
-    <div><dt>${escapeHtml(label(dictionary, "goal"))}</dt><dd><strong>${authoredText(content.title)}</strong><p>${authoredText(citedValue(content.goal))}</p></dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "problem"))}</dt><dd>${authoredText(citedValue(content.problem))}</dd></div>
-    <div><dt>${escapeHtml(label(dictionary, "decidedIntent"))}</dt><dd>${intentList(content, dictionary)}</dd></div>
-    ${excluded}${designDirectionsHtml}${flowHtml}${legacyBoundary}${legacyIncluded}${openChoices}${evidence}
-  </dl>`;
-}
-
-function railRevision(revision, index, data, dictionary, idSuffix) {
-  const current = index === 0;
-  const details = current || data.revisions.length === 1 ? "" : `<details class="revision-disclosure" id="revision-${revision.number}${idSuffix}" name="align-revision" data-dismiss>
-    <summary>${escapeHtml(label(dictionary, "revisionDetails"))}</summary>
-    <div class="revision-popup">${compactRevisionContent(revision.content, dictionary, `revision-${revision.number}${idSuffix}-`)}</div>
-  </details>`;
+function railEntry(entry, number, current, dictionary) {
   return `<li class="${current ? "current" : "past"}">
-    <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>v${revision.number}${current ? ` · ${escapeHtml(label(dictionary, "currentAgreement"))}` : ""}</strong><time datetime="${escapeHtml(revision.agreedAt)}">${escapeHtml(revision.agreedAt.slice(0, 10))}</time></div>
-    <p>${authoredText(revision.summary)}</p>${details ? `
-    ${details}` : ""}
+    <div class="revision-head"><span class="revision-dot" aria-hidden="true"></span><strong>v${number}${current ? ` · ${escapeHtml(label(dictionary, "currentAgreement"))}` : ""}</strong><time datetime="${escapeHtml(entry.at)}">${escapeHtml(entry.at.slice(0, 10))}</time></div>
+    <p>${authoredText(entry.summary)}</p>
   </li>`;
 }
 
-function railHistory(data, dictionary, idSuffix = "") {
-  const reversed = [...data.revisions].reverse();
-  const shown = reversed.slice(0, 2);
-  const older = reversed.slice(shown.length);
+/** The record's history entries, newest first; entries past the second fold away. */
+function railHistory(history, dictionary, idSuffix = "") {
+  const entries = history.map((entry, index) => ({ entry, number: index + 1 })).reverse();
+  const item = ({ entry, number }) => railEntry(entry, number, number === history.length, dictionary);
+  const older = entries.slice(2);
   const headingId = `rail-history-title${idSuffix}`;
   const olderHistory = older.length === 0 ? "" : `
-    <details class="older-history"><summary>${older.length} ${escapeHtml(label(dictionary, "earlierRevisions"))}</summary><ol>${older.map((revision, index) => railRevision(
-      revision,
-      index + shown.length,
-      data,
-      dictionary,
-      idSuffix,
-    )).join("")}</ol></details>`;
+    <details class="older-history"><summary>${older.length} ${escapeHtml(label(dictionary, "earlierRevisions"))}</summary><ol>${older.map(item).join("")}</ol></details>`;
   return `<section class="rail-history" aria-labelledby="${headingId}">
     <h2 id="${headingId}">${escapeHtml(label(dictionary, "history"))}</h2>
-    <ol>${shown.map((revision, index) => railRevision(
-      revision,
-      index,
-      data,
-      dictionary,
-      idSuffix,
-    )).join("")}</ol>${olderHistory}
+    <ol>${entries.slice(0, 2).map(item).join("")}</ol>${olderHistory}
   </section>`;
 }
 
-export function renderAlignArtifact(data, { alternateLocale, digest }) {
-  const dictionary = loadDictionaries(localeDirectory, data.locale, ["align"]);
-  const presentationData = Object.freeze({
-    ...data,
-    revisions: Object.freeze(data.revisions.map((revision) => Object.freeze({
-      ...revision,
-      content: presentationContent(revision.content),
-    }))),
-  });
-  const current = presentationData.revisions.at(-1);
-  const content = current.content;
+/**
+ * Render a validated Align record. `images` holds the decoded design-direction
+ * PNGs in option order; `recordHref` names the JSON record beside the HTML.
+ */
+export function renderAlignArtifact(record, { images = [], recordHref }) {
+  const dictionary = loadDictionaries(localeDirectory, record.locale, ["align"]);
+  const content = record.content;
+  if ((content.designDirections?.options.length ?? 0) !== images.length) {
+    throw new Error("Align design directions need one image per option");
+  }
+  const current = record.history.at(-1);
+  const revision = record.history.length;
   const catalog = evidenceCatalog(content);
   const verifications = verificationCatalog(content, dictionary);
   const hasDecisions = content.intent.some((item) => item.decidedBy !== undefined);
-  const hasBoundaryEvidence = content.exclusions.length > 0
-    || content.legacy !== undefined
-    || content.evidence.length > 0;
+  const hasBoundaryEvidence = content.exclusions.length > 0 || content.evidence.length > 0;
   const sections = [
     { id: "intent", title: label(dictionary, "intent"), include: true, render: (number) => intentSection(content, dictionary, number, catalog, verifications) },
     { id: "decisions", title: label(dictionary, "decisions"), include: hasDecisions, render: (number) => decisionsSection(content, dictionary, number, catalog, verifications) },
-    { id: "design-directions", title: label(dictionary, "designDirections"), include: content.designDirections !== undefined, render: (number) => designDirectionsSection(content, dictionary, number, catalog) },
+    { id: "design-directions", title: label(dictionary, "designDirections"), include: content.designDirections !== undefined, render: (number) => designDirectionsSection(content, images, dictionary, number, catalog) },
     { id: "boundary-evidence", title: label(dictionary, "boundaryEvidence"), include: hasBoundaryEvidence, render: (number) => boundaryEvidenceSection(content, dictionary, number, catalog) },
   ].filter((section) => section.include).map((section, index) => ({
     ...section,
     number: index + 1,
     html: section.render(index + 1),
   }));
-  const record = `SPEC-${String(current.number).padStart(3, "0")}`;
-  const repository = authoredText(data.repository);
+  const repository = authoredText(record.repository);
   return renderDocument({
-    alternateLocale,
-    dataScripts: [{ id: "hope-align-data", value: data }],
+    alternateLocale: record.alternateLocale,
     headMeta: [
-      ["hope-align-id", data.alignId],
-      ["hope-align-digest", digest],
+      ["hope-align-id", record.alignId],
+      ["hope-align-record", recordHref],
       ["hope-align-design-version", String(ALIGN_DESIGN_VERSION)],
     ],
-    identity: { name: "Align", product: "ALIGN", record },
-    locale: data.locale,
+    identity: { name: "Align", product: "ALIGN", record: `SPEC-${String(revision).padStart(3, "0")}` },
+    locale: record.locale,
     main: {
       content: `${documentTitle(content, dictionary)}${sections.map((section) => section.html).join("")}`,
       id: "agreement-document",
     },
     navigation: {
-      extra: railHistory(presentationData, dictionary, "-mobile"),
+      extra: railHistory(record.history, dictionary, "-mobile"),
       label: label(dictionary, "navigation"),
       lead: repositoryMark(repository, "mobile-repository"),
     },
@@ -489,15 +366,15 @@ export function renderAlignArtifact(data, { alternateLocale, digest }) {
       : { href: "#evidence", label: label(dictionary, "evidenceViewList") },
     printIdentity: [
       repository,
-      `v${current.number} · ${escapeHtml(label(dictionary, "currentAgreement"))} · <time datetime="${escapeHtml(current.agreedAt)}">${escapeHtml(current.agreedAt.slice(0, 10))}</time>`,
+      `v${revision} · ${escapeHtml(label(dictionary, "currentAgreement"))} · <time datetime="${escapeHtml(current.at)}">${escapeHtml(current.at.slice(0, 10))}</time>`,
     ],
     rail: {
-      extra: railHistory(presentationData, dictionary),
+      extra: railHistory(record.history, dictionary),
       footer: repositoryMark(repository, "repository"),
     },
     skip: { label: label(dictionary, "skip"), target: "intent" },
     styles: [readStylesheet(stylesheetUrl)],
-    theme: data.theme,
+    theme: record.theme,
     title: content.title,
     toc: sections.length >= 2
       ? { items: sections, label: label(dictionary, "menu") }

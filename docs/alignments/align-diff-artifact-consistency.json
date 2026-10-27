@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "alignId": "379adbf8-93a8-4504-8bfa-71077d443f55",
+  "repository": "dkstm95/hope",
+  "locale": "ko-KR",
+  "theme": "system",
+  "createdAt": "2026-08-16T08:42:21.998Z",
+  "updatedAt": "2026-08-16T08:55:16.300Z",
+  "history": [
+    {
+      "at": "2026-08-16T08:42:21.998Z",
+      "summary": "Align을 기준으로 Diff의 시각 언어와 첫 화면 문장을 단순화하는 최초 합의"
+    },
+    {
+      "at": "2026-08-16T08:55:16.300Z",
+      "summary": "AS-IS와 TO-BE를 명확한 상태 레이블로 유지하기로 함"
+    }
+  ],
+  "content": {
+    "title": "Align과 Diff 산출물의 일관된 읽기 경험",
+    "goal": "Diff 산출물이 Align과 같은 시각 언어와 직접적인 문장을 사용해, 처음 보는 사람도 변경 내용과 검토 결과를 빠르게 이해할 수 있게 한다.",
+    "problem": "현재 Diff는 Align과 색상은 비슷하지만 타이포그래피, 여백, 반응형 기준, 첫 화면의 정보 밀도와 문장 구조가 달라 더 복잡하고 읽기 어렵게 느껴진다.",
+    "intent": [
+      {
+        "statement": "Diff의 상단 바, 본문과 목차 폭, 타이포그래피, 간격, 구분선과 반응형 전환이 Align의 시각 기준과 일치한다.",
+        "verify": "1440px 데스크톱과 390px 모바일에서 두 산출물의 토큰, 계산된 크기, 주요 요소 좌표와 캡처를 비교해 차이를 보고한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "Diff 첫 화면이 제목, 목표, AS-IS, TO-BE, 영향, 검토 결과, 필요한 제한 순서로 읽히고 부가 메타정보가 본문보다 먼저 강조되지 않는다.",
+        "verify": "대표 산출물의 DOM 순서와 브라우저 캡처를 검사하고, 같은 정보가 첫 화면에 중복되지 않는지 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "Diff의 한국어와 영어 제목, 레이블, 생성 문장이 짧고 직접적이며 한 문장에 한 주장만 담는다.",
+        "verify": "로케일 문구와 분석 지침을 검토하고 대표 한국어·영어 산출물에서 제목과 첫 화면 문장을 읽어 의미와 자연스러움을 비교한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "근거 연결, 검토 항목 상태, 교육 보조 자료, 테마, 목차, 인쇄, JavaScript 없는 읽기와 접근성은 기존 Diff 동작을 유지한다.",
+        "verify": "Diff 단위 테스트와 전체 브라우저 테스트를 실행하고 대표 산출물의 근거 열기, 키보드 탐색, 모바일 목차와 인쇄 보기를 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "Align과 Diff는 같은 시각 결과를 내면서도 각자의 렌더러와 토큰을 독립적으로 소유한다.",
+        "verify": "Diff 코드가 Align 렌더러나 토큰을 import하지 않는지 의존성 테스트와 변경 검토로 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "바뀐 Diff 산출물이 Align만큼 직관적으로 이해되는지 사용자가 판단할 수 있다.",
+        "verify": "최종 한국어 Diff HTML을 사용자가 Align 산출물과 나란히 보고 정보 계층과 문장 이해도를 확인한다.",
+        "by": "human"
+      },
+      {
+        "statement": "변경은 PR #81을 기반으로 하는 별도 stacked PR에만 포함된다.",
+        "verify": "새 브랜치의 merge base와 생성된 PR의 base branch가 codex/align-verifiable-goals인지 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": "Align 산출물은 이번 작업의 시각·언어 기준이다. Diff의 근거 수집, 스냅샷 검증, 리뷰 판단과 안전 경계는 유지하며 두 기능 사이에 런타임 의존성이나 공유 렌더러를 만들지 않는다.",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Diff 디자인 토큰과 HTML/CSS 구조",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Diff 한국어·영어 인터페이스 문구",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Diff 분석 지침의 제목과 첫 화면 문장 기준",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "프로젝트 디자인 계약과 사용자 문서",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Diff 렌더링 단위 테스트와 브라우저 테스트",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "대표 README 이미지와 새 Align 구현 계약",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "PR #81 기반 stacked PR 생성",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Align 산출물을 시각 기준으로 사용한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "사용자가 이미 선호하는 화면이며 이번 작업의 명확한 디자인 권위로 제공했다."
+      },
+      {
+        "statement": "두 기능의 렌더러와 토큰 소유권은 분리한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "현재 두 기능은 서로 다른 안전 경계와 콘텐츠 구조를 가지므로 결과만 맞추고 런타임 결합은 만들지 않는다."
+      },
+      {
+        "statement": "Diff 첫 화면의 정보 계층을 Align처럼 단순화한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "변경 내용과 검토 결과를 메타정보나 근거 세부보다 먼저 이해할 수 있게 한다."
+      },
+      {
+        "statement": "근거는 주장 가까이에 유지하되 시각적으로 2차 정보로 둔다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "Diff의 근거 연결 책임을 보존하면서 첫 읽기의 복잡도를 줄인다."
+      },
+      {
+        "statement": "AS-IS와 TO-BE는 유지한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "두 상태의 대비를 짧고 명확하게 보여 주며 현재 문맥에서 이해를 방해하지 않는다."
+      },
+      {
+        "statement": "생성 제목과 설명 문장은 짧고 직접적으로 쓴다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "익숙한 상태 레이블은 유지하면서 긴 목적형 문장과 한 문장에 섞인 여러 주장을 줄인다."
+      },
+      {
+        "statement": "별도 브랜치와 stacked PR을 사용한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "Align 목표 계약을 추가한 PR #81과 Diff UI 변경을 독립적으로 검토하고 순서대로 병합할 수 있게 한다."
+      }
+    ],
+    "exclusions": [
+      "Align 산출물 UI 변경",
+      "Diff의 GitHub 수집, 스냅샷, 검증과 발행 안전 경계 변경",
+      "Align과 Diff의 공유 렌더러 또는 공유 디자인 토큰 모듈",
+      "PR #81의 기존 커밋 수정",
+      "GitHub PR 병합"
+    ],
+    "evidence": [
+      {
+        "label": "Hope 디자인 계약",
+        "location": "docs/design.md"
+      },
+      {
+        "label": "Align 디자인 토큰",
+        "location": "plugins/hope/skills/align/scripts/design/tokens.mjs"
+      },
+      {
+        "label": "Diff 디자인 토큰",
+        "location": "plugins/hope/skills/diff/scripts/design/tokens.mjs"
+      },
+      {
+        "label": "Align 렌더러",
+        "location": "plugins/hope/skills/align/scripts/render.mjs"
+      },
+      {
+        "label": "Diff 렌더러",
+        "location": "plugins/hope/skills/diff/scripts/render.mjs"
+      },
+      {
+        "label": "Diff 분석 지침",
+        "location": "plugins/hope/skills/diff/references/analysis.md"
+      }
+    ]
+  }
+}
