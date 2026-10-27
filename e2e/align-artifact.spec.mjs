@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { execFile } from "node:child_process";
 import {
+  copyFile,
+  mkdir,
   mkdtemp,
   rm,
   writeFile,
@@ -11,21 +13,21 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import {
-  reviseAlignArtifact,
+  createAlignRecord,
+  reviseAlignRecord,
 } from "../plugins/hope/skills/align/scripts/artifact.mjs";
 import { ARTIFACT_COLORS, ARTIFACT_TYPE } from "../plugins/hope/assets/artifact-theme.mjs";
 import {
   makeAlignInput,
-  makeLegacyAlignInputV2,
   makeDesignDirections,
-  writeLegacyAlignArtifact,
 } from "../test-support/align-fixture.mjs";
 import { narrowAudit } from "../test-support/narrow-audit.mjs";
 
 const execFileAsync = promisify(execFile);
 let artifactUrl;
 let temporaryRoot;
-const directionImages = [
+let directionImages;
+const sourceImages = [
   fileURLToPath(new URL("../assets/readme/hope-align-ko.png", import.meta.url)),
   fileURLToPath(new URL("../assets/readme/hope-align-decisions-ko.png", import.meta.url)),
 ];
@@ -61,22 +63,18 @@ test.beforeAll(async () => {
     "origin",
     "git@github.com:acme/storage.git",
   ]);
-  const artifactPath = join(temporaryRoot, "docs", "alignments", "upload-recovery.html");
-  const created = await writeLegacyAlignArtifact({
-    artifactPath,
-    content: {
-      designDirections: makeDesignDirections(directionImages),
-      behavior: {
-        ...makeLegacyAlignInputV2().behavior,
-        outcomes: [{
-          title: "이전 결과 전용",
-          detail: "이전 버전에서만 합의한 결과다.",
-          kind: "cancel",
-        }],
-      },
-      evidence: [{ label: "이전 근거 전용", location: "docs/previous.md" }],
-    },
-  });
+  const imageDirectory = join(temporaryRoot, "docs", "alignments", "upload-recovery");
+  await mkdir(imageDirectory, { recursive: true });
+  directionImages = sourceImages.map((_, index) => join(imageDirectory, `direction-${index + 1}.png`));
+  await Promise.all(sourceImages.map((path, index) => copyFile(path, directionImages[index])));
+  const recordPath = join(temporaryRoot, "docs", "alignments", "upload-recovery.json");
+  const firstInput = await writeInput("first.json", makeAlignInput({
+    designDirections: makeDesignDirections(directionImages),
+  }));
+  const created = await createAlignRecord(
+    { inputPath: firstInput, outputPath: recordPath, root: temporaryRoot },
+    { now: () => new Date("2026-08-14T00:00:00.000Z") },
+  );
   const currentInput = makeAlignInput();
   const secondInput = await writeInput("second.json", makeAlignInput({
     goal: {
@@ -113,16 +111,11 @@ test.beforeAll(async () => {
     ],
     revisionSummary: "복구 의도와 근거를 명확히 함",
   }));
-  await reviseAlignArtifact(
-    {
-      artifactPath,
-      expectedDigest: created.digest,
-      inputPath: secondInput,
-      root: temporaryRoot,
-    },
+  await reviseAlignRecord(
+    { inputPath: secondInput, recordPath, root: temporaryRoot },
     { now: () => new Date("2026-08-15T00:00:00.000Z") },
   );
-  artifactUrl = pathToFileURL(artifactPath).href;
+  artifactUrl = pathToFileURL(created.htmlPath).href;
 });
 
 test.afterAll(async () => {
@@ -184,6 +177,8 @@ test("Align presents one compact shared understanding with secondary history", a
   await expect(page.locator(".rail-navigation .rail-history .past .revision-head strong"))
     .toHaveText("v1");
   await expect(page.locator(".rail-navigation .rail-history .current")).toContainText("복구 의도와 근거를 명확히 함");
+  await expect(page.locator(".rail-navigation .rail-history .past")).toContainText("최초 합의");
+  await expect(page.locator(".rail-navigation .rail-history details")).toHaveCount(0);
   const historyMarkers = await page.locator(".rail-navigation").evaluate((navigation) => {
     const clip = navigation.getBoundingClientRect();
     return [...navigation.querySelectorAll(".revision-dot")].map((dot) => {
@@ -196,7 +191,6 @@ test("Align presents one compact shared understanding with secondary history", a
     expect(marker.left).toBeGreaterThanOrEqual(0);
     expect(marker.right).toBeGreaterThanOrEqual(0);
   }
-  await expect(page.locator("#revision-1")).not.toHaveAttribute("open", /.+/u);
   await expect(page.locator("#intent")).toContainText("중단 지점부터 이어서 완료할 수 있다");
   await expect(page.locator("#decisions")).toContainText("각 원본 업로드에는 하나의 복구 기록이 연결되고");
   await expect(page.locator("#boundary-evidence")).toContainText("범위 밖");
@@ -404,14 +398,6 @@ test("Align presents one compact shared understanding with secondary history", a
   await expect(page.locator("#verification .section-disclosure-content")).toBeVisible();
   await page.locator("#evidence > summary").click();
   await expect(page.locator("#evidence .section-disclosure-content")).toBeVisible();
-  await page.locator("#revision-1 > summary").click();
-  await expect(page.locator("#revision-1 .intent-list > li")).toHaveCount(5);
-  await expect(page.locator("#revision-1")).toContainText("이전 결과 전용 (취소)");
-  await expect(page.locator("#revision-1")).toContainText("이전 근거 전용");
-  await expect(page.locator("#revision-1")).toContainText("docs/previous.md");
-  await expect(page.locator("#revision-1 .design-direction")).toHaveCount(2);
-  await expect(page.locator("#revision-1 .direction-image img")).toHaveCount(2);
-  await expect(page.locator("#revision-1")).toContainText("복구 선택을 첫 화면의 주 행동으로 배치했다");
   await page.locator('.rail-navigation .toc-link[href="#decisions"]').click();
   await expect(page.locator(".rail-navigation .toc-progress")).toHaveText("2 / 4");
   await expect(page.locator('.rail-navigation .toc-link[href="#decisions"]')).toHaveAttribute(
@@ -419,38 +405,6 @@ test("Align presents one compact shared understanding with secondary history", a
     "location",
   );
   await expectNoOverflow(page);
-});
-
-test("Align history details escape the rail clip and close from the keyboard", async ({ page }) => {
-  for (const width of [1920, 1440, 1168]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto(artifactUrl);
-    const summary = page.locator("#revision-1 > summary");
-    await summary.click();
-    const geometry = await page.locator("#revision-1 .revision-popup").evaluate((panel) => {
-      const bounds = panel.getBoundingClientRect();
-      // Sample inside the rounded corner so the point lies on the panel itself.
-      const sample = document.elementFromPoint(bounds.left + 24, bounds.top + 24);
-      return {
-        left: bounds.left,
-        railRight: document.querySelector(".rail").getBoundingClientRect().right,
-        right: bounds.right,
-        top: bounds.top,
-        bottom: bounds.bottom,
-        visible: panel === sample || panel.contains(sample),
-        overflow: panel.scrollWidth - panel.clientWidth,
-      };
-    });
-    expect(geometry.left).toBeGreaterThan(geometry.railRight);
-    expect(geometry.right).toBeLessThanOrEqual(width);
-    expect(geometry.top).toBeGreaterThanOrEqual(0);
-    expect(geometry.bottom).toBeLessThanOrEqual(900);
-    expect(geometry.visible).toBe(true);
-    expect(geometry.overflow).toBeLessThanOrEqual(1);
-    await page.keyboard.press("Escape");
-    await expect(page.locator("#revision-1")).not.toHaveAttribute("open", "");
-    await expect(summary).toBeFocused();
-  }
 });
 
 test("Align theme action is keyboard reachable and updates its label", async ({ page }) => {
@@ -583,7 +537,7 @@ test("Align remains useful without JavaScript", async ({ browser }) => {
   await expect(page.locator("#flow")).toBeVisible();
   await expect(page.locator("#design-directions")).toBeVisible();
   await expect(page.locator("#design-directions .direction-image img")).toHaveCount(2);
-  await expect(page.locator("#revision-1 > summary")).toBeVisible();
+  await expect(page.locator(".rail-navigation .rail-history .past")).toContainText("최초 합의");
   const reference = page.locator("#design-directions .direction-references");
   await reference.locator(":scope > summary").click();
   await expect(reference.locator(".direction-reference-content")).toBeVisible();

@@ -1,0 +1,413 @@
+{
+  "schemaVersion": 1,
+  "alignId": "23bc0113-888a-4bfc-babb-57bd0ba82fbd",
+  "repository": "dkstm95/hope",
+  "locale": "ko-KR",
+  "theme": "system",
+  "createdAt": "2026-08-21T05:57:03.942Z",
+  "updatedAt": "2026-08-22T11:53:03.594Z",
+  "history": [
+    {
+      "at": "2026-08-21T05:57:03.942Z",
+      "summary": "본문 가독성과 번호형 근거 UI의 최종 합의를 기록함"
+    },
+    {
+      "at": "2026-08-22T06:32:32.066Z",
+      "summary": "기호 기준 팝업, [AI]·[유저] 확인 표식과 Diff 근거 예산 진단 및 산출물 생성 조건을 확정함"
+    },
+    {
+      "at": "2026-08-22T07:42:19.266Z",
+      "summary": "중복 basis 라벨 제거와 README 고정 샘플 기준의 최종 산출물 검증을 합의에 추가함"
+    },
+    {
+      "at": "2026-08-22T11:10:04.210Z",
+      "summary": "정확한 구조적 중복 검증과 의미상 반복 진단 원칙을 추가함"
+    },
+    {
+      "at": "2026-08-22T11:53:03.594Z",
+      "summary": "공유 출처 참조, 변화 없음 상태와 렌더링 사본 제거 원칙을 추가함"
+    }
+  ],
+  "content": {
+    "title": "근거와 확인 방법을 문맥 안에서 간결하게 확인한다",
+    "goal": {
+      "text": "Align과 Diff 산출물의 선명한 본문과 문맥형 근거 UI를 유지하면서, 정확한 구조적 중복을 차단하고 같은 근거나 겹치는 근거가 반복 의미를 만드는지 생성 단계에서 점검한다.",
+      "evidenceIds": [
+        "conversation",
+        "align-validator",
+        "diff-validator",
+        "align-guidance",
+        "diff-guidance"
+      ]
+    },
+    "problem": {
+      "text": "완전 중복 claim뿐 아니라 같은 출처 URL을 Align 설계 방향과 근거 카탈로그에 함께 저장하고, Diff의 변화 없는 전후 trace와 접근성 상태를 HTML에 다시 쓰며, 과거 버전 요약을 한 항목 안에서 두 번 출력하는 구조적 중복이 확인됐다. 의미상 중복 후보는 여전히 별도 판단이 필요하다.",
+      "evidenceIds": [
+        "conversation",
+        "align-validator",
+        "diff-validator"
+      ]
+    },
+    "intent": [
+      {
+        "statement": {
+          "text": "Align과 Diff의 일반 본문은 Hope Sans Medium 500을 사용하고 라이트·다크 모드에서 충분한 대비를 유지한다.",
+          "evidenceIds": [
+            "align-renderer",
+            "diff-renderer",
+            "browser-tests"
+          ]
+        },
+        "verify": "README 한국어 Align·Diff 샘플을 데스크톱과 모바일 뷰포트에서 열어 계산된 굵기, 색 대비와 가로 넘침을 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "Align과 Diff의 [n] 근거 기호를 누르면 해당 기호를 가리키는 팝업이 화면 안에 열리고, 공간이 부족하면 위쪽 또는 모바일 하단 시트로 전환한다.",
+          "evidenceIds": [
+            "align-renderer",
+            "diff-renderer",
+            "browser-tests"
+          ]
+        },
+        "verify": "README 한국어·영어 샘플을 데스크톱·모바일 Chromium에서 열어 기호와 팝업의 픽셀 위치, 화면 경계, 재배치, 닫기와 포커스 복귀를 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "Align 완료 조건은 별도 확인 줄 대신 조건 바로 뒤의 [AI] 또는 [유저] 기호를 사용하고, 누르면 기존 확인 방법을 같은 위치 기준 팝업으로 보여 준다.",
+          "evidenceIds": [
+            "conversation",
+            "align-renderer",
+            "browser-tests"
+          ]
+        },
+        "verify": "README 한국어·영어 Align 샘플에서 확인 기호의 문구, 인라인 배치, 팝업 내용, 키보드 접근과 JavaScript 없는 하단 확인 방법 이동을 검사한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "Diff 근거 예산 검증은 실제 사용량, 제한, 필드별 사용량과 가장 큰 범위를 알려 주어 한 번의 수정으로 초과 근거를 줄일 수 있게 한다.",
+          "evidenceIds": [
+            "diff-validator",
+            "diff-validation-tests"
+          ]
+        },
+        "verify": "정확히 재사용한 범위와 겹치는 범위를 포함한 단위 테스트에서 구조화된 예산 진단과 600줄 제한을 검증한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "Diff의 설명과 핵심 변경에는 [n] 근거 기호와 의미가 겹치는 '코드' 같은 짧은 메타 라벨이 홀로 남지 않고, 독자 판단에 필요한 출처 구분만 문맥이 분명한 말로 표시된다.",
+          "evidenceIds": [
+            "diff-renderer",
+            "diff-locales",
+            "diff-render-tests"
+          ]
+        },
+        "verify": "모든 basis 렌더링 경로와 README 한국어·영어 Diff 샘플을 검사해 중복 라벨이 없고, 확인 불가나 작성자 진술처럼 중요한 구분은 명확한 표현으로 남는지 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "Align은 같은 label과 location을 가진 근거 항목과 같은 형제 목록의 완전 중복 항목을 거부하고, 설계 방향이 근거 카탈로그의 출처를 evidenceId로 재사용하며, 과거 버전 요약은 뷰포트별 한 번만 표시한다.",
+          "evidenceIds": [
+            "align-validator",
+            "align-renderer",
+            "align-validation-tests",
+            "align-runtime"
+          ]
+        },
+        "verify": "서로 다른 근거 ID, 순서가 바뀐 근거 ID 집합, 설계 방향의 복사 URL과 과거 버전 렌더링을 포함한 단위·브라우저 테스트로 신규 입력 거부, 단일 표시와 기존 이력 호환성을 검사한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "Diff는 같은 형제 목록의 완전 중복 항목과 복사된 전후 trace를 거부하고, 변화가 없을 때 unchanged 상태 하나를 저장하며 접근성 안내는 렌더링된 내용에서 계산한다.",
+          "evidenceIds": [
+            "diff-validator",
+            "diff-renderer",
+            "diff-validation-tests",
+            "diff-render-tests",
+            "diff-runtime"
+          ]
+        },
+        "verify": "핵심 상세·코드 단계의 완전 중복과 동일 전후 trace는 실패하고, unchanged 상태는 간결한 화면과 같은 의미의 라이브 안내를 만드는 단위·브라우저 테스트를 실행한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "Align과 Diff 생성 지침은 같은 근거 집합과 크게 겹치는 근거 범위를 의미상 중복 점검 신호로 사용하되 자동 병합이나 근거 삭제를 요구하지 않는다.",
+          "evidenceIds": [
+            "align-guidance",
+            "diff-guidance",
+            "conversation"
+          ]
+        },
+        "verify": "생성 지침을 검토하고 README 고정 샘플의 반복 후보가 서로 다른 요구, 독자 질문이나 검토 행동을 소유하는지 비교한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "README가 사용하는 rescene-fan-calendar Align 샘플과 ky-867-retry-extend Diff 샘플의 한국어·영어 HTML과 대표 이미지가 최신 렌더러 결과와 일치한다.",
+          "evidenceIds": [
+            "readme-assets"
+          ]
+        },
+        "verify": "README 자산을 다시 생성하고 결정적 일치 검사를 통과시킨 뒤, 두 고정 샘플의 데스크톱·모바일 이미지를 픽셀 단위로 확인한다.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "정확히 같은 형제 항목과 동일 데이터를 다른 필드에 복사한 경우만 결정적으로 거부하거나 단일 참조·상태로 정규화한다. 같은 근거를 서로 다른 목적의 주장에 재사용하거나 일부 겹치는 범위를 인용하는 것은 허용하며, 의미상 중복 후보는 생성 에이전트가 문서 역할과 의미를 비교해 판단한다.",
+          "evidenceIds": [
+            "conversation",
+            "align-runtime",
+            "diff-runtime"
+          ]
+        },
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Align과 Diff의 기호 기준 근거 팝업과 반응형 위치 보정",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Align 완료 조건의 [AI]·[유저] 인라인 확인 기호와 하단 접힌 확인 방법 목록",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Diff의 중복 basis 라벨 제거와 문맥이 분명한 불확실성 표시",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Align 근거 카탈로그와 claim 형제 목록의 정확한 구조적 중복 검증",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Diff claim 형제 목록의 정확한 구조적 중복 검증",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "같은 근거 집합과 겹치는 근거 범위를 이용한 의미상 중복 자체 점검 지침",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "한국어·영어 문구, 단위·브라우저 테스트와 런타임 계약",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "README 고정 Align·Diff 샘플 HTML과 이미지 재생성 및 픽셀 검증",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "Align 설계 출처의 evidenceId 참조와 과거 요약 단일 표시, Diff 변화 없음 상태와 DOM 기반 접근성 안내",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human"
+      },
+      {
+        "statement": "근거와 확인 팝업은 누른 기호에 붙여 연다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "기호와 설명의 관계를 눈으로 바로 이해하고 읽던 위치를 유지할 수 있다."
+      },
+      {
+        "statement": "Align의 확인 표식은 [AI]와 [유저]를 사용한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "A1과 U1보다 주체를 직관적으로 알 수 있고 별도 설명 줄을 없앨 수 있다."
+      },
+      {
+        "statement": "근거와 확인 방법의 원문은 문서 마지막의 별도 접힌 목록에 둔다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "인라인 표식은 작게 유지하면서 JavaScript와 인쇄 환경에서도 원문을 잃지 않는다."
+      },
+      {
+        "statement": "근거 기호와 겹치는 코드 basis 라벨은 표시하지 않는다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "근거 위치와 유형은 [n] 팝오버에서 확인할 수 있어 '코드' 한 단어를 반복하면 정보보다 혼란이 커진다."
+      },
+      {
+        "statement": "정확한 구조적 중복만 결정적 오류로 처리한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "완전히 같은 항목은 가치가 없고 안정적으로 판별할 수 있지만, 공유 근거 자체는 정상적인 문서 구조일 수 있다."
+      },
+      {
+        "statement": "의미상 중복은 생성 에이전트가 진단하고 자동 병합하지 않는다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "서로 다른 요구와 검토 행동을 잘못 합치는 오탐을 피하면서 반복된 의미만 줄일 수 있다."
+      },
+      {
+        "statement": "README 고정 샘플을 최종 화면 검증 대상으로 사용한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "README에서 실제로 열고 보는 HTML과 이미지가 같은 최신 렌더러 결과임을 직접 보장한다."
+      },
+      {
+        "statement": "Align 설계 방향의 공유 출처는 evidenceId로 참조한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "표시 문구와 URL의 원본을 근거 카탈로그 한 곳에 두어 두 표현이 어긋날 가능성을 없앤다."
+      },
+      {
+        "statement": "Diff의 동일한 전후 trace는 unchanged 상태로 표현한다",
+        "verify": "마이그레이션 전 기록에 판단 방법이 없어 사람이 이 항목을 판단한다.",
+        "by": "human",
+        "reason": "같은 단계와 결과를 두 번 저장하지 않으면서 변화가 없다는 의미를 더 직접적으로 보여 준다."
+      }
+    ],
+    "exclusions": [
+      "Diff 코드 근거 600줄 제한 상향",
+      "GitHub 수집 범위나 스냅샷 재확인 규칙 변경",
+      "서로 다른 문서 역할 사이의 같은 근거 사용 금지",
+      "유사도 점수나 언어 모델을 이용한 결정적 검증",
+      "의미상 중복 후보의 자동 삭제 또는 자동 병합",
+      "README 고정 샘플의 시나리오나 원본 분석 의미 변경",
+      "새 외부 서비스나 네트워크 의존성"
+    ],
+    "flow": {
+      "steps": [
+        {
+          "title": "주장이나 완료 조건 뒤에 기호를 표시한다",
+          "detail": "근거는 [n], AI 에이전트 확인은 [AI], 사용자 확인은 [유저]로 표시한다."
+        },
+        {
+          "title": "기호를 누르면 바로 곁에 팝업을 연다",
+          "detail": "팝업은 기호를 가리키고 화면 경계와 가용 공간에 따라 아래나 위에 배치된다."
+        },
+        {
+          "title": "정확히 같은 항목과 복사된 표현은 입력 단계에서 줄인다",
+          "detail": "완전 중복 형제는 거부하고, Align 설계 출처는 근거 ID로 참조하며, Diff의 동일한 전후 trace는 unchanged 상태로 표현한다."
+        },
+        {
+          "title": "같거나 크게 겹치는 근거를 중복 점검 신호로 사용한다",
+          "detail": "각 항목이 서로 다른 요구, 독자 질문 또는 검토 행동을 맡는지 확인하고 같은 의미와 역할이면 하나로 정리한다."
+        },
+        {
+          "title": "필요한 근거 재사용과 불확실성은 보존한다",
+          "detail": "근거가 같다는 이유만으로 다른 역할의 주장을 합치지 않고 추론이나 확인 불가처럼 독자 판단에 필요한 구분을 남긴다."
+        },
+        {
+          "title": "README 고정 샘플로 최종 결과를 만든다",
+          "detail": "rescene-fan-calendar와 ky-867-retry-extend의 한국어·영어 HTML과 이미지를 같은 생성 명령으로 갱신한다."
+        },
+        {
+          "title": "표시용 사본은 렌더링된 원본에서 계산한다",
+          "detail": "과거 버전 요약은 항목당 한 번만 출력하고 Diff 라이브 안내는 화면의 현재 시나리오 내용에서 만든다."
+        }
+      ],
+      "outcomes": [
+        {
+          "title": "문맥을 잃지 않고 근거와 확인 방법을 읽는다",
+          "detail": "독자는 조건이나 주장 옆 기호에서 필요한 내용을 바로 확인한다.",
+          "kind": "complete"
+        },
+        {
+          "title": "확실한 중복은 최종 산출물에 들어가지 않는다",
+          "detail": "같은 근거 카탈로그 항목과 형제 claim은 생성 전에 거부되고, 공유 출처와 변화 없음은 한 번만 저장된다.",
+          "kind": "complete"
+        },
+        {
+          "title": "의미상 반복은 필요한 차이를 보존하며 줄인다",
+          "detail": "공유 근거를 단서로 반복 후보를 검토하되 서로 다른 요구와 검토 행동은 유지한다.",
+          "kind": "complete"
+        },
+        {
+          "title": "README가 실제 최신 샘플 화면을 보여 준다",
+          "detail": "문서 링크와 대표 이미지는 모두 고정 샘플의 현재 렌더러 결과를 가리킨다.",
+          "kind": "complete"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "id": "conversation",
+        "label": "사용자 요구와 결정",
+        "location": "Codex task 01a022b8-b852-79a3-9ba7-8719f1031ee8"
+      },
+      {
+        "id": "align-renderer",
+        "label": "Align HTML 렌더러",
+        "location": "plugins/hope/skills/align/scripts/render.mjs"
+      },
+      {
+        "id": "diff-renderer",
+        "label": "Diff HTML 렌더러",
+        "location": "plugins/hope/skills/diff/scripts/render.mjs"
+      },
+      {
+        "id": "diff-locales",
+        "label": "Diff 한국어·영어 basis 문구",
+        "location": "plugins/hope/skills/diff/scripts/locales/ko-KR/diff.json, plugins/hope/skills/diff/scripts/locales/en-US/diff.json"
+      },
+      {
+        "id": "align-validator",
+        "label": "Align 입력 검증기",
+        "location": "plugins/hope/skills/align/scripts/artifact.mjs"
+      },
+      {
+        "id": "diff-validator",
+        "label": "Diff 분석 검증기",
+        "location": "plugins/hope/skills/diff/scripts/validate.mjs"
+      },
+      {
+        "id": "align-guidance",
+        "label": "Align 작성 지침",
+        "location": "plugins/hope/skills/align/SKILL.md"
+      },
+      {
+        "id": "diff-guidance",
+        "label": "Diff 분석 지침",
+        "location": "plugins/hope/skills/diff/references/analysis.md"
+      },
+      {
+        "id": "align-runtime",
+        "label": "Align 산출물 런타임 계약",
+        "location": "plugins/hope/skills/align/references/artifact.md"
+      },
+      {
+        "id": "diff-runtime",
+        "label": "Diff 런타임 계약",
+        "location": "plugins/hope/skills/diff/references/runtime.md"
+      },
+      {
+        "id": "align-validation-tests",
+        "label": "Align 중복 검증 테스트",
+        "location": "test/align-artifact.test.mjs"
+      },
+      {
+        "id": "diff-validation-tests",
+        "label": "Diff 중복 및 근거 예산 검증 테스트",
+        "location": "test/diff-model.test.mjs"
+      },
+      {
+        "id": "diff-render-tests",
+        "label": "Diff 렌더링 테스트",
+        "location": "test/diff-render.test.mjs"
+      },
+      {
+        "id": "browser-tests",
+        "label": "Align·Diff Chromium 상호작용 테스트",
+        "location": "e2e/align-artifact.spec.mjs, e2e/diff-review.spec.mjs"
+      },
+      {
+        "id": "readme-assets",
+        "label": "README 고정 예시 생성물",
+        "location": "assets/readme/, docs/alignments/rescene-fan-calendar.*.html, docs/diffs/ky-867-retry-extend.*.html"
+      }
+    ]
+  }
+}

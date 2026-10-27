@@ -1,12 +1,8 @@
-import {
-  mkdir,
-  readFile,
-  writeFile,
-} from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { sealAlignHtml } from "../plugins/hope/skills/align/scripts/artifact.mjs";
-import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render.mjs";
+const realLegacyDataUrl = new URL("./align-legacy-ui-design-directions.json", import.meta.url);
 
 export function makeLegacyAlignInputV2(overrides = {}) {
   return {
@@ -140,6 +136,17 @@ export function makeAlignInput(overrides = {}) {
   };
 }
 
+function inputContent(input) {
+  const {
+    schemaVersion: _schemaVersion,
+    locale: _locale,
+    theme: _theme,
+    revisionSummary: _revisionSummary,
+    ...content
+  } = input;
+  return content;
+}
+
 async function embedLegacyDesignDirections(value) {
   if (value === undefined) return undefined;
   return {
@@ -160,62 +167,70 @@ async function embedLegacyDesignDirections(value) {
   };
 }
 
-export async function writeLegacyAlignArtifact({
-  artifactPath,
-  content: contentOverrides = {},
-  createdAt = "2026-08-14T00:00:00.000Z",
-  alignId = "11111111-1111-4111-8111-111111111111",
-  repository = "acme/storage",
-  repositoryIdentity = "remote://github.com/acme/storage",
-}) {
-  const current = makeLegacyAlignInputV2();
-  const {
-    goal,
-    checks,
-    schemaVersion: _schemaVersion,
-    locale,
-    theme,
-    revisionSummary,
-    ...shared
-  } = current;
-  const content = {
-    ...shared,
-    intent: goal,
-    success: checks.map((check) => check.condition),
-    ...contentOverrides,
-  };
-  const designDirections = await embedLegacyDesignDirections(content.designDirections);
-  if (designDirections === undefined) {
-    delete content.designDirections;
+/** Content of one legacy revision in schema 1, 2, or 3, as Hope 8 embedded it. */
+export async function makeLegacyContent(schema, overrides = {}) {
+  let content;
+  if (schema === 1) {
+    const { goal, checks, ...shared } = inputContent(makeLegacyAlignInputV2());
+    content = { ...shared, intent: goal, success: checks.map((check) => check.condition) };
+  } else if (schema === 2) {
+    content = inputContent(makeLegacyAlignInputV2());
   } else {
-    content.designDirections = designDirections;
+    content = inputContent(makeAlignInput());
   }
-  const data = {
+  content = { ...content, ...overrides };
+  const designDirections = await embedLegacyDesignDirections(content.designDirections);
+  if (designDirections === undefined) delete content.designDirections;
+  else content.designDirections = designDirections;
+  return content;
+}
+
+export function makeLegacyData({
+  alignId = "11111111-1111-4111-8111-111111111111",
+  createdAt = "2026-08-14T00:00:00.000Z",
+  locale = "ko-KR",
+  repository = "acme/storage",
+  revisions,
+}) {
+  return {
     schemaVersion: 1,
     alignId,
     repository,
-    repositoryIdentity,
+    repositoryIdentity: `remote://github.com/${repository}`,
     locale,
-    theme,
+    theme: "system",
     createdAt,
-    revisions: [{
-      number: 1,
-      agreedAt: createdAt,
-      summary: revisionSummary,
-      content,
-    }],
+    revisions: revisions.map((revision, index) => ({ number: index + 1, ...revision })),
   };
-  const sealed = sealAlignHtml(renderAlignArtifact(data, { digest: "0".repeat(64) }));
+}
+
+/** The embedded data of docs/alignments/ui-design-directions.html before migration. */
+export async function readRealLegacyData() {
+  return JSON.parse(await readFile(realLegacyDataUrl, "utf8"));
+}
+
+/**
+ * Write a sealed legacy artifact: the identity meta, the SHA-256 digest meta,
+ * and the embedded data script that Hope 8 produced around its rendered page.
+ */
+export async function writeLegacyAlignArtifact(artifactPath, data, { alternateLocale } = {}) {
+  const json = JSON.stringify(data).replace(/</gu, "\\u003c");
+  const locale = alternateLocale === undefined
+    ? ""
+    : `<a class="locale-option" href="${alternateLocale.href}" hreflang="${alternateLocale.locale}" lang="${alternateLocale.locale}">other</a>`;
+  const unsealed = [
+    "<!doctype html>",
+    `<html lang="${data.locale}">`,
+    `<head><meta name="hope-align-id" content="${data.alignId}"><meta name="hope-align-digest" content="${"0".repeat(64)}"></head>`,
+    `<body>${locale}<main>${data.revisions.at(-1).content.title}</main>`,
+    `<script id="hope-align-data" type="application/json">${json}</script>`,
+    "</body></html>",
+    "",
+  ].join("\n");
+  const digest = createHash("sha256").update(unsealed, "utf8").digest("hex");
   await mkdir(dirname(artifactPath), { recursive: true });
-  await writeFile(artifactPath, sealed.bytes);
-  return Object.freeze({
-    alignId,
-    artifactPath,
-    digest: sealed.digest,
-    repository,
-    revision: 1,
-    title: content.title,
-  });
+  await writeFile(artifactPath, unsealed.replace("0".repeat(64), digest), "utf8");
+  return digest;
 }
 
 export function makeDesignDirections(imagePaths) {

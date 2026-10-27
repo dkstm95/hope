@@ -1,33 +1,30 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import {
-  copyFile,
-  mkdir,
-  readFile,
-  rename,
-  symlink,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
+import { copyFile, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { deflateSync } from "node:zlib";
 
 import {
-  createAlignArtifact,
-  inspectAlignArtifact,
-  reviseAlignArtifact,
-  validateAlignInput,
-  verifyAlignHtml,
+  createAlignRecord,
+  inspectAlignRecord,
+  renderAlignRecord,
+  reviseAlignRecord,
 } from "../plugins/hope/skills/align/scripts/artifact.mjs";
+import { migrateAlignArtifact } from "../plugins/hope/skills/align/scripts/migrate.mjs";
 import { renderAlignArtifact } from "../plugins/hope/skills/align/scripts/render.mjs";
+import {
+  validateAlignInput,
+  validateAlignRecord,
+} from "../plugins/hope/skills/align/scripts/validate.mjs";
 import {
   makeAlignInput,
   makeDesignDirections,
   makeLegacyAlignInputV2,
+  makeLegacyContent,
+  makeLegacyData,
+  readRealLegacyData,
   writeLegacyAlignArtifact,
 } from "../test-support/align-fixture.mjs";
 import {
@@ -38,61 +35,6 @@ const execFileAsync = promisify(execFile);
 const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
 const now = new Date("2026-08-14T00:00:00.000Z");
 const sampleImage = fileURLToPath(new URL("../plugins/hope/assets/hope-icon.png", import.meta.url));
-const alignDataPattern = /<script id="hope-align-data" type="application\/json">([\s\S]*?)<\/script>/u;
-const alignDigestPattern = /(<meta name="hope-align-digest" content=")[a-f0-9]{64}(">)/u;
-
-function resealAlignArtifact(source, mutate) {
-  const dataSource = source.match(alignDataPattern)?.[1];
-  assert.notEqual(dataSource, undefined);
-  const data = JSON.parse(dataSource);
-  mutate(data);
-  const changed = source.replace(
-    alignDataPattern,
-    `<script id="hope-align-data" type="application/json">${JSON.stringify(data)}</script>`,
-  );
-  const normalized = changed.replace(alignDigestPattern, `$1${"0".repeat(64)}$2`);
-  const digest = createHash("sha256").update(normalized).digest("hex");
-  return normalized.replace(alignDigestPattern, `$1${digest}$2`);
-}
-
-function crc32(bytes) {
-  let checksum = 0xffffffff;
-  for (const byte of bytes) {
-    checksum ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) {
-      checksum = (checksum >>> 1) ^ (checksum & 1 ? 0xedb88320 : 0);
-    }
-  }
-  return (checksum ^ 0xffffffff) >>> 0;
-}
-
-function pngChunk(type, data) {
-  const typeBytes = Buffer.from(type, "ascii");
-  const chunk = Buffer.alloc(data.length + 12);
-  chunk.writeUInt32BE(data.length, 0);
-  typeBytes.copy(chunk, 4);
-  data.copy(chunk, 8);
-  chunk.writeUInt32BE(crc32(Buffer.concat([typeBytes, data])), data.length + 8);
-  return chunk;
-}
-
-function boundedLargePng() {
-  const width = 480;
-  const height = 256;
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(width, 0);
-  header.writeUInt32BE(height, 4);
-  header.set([8, 6, 0, 0, 0], 8);
-  const rows = Buffer.alloc((width * 4 + 1) * height);
-  for (let row = 0; row < height; row += 1) rows[row * (width * 4 + 1)] = 0;
-  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  return Buffer.concat([
-    signature,
-    pngChunk("IHDR", header),
-    pngChunk("IDAT", deflateSync(rows, { level: 0 })),
-    pngChunk("IEND", Buffer.alloc(0)),
-  ]);
-}
 
 async function repository(remote = "git@github.com:acme/storage.git") {
   const root = await createTestTemporaryDirectory("hope-align-test-");
@@ -109,10 +51,41 @@ async function inputFile(root, name, value) {
   return path;
 }
 
+async function readJson(path) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+/** A PNG header with the given size and dimensions; the runtime checks no more. */
+function pngHeader(width, height, bytes = 64) {
+  const png = Buffer.alloc(bytes);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
+  png.writeUInt32BE(13, 8);
+  png.write("IHDR", 12, "ascii");
+  png.writeUInt32BE(width, 16);
+  png.writeUInt32BE(height, 20);
+  return png;
+}
+
+function recordFor(value, overrides = {}) {
+  const input = validateAlignInput(value);
+  return validateAlignRecord({
+    schemaVersion: 1,
+    alignId: "11111111-1111-4111-8111-111111111111",
+    repository: "acme/storage",
+    locale: input.locale,
+    theme: input.theme,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    history: [{ at: now.toISOString(), summary: input.revisionSummary }],
+    content: input.content,
+    ...overrides,
+  });
+}
+
 test("repository display exposes bidirectional controls from remotes and local names", async () => {
-  const remoteRoot = await repository("git@github.com:acme/storage\u202Ename.git");
+  const remoteRoot = await repository("git@github.com:acme/storage‮name.git");
   const localParent = await createTestTemporaryDirectory("hope-align-repository-label-");
-  const localRoot = join(localParent, "storage\u202Ename");
+  const localRoot = join(localParent, "storage‮name");
   await mkdir(localRoot);
   await execFileAsync("git", ["init", "-q", localRoot]);
 
@@ -121,17 +94,13 @@ test("repository display exposes bidirectional controls from remotes and local n
     [localRoot, "storage\\u202Ename"],
   ]) {
     const inputPath = await inputFile(root, "align-input.json", makeAlignInput());
-    const outputPath = join(root, "docs", "alignments", "repository-label.html");
-    const result = await createAlignArtifact({ inputPath, outputPath, root }, {
-      now: () => now,
-      randomUUID: () => "77777777-7777-4777-8777-777777777777",
-    });
-    const html = await readFile(outputPath, "utf8");
-    const visibleHtml = html.split('<script id="hope-align-data"')[0];
+    const outputPath = join(root, "docs", "alignments", "repository-label.json");
+    await createAlignRecord({ inputPath, outputPath, root });
+    const html = await readFile(outputPath.replace(/json$/u, "html"), "utf8");
 
-    assert.equal(result.repository, expected);
-    assert.equal(visibleHtml.includes(expected), true);
-    assert.equal(visibleHtml.includes("\u202E"), false);
+    assert.equal((await readJson(outputPath)).repository, expected);
+    assert.equal(html.includes(expected), true);
+    assert.equal(html.includes("‮"), false);
   }
 });
 
@@ -142,9 +111,9 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
     exclusions: [],
   });
   const value = validateAlignInput(minimal);
-  assert.equal(value.flow, undefined);
-  assert.deepEqual(value.exclusions, []);
-  assert.deepEqual(value.evidence, []);
+  assert.equal(value.content.flow, undefined);
+  assert.deepEqual(value.content.exclusions, []);
+  assert.deepEqual(value.content.evidence, []);
 
   assert.throws(
     () => validateAlignInput({ ...makeAlignInput(), progress: 50 }),
@@ -192,7 +161,7 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
   );
 
   assert.equal(
-    [...validateAlignInput(makeAlignInput({ title: "😀".repeat(160) })).title].length,
+    [...validateAlignInput(makeAlignInput({ title: "😀".repeat(160) })).content.title].length,
     160,
   );
   assert.throws(
@@ -212,8 +181,7 @@ test("Align input keeps optional detail conditional and rejects unknown fields",
 });
 
 test("Align accepts the v3 shared-understanding model", () => {
-  const current = validateAlignInput(makeAlignInput());
-  assert.equal(current.schemaVersion, 3);
+  const { content: current } = validateAlignInput(makeAlignInput());
   assert.equal(current.intent.length, 4);
   assert.equal(current.intent[3].decidedBy, "user");
   assert.equal(current.intent[0].reason, "중단된 작업을 처음부터 반복하지 않고도 데이터 손실을 피해야 한다.");
@@ -229,7 +197,7 @@ test("Align accepts the v3 shared-understanding model", () => {
     verify: `결과 ${index + 1}을 확인한다.`,
     by: "agent",
   }));
-  assert.equal(validateAlignInput(makeAlignInput({ intent: broadIntent })).intent.length, 13);
+  assert.equal(validateAlignInput(makeAlignInput({ intent: broadIntent })).content.intent.length, 13);
   assert.throws(
     () => validateAlignInput(makeAlignInput({ scope: { included: [], excluded: [] } })),
     /unsupported field: scope/u,
@@ -244,31 +212,6 @@ test("Align accepts the v3 shared-understanding model", () => {
     /\$\.intent\[1\] duplicates \$\.intent\[0\]/u,
   );
 });
-
-test("create and revise reject direct v2 input", async () => {
-  const root = await repository();
-  const legacyInput = await inputFile(root, "legacy-v2.json", makeLegacyAlignInputV2());
-  const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
-
-  await assert.rejects(
-    createAlignArtifact({ inputPath: legacyInput, outputPath, root }),
-    /schemaVersion must be 3/u,
-  );
-
-  const currentInput = await inputFile(root, "current-v3.json", makeAlignInput());
-  const created = await createAlignArtifact({ inputPath: currentInput, outputPath, root });
-  await assert.rejects(
-    reviseAlignArtifact({
-      artifactPath: outputPath,
-      expectedDigest: created.digest,
-      inputPath: legacyInput,
-      root,
-    }),
-    /schemaVersion must be 3/u,
-  );
-  assert.equal((await inspectAlignArtifact(outputPath)).revision, 1);
-});
-
 test("Align input binds cited claims to unique evidence ids", () => {
   const value = validateAlignInput(makeAlignInput({
     goal: {
@@ -280,8 +223,8 @@ test("Align input binds cited claims to unique evidence ids", () => {
       { id: "product-requirements", label: "제품 요구", location: "https://example.com/requirements" },
     ],
   }));
-  assert.deepEqual(value.goal.evidenceIds, ["upload-service", "product-requirements"]);
-  assert.equal(value.goal.text, "중단된 업로드를 안전하게 복구한다.");
+  assert.deepEqual(value.content.goal.evidenceIds, ["upload-service", "product-requirements"]);
+  assert.equal(value.content.goal.text, "중단된 업로드를 안전하게 복구한다.");
 
   assert.throws(
     () => validateAlignInput(makeAlignInput({
@@ -345,194 +288,6 @@ test("Align input rejects exact evidence and sibling-item duplicates", () => {
   }
 });
 
-test("inspect keeps exact duplicates in retained history readable", async () => {
-  const root = await repository();
-  const inputPath = await inputFile(root, "input.json", makeAlignInput());
-  const outputPath = join(root, "docs", "alignments", "retained-duplicate.html");
-  await createAlignArtifact({ inputPath, outputPath, root });
-  const original = await readFile(outputPath, "utf8");
-  const retained = resealAlignArtifact(original, (data) => {
-    const evidence = data.revisions[0].content.evidence;
-    evidence.push(structuredClone(evidence[0]));
-  });
-  await writeFile(outputPath, retained, "utf8");
-
-  const inspected = await inspectAlignArtifact(outputPath);
-  assert.equal(inspected.content.evidence.length, 3);
-});
-
-test("design direction images are validated, embedded, and kept off the network", async () => {
-  const root = await repository();
-  const firstImage = join(root, "direction-one.png");
-  const secondImage = join(root, "direction-two.png");
-  await copyFile(sampleImage, firstImage);
-  await copyFile(sampleImage, secondImage);
-  const designDirections = makeDesignDirections([firstImage, secondImage]);
-  designDirections.options[0].references[0] = {
-    evidenceId: "recovery-reference",
-    influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
-  };
-  const inputPath = await inputFile(root, "input.json", makeAlignInput({
-    designDirections,
-    evidence: [{
-      id: "recovery-reference",
-      label: "복구 요구 참고",
-      location: "https://example.com/recovery-reference",
-    }],
-  }));
-  const outputPath = join(root, "docs", "alignments", "visual-agreement.html");
-  const created = await createAlignArtifact({ inputPath, outputPath, root });
-  const inspected = await inspectAlignArtifact(outputPath);
-  const directions = inspected.content.designDirections;
-
-  assert.equal(directions.options.length, 2);
-  assert.equal(directions.options[0].image.mimeType, "image/png");
-  assert.equal(directions.options[0].image.width, 128);
-  assert.equal(directions.options[0].image.height, 128);
-  assert.equal(directions.recommendation.optionId, "direction-1");
-  assert.equal(directions.selection.optionId, "direction-2");
-  assert.equal(directions.options[0].references[0].evidenceId, "recovery-reference");
-  const html = await readFile(outputPath, "utf8");
-  assert.equal(verifyAlignHtml(html), created.digest);
-  assert.equal((html.match(/class="direction-image"><img src="data:image\/png;base64,/gu) ?? []).length, 2);
-  assert.match(html, /id="design-directions"/u);
-  assert.match(html, />AI 추천</u);
-  assert.match(html, />사용자가 선택함</u);
-  assert.match(html, /href="https:\/\/example\.com\/recovery-reference"/u);
-  assert.match(html, /복구 선택을 첫 화면의 주 행동으로 배치했다/u);
-  const firstDirection = html.indexOf('id="design-direction-direction-1"');
-  const secondDirection = html.indexOf('id="design-direction-direction-2"');
-  const firstStrength = html.indexOf("핵심 선택을 빠르게 찾을 수 있다.");
-  const firstRecommendation = html.indexOf(">AI 추천<", firstDirection);
-  const firstReference = html.indexOf("복구 요구 참고");
-  assert.ok(firstDirection < firstStrength);
-  assert.ok(firstStrength < firstRecommendation);
-  assert.ok(firstRecommendation < firstReference);
-  assert.ok(firstReference < secondDirection);
-  const secondStrength = html.indexOf("현재 단계가 분명하다.");
-  const secondSelection = html.indexOf(">선택 결과<", secondDirection);
-  assert.ok(secondDirection < secondStrength);
-  assert.ok(secondStrength < secondSelection);
-  assert.match(html, /<details class="direction-references">[\s\S]*?<summary>참고 자료 · 1<\/summary>/u);
-  assert.doesNotMatch(html, /direction-reference-list|class="direction-reference"/u);
-  assert.doesNotMatch(html, /design-direction-detail-list/u);
-  assert.doesNotMatch(html, new RegExp(firstImage.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
-  assert.doesNotMatch(html, /<img[^>]+https?:/u);
-});
-
-test("design direction input rejects unsafe images and inconsistent choices", async () => {
-  const root = await repository();
-  const unsupported = join(root, "direction.svg");
-  await writeFile(unsupported, "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>", "utf8");
-  const unsupportedInput = await inputFile(root, "unsupported.json", makeAlignInput({
-    designDirections: makeDesignDirections([unsupported, unsupported]),
-  }));
-  await assert.rejects(
-    createAlignArtifact({
-      inputPath: unsupportedInput,
-      outputPath: join(root, "docs", "alignments", "unsupported.html"),
-      root,
-    }),
-    /must be a PNG image/u,
-  );
-
-  const oversized = join(root, "oversized.png");
-  await writeFile(oversized, Buffer.alloc((512 * 1024) + 1));
-  const oversizedInput = await inputFile(root, "oversized.json", makeAlignInput({
-    designDirections: makeDesignDirections([sampleImage, oversized]),
-  }));
-  await assert.rejects(
-    createAlignArtifact({
-      inputPath: oversizedInput,
-      outputPath: join(root, "docs", "alignments", "oversized-image.html"),
-      root,
-    }),
-    /exceeds 524288 bytes/u,
-  );
-
-  const hugeDimensions = join(root, "huge-dimensions.png");
-  const hugeBytes = await readFile(sampleImage);
-  hugeBytes.writeUInt32BE(5_000, 16);
-  hugeBytes.writeUInt32BE(crc32(hugeBytes.subarray(12, 29)), 29);
-  await writeFile(hugeDimensions, hugeBytes);
-  const hugeInput = await inputFile(root, "huge.json", makeAlignInput({
-    designDirections: makeDesignDirections([sampleImage, hugeDimensions]),
-  }));
-  await assert.rejects(
-    createAlignArtifact({
-      inputPath: hugeInput,
-      outputPath: join(root, "docs", "alignments", "huge-image.html"),
-      root,
-    }),
-    /exceeds the supported image dimensions/u,
-  );
-
-  const truncated = join(root, "truncated.png");
-  await writeFile(truncated, (await readFile(sampleImage)).subarray(0, 24));
-  const truncatedInput = await inputFile(root, "truncated.json", makeAlignInput({
-    designDirections: makeDesignDirections([sampleImage, truncated]),
-  }));
-  await assert.rejects(
-    createAlignArtifact({
-      inputPath: truncatedInput,
-      outputPath: join(root, "docs", "alignments", "truncated-image.html"),
-      root,
-    }),
-    /is not a valid PNG image/u,
-  );
-
-  const corrupt = join(root, "corrupt.png");
-  const corruptBytes = await readFile(sampleImage);
-  corruptBytes[corruptBytes.length - 5] ^= 0xff;
-  await writeFile(corrupt, corruptBytes);
-  const corruptInput = await inputFile(root, "corrupt.json", makeAlignInput({
-    designDirections: makeDesignDirections([sampleImage, corrupt]),
-  }));
-  await assert.rejects(
-    createAlignArtifact({
-      inputPath: corruptInput,
-      outputPath: join(root, "docs", "alignments", "corrupt-image.html"),
-      root,
-    }),
-    /is not a valid PNG image/u,
-  );
-
-  assert.throws(
-    () => validateAlignInput(makeAlignInput({
-      designDirections: {
-        ...makeDesignDirections([sampleImage, sampleImage]),
-        selection: { optionId: "missing", reason: "없는 안", decidedBy: "user" },
-      },
-    })),
-    /selection\.optionId must name an option/u,
-  );
-  const credentials = makeDesignDirections([sampleImage, sampleImage]);
-  credentials.options[0].references[0].url = "https://user:secret@example.com/reference";
-  assert.throws(
-    () => validateAlignInput(makeAlignInput({ designDirections: credentials })),
-    /without credentials/u,
-  );
-  const uppercaseScheme = makeDesignDirections([sampleImage, sampleImage]);
-  uppercaseScheme.options[0].references[0].url = "HTTPS://example.com/reference";
-  assert.equal(
-    validateAlignInput(makeAlignInput({ designDirections: uppercaseScheme }))
-      .designDirections.options[0].references[0].url,
-    "HTTPS://example.com/reference",
-  );
-  assert.throws(
-    () => validateAlignInput(makeAlignInput({
-      designDirections: makeDesignDirections(["relative.png", sampleImage]),
-    })),
-    /must be an absolute path/u,
-  );
-  const missingInfluence = makeDesignDirections([sampleImage, sampleImage]);
-  delete missingInfluence.options[0].references[0].influence;
-  assert.throws(
-    () => validateAlignInput(makeAlignInput({ designDirections: missingInfluence })),
-    /influence must be text/u,
-  );
-});
-
 test("design directions reuse evidence-backed sources instead of copying URLs", () => {
   const directions = makeDesignDirections([sampleImage, sampleImage]);
   directions.options[0].references[0] = {
@@ -548,7 +303,7 @@ test("design directions reuse evidence-backed sources instead of copying URLs", 
     }],
   }));
   assert.deepEqual(
-    validated.designDirections.options[0].references[0],
+    validated.content.designDirections.options[0].references[0],
     {
       evidenceId: "recovery-reference",
       influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
@@ -579,60 +334,40 @@ test("design directions reuse evidence-backed sources instead of copying URLs", 
   );
 });
 
-test("two image-rich revisions remain complete within the artifact boundary", async () => {
-  const root = await repository();
-  const firstImage = join(root, "large-one.png");
-  const secondImage = join(root, "large-two.png");
-  const image = boundedLargePng();
-  assert.ok(image.length < 512 * 1024);
-  assert.ok(image.length * 2 < 1024 * 1024);
-  await writeFile(firstImage, image);
-  await writeFile(secondImage, image);
-  const directions = makeDesignDirections([firstImage, secondImage]);
-  const firstInput = await inputFile(root, "visual-one.json", makeAlignInput({
-    designDirections: directions,
-  }));
-  const outputPath = join(root, "docs", "alignments", "visual-history.html");
-  const created = await createAlignArtifact({ inputPath: firstInput, outputPath, root });
-  const revisedDirections = makeDesignDirections([firstImage, secondImage]);
-  revisedDirections.selection = {
-    optionId: "direction-1",
-    reason: "첫 번째 시안이 작업 집중도에 더 잘 맞는다.",
-    decidedBy: "delegated",
-  };
-  const secondInput = await inputFile(root, "visual-two.json", makeAlignInput({
-    designDirections: revisedDirections,
-    revisionSummary: "시안 선택 변경",
-  }));
-  const revised = await reviseAlignArtifact({
-    artifactPath: outputPath,
-    expectedDigest: created.digest,
-    inputPath: secondInput,
-    root,
-  });
-  const html = await readFile(outputPath, "utf8");
-  assert.ok(Buffer.byteLength(html) < 12 * 1024 * 1024);
-  assert.equal(verifyAlignHtml(html), revised.digest);
-  assert.match(html, /id="revision-1"/u);
-  assert.match(html, /revision-1-design-direction-direction-1/u);
-  assert.match(html, /복구 선택을 첫 화면의 주 행동으로 배치했다/u);
-  assert.equal((await inspectAlignArtifact(outputPath)).history.length, 2);
 
-  const tooManyImages = await inputFile(root, "visual-over-total.json", makeAlignInput({
-    designDirections: makeDesignDirections([firstImage, secondImage, firstImage]),
-  }));
-  await assert.rejects(
-    createAlignArtifact({
-      inputPath: tooManyImages,
-      outputPath: join(root, "docs", "alignments", "visual-over-total.html"),
-      root,
-    }),
-    /images exceed 1048576 bytes/u,
+test("design direction input rejects inconsistent choices and unsafe references", () => {
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({
+      designDirections: {
+        ...makeDesignDirections([sampleImage, sampleImage]),
+        selection: { optionId: "missing", reason: "없는 안", decidedBy: "user" },
+      },
+    })),
+    /selection\.optionId must name an option/u,
+  );
+  const credentials = makeDesignDirections([sampleImage, sampleImage]);
+  credentials.options[0].references[0].url = "https://user:secret@example.com/reference";
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({ designDirections: credentials })),
+    /without credentials/u,
+  );
+  const uppercaseScheme = makeDesignDirections([sampleImage, sampleImage]);
+  uppercaseScheme.options[0].references[0].url = "HTTPS://example.com/reference";
+  assert.equal(
+    validateAlignInput(makeAlignInput({ designDirections: uppercaseScheme }))
+      .content.designDirections.options[0].references[0].url,
+    "HTTPS://example.com/reference",
+  );
+  const missingInfluence = makeDesignDirections([sampleImage, sampleImage]);
+  delete missingInfluence.options[0].references[0].influence;
+  assert.throws(
+    () => validateAlignInput(makeAlignInput({ designDirections: missingInfluence })),
+    /influence must be text/u,
   );
 });
 
 test("renderer is deterministic, self-contained, and keeps authored text inert", () => {
-  const input = validateAlignInput(makeAlignInput({
+  const record = recordFor(makeAlignInput({
     title: '</title><script src="https://evil.example/x.js"></script>',
     goal: {
       text: "Keep <img src=x onerror=alert(1)> as text.\nKeep the second idea distinct.",
@@ -642,24 +377,9 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
       { id: "upload-service", label: "Upload service", location: "src/upload/recovery.ts" },
     ],
   }));
-  const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
-  const data = {
-    schemaVersion: 1,
-    alignId: "11111111-1111-4111-8111-111111111111",
-    repository: "acme/storage",
-    locale,
-    theme,
-    createdAt: now.toISOString(),
-    revisions: [{
-      number: 1,
-      agreedAt: now.toISOString(),
-      summary: revisionSummary,
-      content,
-    }],
-  };
-  const options = { digest: "0".repeat(64) };
-  const first = renderAlignArtifact(data, options);
-  const second = renderAlignArtifact(data, options);
+  const options = { recordHref: "upload-recovery.json" };
+  const first = renderAlignArtifact(record, options);
+  const second = renderAlignArtifact(record, options);
 
   assert.equal(first, second);
   assert.match(first, /<span class="brand-product">ALIGN<\/span><span class="brand-separator">\/<\/span><span class="brand-record">SPEC-001<\/span>/u);
@@ -672,7 +392,7 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.match(first, /@font-face\{font-family:"Hope Code"/u);
   assert.equal((first.match(/@font-face/gu) ?? []).length, 3);
   assert.match(first, /font-src data:/u);
-  assert.match(first, /name="hope-align-design-version" content="34"/u);
+  assert.match(first, /name="hope-align-design-version" content="35"/u);
   assert.match(
     first,
     /<h2 class="toc-heading"><span>문서 목차<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
@@ -735,7 +455,8 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
   assert.doesNotMatch(first, /<script src="https:\/\/evil/u);
   assert.doesNotMatch(first, /localStorage/u);
   assert.doesNotMatch(first, /현재 구현 기준|구현 계약/u);
-  assert.match(first, /<script id="hope-align-data" type="application\/json">/u);
+  assert.doesNotMatch(first, /<script id="hope-align-data"|hope-align-digest/u);
+  assert.match(first, /<meta name="hope-align-record" content="upload-recovery\.json">/u);
   assert.doesNotMatch(first, /target="_blank"/u);
   assert.doesNotMatch(first, /class="locale-menu"/u);
   assert.match(first, /<div class="display-controls">[\s\S]*?<button class="theme-button"/u);
@@ -750,26 +471,26 @@ test("renderer is deterministic, self-contained, and keeps authored text inert",
     ["01", "02", "03"],
   );
 
-  const withAlternateLocale = renderAlignArtifact(data, {
+  const withAlternateLocale = renderAlignArtifact({
+    ...record,
     alternateLocale: { href: "upload-recovery.en.html", locale: "en-US" },
-    digest: "0".repeat(64),
-  });
+  }, options);
   assert.match(
     withAlternateLocale,
     /<a class="locale-option" href="upload-recovery\.en\.html" hreflang="en-US" lang="en-US">English<\/a>/u,
   );
   assert.match(withAlternateLocale, /<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu"[\s\S]*?<button class="theme-button"/u);
   assert.throws(
-    () => renderAlignArtifact(data, {
-      alternateLocale: { href: "..\/outside.html", locale: "en-US" },
-      digest: "0".repeat(64),
-    }),
+    () => renderAlignArtifact({
+      ...record,
+      alternateLocale: { href: "../outside.html", locale: "en-US" },
+    }, options),
     /alternateLocale must name a supported locale and sibling HTML file/u,
   );
 });
 
 test("evidence marker groups follow document number order", () => {
-  const input = validateAlignInput(makeAlignInput({
+  const input = makeAlignInput({
     goal: {
       text: "근거 순서와 관계없이 번호를 읽기 쉽게 표시한다.",
       evidenceIds: ["third", "first", "second"],
@@ -779,22 +500,8 @@ test("evidence marker groups follow document number order", () => {
       { id: "second", label: "둘째 근거", location: "docs/second.md" },
       { id: "third", label: "셋째 근거", location: "docs/third.md" },
     ],
-  }));
-  const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
-  const html = renderAlignArtifact({
-    alignId: "11111111-1111-4111-8111-111111111111",
-    createdAt: now.toISOString(),
-    locale,
-    repository: "acme/storage",
-    revisions: [{
-      agreedAt: now.toISOString(),
-      content,
-      number: 1,
-      summary: revisionSummary,
-    }],
-    schemaVersion: 1,
-    theme,
-  }, { digest: "0".repeat(64) });
+  });
+  const html = renderAlignArtifact(recordFor(input), { recordHref: "work.json" });
   const goal = html.match(/<dt>목표<\/dt><dd>[\s\S]*?<\/dd>/u)?.[0] ?? "";
 
   assert.deepEqual(
@@ -806,27 +513,11 @@ test("evidence marker groups follow document number order", () => {
 });
 
 test("renderer omits empty optional sections instead of filling the screen", () => {
-  const input = validateAlignInput(makeAlignInput({
+  const html = renderAlignArtifact(recordFor(makeAlignInput({
     exclusions: [],
     flow: undefined,
     evidence: undefined,
-  }));
-  const { revisionSummary, locale, theme, schemaVersion: _schemaVersion, ...content } = input;
-  const data = {
-    schemaVersion: 1,
-    alignId: "11111111-1111-4111-8111-111111111111",
-    repository: "acme/storage",
-    locale,
-    theme,
-    createdAt: now.toISOString(),
-    revisions: [{
-      number: 1,
-      agreedAt: now.toISOString(),
-      summary: revisionSummary,
-      content,
-    }],
-  };
-  const html = renderAlignArtifact(data, { digest: "0".repeat(64) });
+  })), { recordHref: "work.json" });
   assert.doesNotMatch(html, /id="flow"|id="evidence"/u);
   assert.match(html, /id="intent"/u);
   assert.match(html, /id="decisions"/u);
@@ -835,349 +526,412 @@ test("renderer omits empty optional sections instead of filling the screen", () 
   assert.doesNotMatch(html, />미결정 의도</u);
 });
 
-test("create publishes one owned project artifact without replacing a path", async () => {
+
+test("create writes one record and its rendered HTML without replacing a path", async () => {
   const root = await repository();
   const inputPath = await inputFile(root, "input.json", makeAlignInput());
-  const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
-  const result = await createAlignArtifact(
+  const outputPath = join(root, "docs", "alignments", "upload-recovery.json");
+  const htmlPath = join(root, "docs", "alignments", "upload-recovery.html");
+  const result = await createAlignRecord(
     { inputPath, outputPath, root },
     { now: () => now, randomUUID: () => "11111111-1111-4111-8111-111111111111" },
   );
-  assert.equal(result.artifactPath, outputPath);
-  assert.equal(result.repository, "acme/storage");
+  assert.equal(result.recordPath, outputPath);
+  assert.equal(result.htmlPath, htmlPath);
   assert.equal(result.revision, 1);
-  assert.match(result.digest, /^[a-f0-9]{64}$/u);
 
-  const html = await readFile(outputPath, "utf8");
-  assert.equal(verifyAlignHtml(html), result.digest);
-  const inspected = await inspectAlignArtifact(outputPath);
-  assert.equal(inspected.digest, result.digest);
-  assert.equal(inspected.content.title, "실패한 업로드 복구");
-  assert.equal(inspected.content.intent.length, 4);
-  assert.equal(inspected.content.exclusions.length, 3);
-  assert.deepEqual(inspected.history, [{
-    agreedAt: now.toISOString(),
-    number: 1,
-    summary: "최초 합의",
-  }]);
+  const record = await readJson(outputPath);
+  assert.deepEqual(Object.keys(record), [
+    "schemaVersion", "alignId", "repository", "locale", "theme",
+    "createdAt", "updatedAt", "history", "content",
+  ]);
+  assert.equal(record.repository, "acme/storage");
+  assert.deepEqual(record.history, [{ at: now.toISOString(), summary: "최초 합의" }]);
+  assert.equal(record.content.title, "실패한 업로드 복구");
+  assert.equal(record.content.revisionSummary, undefined);
+
+  const html = await readFile(htmlPath, "utf8");
+  assert.match(html, /<meta name="hope-align-id" content="11111111-1111-4111-8111-111111111111">/u);
+  assert.match(html, /<meta name="hope-align-record" content="upload-recovery\.json">/u);
+  assert.doesNotMatch(html, /hope-align-data|hope-align-digest/u);
+
+  const inspected = await inspectAlignRecord(outputPath);
+  assert.equal(inspected.alignId, result.alignId);
+  assert.equal(inspected.repository, "acme/storage");
+  assert.equal(inspected.updatedAt, now.toISOString());
+  assert.deepEqual(inspected.history, record.history);
+  assert.deepEqual(inspected.content, record.content);
 
   await assert.rejects(
-    createAlignArtifact({ inputPath, outputPath, root }),
+    createAlignRecord({ inputPath, outputPath, root }),
     /did not replace the existing file/u,
   );
-  assert.equal(await readFile(outputPath, "utf8"), html);
+  const htmlOnly = join(root, "docs", "alignments", "existing.html");
+  await writeFile(htmlOnly, "<p>someone else's page</p>\n", "utf8");
+  await assert.rejects(
+    createAlignRecord({ inputPath, outputPath: htmlOnly.replace(/html$/u, "json"), root }),
+    /did not replace the existing file/u,
+  );
+  assert.equal(await readFile(htmlOnly, "utf8"), "<p>someone else's page</p>\n");
+  assert.equal(await readFile(htmlPath, "utf8"), html);
 });
 
-test("revise appends a current shared-understanding record to a legacy artifact", async () => {
+test("create keeps the record a .json file inside the repository", async () => {
   const root = await repository();
-  const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
-  const created = await writeLegacyAlignArtifact({
-    artifactPath: outputPath,
-    content: {
-      behavior: {
-        ...makeLegacyAlignInputV2().behavior,
-        outcomes: [{
-          title: "이전 결과 전용",
-          detail: "이전 버전에서만 합의한 결과다.",
-          kind: "cancel",
-        }],
-      },
-      evidence: [{ label: "이전 근거 전용", location: "docs/previous.md" }],
-    },
-  });
-  const legacy = await inspectAlignArtifact(outputPath);
-  assert.equal(legacy.digest, created.digest);
-  assert.equal(legacy.revision, 1);
-  assert.equal(legacy.content.intent, makeLegacyAlignInputV2().goal);
-  assert.deepEqual(
-    legacy.content.success,
-    makeLegacyAlignInputV2().checks.map((check) => check.condition),
+  const inputPath = await inputFile(root, "input.json", makeAlignInput());
+  await assert.rejects(
+    createAlignRecord({ inputPath, outputPath: "docs/alignments/work.html", root }),
+    /must use a \.json extension/u,
+  );
+  await assert.rejects(
+    createAlignRecord({ inputPath, outputPath: "../outside.json", root }),
+    /must stay inside the repository/u,
+  );
+  if (process.platform !== "win32") {
+    const outside = await createTestTemporaryDirectory("hope-align-outside-");
+    await symlink(outside, join(root, "linked-docs"));
+    await assert.rejects(
+      createAlignRecord({ inputPath, outputPath: "linked-docs/agreement.json", root }),
+      /must stay inside the repository/u,
+    );
+    await assert.rejects(readFile(join(outside, "agreement.json")), { code: "ENOENT" });
+  }
+});
+
+test("revise replaces the content, appends history, and rewrites both files", async () => {
+  const root = await repository();
+  const firstInput = await inputFile(root, "first.json", makeAlignInput());
+  const recordPath = join(root, "docs", "alignments", "upload-recovery.json");
+  const created = await createAlignRecord(
+    { inputPath: firstInput, outputPath: recordPath, root },
+    { now: () => now },
   );
   const revisedAt = new Date("2026-08-15T00:00:00.000Z");
   const secondInput = await inputFile(root, "second.json", makeAlignInput({
-    exclusions: [
-      ...makeAlignInput().exclusions,
-      "복구 기간이 24시간을 지난 항목",
-    ],
+    exclusions: [...makeAlignInput().exclusions, "복구 기간이 24시간을 지난 항목"],
     revisionSummary: "복구 기간과 경계를 명확히 함",
   }));
-  const revised = await reviseAlignArtifact(
-    {
-      artifactPath: outputPath,
-      expectedDigest: created.digest,
-      inputPath: secondInput,
-      root,
-    },
+  const revised = await reviseAlignRecord(
+    { inputPath: secondInput, recordPath, root },
     { now: () => revisedAt },
   );
 
   assert.equal(revised.alignId, created.alignId);
-  assert.equal(revised.artifactPath, created.artifactPath);
   assert.equal(revised.revision, 2);
-  assert.notEqual(revised.digest, created.digest);
-  const inspected = await inspectAlignArtifact(outputPath);
-  assert.equal(inspected.revision, 2);
-  assert.equal(inspected.content.goal, makeAlignInput().goal);
-  assert.deepEqual(inspected.content.intent, makeAlignInput().intent);
-  assert.match(inspected.content.exclusions.at(-1), /24시간/u);
-  assert.equal(inspected.history.length, 2);
-  const html = await readFile(outputPath, "utf8");
-  assert.match(html, /v2 · 현재 합의/u);
-  assert.match(html, /<strong>v1<\/strong>/u);
-  assert.equal((html.match(/<p><bdi dir="auto">최초 합의<\/bdi><\/p>/gu) ?? []).length, 2);
-  assert.match(html, /id="revision-1"/u);
-  assert.match(html, /변경 내용 보기/u);
-  assert.match(html, /이전 결과 전용 \(취소\)/u);
-  assert.match(html, /이전 버전에서만 합의한 결과다/u);
-  assert.match(html, /이전 근거 전용/u);
-  assert.match(html, /docs\/previous\.md/u);
-  assert.match(html, /중단 지점부터 이어서 완료할 수 있다/u);
-  assert.match(html, /원본과 같은 파일을 받을 수 있는지/u);
-
-  await assert.rejects(
-    reviseAlignArtifact({
-      artifactPath: outputPath,
-      expectedDigest: created.digest,
-      inputPath: secondInput,
-      root,
-    }),
-    /does not match the inspected revision/u,
-  );
-
-  await writeFile(outputPath, `${html}\n<!-- user edit -->\n`, "utf8");
-  const edited = await readFile(outputPath, "utf8");
-  await assert.rejects(
-    inspectAlignArtifact(outputPath),
-    /changed outside Hope/u,
-  );
-  await assert.rejects(
-    reviseAlignArtifact({
-      artifactPath: outputPath,
-      expectedDigest: revised.digest,
-      inputPath: secondInput,
-      root,
-    }),
-    /changed outside Hope/u,
-  );
-  assert.equal(await readFile(outputPath, "utf8"), edited);
-});
-
-test("inspect rejects resealed artifacts with invalid revision content", async () => {
-  const root = await repository();
-  const inputPath = await inputFile(root, "input.json", makeAlignInput());
-  const outputPath = join(root, "docs", "alignments", "upload-recovery.html");
-  await createAlignArtifact({ inputPath, outputPath, root });
-  const original = await readFile(outputPath, "utf8");
-  const invalidChanges = [
-    (data) => { data.revisions[0].content.exclusions = "not a list"; },
-    (data) => { data.revisions[0].content.progress = 50; },
-    (data) => { delete data.revisions[0].content.intent; },
-    (data) => { data.revisions[0].content.intent = data.revisions[0].content.goal; },
-  ];
-
-  for (const change of invalidChanges) {
-    await writeFile(outputPath, resealAlignArtifact(original, change), "utf8");
-    await assert.rejects(inspectAlignArtifact(outputPath), /content|intent record/u);
-  }
-});
-
-test("revision rejects an artifact that would exceed the readable size", async () => {
-  const root = await repository();
-  const prose = "x".repeat(3_980);
-  const largeInput = makeAlignInput({
-    flow: undefined,
-    evidence: undefined,
-    goal: prose,
-    problem: prose,
-    intent: Array.from({ length: 4 }, (_, index) => ({
-      statement: `${prose} condition ${index}`,
-      verify: `${prose} verify ${index}`,
-      by: "agent",
-    })),
-    exclusions: Array.from({ length: 25 }, (_, index) => `${prose} excluded ${index}`),
-  });
-  const inputPath = await inputFile(root, "large.json", largeInput);
-  const outputPath = join(root, "docs", "alignments", "large.html");
-  let current = await createAlignArtifact({ inputPath, outputPath, root });
-  let rejection;
-
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const before = await readFile(outputPath);
-    try {
-      current = await reviseAlignArtifact({
-        artifactPath: outputPath,
-        expectedDigest: current.digest,
-        inputPath,
-        root,
-      });
-    } catch (error) {
-      rejection = error;
-      assert.match(error.message, /exceeds 12582912 bytes/u);
-      assert.deepEqual(await readFile(outputPath), before);
-      const inspected = await inspectAlignArtifact(outputPath);
-      assert.equal(inspected.digest, current.digest);
-      break;
-    }
-  }
-
-  assert.ok(rejection, "a bounded artifact must reject history before it becomes unreadable");
-});
-
-test("revision compares canonical repository identity instead of its display label", async () => {
-  const sourceRoot = await repository("git@github.com:acme/storage.git");
-  const inputPath = await inputFile(sourceRoot, "input.json", makeAlignInput());
-  const sourceArtifact = join(sourceRoot, "docs", "alignments", "intent.html");
-  const created = await createAlignArtifact({ inputPath, outputPath: sourceArtifact, root: sourceRoot });
-
-  await execFileAsync("git", [
-    "-C",
-    sourceRoot,
-    "remote",
-    "set-url",
-    "origin",
-    "https://github.com/acme/storage.git",
+  const record = await readJson(recordPath);
+  assert.equal(record.createdAt, now.toISOString());
+  assert.equal(record.updatedAt, revisedAt.toISOString());
+  assert.deepEqual(record.history, [
+    { at: now.toISOString(), summary: "최초 합의" },
+    { at: revisedAt.toISOString(), summary: "복구 기간과 경계를 명확히 함" },
   ]);
-  const sameRepositoryInput = await inputFile(sourceRoot, "same.json", makeAlignInput({
-    revisionSummary: "같은 저장소의 HTTPS 주소",
+  assert.match(record.content.exclusions.at(-1), /24시간/u);
+
+  const html = await readFile(created.htmlPath, "utf8");
+  assert.match(html, /<span class="brand-record">SPEC-002<\/span>/u);
+  assert.match(html, /<strong>v2 · 현재 합의<\/strong><time datetime="2026-08-15T00:00:00\.000Z">2026-08-15<\/time>/u);
+  assert.match(html, /<strong>v1<\/strong><time datetime="2026-08-14T00:00:00\.000Z">2026-08-14<\/time><\/div>\s*<p><bdi dir="auto">최초 합의<\/bdi><\/p>/u);
+  assert.match(html, /24시간을 지난 항목/u);
+  assert.doesNotMatch(html, /revision-disclosure|revision-popup/u);
+
+  await assert.rejects(
+    reviseAlignRecord({ inputPath: await inputFile(root, "v2.json", makeLegacyAlignInputV2()), recordPath, root }),
+    /schemaVersion must be 3/u,
+  );
+  assert.equal((await inspectAlignRecord(recordPath)).revision, 2);
+});
+
+test("older history entries fold below the two newest", async () => {
+  const history = ["첫 합의", "둘째 합의", "셋째 합의", "넷째 합의"].map((summary, index) => ({
+    at: `2026-08-1${index + 1}T00:00:00.000Z`,
+    summary,
   }));
-  const revised = await reviseAlignArtifact({
-    artifactPath: sourceArtifact,
-    expectedDigest: created.digest,
-    inputPath: sameRepositoryInput,
-    root: sourceRoot,
+  const html = renderAlignArtifact(recordFor(makeAlignInput(), { history }), {
+    recordHref: "work.json",
   });
-  assert.equal(revised.revision, 2);
-
-  const otherRoot = await repository("git@gitlab.com:acme/storage.git");
-  const otherArtifact = join(otherRoot, "docs", "alignments", "intent.html");
-  await mkdir(dirname(otherArtifact), { recursive: true });
-  await copyFile(sourceArtifact, otherArtifact);
-  const otherInput = await inputFile(otherRoot, "other.json", makeAlignInput());
-  const copiedBytes = await readFile(otherArtifact);
-  await assert.rejects(
-    reviseAlignArtifact({
-      artifactPath: otherArtifact,
-      expectedDigest: revised.digest,
-      inputPath: otherInput,
-      root: otherRoot,
-    }),
-    /belongs to a different repository/u,
+  const rail = html.match(/<section class="rail-history" aria-labelledby="rail-history-title">[\s\S]*?<\/section>/u)[0];
+  assert.deepEqual(
+    [...rail.matchAll(/<strong>(v\d)/gu)].map((match) => match[1]),
+    ["v4", "v3", "v2", "v1"],
   );
-  assert.deepEqual(await readFile(otherArtifact), copiedBytes);
-
-  const firstParent = await createTestTemporaryDirectory("hope-align-local-a-");
-  const secondParent = await createTestTemporaryDirectory("hope-align-local-b-");
-  const firstLocal = join(firstParent, "project");
-  const secondLocal = join(secondParent, "project");
-  await mkdir(firstLocal);
-  await mkdir(secondLocal);
-  await execFileAsync("git", ["init", "-q", firstLocal]);
-  await execFileAsync("git", ["init", "-q", secondLocal]);
-  const localInput = await inputFile(firstLocal, "input.json", makeAlignInput());
-  const firstLocalArtifact = join(firstLocal, "docs", "alignments", "intent.html");
-  const localCreated = await createAlignArtifact({
-    inputPath: localInput,
-    outputPath: firstLocalArtifact,
-    root: firstLocal,
-  });
-  const secondLocalArtifact = join(secondLocal, "docs", "alignments", "intent.html");
-  await mkdir(dirname(secondLocalArtifact), { recursive: true });
-  await copyFile(firstLocalArtifact, secondLocalArtifact);
-  const secondInput = await inputFile(secondLocal, "input.json", makeAlignInput());
-  await assert.rejects(
-    reviseAlignArtifact({
-      artifactPath: secondLocalArtifact,
-      expectedDigest: localCreated.digest,
-      inputPath: secondInput,
-      root: secondLocal,
-    }),
-    /belongs to a different repository/u,
-  );
+  assert.match(rail, /<\/ol>\s*<details class="older-history"><summary>2 개의 이전 버전<\/summary>/u);
+  assert.match(rail, /<li class="current">[\s\S]*?넷째 합의/u);
 });
 
-test("publication stops when an ancestor changes after validation", {
-  skip: process.platform === "win32",
-}, async () => {
+test("render rebuilds the HTML after a manual record edit and rejects invalid records", async () => {
   const root = await repository();
-  const outside = await createTestTemporaryDirectory("hope-align-race-outside-");
   const inputPath = await inputFile(root, "input.json", makeAlignInput());
-  const outputPath = join(root, "docs", "alignments", "agreement.html");
-  const parent = dirname(outputPath);
-  const moved = join(root, "validated-alignments");
-  let swapped = false;
+  const recordPath = join(root, "docs", "alignments", "upload-recovery.json");
+  const created = await createAlignRecord({ inputPath, outputPath: recordPath, root });
+  const record = await readJson(recordPath);
+  record.content.title = "손으로 고친 제목";
+  record.alternateLocale = { locale: "en-US", href: "upload-recovery.en.html" };
+  await writeFile(recordPath, `${JSON.stringify(record, null, 2)}\n`, "utf8");
 
-  await assert.rejects(
-    createAlignArtifact(
-      { inputPath, outputPath, root },
-      {
-        publicationCheckpoint: async (step) => {
-          if (!swapped && step === "before-link") {
-            swapped = true;
-            await rename(parent, moved);
-            await symlink(outside, parent);
-          }
-        },
-      },
-    ),
-    /non-directory or link|directory changed during publication/u,
-  );
-  await assert.rejects(readFile(join(outside, "agreement.html")), { code: "ENOENT" });
+  const rendered = await renderAlignRecord(recordPath);
+  assert.equal(rendered.htmlPath, created.htmlPath);
+  const html = await readFile(created.htmlPath, "utf8");
+  assert.match(html, /<h1 id="artifact-title"><bdi dir="auto">손으로 고친 제목<\/bdi><\/h1>/u);
+  assert.match(html, /<a class="locale-option" href="upload-recovery\.en\.html" hreflang="en-US"/u);
+  assert.equal((await readJson(recordPath)).content.title, "손으로 고친 제목");
+
+  const invalidChanges = [
+    [(value) => { value.progress = 50; }, /unsupported field: progress/u],
+    [(value) => { value.history = []; }, /history must contain at least 1 entry/u],
+    [(value) => { value.history[0].at = "yesterday"; }, /ISO 8601/u],
+    [(value) => { value.content.exclusions = "not a list"; }, /exclusions must be an array/u],
+    [(value) => { value.alternateLocale = { locale: "ko-KR", href: "x.html" }; }, /other locale/u],
+  ];
+  for (const [change, expected] of invalidChanges) {
+    const value = structuredClone(record);
+    change(value);
+    await writeFile(recordPath, JSON.stringify(value), "utf8");
+    await assert.rejects(inspectAlignRecord(recordPath), expected);
+    await assert.rejects(renderAlignRecord(recordPath), expected);
+  }
 });
 
-test("revision stops when its verified parent changes before replacement", {
-  skip: process.platform === "win32",
-}, async () => {
+test("design direction images live in the repository and are embedded at render time", async () => {
   const root = await repository();
-  const outside = await createTestTemporaryDirectory("hope-align-revise-race-outside-");
-  const firstInput = await inputFile(root, "first.json", makeAlignInput());
-  const secondInput = await inputFile(root, "second.json", makeAlignInput({
-    revisionSummary: "두 번째 합의",
+  const imageDirectory = join(root, "docs", "alignments", "visual-agreement");
+  await mkdir(imageDirectory, { recursive: true });
+  const firstImage = join(imageDirectory, "direction-one.png");
+  const secondImage = join(imageDirectory, "direction-two.png");
+  await copyFile(sampleImage, firstImage);
+  await copyFile(sampleImage, secondImage);
+  const designDirections = makeDesignDirections([firstImage, secondImage]);
+  designDirections.options[0].references[0] = {
+    evidenceId: "recovery-reference",
+    influence: "복구 선택을 첫 화면의 주 행동으로 배치했다.",
+  };
+  const evidence = [{
+    id: "recovery-reference",
+    label: "복구 요구 참고",
+    location: "https://example.com/recovery-reference",
+  }];
+  const inputPath = await inputFile(root, "input.json", makeAlignInput({ designDirections, evidence }));
+  const recordPath = join(root, "docs", "alignments", "visual-agreement.json");
+  const created = await createAlignRecord({ inputPath, outputPath: recordPath, root });
+
+  const record = await readJson(recordPath);
+  assert.deepEqual(
+    record.content.designDirections.options.map((option) => option.imagePath),
+    ["visual-agreement/direction-one.png", "visual-agreement/direction-two.png"],
+  );
+  const html = await readFile(created.htmlPath, "utf8");
+  assert.equal(
+    (html.match(/class="direction-image"><img src="data:image\/png;base64,[^"]+" alt="[^"]+" width="128" height="128">/gu) ?? []).length,
+    2,
+  );
+  assert.match(html, /id="design-directions"/u);
+  assert.match(html, />AI 추천</u);
+  assert.match(html, />사용자가 선택함</u);
+  assert.match(html, /href="https:\/\/example\.com\/recovery-reference"/u);
+  const firstDirection = html.indexOf('id="design-direction-direction-1"');
+  const secondDirection = html.indexOf('id="design-direction-direction-2"');
+  const firstStrength = html.indexOf("핵심 선택을 빠르게 찾을 수 있다.");
+  const firstRecommendation = html.indexOf(">AI 추천<", firstDirection);
+  const firstReference = html.indexOf("복구 요구 참고");
+  assert.ok(firstDirection < firstStrength);
+  assert.ok(firstStrength < firstRecommendation);
+  assert.ok(firstRecommendation < firstReference);
+  assert.ok(firstReference < secondDirection);
+  assert.doesNotMatch(html, /direction-one\.png|visual-agreement\//u);
+  assert.doesNotMatch(html, /<img[^>]+https?:/u);
+
+  // A revision may reuse the record-relative paths that inspect reports.
+  const inspected = await inspectAlignRecord(recordPath);
+  const reviseInput = await inputFile(root, "revise.json", makeAlignInput({
+    designDirections: inspected.content.designDirections,
+    evidence,
+    revisionSummary: "같은 시안 유지",
   }));
-  const outputPath = join(root, "docs", "alignments", "agreement.html");
-  const created = await createAlignArtifact({ inputPath: firstInput, outputPath, root });
-  const parent = dirname(outputPath);
-  const moved = join(root, "validated-alignments");
-  let swapped = false;
-
-  await assert.rejects(
-    reviseAlignArtifact(
-      {
-        artifactPath: outputPath,
-        expectedDigest: created.digest,
-        inputPath: secondInput,
-        root,
-      },
-      {
-        publicationCheckpoint: async (step) => {
-          if (!swapped && step === "before-replace") {
-            swapped = true;
-            await rename(parent, moved);
-            await symlink(outside, parent);
-          }
-        },
-      },
-    ),
-    /non-directory or link|directory changed during publication/u,
+  await reviseAlignRecord({ inputPath: reviseInput, recordPath, root });
+  assert.deepEqual(
+    (await readJson(recordPath)).content.designDirections,
+    record.content.designDirections,
   );
-  await assert.rejects(readFile(join(outside, "agreement.html")), { code: "ENOENT" });
-  await unlink(parent);
-  await rename(moved, parent);
-  assert.equal((await inspectAlignArtifact(outputPath)).digest, created.digest);
+
+  await writeFile(secondImage, "not a png", "utf8");
+  await assert.rejects(renderAlignRecord(recordPath), /Design direction image 2 must be a PNG image/u);
+  await copyFile(sampleImage, secondImage);
+  const edited = await readJson(recordPath);
+  edited.content.designDirections.options[1].imagePath = "visual-agreement/missing.png";
+  await writeFile(recordPath, JSON.stringify(edited), "utf8");
+  await assert.rejects(renderAlignRecord(recordPath), /Design direction image 2 was not found/u);
+  edited.content.designDirections.options[1].imagePath = "/tmp/direction.png";
+  await writeFile(recordPath, JSON.stringify(edited), "utf8");
+  await assert.rejects(renderAlignRecord(recordPath), /must be a relative path/u);
 });
 
-test("create refuses a linked output directory", {
-  skip: process.platform === "win32",
-}, async () => {
+test("design direction images stay inside the repository and the PNG limits", async () => {
   const root = await repository();
-  const outside = await createTestTemporaryDirectory("hope-align-outside-");
-  const inputPath = await inputFile(root, "input.json", makeAlignInput());
-  await symlink(outside, join(root, "linked-docs"));
-  await assert.rejects(
-    createAlignArtifact({
+  const outside = await createTestTemporaryDirectory("hope-align-image-outside-");
+  const outsideImage = join(outside, "direction.png");
+  await copyFile(sampleImage, outsideImage);
+  const inside = join(root, "inside.png");
+  await copyFile(sampleImage, inside);
+  const attempt = async (name, imagePaths) => {
+    const inputPath = await inputFile(root, `${name}.json`, makeAlignInput({
+      designDirections: makeDesignDirections(imagePaths),
+    }));
+    return createAlignRecord({
       inputPath,
-      outputPath: join(root, "linked-docs", "agreement.html"),
+      outputPath: join(root, "docs", "alignments", `${name}.json`),
       root,
-    }),
-    /non-directory or link/u,
-  );
+    });
+  };
+
+  await assert.rejects(attempt("outside", [inside, outsideImage]), /image 2 must stay inside the repository/u);
+  if (process.platform !== "win32") {
+    await symlink(outsideImage, join(root, "linked.png"));
+    await assert.rejects(attempt("linked", [inside, join(root, "linked.png")]), /must stay inside the repository/u);
+  }
+  const svg = join(root, "direction.svg");
+  await writeFile(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>", "utf8");
+  await assert.rejects(attempt("svg", [inside, svg]), /must be a PNG image/u);
+  const oversized = join(root, "oversized.png");
+  await writeFile(oversized, pngHeader(64, 64, 512 * 1024 + 1));
+  await assert.rejects(attempt("oversized", [inside, oversized]), /exceeds 524288 bytes/u);
+  const huge = join(root, "huge.png");
+  await writeFile(huge, pngHeader(5_000, 10));
+  await assert.rejects(attempt("huge", [inside, huge]), /exceeds the supported image dimensions/u);
+  const tooManyPixels = join(root, "pixels.png");
+  await writeFile(tooManyPixels, pngHeader(4_000, 4_000));
+  await assert.rejects(attempt("pixels", [inside, tooManyPixels]), /exceeds the supported image dimensions/u);
+  const large = join(root, "large.png");
+  await writeFile(large, pngHeader(64, 64, 400 * 1024));
+  await assert.rejects(attempt("total", [large, large, large]), /images exceed 1048576 bytes/u);
+  await assert.rejects(readFile(join(root, "docs", "alignments", "total.json")), { code: "ENOENT" });
+});
+
+test("migrate turns each legacy schema into a record and re-renders the legacy path", async () => {
+  const root = await repository();
+  const imageDirectory = join(root, "source-images");
+  await mkdir(imageDirectory);
+  const directionImages = [join(imageDirectory, "one.png"), join(imageDirectory, "two.png")];
+  for (const path of directionImages) await copyFile(sampleImage, path);
+  const v1 = await makeLegacyContent(1);
+  const v2 = await makeLegacyContent(2);
+  const v3 = await makeLegacyContent(3, { designDirections: makeDesignDirections(directionImages) });
+  const artifactPath = join(root, "docs", "alignments", "upload-recovery.html");
+  await writeLegacyAlignArtifact(artifactPath, makeLegacyData({
+    revisions: [
+      { agreedAt: "2026-08-14T00:00:00.000Z", summary: "최초 합의", content: v1 },
+      { agreedAt: "2026-08-15T00:00:00.000Z", summary: "검증 방법 추가", content: v2 },
+      { agreedAt: "2026-08-16T00:00:00.000Z", summary: "시안 선택", content: v3 },
+    ],
+  }), { alternateLocale: { locale: "en-US", href: "upload-recovery.en.html" } });
+
+  const result = await migrateAlignArtifact({ artifactPath });
+  const recordPath = join(root, "docs", "alignments", "upload-recovery.json");
+  assert.equal(result.recordPath, recordPath);
+  assert.equal(result.htmlPath, artifactPath);
+  assert.equal(result.legacySchema, 3);
+  assert.equal(result.revision, 3);
+  assert.deepEqual(result.images, [
+    join(root, "docs", "alignments", "upload-recovery.direction-1.png"),
+    join(root, "docs", "alignments", "upload-recovery.direction-2.png"),
+  ]);
+  assert.deepEqual(await readFile(result.images[0]), await readFile(sampleImage));
+
+  const record = await readJson(recordPath);
+  assert.equal(record.alignId, "11111111-1111-4111-8111-111111111111");
+  assert.equal(record.createdAt, "2026-08-14T00:00:00.000Z");
+  assert.equal(record.updatedAt, "2026-08-16T00:00:00.000Z");
+  assert.deepEqual(record.alternateLocale, { locale: "en-US", href: "upload-recovery.en.html" });
+  assert.deepEqual(record.history.map((entry) => entry.summary), ["최초 합의", "검증 방법 추가", "시안 선택"]);
+  assert.deepEqual(record.content.intent, makeAlignInput().intent);
+  assert.equal(record.content.designDirections.options[0].imagePath, "upload-recovery.direction-1.png");
+  assert.equal(record.content.designDirections.options[0].image, undefined);
+
+  const html = await readFile(artifactPath, "utf8");
+  assert.doesNotMatch(html, /hope-align-data|hope-align-digest/u);
+  assert.match(html, /<meta name="hope-align-record" content="upload-recovery\.json">/u);
+  assert.equal((html.match(/<img src="data:image\/png;base64,/gu) ?? []).length, 2);
+  assert.match(html, /<strong>v3 · 현재 합의<\/strong>/u);
+  assert.match(html, /hreflang="en-US"/u);
+
+  await assert.rejects(migrateAlignArtifact({ artifactPath }), /not a sealed legacy/u);
+});
+
+test("migrate maps v1 and v2 fields without inventing provenance", async () => {
+  const root = await repository();
+  for (const schema of [1, 2]) {
+    const artifactPath = join(root, "docs", "alignments", `schema-${schema}.html`);
+    await writeLegacyAlignArtifact(artifactPath, makeLegacyData({
+      revisions: [{
+        agreedAt: "2026-08-14T00:00:00.000Z",
+        summary: "최초 합의",
+        content: await makeLegacyContent(schema),
+      }],
+    }));
+    const result = await migrateAlignArtifact({ artifactPath });
+    const { content } = await readJson(result.recordPath);
+    const legacy = makeLegacyAlignInputV2();
+
+    assert.equal(result.legacySchema, schema);
+    assert.equal(content.goal, legacy.goal);
+    assert.deepEqual(content.exclusions, [...legacy.scope.excluded, ...legacy.openChoices]);
+    assert.deepEqual(content.flow, legacy.behavior);
+    assert.deepEqual(
+      content.intent.map((item) => item.statement),
+      [
+        ...legacy.checks.map((check) => check.condition),
+        legacy.boundary,
+        ...legacy.scope.included,
+        ...legacy.decisions.map((decision) => decision.decision),
+      ],
+    );
+    assert.equal(content.intent.some((item) => item.decidedBy !== undefined), false);
+    const unjudged = content.intent.slice(schema === 2 ? legacy.checks.length : 0);
+    assert.equal(unjudged.every((item) => item.by === "human" && /판단 방법이 없어/u.test(item.verify)), true);
+    if (schema === 2) {
+      assert.deepEqual(content.intent[0], {
+        statement: legacy.checks[0].condition,
+        verify: legacy.checks[0].verify,
+        by: "agent",
+      });
+    }
+    assert.equal(content.intent.at(-1).reason, legacy.decisions.at(-1).reason);
+    assert.deepEqual(Object.keys(result.moved).sort(), [
+      ...(schema === 1 ? ["intent", "success"] : ["checks"]),
+      "behavior", "boundary", "decisions", "openChoices", "scope.excluded", "scope.included",
+    ].sort());
+  }
+});
+
+test("migrate reads a real legacy example and refuses changed or occupied targets", async () => {
+  const root = await repository();
+  const artifactPath = join(root, "docs", "alignments", "ui-design-directions.html");
+  const data = await readRealLegacyData();
+  await writeLegacyAlignArtifact(artifactPath, data);
+
+  const result = await migrateAlignArtifact({ artifactPath });
+  const record = await readJson(result.recordPath);
+  assert.equal(result.legacySchema, 1);
+  assert.equal(record.alignId, data.alignId);
+  assert.equal(record.repository, "dkstm95/hope");
+  assert.deepEqual(record.history, data.revisions.map((revision) => ({
+    at: revision.agreedAt,
+    summary: revision.summary,
+  })));
+  assert.equal(record.content.goal, data.revisions.at(-1).content.intent);
+  assert.equal(record.alternateLocale, undefined);
+  const html = await readFile(artifactPath, "utf8");
+  assert.match(html, /<span class="brand-record">SPEC-002<\/span>/u);
+  assert.match(html, /UI 디자인 시안 탐색을 포함하는 Align/u);
+
+  const edited = join(root, "docs", "alignments", "edited.html");
+  await writeLegacyAlignArtifact(edited, { ...data, alignId: "22222222-2222-4222-8222-222222222222" });
+  const source = await readFile(edited, "utf8");
+  await writeFile(edited, source.replace("<main>", "<main>hand edit "), "utf8");
+  await assert.rejects(migrateAlignArtifact({ artifactPath: edited }), /changed outside Hope/u);
+
+  const occupied = join(root, "docs", "alignments", "occupied.html");
+  await writeLegacyAlignArtifact(occupied, data);
+  await writeFile(occupied.replace(/html$/u, "json"), "{}\n", "utf8");
+  const before = await readFile(occupied, "utf8");
+  await assert.rejects(migrateAlignArtifact({ artifactPath: occupied }), /did not replace the existing file/u);
+  assert.equal(await readFile(occupied, "utf8"), before);
 });

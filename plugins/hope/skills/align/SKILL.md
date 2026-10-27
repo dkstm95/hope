@@ -84,15 +84,15 @@ alignment-only request ends with the confirmed understanding.
 
 ## Preserve understanding when needed
 
-Read `references/artifact.md` when the person supplies an Align artifact, asks
-for a durable record, or another session or worker will rely on the agreement.
-Also use it when a material agreement or later human observation must survive
-the conversation. Otherwise the conversation is sufficient.
+Read `references/artifact.md` when the person supplies an Align record or its
+HTML page, asks for a durable record, or another session or worker will rely on
+the agreement. Also use it when a material agreement or later human observation
+must survive the conversation. Otherwise the conversation is sufficient.
 
-The reference owns artifact authoring, revision, and handoff. Run its commands
-through `node "<skill-dir>/scripts/cli.mjs"`, replacing `<skill-dir>` with the
-absolute directory containing this file. In Claude Code it is
-`${CLAUDE_PLUGIN_ROOT}/skills/align`.
+The reference owns record authoring, revision, rendering, migration, and
+handoff. Run its commands through `node "<skill-dir>/scripts/cli.mjs"`,
+replacing `<skill-dir>` with the absolute directory containing this file. In
+Claude Code it is `${CLAUDE_PLUGIN_ROOT}/skills/align`.
 
 Report where the confirmed understanding remains. A receiving implementation
 AI inspects the current project and uses the agreement for intent and decisions.

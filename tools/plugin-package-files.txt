@@ -29,7 +29,9 @@ skills/align/scripts/design/tokens.mjs
 skills/align/scripts/image.mjs
 skills/align/scripts/locales/en-US/align.json
 skills/align/scripts/locales/ko-KR/align.json
+skills/align/scripts/migrate.mjs
 skills/align/scripts/render.mjs
+skills/align/scripts/validate.mjs
 skills/design/LICENSE.emil
 skills/design/LICENSE.impeccable
 skills/design/LICENSE.interface-design

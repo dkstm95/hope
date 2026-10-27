@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "alignId": "e9b3bc09-256a-4240-aa8d-0436a3e1aed1",
+  "repository": "dkstm95/hope",
+  "locale": "en-US",
+  "theme": "system",
+  "alternateLocale": {
+    "locale": "ko-KR",
+    "href": "rescene-fan-calendar.ko.html"
+  },
+  "createdAt": "2026-08-17T03:52:43.056Z",
+  "updatedAt": "2026-08-17T03:52:43.056Z",
+  "history": [
+    {
+      "at": "2026-08-17T03:52:43.056Z",
+      "summary": "Agreed on the source policy and selected the monthly trust map."
+    }
+  ],
+  "content": {
+    "title": "Trusted fan schedule",
+    "goal": {
+      "text": "Give fans one reliable place to check schedules, voting and application deadlines, source conflicts, and the next safe action.",
+      "evidenceIds": [
+        "rescene-go",
+        "mnet-plus",
+        "blip-event"
+      ]
+    },
+    "problem": "Broadcasts, performances, releases, votes, and applications use different dates and sources. Fans can miss a deadline or act on stale information while moving between them.",
+    "intent": [
+      {
+        "statement": "Desktop shows the monthly schedule beside the selected date, while mobile presents the same events in date order.",
+        "verify": "Compare event order, selected-date details, and missing information in the wide and narrow experiences.",
+        "by": "agent"
+      },
+      {
+        "statement": {
+          "text": "Every event shows its KST time, primary source, last checked time, and a direct action link when action is required.",
+          "evidenceIds": [
+            "rescene-go",
+            "mnet-plus",
+            "blip-event"
+          ]
+        },
+        "verify": "Review representative event details and confirm that each required time and source is visible.",
+        "by": "agent",
+        "reason": "Fans need enough source context to judge whether an action is still safe."
+      },
+      {
+        "statement": "Each source observation keeps its value and checked time; source priority selects the displayed schedule while unresolved conflicts, changes, and cancellations remain visible.",
+        "verify": "Inspect representative event records and screens, then compare retained observations, the resolved display value, visible conflicts, and available actions.",
+        "by": "agent",
+        "decidedBy": "user",
+        "reason": "Preserving source observations keeps provenance and later corrections available while fans receive one usable schedule."
+      },
+      {
+        "statement": {
+          "text": "Official organizers and artists have highest source priority, and action links require a recent check.",
+          "evidenceIds": [
+            "mnet-plus"
+          ]
+        },
+        "verify": "Compare representative conflicts and action deadlines against the visible source order and last-checked time.",
+        "by": "agent",
+        "decidedBy": "user",
+        "reason": "These sources can confirm changes directly, while voting and application deadlines can change within hours."
+      },
+      {
+        "statement": "The schedule identifies itself as unofficial and sends final participation decisions to the linked official source.",
+        "verify": "Check the schedule notice and every participation action for an explicit official-source destination.",
+        "by": "agent"
+      },
+      {
+        "statement": "The chosen direction fits the existing fan site and makes monthly context and urgent actions easy to distinguish.",
+        "verify": "The person compares the two directions and judges the selected information hierarchy and responsive transition.",
+        "by": "human"
+      }
+    ],
+    "exclusions": [
+      "Push, email, or text notifications",
+      "Personal calendar synchronization",
+      "Voting or applying inside the fan site",
+      "A guarantee that every official announcement is collected"
+    ],
+    "designDirections": {
+      "options": [
+        {
+          "id": "month-map",
+          "title": "Monthly trust map",
+          "imagePath": "rescene-fan-calendar.en.month-map.png",
+          "alt": "Monthly fan schedule with a selected-date source panel and visible deadline states",
+          "summary": "Keep the monthly rhythm primary and reveal source confidence and actions for the selected date.",
+          "strengths": [
+            "Fans can scan activity density and overlapping events quickly.",
+            "The selected-date panel keeps evidence beside the event."
+          ],
+          "tradeoffs": [
+            "Urgent actions are less prominent before a date is selected."
+          ],
+          "references": [
+            {
+              "evidenceId": "rescene-go",
+              "influence": "Its monthly desktop rhythm and mobile list informed the responsive structure."
+            }
+          ]
+        },
+        {
+          "id": "action-radar",
+          "title": "Action deadline radar",
+          "imagePath": "rescene-fan-calendar.en.action-radar.png",
+          "alt": "Fan action planner that prioritizes voting and application deadlines beside a compact calendar",
+          "summary": "Put urgent voting and application actions first while retaining a compact monthly reference.",
+          "strengths": [
+            "Near-term deadlines and their official links are hard to miss.",
+            "Conflict and cancellation warnings sit beside each action."
+          ],
+          "tradeoffs": [
+            "The month-wide activity pattern takes longer to understand."
+          ],
+          "references": [
+            {
+              "label": "RESCENE STREAM",
+              "url": "https://rescene.stream/",
+              "influence": "Its separation of schedules and fan actions informed the action-first grouping."
+            }
+          ]
+        }
+      ],
+      "recommendation": {
+        "optionId": "month-map",
+        "reason": "It meets the original monthly-schedule goal while keeping source conflicts and action links beside the selected date."
+      },
+      "selection": {
+        "optionId": "month-map",
+        "reason": "The person delegated the reversible choice and accepted the direction that preserves monthly context.",
+        "decidedBy": "delegated"
+      }
+    },
+    "flow": {
+      "steps": [
+        {
+          "title": "Choose a view",
+          "detail": "Choose today, week, or month and filter event types."
+        },
+        {
+          "title": "Compare time and urgency",
+          "detail": "Scan the monthly rhythm together with deadlines, changes, and cancellations."
+        },
+        {
+          "title": "Check the source",
+          "detail": "Open an event to compare its primary source, other values, and last check."
+        },
+        {
+          "title": "Act at the original",
+          "detail": "Follow a verified official link or wait for a source correction when a conflict remains."
+        }
+      ],
+      "outcomes": [
+        {
+          "title": "Official source opened",
+          "detail": "The fan continues at the recently verified official source.",
+          "kind": "complete"
+        },
+        {
+          "title": "Source correction pending",
+          "detail": "The source conflict stays visible while the fan waits for a correction.",
+          "kind": "cancel"
+        }
+      ]
+    },
+    "evidence": [
+      {
+        "id": "rescene-go",
+        "label": "RESCENE go",
+        "location": "https://www.rescene.org/schedule"
+      },
+      {
+        "id": "mnet-plus",
+        "label": "RESCENE official Mnet Plus",
+        "location": "https://artist.mnetplus.world/main/stg/rescene-official/home"
+      },
+      {
+        "id": "blip-event",
+        "label": "Fan-sign event date example",
+        "location": "https://s.blip.kr/s/9d3b7f37"
+      }
+    ]
+  }
+}

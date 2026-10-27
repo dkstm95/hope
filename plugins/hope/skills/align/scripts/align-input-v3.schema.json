@@ -190,7 +190,7 @@
       "properties": {
         "id": { "$ref": "#/$defs/optionId" },
         "title": { "$ref": "#/$defs/title" },
-        "imagePath": { "$ref": "#/$defs/absolutePath" },
+        "imagePath": { "$ref": "#/$defs/imagePath" },
         "alt": { "$ref": "#/$defs/prose" },
         "summary": { "$ref": "#/$defs/prose" },
         "strengths": { "$ref": "#/$defs/shortProseList" },
@@ -239,12 +239,9 @@
         }
       ]
     },
-    "absolutePath": {
-      "$comment": "The runtime also requires the path to be absolute on the current platform.",
-      "allOf": [
-        { "$ref": "#/$defs/prose" },
-        { "pattern": "^(?:/|[A-Za-z]:[\\\\/]|\\\\\\\\)" }
-      ]
+    "imagePath": {
+      "$comment": "An absolute path or a path relative to the record file. The runtime requires it to resolve to a PNG inside the repository and stores it relative to the record.",
+      "$ref": "#/$defs/prose"
     },
     "titledItem": {
       "type": "object",
