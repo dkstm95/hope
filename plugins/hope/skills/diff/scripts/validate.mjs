@@ -24,7 +24,7 @@ const statedSources = new Set([
   "pull-request-description",
   "commit-title",
 ]);
-const contextStatuses = ["checked", "not-applicable", "limited"];
+const groupKinds = FILE_DISPOSITIONS.slice(0, 3);
 const aidBases = ["stated", "code", "inferred"];
 const visualKinds = ["flow", "decision-table", "sequence", "component-map"];
 const proseFields = new Set([
@@ -64,13 +64,9 @@ const analysisFields = Object.freeze([
   "purpose",
   "coreChange",
   "groups",
-  "contextChecks",
   "background",
-  "beginnerPrimer",
   "behavior",
-  "codeSteps",
   "reviewItems",
-  "fileDispositions",
   "limitImpacts",
   "quiz",
 ]);
@@ -99,8 +95,8 @@ function validateReviewTitle(value, snapshot, sourceMap) {
     throw new Error("title must be grounded in collected code");
   }
   if (
-    comparableTitle(validated.text)
-    === comparableTitle(snapshot.pullRequest.title)
+    snapshot.change.kind === "github"
+    && comparableTitle(validated.text) === comparableTitle(snapshot.change.title)
   ) {
     throw new Error("title must explain the change instead of copying the pull request title");
   }
@@ -473,30 +469,6 @@ function claim(value, name, sourceMap, { title = false, statedCodeEvidence = fal
   });
 }
 
-function primerClaim(value, name, sourceMap) {
-  object(value, name, ["title", "text", "basis", "evidence"]);
-  const basis = enumeration(value.basis, `${name}.basis`, aidBases);
-  const evidence = evidenceList(value.evidence, `${name}.evidence`, sourceMap);
-  if (
-    basis === "stated"
-    && evidence.some((item) => !statedSources.has(item.sourceKind))
-  ) {
-    throw new Error(`${name} uses code as a stated-source basis`);
-  }
-  if (
-    basis === "code"
-    && evidence.some((item) => !codeSources.has(item.sourceKind))
-  ) {
-    throw new Error(`${name} uses non-code evidence as a code basis`);
-  }
-  return Object.freeze({
-    basis,
-    evidence,
-    text: text(value.text, `${name}.text`),
-    title: text(value.title, `${name}.title`),
-  });
-}
-
 function groundedAid(value, name, sourceMap) {
   const basis = enumeration(value.basis, `${name}.basis`, aidBases);
   const evidence = evidenceList(value.evidence, `${name}.evidence`, sourceMap);
@@ -758,10 +730,11 @@ function validateMicroworld(value, sourceMap) {
       });
     },
   );
-  for (const key of expectedKeys) {
-    if (!actualKeys.has(key)) {
-      throw new Error(`${name}.scenarios is missing a control combination`);
-    }
+  const missing = [...expectedKeys].filter((key) => !actualKeys.has(key));
+  if (missing.length > 0) {
+    throw new Error(
+      `${name}.scenarios is missing control combinations: ${missing.join("; ")}`,
+    );
   }
   return Object.freeze({
     ...grounded,
@@ -828,31 +801,16 @@ function reviewItem(value, index, sourceMap, limitMap) {
   };
 }
 
-function validateFileDispositions(values, snapshot) {
-  const entries = array(values, "fileDispositions", LIMITS.changedFiles);
-  const files = new Map(snapshot.files.map((file) => [file.id, file]));
-  const selected = new Map();
-  for (const [index, entry] of entries.entries()) {
-    const name = `fileDispositions[${index}]`;
-    object(entry, name, ["fileId", "disposition"]);
-    const file = files.get(entry.fileId);
-    if (!file) throw new Error(`${name} refers to an unknown file`);
-    if (file.bodyState !== "included") {
-      throw new Error(`${name} cannot classify a ${file.bodyState} file`);
-    }
-    if (selected.has(entry.fileId)) {
-      throw new Error(`${name} repeats ${entry.fileId}`);
-    }
-    const disposition = enumeration(
-      entry.disposition,
-      `${name}.disposition`,
-      FILE_DISPOSITIONS.slice(0, 3),
-    );
-    selected.set(entry.fileId, disposition);
-  }
-  for (const file of snapshot.files) {
-    if (file.bodyState === "included" && !selected.has(file.id)) {
-      throw new Error(`No semantic disposition was provided for ${file.path}`);
+const kindStrength = new Map(groupKinds.map((kind, index) => [kind, index]));
+
+function deriveFileDispositions(groups, snapshot) {
+  const strongest = new Map();
+  for (const group of groups) {
+    for (const part of group.parts) {
+      const current = strongest.get(part.fileId);
+      if (current === undefined || kindStrength.get(group.kind) < kindStrength.get(current)) {
+        strongest.set(part.fileId, group.kind);
+      }
     }
   }
   return snapshot.files.map((file) => Object.freeze({
@@ -861,7 +819,7 @@ function validateFileDispositions(values, snapshot) {
       ? "redacted"
       : file.bodyState === "metadata-only"
         ? "metadata-only"
-        : selected.get(file.id),
+        : strongest.get(file.id),
   }));
 }
 
@@ -911,125 +869,13 @@ function validateMaterialVerificationLimits(limits, reviewItems) {
   }
 }
 
-function validateContextChecks(values, sourceMap, limitMap) {
-  const entries = array(values, "contextChecks", 20);
-  const subjects = new Set();
-  const linkedLimits = new Set();
-  const checks = entries.map((value, index) => {
-    const name = `contextChecks[${index}]`;
-    object(value, name, [
-      "subject",
-      "status",
-      "basis",
-      "explanation",
-      "evidence",
-      "limitIds",
-    ]);
-    const subject = text(value.subject, `${name}.subject`);
-    if (subjects.has(subject)) throw new Error(`${name} repeats its subject`);
-    subjects.add(subject);
-    const status = enumeration(
-      value.status,
-      `${name}.status`,
-      contextStatuses,
-    );
-    const basis = enumeration(value.basis, `${name}.basis`, BASIS);
-    const evidence = evidenceList(
-      value.evidence,
-      `${name}.evidence`,
-      sourceMap,
-      { allowEmpty: true },
-    );
-    const limitIds = array(value.limitIds, `${name}.limitIds`, 12);
-    if (new Set(limitIds).size !== limitIds.length) {
-      throw new Error(`${name}.limitIds contains a duplicate`);
-    }
-    for (const limitId of limitIds) {
-      if (!limitMap.has(limitId)) {
-        throw new Error(`${name}.limitIds refers to an unknown limit`);
-      }
-    }
-    if (status === "checked" && evidence.length === 0) {
-      throw new Error(`${name} needs evidence when checked`);
-    }
-    if (status === "checked" && basis === "unknown") {
-      throw new Error(`${name} needs a grounded basis when checked`);
-    }
-    if (basis === "unknown" && evidence.length > 0) {
-      throw new Error(`${name} cannot use evidence with an unknown basis`);
-    }
-    if (basis !== "unknown" && evidence.length === 0) {
-      throw new Error(`${name} needs evidence for its basis`);
-    }
-    if (
-      basis === "stated"
-      && evidence.some((item) => !statedSources.has(item.sourceKind))
-    ) {
-      throw new Error(`${name} uses code as a stated-source basis`);
-    }
-    if (
-      basis === "code"
-      && evidence.some((item) => !codeSources.has(item.sourceKind))
-    ) {
-      throw new Error(`${name} uses non-code evidence as a code basis`);
-    }
-    if (status === "checked" && limitIds.length > 0) {
-      throw new Error(`${name} cannot link limits when checked`);
-    }
-    if (status === "limited" && limitIds.length === 0) {
-      throw new Error(`${name} needs at least one limit when limited`);
-    }
-    if (status === "not-applicable" && limitIds.length > 0) {
-      throw new Error(`${name} cannot link limits when not applicable`);
-    }
-    if (status === "limited") {
-      for (const limitId of limitIds) linkedLimits.add(limitId);
-    }
-    return Object.freeze({
-      basis,
-      evidence,
-      explanation: text(value.explanation, `${name}.explanation`),
-      limitIds: Object.freeze([...limitIds]),
-      status,
-      subject,
-    });
-  });
-  for (const limitId of limitMap.keys()) {
-    if (!linkedLimits.has(limitId)) {
-      throw new Error(`No context check accounts for ${limitId}`);
-    }
-  }
-  return checks;
-}
-
-function validateCodeStep(value, index, sourceMap, fileMap) {
-  const name = `codeSteps[${index}]`;
-  object(value, name, ["title", "text", "basis", "evidence"]);
-  const validatedClaim = claim({
-    basis: value.basis,
-    evidence: value.evidence,
-    text: value.text,
-    title: value.title,
-  }, name, sourceMap, { title: true });
-  const evidenceFiles = new Set(
-    validatedClaim.evidence.map((item) => item.fileId).filter(Boolean),
-  );
-  if (evidenceFiles.size === 0) {
-    throw new Error(`${name} needs code evidence`);
-  }
-  const fileIds = [...evidenceFiles];
-  for (const fileId of fileIds) {
-    if (!fileMap.has(fileId)) throw new Error(`${name} refers to an unknown file`);
-  }
-  return Object.freeze({ ...validatedClaim, fileIds: Object.freeze([...fileIds]) });
-}
-
 function validateGroups(values, snapshot, sourceMap) {
   const groups = array(values, "groups", LIMITS.changedLines + LIMITS.changedFiles).map((value, index) => {
     const name = `groups[${index}]`;
-    object(value, name, ["id", "title", "text", "basis", "evidence", "parts"]);
+    object(value, name, ["id", "kind", "title", "text", "basis", "evidence", "parts"]);
     const id = identifier(value.id, `${name}.id`);
     if (!id.startsWith("g-")) throw new Error(`${name}.id must start with g-`);
+    const kind = enumeration(value.kind, `${name}.kind`, groupKinds);
     const explanation = claim({ title: value.title, text: value.text, basis: value.basis, evidence: value.evidence }, name, sourceMap, { title: true, statedCodeEvidence: true });
     if (explanation.basis === "code") throw new Error(`${name} must distinguish stated, inferred, or unknown reasons`);
     const parts = boundedArray(value.parts, `${name}.parts`, 1, LIMITS.changedLines + LIMITS.changedFiles).map((part, partIndex) => {
@@ -1039,7 +885,7 @@ function validateGroups(values, snapshot, sourceMap) {
       return { fileId: part.fileId, ...(part.startLine === undefined ? {} : { startLine: part.startLine, endLine: part.endLine }),
         ...(part.note === undefined ? {} : { note: text(part.note, `${path}.note`) }) };
     });
-    return { id, ...explanation, parts };
+    return { id, kind, ...explanation, parts };
   });
   if (new Set(groups.map((group) => group.id)).size !== groups.length) throw new Error("Duplicate group IDs");
   const captured = readerSnapshot(snapshot);
@@ -1082,7 +928,6 @@ function validateAnalysisValue(analysis, snapshot, {
     }
     return [source.id, { ...source, lines, referenceCache: new Map() }];
   }));
-  const fileMap = new Map(snapshot.files.map((file) => [file.id, file]));
   const limitMap = new Map(snapshot.limits.map((limit) => [limit.id, limit]));
   const errors = [];
   const capture = (path, operation) => {
@@ -1166,11 +1011,6 @@ function validateAnalysisValue(analysis, snapshot, {
     (value, index) => claim(value, `background[${index}]`, sourceMap, { title: true }),
     claimIdentity,
   );
-  const beginnerPrimer = analysis.beginnerPrimer === undefined ? [] : items(
-    analysis.beginnerPrimer, "beginnerPrimer", 1, 8,
-    (value, index) => primerClaim(value, `beginnerPrimer[${index}]`, sourceMap),
-    claimIdentity,
-  );
   let behavior;
   if (analysis.behavior !== undefined) {
     const value = capture("behavior", () => object(
@@ -1212,23 +1052,12 @@ function validateAnalysisValue(analysis, snapshot, {
       limits, authoredReviewItems,
     ));
   }
-  const contextChecks = capture("contextChecks", () => validateContextChecks(
-    analysis.contextChecks, sourceMap, limitMap,
-  ));
-  const files = capture("fileDispositions", () => validateFileDispositions(
-    analysis.fileDispositions, snapshot,
-  ));
   capture("coreChange", () => {
     if (!snapshot.files.some((file) => file.bodyState === "included")) {
       throw new Error("The core change cannot be grounded without an included file");
     }
   });
   const reader = capture("groups", () => validateGroups(analysis.groups, snapshot, sourceMap));
-  const codeSteps = items(
-    analysis.codeSteps, "codeSteps", 0, 20,
-    (value, index) => validateCodeStep(value, index, sourceMap, fileMap),
-    claimIdentity,
-  );
 
   let quiz = [];
   if (analysis.quiz !== undefined) {
@@ -1258,11 +1087,8 @@ function validateAnalysisValue(analysis, snapshot, {
     [
       ["background", background],
       ["behavior", behavior],
-      ["codeSteps", codeSteps],
-      ["contextChecks", contextChecks],
       ["coreChange", coreChange],
       ["groups", reader?.groups],
-      ["beginnerPrimer", beginnerPrimer],
       ["purpose", purpose],
       ["quiz", quiz],
       ["reviewItems", authoredReviewItems],
@@ -1295,14 +1121,11 @@ function validateAnalysisValue(analysis, snapshot, {
     analysisSchemaVersion: ANALYSIS_VERSION,
     reader,
     background: Object.freeze(background),
-    beginnerPrimer: Object.freeze(beginnerPrimer),
     behavior,
-    codeSteps: Object.freeze(codeSteps),
-    contextChecks: Object.freeze(contextChecks),
     coreChange: Object.freeze({
       ...coreChange, details: Object.freeze(coreChange.details),
     }),
-    files: Object.freeze(files),
+    files: Object.freeze(deriveFileDispositions(reader.groups, snapshot)),
     limits: Object.freeze(limits),
     purpose,
     quiz: Object.freeze(quiz),
@@ -1320,7 +1143,7 @@ function validateAnalysisValue(analysis, snapshot, {
     snapshot: Object.freeze({
       capturedAt: snapshot.capturedAt,
       digest: snapshot.digest,
-      pullRequest: snapshot.pullRequest,
+      change: snapshot.change,
       repository: snapshot.repository,
       settings: snapshot.settings,
       snapshot: snapshot.snapshot,
@@ -1332,7 +1155,7 @@ function validateAnalysisValue(analysis, snapshot, {
 function analysisIssue(error, path) {
   const message = error instanceof Error ? error.message : String(error);
   const inferredPath = message.match(
-    /^(?:analysis|background|beginnerPrimer|behavior|codeSteps|contextChecks|coreChange|groups|fileDispositions|limitImpacts|purpose|quiz|reviewItems|title)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
+    /^(?:analysis|background|behavior|coreChange|groups|limitImpacts|purpose|quiz|reviewItems|title)(?:\[[0-9]+\])?(?:\.[A-Za-z][A-Za-z0-9]*)*/u,
   )?.[0] ?? "analysis";
   let code = "ANALYSIS_CONTRACT";
   if (
@@ -1341,9 +1164,7 @@ function analysisIssue(error, path) {
   ) code = "EVIDENCE_RANGE_LIMIT";
   else if (message.includes("unknown source")) code = "EVIDENCE_SOURCE_UNKNOWN";
   else if (message.includes("invalid line range")) code = "EVIDENCE_RANGE_INVALID";
-  else if (message.includes("evidence does not match its files")) {
-    code = "CODE_STEP_FILE_MISMATCH";
-  } else if (message.includes("code evidence lines")) {
+  else if (message.includes("code evidence lines")) {
     code = "RESOURCE_CODE_EVIDENCE_LINES";
   } else if (message.includes("evidence references")) {
     code = "RESOURCE_EVIDENCE_REFERENCES";

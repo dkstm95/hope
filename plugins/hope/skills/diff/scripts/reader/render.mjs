@@ -27,18 +27,23 @@ function button(id, mark, label, attributes = "") {
   return `<button type="button" class="icon-button" ${id ? `id="${id}"` : ""} aria-label="${html(label)}" data-tip="${html(label)}" ${attributes}>${icon(mark)}</button>`;
 }
 
+// Link only revisions a remote can serve: a local review's head is working-tree text.
+function evidenceUrl(reference, snapshot) {
+  const { change, repository, snapshot: revisions } = snapshot;
+  const linkable = repository && reference.path && reference.revision
+    && (change.kind === "github" || reference.revision === revisions.mergeBase);
+  if (!linkable) return change.kind === "github" ? change.url : undefined;
+  const selected = (reference.revision === revisions.mergeBase ? repository.base : repository.head) ?? repository;
+  return `https://github.com/${selected.owner}/${selected.name}/blob/${reference.revision}/${reference.path.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 function evidenceHtml(explanation, review, labels) {
   if (!explanation.evidence.length) return "";
   return `<details class="evidence"><summary>${icon("link")}<span>${html(labels.source)}</span>${icon("right")}</summary>${explanation.evidence.map((reference) => {
     const code = reference.sourceKind === "patch";
-    const repository = reference.revision === review.snapshot.snapshot.mergeBase
-      ? review.snapshot.repository.base : review.snapshot.repository.head;
-    const owner = repository?.owner ?? review.snapshot.repository.owner;
-    const name = repository?.name ?? review.snapshot.repository.name;
-    const url = reference.path && reference.revision
-      ? `https://github.com/${owner}/${name}/blob/${reference.revision}/${reference.path.split("/").map(encodeURIComponent).join("/")}`
-      : review.snapshot.pullRequest.url;
-    return `<div class="evidence-entry" data-source="${html(reference.fileId ?? reference.sourceId)}" data-start="${reference.startLine}" data-end="${reference.endLine}">${code ? `<button type="button" class="source-jump js-control" data-reference-file="${html(reference.fileId)}" data-reference-line="${reference.startLine}">${html(labels.showCode)}</button>` : ""}<a href="${html(url)}" rel="noreferrer">${html(reference.path ?? reference.sourceKind)} · ${code ? "diff " : ""}L${reference.startLine}–${reference.endLine}</a><pre dir="auto">${html(reference.excerpt)}</pre></div>`;
+    const url = evidenceUrl(reference, review.snapshot);
+    const title = `${html(reference.path ?? reference.sourceKind)} · ${code ? "diff " : ""}L${reference.startLine}–${reference.endLine}`;
+    return `<div class="evidence-entry" data-source="${html(reference.fileId ?? reference.sourceId)}" data-start="${reference.startLine}" data-end="${reference.endLine}">${code ? `<button type="button" class="source-jump js-control" data-reference-file="${html(reference.fileId)}" data-reference-line="${reference.startLine}">${html(labels.showCode)}</button>` : ""}${url ? `<a href="${html(url)}" rel="noreferrer">${title}</a>` : `<span>${title}</span>`}<pre dir="auto">${html(reference.excerpt)}</pre></div>`;
   }).join("")}</details>`;
 }
 

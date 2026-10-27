@@ -2,12 +2,12 @@ import { isUtf8 } from "node:buffer";
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
 
-import { CONTRACT_VERSION, LIMITS } from "./constants.mjs";
+import { BASE_LIMITS, CONTRACT_VERSION, LIMITS } from "./constants.mjs";
 import { parsePatch } from "./patch.mjs";
 import { diffText } from "./reconstruct-patch.mjs";
 import { digestJson } from "./hash.mjs";
 import { redactionKind } from "./redact.mjs";
-import { containsBidiControl, exposeBidiControls } from "./text.mjs";
+import { cleanText, containsBidiControl, unavailableReason } from "./text.mjs";
 
 const execFile = promisify(execFileCallback);
 const GITHUB_COMMAND_TIMEOUT_MS = 30_000;
@@ -23,12 +23,6 @@ const githubFileStatuses = new Set([
 
 function byteLength(value) {
   return Buffer.byteLength(value ?? "", "utf8");
-}
-
-function cleanText(value) {
-  return exposeBidiControls(String(value ?? "")
-    .replace(/\r\n?/gu, "\n")
-    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/gu, "\uFFFD"));
 }
 
 function assertCredentialFreeMetadata(texts) {
@@ -63,17 +57,6 @@ function repositoryIdentity(value, name) {
     throw new Error(`GitHub returned an invalid ${name} repository identity`);
   }
   return Object.freeze({ name: match[2], owner: match[1] });
-}
-
-function unavailableReason(kind, detail) {
-  return {
-    "credential-pattern": "The file body matched a high-confidence credential pattern",
-    "invalid-text": "The body is not UTF-8 text",
-    "no-text-diff": "GitHub did not report a text diff for this changed file",
-    "private-path": "The file name commonly contains private configuration",
-    "safe-size-limit": `The file exceeds Hope's ${LIMITS.safeBodyBytes}-byte safe-text limit`,
-    "special-entry": `GitHub reported a ${String(detail ?? "special")} entry`,
-  }[kind];
 }
 
 export function parseGitHubPullRequestUrl(value) {
@@ -511,20 +494,7 @@ export async function collectGitHubPullRequest(value, {
     });
   }
 
-  const limits = [
-    {
-      id: "limit-1",
-      kind: "unchanged-context",
-      reason: "Hope collects only exact-revision context files explicitly requested after initial inspection; other unchanged code remains unchecked",
-      subject: "Other unchanged code outside collected context",
-    },
-    {
-      id: "limit-2",
-      kind: "verification",
-      reason: "The first Hope diff path does not collect or execute CI, tests, builds, or lint",
-      subject: "Execution and CI results",
-    },
-  ];
+  const limits = BASE_LIMITS.map((limit) => ({ ...limit }));
   const files = collectedFiles.map((file, index) => {
     const id = `file-${index + 1}`;
     const sourceIds = [];
@@ -563,8 +533,9 @@ export async function collectGitHubPullRequest(value, {
     capturedAt,
     files,
     limits,
-    pullRequest: {
+    change: {
       author: pull.user?.login,
+      kind: "github",
       number: target.number,
       state: pull.state,
       title,
@@ -597,7 +568,7 @@ export async function collectGitHubPullRequest(value, {
 }
 
 export async function revalidateGitHubSnapshot(collected, { clock = () => new Date(), gh } = {}) {
-  const target = collected.pullRequest;
+  const target = collected.change;
   const options = gh ? { exec: gh } : {};
   const prefix = `/repos/${encodeURIComponent(collected.repository.owner)}`
     + `/${encodeURIComponent(collected.repository.name)}`;
@@ -646,6 +617,5 @@ export async function revalidateGitHubSnapshot(collected, { clock = () => new Da
 
 export {
   githubFileStatuses,
-  unavailableReason as githubUnavailableReason,
   readContent as readGitHubContent,
 };

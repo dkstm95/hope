@@ -1,48 +1,24 @@
-export const CONTRACT_VERSION = 1;
-export const ANALYSIS_VERSION = 5;
-export const RENDERER_VERSION = 23;
-export const RUN_VERSION = 8;
-export const CHECKPOINT_VERSION = 1;
-export const CHECKPOINT_WINDOW_VERSION = 2;
-export const MICROWORLD_SKELETON_VERSION = 6;
+export const CONTRACT_VERSION = 2;
+export const ANALYSIS_VERSION = 6;
+export const RENDERER_VERSION = 24;
+export const RUN_VERSION = 9;
 
 export const LIMITS = Object.freeze({
   analysisProseBytes: 48 * 1024,
   authoredEvidenceLines: 96,
+  bundleBytes: 192 * 1024,
   artifactBytes: 24 * 1024 * 1024,
   changedFiles: 500,
   changedLines: 20_000,
-  checkpointBytes: 32 * 1024,
-  checkpointEvidence: 8,
-  checkpointEvidenceReferences: 32,
-  checkpointEvidenceExcerptBytes: 8 * 1024,
-  checkpointEvidenceLines: 24,
-  checkpointEvidenceTotalBytes: 96 * 1024,
-  checkpointEvidenceTotalLines: 1_200,
-  checkpointObservations: 8,
-  checkpointTextBytes: 4 * 1024,
-  checkpointTextTotalBytes: 96 * 1024,
-  checkpointTotalObservations: 256,
-  checkpointTotalRequests: 12,
-  checkpointWindowBytes: 128 * 1024,
-  checkpointWindowPages: 4,
   commits: 250,
   contextBodyTotalBytes: 256 * 1024,
   contextFiles: 12,
-  contextLineJsonBytes: 8 * 1024,
   contextPathJsonBytes: 4 * 1024,
   evidenceBytes: 96 * 1024,
   evidenceLines: 24,
   evidenceReferences: 192,
   evidenceTotalLines: 1_200,
   codeEvidenceLines: 600,
-  inspectionPageBytes: 16 * 1024,
-  inspectionTotalBytes: 1024 * 1024,
-  inspectionWindowBytes: 32 * 1024,
-  ledgerBytes: 1024 * 1024,
-  ledgerPageBytes: 24 * 1024,
-  ledgerStateBytes: 64 * 1024,
-  manifestBytes: 128 * 1024,
   modelBytes: 128 * 1024,
   modelString: 32 * 1024,
   pullRequestBodyBytes: 32 * 1024,
@@ -54,6 +30,22 @@ export const LIMITS = Object.freeze({
   snapshotBytes: 8 * 1024 * 1024,
   uniqueEvidenceRanges: 96,
 });
+
+// Every capture starts with these two limits; file and context limits follow.
+export const BASE_LIMITS = Object.freeze([
+  Object.freeze({
+    id: "limit-1",
+    kind: "unchanged-context",
+    reason: "Hope collects only exact-revision context files explicitly requested during the review; other unchanged code remains unchecked",
+    subject: "Other unchanged code outside collected context",
+  }),
+  Object.freeze({
+    id: "limit-2",
+    kind: "verification",
+    reason: "Hope Diff does not collect or execute CI, tests, builds, or lint",
+    subject: "Execution and CI results",
+  }),
+]);
 
 export const FILE_DISPOSITIONS = Object.freeze([
   "explained",
