@@ -50,7 +50,7 @@ description.
 ### <img src="assets/readme/mark-align.svg" width="22" height="22" alt=""> Align
 
 Settle the choices that would change the result before any code is written.
-Align researches the project, asks every open question in one round with a
+Align researches the project, asks the open questions together, each with a
 recommendation, and traces each answer to the choices it uncovers. You decide
 or delegate. When the agreement must outlast the conversation, Align keeps it
 as a record that marks who made each call and links it to evidence.
