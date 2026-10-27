@@ -11,6 +11,7 @@
   "scripts": {
     "build:plugin": "node tools/build-plugin.mjs",
     "check:title": "node tools/check-change-title.mjs",
+    "examples:align": "node tools/render-align-examples.mjs",
     "plugin:dev:install": "node tools/install-plugin-dev.mjs",
     "release:prepare": "node tools/prepare-release.mjs",
     "test": "node --test",

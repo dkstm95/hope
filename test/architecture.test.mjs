@@ -25,7 +25,13 @@ const publishedCrossFeatureReferences = new Set([
   resolve(skillsRoot, "diagram/SKILL.md"),
   resolve(skillsRoot, "write/SKILL.md"),
 ]);
-const publishedSharedModules = new Set([sharedArtifactTheme]);
+const artifactShellRoot = resolve(sharedAssetsRoot, "artifact-shell");
+const publishedSharedModules = new Set([
+  sharedArtifactTheme,
+  ...["document.mjs", "locales.mjs", "text.mjs"].map(
+    (name) => resolve(artifactShellRoot, name),
+  ),
+]);
 const deliveryDependencyPattern =
   /(?:CLAUDE_)?PLUGIN_ROOT|plugins\/hope|\.codex-plugin|\.claude-plugin|marketplace/u;
 
@@ -226,6 +232,19 @@ test("architecture checks distinguish allowed and forbidden source edges", () =>
     ),
     [],
   );
+  assert.deepEqual(
+    scriptBoundaryIssues(
+      'import { renderDocument } from "../../../assets/artifact-shell/document.mjs";',
+      script,
+      featureRoot,
+    ),
+    [],
+  );
+  assert.ok(scriptBoundaryIssues(
+    'import "../../../assets/artifact-shell/client.mjs";',
+    script,
+    featureRoot,
+  ).some((issue) => issue.includes("outside its Skill")));
   assert.ok(scriptBoundaryIssues(
     'import "../../../assets/private-helper.mjs";',
     script,

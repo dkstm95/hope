@@ -214,10 +214,19 @@ export function mount() {
       const row = entries.filter(([line]) => line >= Number(source.dataset.referenceLine)).sort((a, b) => a[0] - b[0])[0]?.[1];
       if (row) { select(row.closest(".change-group").id, row, true); row.focus({ preventScroll: true }); save(); }
     }
-    const link = event.target.closest('.file-index a, .limits a');
-    if (link) {
-      const target = $(link.hash.slice(1));
-      if (target) { event.preventDefault(); select(target.closest(".change-group").id, target.matches(".diff-part") ? target : null, true); save(); link.closest("details").open = false; }
+    // Index, limit, and change-map links select their group; SVG links have no `hash`.
+    const link = event.target.closest('.file-index a, .limits a, .change-map a');
+    const target = link && $(link.getAttribute("href").slice(1));
+    if (target?.closest(".change-group")) {
+      event.preventDefault();
+      const group = target.closest(".change-group");
+      select(group.id, target.matches(".diff-part") ? target : null, true);
+      group.querySelector(".group-disclosure").open = true;
+      save();
+      const menu = link.closest("details");
+      if (menu) menu.open = false;
+      // Move keyboard focus with the view, as table-of-contents links do.
+      group.querySelector(".group-heading").focus({ preventScroll: true });
     }
   });
   root.addEventListener("keydown", (event) => {

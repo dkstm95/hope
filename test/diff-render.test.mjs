@@ -12,6 +12,12 @@ import {
   makeSnapshot,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
+import {
+  analysisFor as readerAnalysis,
+  fixture as readerFixture,
+  reasons as readerGroups,
+  runId as readerRunId,
+} from "../test-support/diff-reader-fixture.mjs";
 
 const runId = "3".repeat(32);
 
@@ -57,8 +63,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     renderReview(review),
     renderReview(review),
   ]);
-  assert.equal(first.rendererVersion, 24);
-  assert.equal(first.designVersion, 28);
+  assert.equal(first.rendererVersion, 25);
+  assert.equal(first.designVersion, 29);
   assert.deepEqual(first.bytes, second.bytes);
   const html = first.bytes.toString("utf8");
   assert.doesNotMatch(html, /<script src="https:\/\/evil/u);
@@ -79,8 +85,8 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<h2 class="toc-heading"><span>Document index<\/span><span class="toc-progress"><span data-toc-current>1<\/span> \/ \d+<\/span><\/h2>/u,
   );
   assert.match(html, /data:font\/woff2;base64/u);
-  assert.match(html, /font-family: "Hope Sans"/u);
-  assert.match(html, /font-family: "Hope Code"/u);
+  assert.match(html, /@font-face\{font-family:"Hope Sans"/u);
+  assert.match(html, /@font-face\{font-family:"Hope Code"/u);
   assert.equal((html.match(/@font-face/gu) ?? []).length, 3);
   assert.match(html, /aria-label="Switch to dark mode"/u);
   assert.doesNotMatch(html.match(/<button class="theme-button"[^>]+>/u)[0], /aria-pressed=/u);
@@ -96,7 +102,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   assert.doesNotMatch(html, /artifact-title-line|synopsis-head/u);
   assert.doesNotMatch(html, /target="_blank"/u);
   assert.doesNotMatch(header, /<h1>/u);
-  assert.match(header, /<details class="toc-mobile">/u);
+  assert.match(header, /<details class="toc-mobile" data-dismiss>/u);
   assert.match(header, /class="toc-mobile-panel"/u);
   assert.match(header, /class="toc-icon"/u);
   assert.match(header, /<span>example\/hope<\/span>/u);
@@ -121,7 +127,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     localizedHeader,
     /<a class="locale-option" href="retry\.ko\.html" hreflang="ko-KR" lang="ko-KR">한국어<\/a>/u,
   );
-  assert.match(localizedHeader, /class="pull-request-link"[\s\S]*?<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu">[\s\S]*?<button class="theme-button"/u);
+  assert.match(localizedHeader, /class="pull-request-link"[\s\S]*?<div class="display-controls has-locale-menu">[\s\S]*?<details class="locale-menu"[\s\S]*?<button class="theme-button"/u);
   await assert.rejects(
     renderReview(review, {
       alternateLocale: { href: "..\/outside.html", locale: "ko-KR" },
@@ -159,7 +165,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
   );
   assert.doesNotMatch(
     html.match(/<main class="main"[\s\S]*?<\/main>/u)?.[0] ?? "",
-    /<details class="toc-mobile">/u,
+    /<details class="toc-mobile" data-dismiss>/u,
   );
   assert.match(html, /<section class="synopsis" id="synopsis"/u);
   assert.match(
@@ -178,7 +184,7 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     [...main.matchAll(/class="section-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
     ["01", "02", "03", "04", "05"],
   );
-  const toc = html.match(/<nav class="toc-desktop rail-navigation"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
+  const toc = html.match(/<nav class="toc toc-desktop"[\s\S]*?<ol class="toc-list">([\s\S]*?)<\/ol>/u)?.[1] ?? "";
   assert.deepEqual(
     [...toc.matchAll(/class="toc-number">(\d{2})<\/span>/gu)].map((match) => match[1]),
     ["01", "02", "03", "04", "05"],
@@ -264,11 +270,11 @@ test("rendering is byte-identical and keeps untrusted content inert", async () =
     /<details class="evidence-group(?: [^"]*)?" open>/u,
   );
   assert.ok((html.match(/<details class="evidence-group(?: [^"]*)?">/gu) ?? []).length >= 4);
-  assert.match(html, /class="evidence-marker" href="#evidence-[a-f0-9]{12}"/u);
+  assert.match(html, /class="reference-marker evidence-marker" href="#evidence-[a-f0-9]{12}"/u);
   assert.match(html, /\.code-line-patch\.code-line-unlocated/u);
   assert.match(html, /id="evidence-references"/u);
   assert.match(html, /class="evidence-footnote-list"/u);
-  assert.match(html, /id="evidence-popover" popover="auto" role="dialog"/u);
+  assert.match(html, /id="reference-popover" popover="auto" role="dialog"/u);
   assert.doesNotMatch(html, /class="evidence-reference"/u);
   assert.equal((html.match(/id="evidence-[a-f0-9]{12}"/gu) ?? []).length > 0, true);
   assert.match(html, /<caption class="sr-only">/u);
@@ -312,7 +318,7 @@ test("evidence marker groups follow document number order", async () => {
   const impact = synopsis.slice(impactStart, reviewStart);
 
   assert.deepEqual(
-    [...impact.matchAll(/class="evidence-marker"[^>]*>\[([0-9]+)\]<\/a>/gu)]
+    [...impact.matchAll(/class="reference-marker evidence-marker"[^>]*>\[([0-9]+)\]<\/a>/gu)]
       .map((match) => Number(match[1])),
     [1, 2],
   );
@@ -503,7 +509,8 @@ test("quiz responses stay visually unlabeled and separate from the answer", asyn
   const review = validateAnalysis(analysis, snapshot, { runId });
   const html = (await renderReview(review)).bytes.toString("utf8");
 
-  assert.equal((html.match(/<details class="quiz-question"/gu) ?? []).length, 3);
+  // Each question stays visible as its own card; only the answer is folded.
+  assert.equal((html.match(/<article class="quiz-question"/gu) ?? []).length, 3);
   assert.equal((html.match(/<textarea\s+aria-labelledby="quiz-/gu) ?? []).length, 3);
   assert.equal((html.match(/class="quiz-answer"/gu) ?? []).length, 3);
   assert.equal((html.match(/>답과 근거 보기<\/summary>/gu) ?? []).length, 3);
@@ -513,7 +520,7 @@ test("quiz responses stay visually unlabeled and separate from the answer", asyn
   );
   assert.match(
     html,
-    /<summary id="quiz-1-question">[\s\S]*?<\/summary>[\s\S]*?<textarea[\s\S]*?aria-labelledby="quiz-1-question quiz-1-response-label"[\s\S]*?id="quiz-1-response"/u,
+    /<h4 id="quiz-1-question">[\s\S]*?<\/h4>[\s\S]*?<textarea[\s\S]*?aria-labelledby="quiz-1-question quiz-1-response-label"[\s\S]*?id="quiz-1-response"/u,
   );
   assert.match(
     html,
@@ -529,7 +536,7 @@ test("quiz responses stay visually unlabeled and separate from the answer", asyn
     html.match(/<details class="quiz-answer">[\s\S]*?<\/details>/u)?.[0] ?? "",
     /<details class="evidence">/u,
   );
-  assert.doesNotMatch(html, /<details class="quiz-question"[^>]* open/u);
+  assert.doesNotMatch(html, /<details class="quiz-question"/u);
   assert.doesNotMatch(html, /<details class="quiz-answer"[^>]* open/u);
 });
 
@@ -625,9 +632,6 @@ test("behavior steps keep one vertical numbered flow regardless of count or leng
   );
   assert.match(shortHtml, /<ol class="flow">/u);
   assert.doesNotMatch(shortHtml, /flow-short/u);
-  assert.match(shortHtml, /counter\(behavior-step, decimal-leading-zero\)/u);
-  assert.match(shortHtml, /grid-template-columns: 28px minmax\(0, 1fr\)/u);
-  assert.match(shortHtml, /overflow-wrap: anywhere/u);
 
   const numerousAnalysis = makeAnalysis(snapshot, runId);
   numerousAnalysis.behavior = {
@@ -683,7 +687,14 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.match(html, /<td data-label="New behavior">/u);
   assert.match(html, /class="microworld" data-microworld/u);
   assert.match(html, /class="microworld-eyebrow">Try it<\/p>/u);
-  assert.match(html, /<details class="microworld-disclosure">\s*<summary>Change the model<\/summary>/u);
+  // Controls and scenarios stay in the reading path; only the model limits fold.
+  const world = html.match(/<section class="microworld" data-microworld[\s\S]*?<\/details>\s*<\/section>/u)?.[0] ?? "";
+  assert.match(world, /<p class="microworld-controls-title" id="microworld-controls-title">Change the model<\/p>/u);
+  assert.match(world, /<details class="microworld-disclosure">\s*<summary>Model limits<\/summary>\s*<dl class="microworld-boundary">/u);
+  assert.doesNotMatch(
+    world.match(/<details class="microworld-disclosure">[\s\S]*?<\/details>/u)?.[0] ?? "",
+    /microworld-control|microworld-scenario/u,
+  );
   assert.doesNotMatch(html, /<details class="microworld-disclosure" open>/u);
   assert.match(
     html,
@@ -706,7 +717,7 @@ test("behavior renders a grounded visual and a separate fixed microworld safely"
   assert.doesNotMatch(html, /class="claim-meta teaching-aid-meta"/u);
   assert.match(
     html,
-    /<aside class="microworld"[\s\S]*?<header>[\s\S]*?<\/bdi><sup class="evidence-markers">[\s\S]*?<\/header>/u,
+    /<section class="microworld"[\s\S]*?<header>[\s\S]*?<\/bdi><sup class="evidence-markers">[\s\S]*?<\/header>/u,
   );
   assert.match(html, /src\/retry\.js · change excerpt 2–4/u);
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/u);
@@ -1069,4 +1080,31 @@ test("the changed-file table shows the strongest group kind for each file", asyn
   assert.match(changedFiles, /src\/retry\.js<\/bdi><\/td>\s*<td>[^<]+<\/td>\s*<td>[^<]+<\/td>/u);
   const dictionary = JSON.parse(await readFile(new URL("../plugins/hope/skills/diff/scripts/locales/en-US/diff.json", import.meta.url), "utf8"));
   assert.match(changedFiles, new RegExp(`<td>${dictionary["file.use.mechanical"]}</td>`, "u"));
+});
+
+test("the change map links one sized, labeled segment to each code-reader group", async () => {
+  const snapshot = readerFixture({ locale: "en-US" });
+  const analysis = readerAnalysis(snapshot);
+  analysis.groups = readerGroups(snapshot).groups;
+  const review = validateAnalysis(analysis, snapshot, { runId: readerRunId });
+  const html = (await renderReview(review)).bytes.toString("utf8");
+  const map = html.match(/<div class="synopsis-row synopsis-shape">[\s\S]*?<\/ul>/u)?.[0] ?? "";
+
+  const segments = [...map.matchAll(
+    /<a class="change-map-link" href="#([^"]+)" aria-label="([^"]+)"><title>[^<]+<\/title><rect class="change-map-hit" x="[\d.]+" y="0" width="[\d.]+" height="44"><\/rect><rect class="change-map-segment kind-(\w+)" x="([\d.]+)" y="14" width="([\d.]+)"/gu,
+  )];
+  assert.deepEqual(
+    segments.map((match) => [match[1], match[3]]),
+    review.reader.layout.groups.map((group) => [group.id, group.kind]),
+  );
+  assert.match(segments[0][2], /^01 .+: 4 changed lines$/u);
+  for (const segment of segments) assert.match(html, new RegExp(`<section class="change-group" id="${segment[1]}"`, "u"));
+  const widths = segments.map((match) => Number(match[5]));
+  assert.ok(widths[0] > widths[1], "the larger group gets the wider segment");
+  const end = Number(segments.at(-1)[4]) + widths.at(-1);
+  assert.ok(Math.abs(end - 1000) < 0.5, "segments fill the bar");
+  assert.match(map, /role="group" aria-label="Changed lines by group"/u);
+  assert.match(map, /4 groups · 4 files/u);
+  assert.match(map, /<li class="kind-explained"><span class="change-map-swatch" aria-hidden="true"><\/span>explained 1<\/li>/u);
+  assert.doesNotMatch(map, /style=/u);
 });

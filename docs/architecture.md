@@ -39,7 +39,10 @@ produce a deterministic result.
 Runtime source stays inside its feature boundary and does not depend on a
 sibling feature or repository support. It may depend on Hope-wide immutable
 assets, including shared semantic artifact tokens with multiple feature
-consumers.
+consumers and the artifact shell that assembles every Technical Record from
+them. The shell is the shared contract for Align and Diff document structure;
+it exposes its document, locale, and text modules and keeps its client script
+private.
 
 Any other cross-feature source dependency requires an explicit shared contract
 and must satisfy the shared-source rule in
