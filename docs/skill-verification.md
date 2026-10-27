@@ -312,7 +312,12 @@ These were reasoned scenarios, not executed artifact runs or native host tests.
 | Analysis omits a group, overlaps a range, or calls code stated intent | Validation rejects the incomplete ownership or unsupported basis before publication. |
 | Open a review, select code, follow evidence, and reload | Groups begin collapsed, code selection explains its group, evidence reveals its target, and progress restores. |
 | Use a narrow viewport, no JavaScript, printing, or unavailable storage | The reader remains usable; all code and inline reasons are retained, with progress export/import. |
-| Provider patch is missing or malformed | Exact merge-base/head text is read once and reconstructed into one complete inspected patch, or a limit is recorded. |
+| Provider patch is missing or malformed | Exact merge-base/head text is read once and reconstructed into one complete bundled patch, or a limit is recorded. |
+| Invoke Diff with no target and no open pull request of the person's in the repository | Capture reviews local changes against the upstream default branch and reports that selection; with no default branch it asks for a base. |
+| Ask Diff about local work while the person has an open pull request elsewhere | The model passes `--base`, so capture reviews the local working tree instead of the latest authored pull request. |
+| Ask Diff to review local work, including new files | Committed, staged, and unstaged changes are captured against the merge base; untracked files appear only with `--untracked`; private, credential-bearing, binary, and symlinked files keep only metadata. |
+| A captured local file changes before publication | Publication stops as stale and no review is created. |
+| A material question needs an unchanged caller | One `context` call appends the file, returns new bundle parts and a new digest, and analysis cites it. |
 
 ## 7.2.0 integrated Diff verification — 2026-09-30
 
@@ -377,3 +382,32 @@ remaining-budget outcome. The overview and behavior table describe error-body
 handling as a test expectation with an uncaptured implementation, consistent
 with the detailed note. Regenerated light reader and dark explorer captures were
 visually inspected. These corrections add no dependency or secondary workflow.
+
+## 9.0.0 Diff capture verification — 2026-10-27
+
+Candidate: branch `claude/diff-redesign-f197c4` based on `e0150c0` (8.0.2).
+Diff now runs as `capture`, `context`, `validate`, `publish`, and `cancel`
+over a Markdown bundle, adds a local Git source, and uses analysis v6 and
+run v9. The inspection, checkpoint, ledger, transition, and microworld
+skeleton commands were removed.
+
+`npm run check` passed all deterministic tests. They cover bundle splitting and
+forged headers, a GitHub capture-to-publish round trip with a fake `gh`, render,
+revalidation, publication, stale, and ownership failures, and the local source
+against a temporary repository. The local tests include committed, staged,
+unstaged, untracked, renamed, binary, symlinked, private, and credential-bearing
+files, a file saved during capture, and edits to captured files and head
+context before publication.
+
+A direct run on this worktree captured 30 local files against `main` in about
+one second. `context` added one file and recorded `.env` as a private-path
+limit; `validate` reported the missing analysis as repairable, and `cancel`
+removed the run. Published artifacts came only from tests with fixture
+analyses.
+
+The browser specs were updated but not run: this worktree loads Playwright
+twice, and the installed Chromium does not match Playwright 1.61.1. No browser
+spec covers a local artifact's rail or its layout without a pull request link.
+Native model invocation of the new flow remains unverified.
+
+Release decision: major, 9.0.0.

@@ -2,10 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { LIMITS } from "../plugins/hope/skills/diff/scripts/constants.mjs";
-import { collectGitHubContext } from "../plugins/hope/skills/diff/scripts/context.mjs";
+import {
+  collectContext,
+  githubContextSource,
+} from "../plugins/hope/skills/diff/scripts/context.mjs";
 
 function snapshot() {
   return {
+    limits: [],
+    sources: [],
     repository: {
       base: {
         name: "repo",
@@ -25,6 +30,15 @@ function snapshot() {
       mergeBase: "c".repeat(40),
     },
   };
+}
+
+// Collect through the GitHub adapter; existingBytes stands for context collected earlier in the run.
+async function collectGitHubContext(value, requests, { existingBytes = 0, gh } = {}) {
+  const sources = existingBytes === 0 ? value.sources : [{
+    id: "source-1", kind: "context-file", lineCount: 1, path: "earlier.js", revision: value.snapshot.head, text: "x".repeat(existingBytes),
+  }];
+  const withSources = { ...value, sources };
+  return await collectContext(withSources, requests, { readSource: githubContextSource(withSources, { gh }) });
 }
 
 function response(value) {
@@ -174,7 +188,7 @@ test("more than twelve context requests fail before collection", async () => {
       })),
       { gh: github.gh },
     ),
-    /supports 12 requests/u,
+    /supports 12 context file requests per run/u,
   );
   assert.deepEqual(github.seen, []);
 });
@@ -248,7 +262,7 @@ test("context bodies enforce the per-file size boundary", async () => {
   assert.equal(unavailable[0].reasonKind, "safe-size-limit");
 });
 
-test("a context line too long for inspection becomes an explicit limit", async () => {
+test("a long context line stays collected for the bundle", async () => {
   const github = fakeGitHub({ content: "a".repeat(15_000) });
   const result = await collectGitHubContext(
     snapshot(),
@@ -256,9 +270,8 @@ test("a context line too long for inspection becomes an explicit limit", async (
     { gh: github.gh },
   );
 
-  assert.equal(result[0].kind, "context-unavailable");
-  assert.equal(result[0].reasonKind, "inspection-line-limit");
-  assert.equal(Object.hasOwn(result[0], "text"), false);
+  assert.equal(result[0].kind, "context-file");
+  assert.equal(result[0].text.length, 15_000);
 });
 
 test("a missing context path at the exact revision becomes an explicit limit", async () => {

@@ -121,8 +121,8 @@ Every generated review also includes the complete captured diff, arranged by
 shared purpose. The model can group implementation and tests across files or
 split one file. Groups start collapsed; selecting a title or code shows its
 reason and evidence on the right. Read marks are reversible and progress can
-be exported. This uses the same PR snapshot and analysis, with no extra skill
-or option to remember.
+be exported. This uses the same captured snapshot and analysis, with no extra
+skill or option to remember.
 
 It may use visuals, a microworld, or a quiz when they help explain the change.
 Analysis can stay in the current conversation; an independent reviewer joins
@@ -131,10 +131,16 @@ when useful or requested.
 The artifact helps the reader build a working mental model of the change and
 turn that understanding into follow-up questions, decisions, and work ideas.
 
+Diff reviews a GitHub pull request or your local changes. Local changes are
+the working tree (committed, staged, and unstaged) against the merge base with
+a base branch; untracked files are included only when you ask.
+
 > [!NOTE]
 > With no URL, Diff first looks for the current branch's pull request.
 > If none exists, it selects your latest open pull request in the repository.
-> Run Diff again when the pull request changes.
+> Outside any pull request, it reviews local changes against the upstream
+> default branch; name another base branch when needed.
+> Run Diff again when the change moves.
 
 The captures below render the captured evidence from
 [Ky PR #825](https://github.com/sindresorhus/ky/pull/825) with the current Diff renderer,
@@ -261,8 +267,8 @@ remaining limits.
 You need:
 
 - Node.js 22 or newer
-- An authenticated [GitHub CLI](https://cli.github.com/) to use Diff. Run
-  `gh auth login` first if needed.
+- An authenticated [GitHub CLI](https://cli.github.com/) to use Diff on a pull
+  request. Run `gh auth login` first if needed. Local changes need only Git.
 
 > [!TIP]
 > The simplest option is to ask an AI:

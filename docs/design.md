@@ -187,10 +187,7 @@ This is a reader-question order, not a fixed six-question template. Omit a
 question that does not apply instead of creating an empty or repetitive block.
 
 Explain behavior before code. The grouped reader then owns the full captured
-diff and the implementation explanation beside it. Reserve the collapsed
-**Implementation details** group in Evidence and scope for a distinct guided
-sequence that adds understanding beyond the reader. Omit it otherwise. In the
-overview, translate source states and callback return values into the human
+diff and the implementation explanation beside it. In the overview, translate source states and callback return values into the human
 choice, condition, and outcome they represent. Evidence previews show bounded
 excerpts from their canonical source.
 
@@ -497,7 +494,7 @@ Use one quiet marker gutter to help the eye follow body content:
 
 - ordinary paragraphs have no marker;
 - two or more parallel claims use one small dot each;
-- ordered behavior and code steps use `01`, `02`, `03`;
+- ordered behavior steps use `01`, `02`, `03`;
 - a status dot, section number, disclosure arrow, or other existing marker is
   not paired with another generic bullet; and
 - nested lists stop after one level and use a neutral marker inside.
@@ -606,7 +603,7 @@ microworld detail, question, answer, and supporting evidence regardless of the
 current disclosure state.
 
 The **Evidence and scope** section is a dense reference appendix. Start the
-section closed. Opening it reveals source groups, context checks, scope limits,
+section closed. Opening it reveals source groups, scope limits,
 the checked-file group, artifact details, and the final numbered evidence list
 as independent disclosures that also start closed.
 

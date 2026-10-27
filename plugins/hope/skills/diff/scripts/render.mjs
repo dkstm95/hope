@@ -108,6 +108,11 @@ function trustedCodeUrl(review, evidence) {
   }
   const snapshot = review.snapshot.snapshot;
   const repository = review.snapshot.repository;
+  if (!repository) return undefined;
+  // A local head source is working-tree text, so only the merge base has a stable remote blob.
+  if (review.snapshot.change.kind === "local" && evidence.revision !== snapshot.mergeBase) {
+    return undefined;
+  }
   const selected = evidence.revision === snapshot.head
     ? repository.head ?? repository
     : evidence.revision === snapshot.mergeBase
@@ -118,6 +123,22 @@ function trustedCodeUrl(review, evidence) {
   return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
     + `/blob/${encodeURIComponent(evidence.revision)}/${path}`
     + `#L${evidence.startLine}-L${evidence.endLine}`;
+}
+
+function changeRecord(change) {
+  return change.kind === "github"
+    ? `PR-${change.number}`
+    : `LOCAL-${change.baseRevision.slice(0, 7)}`;
+}
+
+function repositoryLabel(snapshot) {
+  return snapshot.change.kind === "local"
+    ? snapshot.change.repositoryLabel
+    : `${snapshot.repository.owner}/${snapshot.repository.name}`;
+}
+
+function changeReference(change) {
+  return change.kind === "github" ? `PR #${change.number}` : changeRecord(change);
 }
 
 function accessibleControlLabel(context, action) {
@@ -539,7 +560,7 @@ function documentTitle(claim, dictionary, review, codeRenderer) {
   return `<header class="document-title">
     <h1 id="review-title">${userText(claim.text)}${markers === "" ? "" : `&nbsp;<span class="title-evidence">${markers}</span>`}</h1>
     <div class="document-title-meta">
-      <p class="document-state"><span class="document-state-dot" aria-hidden="true"></span>PR #${review.snapshot.pullRequest.number} · <code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></p>
+      <p class="document-state"><span class="document-state-dot" aria-hidden="true"></span>${html(changeReference(review.snapshot.change))} · <code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></p>
     </div>
   </header>`;
 }
@@ -571,24 +592,6 @@ function collapsibleSection({ id, title, content, number, initiallyOpen = false 
   </details>`;
 }
 
-function beginnerPrimerBlock(review, dictionary, codeRenderer) {
-  if (review.beginnerPrimer.length === 0) return "";
-  const claims = review.beginnerPrimer.map(
-    (item) => titledClaim(item, dictionary, review, codeRenderer),
-  );
-  return `<details class="beginner-primer" id="beginner-primer">
-    <summary class="beginner-primer-summary" aria-label="${html(label(dictionary, "background.beginnerPrimer"))}">
-      <span>${html(label(dictionary, "background.beginnerPrimer"))}</span>
-      <span class="beginner-primer-hint">${html(label(dictionary, "background.beginnerPrimerHint"))}</span>
-    </summary>
-    <div class="beginner-primer-content">
-      ${claims.length > 1
-        ? `<ul class="titled-claim-list">${claims.map((claim) => `<li>${claim}</li>`).join("")}</ul>`
-        : claims.join("")}
-    </div>
-  </details>`;
-}
-
 function limitText(limit, dictionary) {
   if (limit.kind === "unchanged-context") {
     return {
@@ -617,41 +620,6 @@ function limitText(limit, dictionary) {
   return { reason: limit.reason, subject: limit.subject };
 }
 
-function contextCheck(
-  check,
-  dictionary,
-  review,
-  codeRenderer,
-) {
-  const relatedLimits = check.limitIds.map((limitId) => (
-    review.limits.find((limit) => limit.id === limitId)
-  )).filter(Boolean);
-  const markers = evidenceBlock(check.evidence, dictionary, review, codeRenderer, {
-    context: check.subject,
-  });
-  const basis = check.evidence.length === 0
-    ? ""
-    : visibleBasisLabel(check.basis, dictionary);
-  const suffix = `${markers}${basis
-    ? `<span class="claim-basis">${html(basis)}</span>`
-    : ""}`;
-  return `<details class="context-check">
-    <summary class="context-check-head">
-      <h4>${userText(check.subject)}</h4>
-      <span class="context-status context-${html(check.status)}">${html(label(dictionary, `context.${check.status === "not-applicable" ? "notApplicable" : check.status}`))}</span>
-    </summary>
-    <div class="disclosure-content">
-      ${userParagraphs(check.explanation, suffix)}
-      ${relatedLimits.length === 0 ? "" : `<p class="related-limits">
-        ${relatedLimits.map((limit) => {
-          const displayed = limitText(limit, dictionary);
-          return `<a href="#scope-${html(limit.id)}">${userText(displayed.subject)}</a>`;
-        }).join(" · ")}
-      </p>`}
-    </div>
-  </details>`;
-}
-
 function synopsis(review, dictionary, codeRenderer, { number }) {
   const visibleItems = review.reviewItems.slice(0, 3);
   const hiddenItems = review.reviewItems.length - visibleItems.length;
@@ -662,13 +630,11 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
     (item) => titledClaim(item, dictionary, review, codeRenderer, false),
   );
   const background = backgroundClaims.length === 0
-    && review.beginnerPrimer.length === 0
     ? ""
     : `<section class="synopsis-background" id="background">
       <h3>${html(label(dictionary, "section.background"))}</h3>
       <div class="synopsis-background-content">
         ${backgroundClaims.join("")}
-        ${beginnerPrimerBlock(review, dictionary, codeRenderer)}
       </div>
     </section>`;
   return `<section class="synopsis" id="synopsis" aria-labelledby="synopsis-title">
@@ -762,21 +728,6 @@ function synopsis(review, dictionary, codeRenderer, { number }) {
 
 function evidenceSection(review, dictionary, codeRenderer, number) {
   const knownFileIds = new Set(review.files.map((file) => file.id));
-  const implementationDetails = review.codeSteps.length === 0
-    ? ""
-    : `<details class="evidence-group" id="implementation-details">
-      <summary><h3>${html(label(dictionary, "evidence.implementation"))}</h3></summary>
-      <div class="evidence-group-content">
-        <ol class="code-step-list">${review.codeSteps.map(
-          (item) => `<li>${titledClaim(
-            item,
-            dictionary,
-            review,
-            codeRenderer,
-          )}</li>`,
-        ).join("")}</ol>
-      </div>
-    </details>`;
   const sourcesByFile = new Map();
   for (const source of review.sourceIndex) {
     if (!source.fileId) continue;
@@ -798,7 +749,7 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
     const location = source.path
       ? userText(source.path)
       : pullRequestSource
-        ? `${html(review.snapshot.repository.owner)}/${html(review.snapshot.repository.name)} · PR #${review.snapshot.pullRequest.number}`
+        ? `${html(review.snapshot.repository.owner)}/${html(review.snapshot.repository.name)} · ${html(changeReference(review.snapshot.change))}`
         : "—";
     return `<tr>
       <td>${html(label(dictionary, `source.${source.kind}`))}</td>
@@ -838,46 +789,11 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
       ? `${entry.limit.kind}:${entry.limit.reasonKind}`
       : `${entry.limit.kind}:${entry.limit.reason.normalize("NFC").replace(/\s+/gu, " ").trim()}`;
     const key = JSON.stringify([entry.limit.material, stableReason]);
-    const group = groupedLimits.get(key) ?? { checks: [], entries: [], key };
+    const group = groupedLimits.get(key) ?? { entries: [], key };
     group.entries.push(entry);
     groupedLimits.set(key, group);
   }
-  const groupByLimitId = new Map();
-  for (const group of groupedLimits.values()) {
-    for (const entry of group.entries) {
-      groupByLimitId.set(entry.limit.id, group);
-    }
-  }
-  const crossGroupChecks = [];
-  for (const check of review.contextChecks.filter(
-    (entry) => entry.status === "limited",
-  )) {
-    const groups = [...new Set(check.limitIds.map(
-      (limitId) => groupByLimitId.get(limitId),
-    ).filter(Boolean))];
-    if (groups.length === 1) {
-      groups[0].checks.push(check);
-    } else {
-      crossGroupChecks.push(check);
-    }
-  }
-  const renderContextNotes = (checks) => (
-    checks.length === 0
-      ? ""
-      : `<div class="scope-context-notes">${checks.map((check) => (
-        `<section class="scope-context-note">
-          <h4>${userText(check.subject)}</h4>
-          ${userParagraphs(check.explanation, evidenceBlock(
-            check.evidence,
-            dictionary,
-            review,
-            codeRenderer,
-            { context: check.subject },
-          ))}
-        </section>`
-      )).join("")}</div>`
-  );
-  const renderSingleLimit = ({ checks, entries }) => {
+  const renderSingleLimit = ({ entries }) => {
     const { displayed, limit } = entries[0];
     return (
     `<details class="scope-limit" id="scope-${html(limit.id)}">
@@ -890,7 +806,6 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
         <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userParagraphs(displayed.reason)}</dd></div>
         <div><dt>${html(label(dictionary, "scope.result"))}</dt><dd>${userParagraphs(limit.impact)}</dd></div>
       </dl>
-      ${renderContextNotes(checks)}
     </div>
   </details>`
     );
@@ -907,7 +822,6 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
         <dl class="scope-shared-reason">
           <div><dt>${html(label(dictionary, "scope.reason"))}</dt><dd>${userParagraphs(group.entries[0].displayed.reason)}</dd></div>
         </dl>
-        ${renderContextNotes(group.checks)}
         <div class="scope-group-items">${group.entries.map(({ displayed, limit }) => (
           `<details class="scope-limit-item" id="scope-${html(limit.id)}">
             <summary><h4>${userText(displayed.subject)}</h4></summary>
@@ -941,17 +855,18 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
       </div>
     </details>`;
   };
-  const visibleContextChecks = review.contextChecks.filter(
-    (check) => check.status !== "limited",
-  );
   const snapshot = review.snapshot;
+  const { change } = snapshot;
+  const changeRows = change.kind === "github"
+    ? `<div><dt>${html(label(dictionary, "artifact.pullRequest"))}</dt><dd>${html(changeRecord(change))}</dd></div>`
+    : `<div><dt>${html(label(dictionary, "artifact.baseRef"))}</dt><dd><code>${html(change.baseRef)}</code></dd></div>
+          <div><dt>${html(label(dictionary, "artifact.workingTree"))}</dt><dd>${html(label(dictionary, change.dirty ? "artifact.workingTreeDirty" : "artifact.workingTreeClean"))}</dd></div>`;
   const baseRows = snapshot.snapshot.base === snapshot.snapshot.mergeBase
     ? `<div><dt>${html(label(dictionary, "artifact.baseAndMergeBase"))}</dt><dd><code>${html(snapshot.snapshot.base)}</code></dd></div>`
     : `<div><dt>${html(label(dictionary, "artifact.base"))}</dt><dd><code>${html(snapshot.snapshot.base)}</code></dd></div>
           <div><dt>${html(label(dictionary, "artifact.mergeBase"))}</dt><dd><code>${html(snapshot.snapshot.mergeBase)}</code></dd></div>`;
   return collapsibleSection({
     content: `
-      ${implementationDetails}
       <details class="evidence-group">
         <summary><h3>${html(label(dictionary, "evidence.sources"))}</h3></summary>
         <div class="evidence-group-content">
@@ -964,28 +879,6 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
           </div>
         </div>
       </details>
-      ${visibleContextChecks.length === 0 ? "" : `<details class="evidence-group">
-        <summary><h3>${html(label(dictionary, "evidence.context"))}</h3></summary>
-        <div class="evidence-group-content">
-          <div class="context-checks">${visibleContextChecks.map((check) => contextCheck(
-            check,
-            dictionary,
-            review,
-            codeRenderer,
-          )).join("")}</div>
-        </div>
-      </details>`}
-      ${crossGroupChecks.length === 0 ? "" : `<details class="evidence-group">
-        <summary><h3>${html(label(dictionary, "evidence.limitedContext"))}</h3></summary>
-        <div class="evidence-group-content">
-          <div class="context-checks">${crossGroupChecks.map((check) => contextCheck(
-            check,
-            dictionary,
-            review,
-            codeRenderer,
-          )).join("")}</div>
-        </div>
-      </details>`}
       ${limitCategory(true)}
       ${limitCategory(false)}
       <details class="evidence-group">
@@ -1004,13 +897,13 @@ function evidenceSection(review, dictionary, codeRenderer, number) {
         <summary><h3>${html(label(dictionary, "artifact.details"))}</h3></summary>
         <div class="evidence-group-content">
           <dl>
-            <div><dt>${html(label(dictionary, "artifact.pullRequest"))}</dt><dd>PR-${review.snapshot.pullRequest.number}</dd></div>
+            ${changeRows}
             ${baseRows}
             <div><dt>${html(label(dictionary, "artifact.head"))}</dt><dd><code>${html(snapshot.snapshot.head)}</code></dd></div>
             <div><dt>${html(label(dictionary, "artifact.capturedAt"))}</dt><dd><time datetime="${html(snapshot.capturedAt)}" title="${html(snapshot.capturedAt)}">${html(formatTimestamp(snapshot.capturedAt))}</time></dd></div>
-            <div><dt>${html(label(dictionary, "artifact.provider"))}</dt><dd>GitHub</dd></div>
-            <div><dt>${html(label(dictionary, "artifact.repository"))}</dt><dd>${html(snapshot.repository.owner)}/${html(snapshot.repository.name)}</dd></div>
-            <div><dt>${html(label(dictionary, "artifact.pullRequestTitle"))}</dt><dd>${userText(snapshot.pullRequest.title)}</dd></div>
+            <div><dt>${html(label(dictionary, "artifact.provider"))}</dt><dd>${html(change.kind === "github" ? "GitHub" : label(dictionary, "artifact.localProvider"))}</dd></div>
+            <div><dt>${html(label(dictionary, "artifact.repository"))}</dt><dd>${html(repositoryLabel(snapshot))}</dd></div>
+            ${change.kind === "github" ? `<div><dt>${html(label(dictionary, "artifact.pullRequestTitle"))}</dt><dd>${userText(change.title)}</dd></div>` : ""}
             <div><dt>${html(label(dictionary, "artifact.locale"))}</dt><dd>${html(snapshot.settings.locale)} · ${html(label(dictionary, `source.${snapshot.settings.localeSource}`))}</dd></div>
             <div><dt>${html(label(dictionary, "artifact.theme"))}</dt><dd>${html(label(dictionary, `theme.${snapshot.settings.theme}`))}</dd></div>
           </dl>
@@ -3082,13 +2975,12 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
   const styles = css(Object.fromEntries(Object.entries(fontBytes).map(
     ([name, bytes]) => [name, bytes.toString("base64")],
   ))) + "\n" + reader.styles;
-  const { owner, name } = review.snapshot.repository;
-  const prUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
-    + `/pull/${review.snapshot.pullRequest.number}`;
-  const openPullRequestLabel = label(dictionary, "artifact.openPullRequest")
-    .replace("{number}", String(review.snapshot.pullRequest.number));
-  const pullRequestLink = (className = "") => `<a class="pull-request-link${className}" href="${html(prUrl)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
-          <span>PR #${review.snapshot.pullRequest.number}</span>
+  const { change } = review.snapshot;
+  const openPullRequestLabel = change.kind === "github"
+    ? label(dictionary, "artifact.openPullRequest").replace("{number}", String(change.number))
+    : "";
+  const pullRequestLink = (className = "") => change.kind !== "github" ? "" : `<a class="pull-request-link${className}" href="${html(change.url)}" aria-label="${html(openPullRequestLabel)}" title="${html(openPullRequestLabel)}">
+          <span>PR #${change.number}</span>
           <svg class="external-link-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M14 5h5v5"></path>
             <path d="M19 5l-8 8"></path>
@@ -3125,7 +3017,7 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
   <div class="layout">
     <aside class="rail topbar">
     <div class="topbar-inner${locale === "" ? "" : " has-locale-switch"}">
-      <div class="brand"><span class="brand-product">DIFF</span><span class="brand-separator">/</span><span class="brand-record">PR-${review.snapshot.pullRequest.number}</span></div>
+      <div class="brand"><span class="brand-product">DIFF</span><span class="brand-separator">/</span><span class="brand-record">${html(changeRecord(change))}</span></div>
       <div class="rail-divider" aria-hidden="true"></div>
       <nav class="toc-desktop rail-navigation" aria-label="${html(label(dictionary, "common.menu"))}">
         ${tocHeading(dictionary, tocItems.length)}
@@ -3137,7 +3029,7 @@ export async function renderReview(review, { alternateLocale, fonts } = {}) {
             <path d="M3 7.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <path d="M3 9.5v-3a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"></path>
           </svg>
-          <span>${html(owner)}/${html(name)}</span>
+          <span>${html(repositoryLabel(review.snapshot))}</span>
         </div>
         <span class="commit-status" title="${html(label(dictionary, "artifact.reviewedCommit"))} ${html(review.snapshot.snapshot.head)}"><code>${html(review.snapshot.snapshot.head.slice(0, 8))}</code></span>
         ${pullRequestLink()}
