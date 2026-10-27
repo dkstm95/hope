@@ -23,12 +23,10 @@ the same. Do not copy the `before` trace into `after`.
 
 ## Visual
 
-For an included visual, read
-`../../diagram/references/diagram-standard.md` before authoring it. Diagram
-owns the selection and design standard. Diff still owns the evidence, teaching
-job, artifact schema, and delivery. The artifact accepts only `component-map`,
-`decision-table`, `flow`, or `sequence`; choose within those kinds and keep the
-exact schema required by the Diff workflow.
+For an included visual, read `visual-standard.md` before authoring it. The
+artifact accepts only `component-map`, `decision-table`, `flow`, or
+`sequence`; choose within those kinds and keep the exact schema required by the
+Diff workflow.
 
 Identifiers and prose labels are not example values merely because they appear
 in evidence.

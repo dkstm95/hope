@@ -1,6 +1,6 @@
 interface:
   display_name: "Hope Whiplash"
-  short_description: "Review, fix, and repeat until material issues are resolved"
+  short_description: "Review, fix, and repeat; or sweep proven codebase waste"
   brand_color: "#3157FF"
   default_prompt: "Use $hope:whiplash to review this work, fix supported issues, and repeat until no material issue remains."
 policy:

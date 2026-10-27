@@ -104,18 +104,16 @@ Align session or artifact merely to use this process.
 | Purpose, hierarchy, density, generic or overworked composition | `references/judgment.md` |
 | Direction, ordinary-language feedback, references, expressive variation | `references/exploration.md` |
 | Images, working prototypes, comparison and element feedback | `references/prototypes.md` |
-| Layout, typography, fonts, color, themes, surfaces, icons | `references/visual-system.md` |
-| Navigation, forms, asynchronous states, recovery, onboarding, UI copy | `references/interaction.md` |
-| Keyboard, focus, semantics, screen readers, zoom, input alternatives | `references/accessibility.md` |
-| Motion, gestures, haptics, timing, interruption, implementation recipes | `references/motion.md` |
-| Responsive layouts, localization, native and specialist platforms | `references/adaptation.md` |
-| Photography, illustration, textures, brand assets, performance | `references/assets-and-performance.md` |
 | Rendered quality, stress cases, fidelity, regression, completion | `references/verification.md` |
 | Existing systems, reusable decisions, artifact ownership and handoff | `references/continuity.md` |
-| Additional depth, brand/style/font catalogs, library and platform sources | `references/sources.md` |
+| Upstream sources and the primary standards for layout, type, color, interaction, accessibility, motion, and adaptation | `references/sources.md` |
 
-For explanatory diagrams and quantitative charts, use the public
-`../diagram/SKILL.md` only when the person also explicitly invokes Diagram.
-Otherwise use ordinary tools within the current task; keep the product's visual
-system. Specialized image, document, or presentation work uses the available
-tools for that medium under the same scope. Design does not require an external skill installation.
+Hope keeps process guidance here and leaves craft knowledge to the model and
+the primary standards. For typography, color, interaction states, keyboard and
+screen-reader behavior, motion, responsive and native adaptation, and asset
+production, apply current practice, verify conformance claims against the
+standards linked in `references/sources.md`, and follow the project's existing
+system. Diagrams and charts inside a design use ordinary tools within the
+current task and keep the product's visual system. Specialized image, document,
+or presentation work uses the available tools for that medium under the same
+scope. Design does not require an external skill installation.

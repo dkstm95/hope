@@ -13,16 +13,10 @@ const sharedWritingStandard = resolve(
   skillsRoot,
   "write/references/writing-standard.md",
 );
-const sharedDiagramStandard = resolve(
-  skillsRoot,
-  "diagram/references/diagram-standard.md",
-);
 const publishedCrossFeatureReferences = new Set([
   sharedArtifactTheme,
-  sharedDiagramStandard,
   sharedWritingStandard,
   resolve(skillsRoot, "design/SKILL.md"),
-  resolve(skillsRoot, "diagram/SKILL.md"),
   resolve(skillsRoot, "write/SKILL.md"),
 ]);
 const artifactShellRoot = resolve(sharedAssetsRoot, "artifact-shell");
@@ -298,7 +292,7 @@ test("architecture checks distinguish allowed and forbidden source edges", () =>
     skill,
     featureRoot,
   ).some((issue) => issue.includes("without a published shared contract")));
-  for (const feature of ["design", "diagram", "write"]) {
+  for (const feature of ["design", "write"]) {
     assert.deepEqual(
       guidanceBoundaryIssues(`Read \`../${feature}/SKILL.md\`.`, skill, featureRoot),
       [],

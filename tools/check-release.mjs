@@ -52,7 +52,7 @@ assert.equal(packageJson.scripts.hope, undefined);
 assert.equal(codexPlugin.name, "hope");
 assert.equal(codexPlugin.version, currentVersion);
 assert.ok(codexPlugin.interface.defaultPrompt.some(
-  (prompt) => prompt.startsWith("Use $hope:sweep "),
+  (prompt) => prompt.startsWith("Use $hope:whiplash to sweep "),
 ));
 assert.equal(claudePlugin.name, "hope");
 assert.equal(claudePlugin.version, currentVersion);

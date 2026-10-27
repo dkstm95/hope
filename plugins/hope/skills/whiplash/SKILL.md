@@ -1,6 +1,6 @@
 ---
 name: whiplash
-description: Critically review a work product, fix supported material issues, and repeat verification and review until no material issue remains. Use only when explicitly invoked.
+description: Critically review a work product, fix supported material issues, and repeat verification and review until no material issue remains; or, as a sweep, apply proven behavior-preserving cleanup across a codebase. Use only when explicitly invoked.
 disable-model-invocation: true
 ---
 
@@ -77,6 +77,29 @@ still-valid constraints, and relevant artifacts and evidence. Label the author's
 interpretations and assumptions rather than passing them as established facts.
 Judge findings by evidence, not reviewer agreement. Disclose any limit on
 requested independence.
+
+## Sweep mode
+
+When the person asks Whiplash for a sweep, or for cleanup rather than a review
+of a change, the intended state is a smaller codebase with unchanged public
+behavior. Use the named repository or the current one, and the whole repository
+unless the person narrows the scope. Record the revision and working-tree state
+and preserve unrelated edits.
+
+Establish current behavior from running code and configuration, then remove
+dead code, duplication, needless branches or wrappers, misplaced abstractions,
+and repeated work. Share logic only when behavior, ownership, and reasons to
+change match. Prove a removal has no remaining consumer, including external or
+dynamic use; a missing text reference alone does not prove safety. Remove
+dedicated tests, documentation, generation, configuration, and assets with
+their obsolete consumer, and retain support for remaining paths.
+
+Leave bugs, public-contract or behavior changes, product and compatibility
+decisions, migrations, dependency changes, and uncertain removals outside the
+sweep, and do not turn them into unsolicited findings. Verify affected
+consumers with the narrowest useful checks plus required project verification,
+and correct or revert regressions the sweep introduced without repairing
+pre-existing failures. If no proven cleanup exists, say so.
 
 ## Finish
 
