@@ -1,271 +1,28 @@
 <p align="center">
-  <img
-    src="plugins/hope/assets/hope-protected-light.png"
-    width="128"
-    alt="Hope 프로텍티드 라이트 아이콘"
-  >
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-hero-ko-dark.svg">
+    <img src="assets/readme/hope-hero-ko-light.svg" width="960" alt="Hope. 더 보고, 더 이해하고, 더 결정합니다.">
+  </picture>
 </p>
 
-<h1 align="center">Hope</h1>
-
 <p align="center">
-  <strong>
-    Hope는 사람이 판단 능력과 주도권을 유지하며 AI와 더 복잡한 일을 해낼 수 있도록 돕습니다.
-  </strong>
+  <strong>AI가 일을 더 많이 맡아도 판단과 주도권은 사람에게 남기는 Claude Code·Codex 플러그인입니다.</strong>
 </p>
 
 <p align="center"><a href="README.md">English</a></p>
 
-<br>
-
-> AI가 일을 수행하는 능력이 커질수록, 사람은 자신이 책임지는 결과를 어디까지 이해하고 어떻게 판단해야 하는가?
-
-Hope는 이 질문에서 출발합니다. 사람의 판단이 필요한 선택을 드러내고, 그 선택에
-필요한 근거와 결과를 이해하도록 돕습니다. 목표는 판단에 드는 부담을 줄이면서,
-AI와 함께 이해하고 책임질 수 있는 일의 범위를 넓히는 것입니다.
-
-현재는 개발 작업에서 의도를 맞추고, 결과를 검토하고, 변경을 이해하는 기능으로
-이 방향을 실천합니다. 제품의 발전 기준은 사용자가 중요한 선택의 결과를 더 잘
-예측하고, 더 나은 판단을 내리며, 다음 작업을 스스로 이끌 수 있게 되는가입니다.
-
-## 기능
-
-Hope는 개발 작업의 여러 부분을 돕는 여덟 스킬을 제공합니다. 의도를 맞추고,
-인터페이스를 구체화하고, 변경을 이해·검토하고, 코드를 정리하고, 결과를 그림과
-글로 설명할 때 사용할 수 있습니다. 작업에 맞는 스킬을 하나씩 쓰거나 함께
-선택할 수 있습니다.
-
-Codex에서는 `$hope:<이름>`, Claude Code에서는 `/hope:<이름>`, 다른 도구에서는
-스킬 호출 명령이나 선택 메뉴로 스킬을 선택합니다. 이름은 `align`, `design`,
-`diff`, `whiplash`, `sweep`, `diagram`, `write`, `pr-writing`입니다.
-같은 작업의 후속 요청에는 명령을 반복할 필요가 없습니다. PR Writing은 PR·MR
-글을 준비할 때 자동으로도 적용되며 Write를 호출합니다. 그 외에는 직접 선택한
-스킬만 시작합니다.
-
-### 🤝 Align — 구현 전에 의도와 중요한 결정을 함께 이해합니다
-
-Align은 대화와 프로젝트 근거를 바탕으로 결과를 크게 바꿀 선택을 정리합니다.
-AI가 조사하고 방향을 추천하면 사용자가 결정하거나 위임합니다. 답변이 실제 사용에
-어떤 결과를 가져오는지 따라가며 새로운 선택을 발견합니다. 최종 확인 전에는
-합의한 선택들을 함께 적용해 원래 목적을 달성할 수 있는지 살펴보고, 앞선 질문에서
-놓친 부분을 찾습니다. 일상적인 구현 세부 사항은 구현 작업에서 정합니다.
-
-새로운 합의는 확인하고, 이미 받은 구현 허가가 있으면 이어서 진행합니다.
-합의만 요청했다면 거기서 마칩니다. 대화 이후에도 보존할 합의는 프로젝트 안의
-독립형 HTML 문서에 기록합니다. Design도 호출하면 시각적 선택에 이미지 또는
-작동하는 시안을 활용하고, 의미 있는 선택이 남아 있을 때 비교합니다.
-Align은 Design을 호출하지 않아도 시각적 근거를 활용할 수 있습니다.
-
-대화와 산출물 처리 절차는 [Align 스킬](plugins/hope/skills/align/SKILL.md)에
-정의되어 있습니다.
-
-> [!IMPORTANT]
-> 생성된 Align 문서는 프로젝트 문서입니다. 관련 변경과 함께 버전 관리에
-> 포함하는 방식을 기본으로 삼습니다.
-
-**전체 HTML:** [팬 일정 예시 합의를 일반 생성 경로로 기록한 Align 결과물을 엽니다.](docs/alignments/rescene-fan-calendar-default-run.ko.html)
-
-아래 이미지는 실제 생성된 HTML을 다크·라이트 모드에서 캡처했습니다.
-
-![목표와 공유된 이해, 버전 이력을 보여 주는 실제 Align 결과물](assets/readme/hope-align-ko.png)
-
-<details>
-<summary>Align 세부 이미지 보기</summary>
-
-| 라이트 모드 시각 시안 | 다크 모드 공유 이해와 판단 기준 |
-| --- | --- |
-| [![한국어 Align 문서에서 비교한 신뢰 가능한 팬 일정 UI 두 가지](assets/readme/hope-align-directions-ko.png)](assets/readme/hope-align-directions-ko.png) | [![한국어 Align 문서의 출처 우선순위, 충돌, 최신성, 취소 결정](assets/readme/hope-align-decisions-ko.png)](assets/readme/hope-align-decisions-ko.png) |
-
-</details>
-
----
-
-### 🎨 Design — 목적과 느낌을 보고 판단할 수 있는 UI로 만듭니다
-
-디자인 용어를 몰라도 필요한 일이나 불편한 느낌을 설명할 수 있습니다.
-Design은 실제 작업과 화면을 살펴 방향을 추천하고, 판단에 맞는 이미지 또는
-작동하는 시안을 만듭니다. 중요한 차이를 비교하고, 마음에 든 부분은 유지하면서
-피드백을 반영합니다.
-
-획일적인 구성, 과도한 제목·라벨, 일관성 없는 표현을 다듬되 필요한 정보와
-조작 요소, 제품의 개성은 보존합니다. 서체·색상·상호작용·접근성·모션·반응형·
-다국어·이미지·렌더링 검증 지침은 해당 작업에 필요한 부분만 읽습니다.
-
-직접 호출하거나 Align과 함께 호출할 수 있습니다. 예: `$hope:design 이 화면이
-좀 요란해. 색감과 표는 살리고 매일 업무를 확인하기 편하게 다듬어줘.`
-
-진행 방식은 [Design 스킬](plugins/hope/skills/design/SKILL.md), 참고한 지침과
-고정 버전 원문·라이선스·한계는 [출처 색인](plugins/hope/skills/design/references/sources.md)에
-정리되어 있습니다.
-
----
-
-### 🔎 Diff — 코드 변경을 이해하고 다음 작업을 발견합니다
-
-AI는 큰 코드 변경을 빠르게 만들 수 있습니다. Diff는 엔지니어가 그 결과의 동작, 조건, 경계, 근거를 간결하게 이해하도록 돕습니다.
-
-Diff는 하나의 HTML 문서를 만들어 코드보다 동작을 먼저 설명하고 중요한 주장에 근거를 연결합니다.
-
-모든 Diff 결과물에는 전체 변경 코드도 함께 들어갑니다. 모델이 여러 파일의
-구현과 테스트를 목적에 따라 모으거나 한 파일을 나누어 배치합니다. 처음에는
-모든 묶음이 접혀 있으며, 제목이나 코드를 선택하면 오른쪽에 변경 이유와
-근거를 보여 줍니다. 읽음 표시를 되돌리거나 진행 상태를 내보낼 수 있습니다.
-별도 스킬이나 옵션 없이 기존 분석과 같은 캡처 스냅샷을 사용합니다.
-
-변경을 이해하는 데 도움이 될 때 시각 자료, 마이크로월드, 퀴즈를 활용합니다.
-현재 대화에서 분석할 수 있으며, 독립적인 관점이 필요하거나 사용자가 요청하면
-별도 리뷰어를 활용합니다.
-
-이를 통해 변경의 작동 모델을 세우고 후속 질문, 결정, 작업 아이디어로 이어 갑니다.
-
-Diff는 GitHub PR이나 로컬 변경을 리뷰합니다. 로컬 변경은 기준 브랜치와의
-merge base에 대한 작업 트리 전체(커밋, 스테이징, 스테이징하지 않은 변경)이며,
-추적하지 않는 파일은 요청할 때만 포함합니다.
-
-> [!NOTE]
-> URL 없이 실행하면 먼저 현재 브랜치의 PR을 찾습니다.
-> 없으면 저장소에서 사용자가 만든 최신 열린 PR을 선택합니다.
-> PR이 없으면 upstream 기본 브랜치를 기준으로 로컬 변경을 리뷰하며,
-> 필요하면 다른 기준 브랜치를 지정할 수 있습니다.
-> 변경이 바뀌면 Diff를 다시 실행하세요.
-
-아래 이미지는 [Ky PR #825](https://github.com/sindresorhus/ky/pull/825)에서 수집한
-근거를 현재 Diff 렌더러로 만든 뒤 다크·라이트 모드에서 캡처했습니다.
-이 결과물에는 의미별 코드 묶음, 동작 흐름, 마이크로월드가 포함되어 있습니다.
-
-**전체 HTML:** [Ky PR #825의 재시도 시간 예산을 설명한 Diff 결과물을 엽니다.](docs/diffs/ky-825-total-timeout.ko.html)
-
-![제목에 붙은 근거, 변경 요약, 검토 항목을 보여 주는 Diff 결과물](assets/readme/hope-diff-ko.png)
-
-<details>
-<summary>Diff 세부 이미지 보기</summary>
-
-| 라이트 모드 변경 개요와 동작 흐름 | 다크 모드 펼친 마이크로월드 |
-| --- | --- |
-| [![변경 개요와 번호가 매겨진 동작 흐름을 구분한 Diff 결과물](assets/readme/hope-diff-core-ko.png)](assets/readme/hope-diff-core-ko.png) | [![시간 상태에 따른 재시도 동작을 비교하는 Diff 마이크로월드](assets/readme/hope-diff-microworld-ko.png)](assets/readme/hope-diff-microworld-ko.png) |
-
-</details>
-
-![전체 변경을 의미별 묶음과 오른쪽 설명으로 보여 주는 Diff 코드 리더](assets/readme/hope-diff-reader-ko.png)
-
----
-
-### 🥁 Whiplash — 리뷰하고, 고치고, 다시 확인합니다
-
-> “Not quite my tempo.”
-
-영화 *위플래시* (2014)의 합주 장면에서 이름을 따왔습니다. 주의 깊게 듣고,
-잘못된 부분을 고치고, 다시 시도합니다.
-
-![위플래시에서 니먼을 지적하는 플레처](assets/readme/whiplash-not-my-tempo.jpg)
-
-*이미지 출처: [Hulu 공식 “Not My Tempo” 클립](https://www.youtube.com/watch?v=gfceCnMJZ3c).*
-
-`$hope:whiplash`를 한 번 호출하면 결과물을 냉정하게 검토하고, 근거가 있는
-중요한 문제를 수정하고, 변경을 검증한 뒤 다시 리뷰합니다. 요청한 변경 후
-상태를 기준으로 diff 밖의 관련 부분까지 확인하고, 대체된 요구사항과 유지할
-요구사항을 구분합니다. 최종 결과가 그 상태를 충족하고, 미해결 중요 문제가
-없고 필요한 검증이 끝나면 완료합니다. 지적의 타당성을 확인한 뒤
-수정하며, 결정이 필요하거나 수정이 진전되지 않는 문제는 드러냅니다.
-독립적인 관점이 도움이 되거나 사용자가 요청하면 별도 리뷰어를 활용합니다.
-
-Whiplash는 Toxic Review를 대체합니다. 호출하면 대상에 대한 되돌릴 수 있는
-로컬 수정까지 수행합니다. 수정 없이 의견만 받으려면 “리뷰만 해줘”라고 요청하세요.
-
-범위와 완료 기준은 [Whiplash 스킬](plugins/hope/skills/whiplash/SKILL.md)에
-정의되어 있습니다.
-
----
-
-### 🧹 Sweep — 코드베이스를 청소합니다
-
-Sweep을 명시적으로 호출하면 현재 저장소 전체나 지정한 범위에서 기존 동작을
-유지하는 정리를 수행합니다. 데드 코드, 중복, 불필요한 작업과 그에 딸린 오래된
-지원 자료를 제거합니다. 버그 수정, 제품 결정, 불확실한 제거는 포함하지 않습니다.
-
-범위와 검증 기준은 [Sweep 스킬](plugins/hope/skills/sweep/SKILL.md)에 정의되어
-있습니다.
-
----
-
-### ◇ Diagram — 관계를 더 쉽게 이해할 수 있게 보여 줍니다
-
-Diagram은 위치, 연결, 순서, 계층, 상태, 수량의 형태가 글이나 작은 표보다
-의미를 더 분명하게 전달할 때 설명용 다이어그램과 차트를 만들고, 다듬고,
-검토합니다.
-
-독립적인 요청을 맡거나 기존 작업 안에서 그 작업의 근거와 산출물 형식을 유지하며
-사용합니다. 구성, 접근성, 렌더링 검증 기준은
-[Diagram 스킬](plugins/hope/skills/diagram/SKILL.md)에 정의되어 있습니다.
-
-**전체 HTML 예시:** [Diagram이 만든 택배 인계 다이어그램을 엽니다.](docs/visualizations/parcel-handoff.html)
-
-![온라인 주문이 쇼핑몰, 물류센터, 배송기사, 수령자에게 인계되는 과정을 보여 주는 다크 Hope Diagram 기술 기록](assets/readme/hope-diagram-ko.png)
-
-디자인 기준은 Cathryn Lavery의
-[Diagram Design](https://github.com/cathrynlavery/diagram-design)을 MIT
-라이선스에 따라 각색했습니다. Hope에는 필요한
-[원본 고지](plugins/hope/skills/diagram/LICENSE.diagram-design)를 포함하지만,
-Diagram Design의 템플릿·스크립트·글꼴·갤러리·제3자 아이콘은 포함하지 않습니다.
-
----
-
-### ✍️ Write — 의미를 보존하며 명확하게 글을 작성합니다
-
-Write를 호출해 글을 작성·편집·검토할 수 있습니다. 구현 작업 안에서 호출하거나
-다른 스킬과 함께 호출할 수도 있습니다. 글의 의미와 어조, 진행 중인 작업의
-범위를 유지하며 표현을 다듬습니다. 공통 글쓰기 기준은 Write를 호출하지 않아도
-다른 작업에서 계속 참조할 수 있습니다.
-
-Write의 공통 기준은 조지 오웰의
-[「Politics and the English Language」](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/)에
-담긴 여섯 가지 원칙을 바탕으로 합니다.
-
----
-
-### PR Writing — 리뷰어가 판단할 수 있도록 변경을 설명합니다
-
-“PR 생성해”라고 요청하거나 허용된 구현 작업이 PR·MR 작성 단계에 도달하면
-PR Writing이 자동으로 적용됩니다. 프로젝트 규칙과 실제 변경·검증 근거를
-확인하고 Write를 호출해 제목과 본문을 작성합니다. 초안 작성과 기존 PR·MR
-설명 수정도 지원하며, 프로젝트마다 Hope 전용 글쓰기 설정을 추가할 필요가
-없습니다.
-
-구체적인 변경 결과, 변경 이유, 리뷰어에게 필요한 근거를 설명합니다. 기존
-템플릿과 언어 선택을 우선하며, 간단한 변경은 짧게 작성합니다. 중요한 변경에는
-필요한 절충점·한계·검토 초점을 추가합니다. 작성을 마치면 이미 허용된 생성·수정
-작업을 이어서 진행합니다. 리뷰만 요청한 경우에는 PR Writing이 시작되지 않습니다.
-
-범위와 Write 호출 계약은 [PR Writing 스킬](plugins/hope/skills/pr-writing/SKILL.md)에
-정리되어 있습니다. 자동 선택은 도구와 모델이 작업을 인식하는 데 달려 있습니다.
-도구별 관찰 결과와 남은 한계는 [스킬 검증 기록](docs/skill-verification.md)을
-참고하세요.
-
-<br>
+이제 AI는 사람이 읽는 속도보다 빠르게 변경을 만듭니다. 그래도 결과에 대한 책임은
+사람에게 있습니다. Hope는 사람이 판단해야 할 선택을 드러내고, 그 근거를 보여 주고,
+결정은 사람에게 맡깁니다. 그래서 더 큰 일을 맡아도 내보낸 결과를 이해할 수 있습니다.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-flow-ko-dark.svg">
+    <img src="assets/readme/hope-flow-ko-light.svg" width="960" alt="스킬별 역할: 의도 단계의 Align과 Design, 구현 중의 Write, 검토 단계의 Diff와 Whiplash, 제출 단계의 PR Writing.">
+  </picture>
+</p>
 
 ## 설치
-
-다음 항목들이 필요합니다.
-
-- Node.js 22 이상
-- PR에 Diff를 사용하려면 인증된 [GitHub CLI](https://cli.github.com/)가 필요합니다. 필요하다면 먼저 `gh auth login`을 실행하세요. 로컬 변경에는 Git만 있으면 됩니다.
-
-> [!TIP]
-> 가장 간단한 설치 방법은 AI에게 다음과 같이 요청하는 것입니다.
->
-> ```text
-> https://github.com/dkstm95/hope 저장소의 Hope를 현재 AI 도구에 설치해 주세요.
-> 저장소의 README에 따라 설치하고, 다시 시작해야 한다면 알려 주세요.
-> ```
-
-직접 설치하려면 사용 중인 도구의 명령을 실행하세요.
-
-예시:
-```bash
-# Codex
-codex plugin marketplace add dkstm95/hope
-codex plugin add hope@hope
-```
 
 ```bash
 # Claude Code
@@ -273,13 +30,95 @@ claude plugin marketplace add dkstm95/hope
 claude plugin install hope@hope
 ```
 
+```bash
+# Codex
+codex plugin marketplace add dkstm95/hope
+codex plugin add hope@hope
+```
+
+Node.js 22 이상이 필요합니다. Diff로 GitHub PR을 리뷰하려면 로그인된
+[GitHub CLI](https://cli.github.com/)도 필요합니다.
+
+## 스킬
+
+Claude Code에서는 `/hope:<이름>`, Codex에서는 `$hope:<이름>`으로 스킬을 시작합니다.
+같은 작업의 후속 요청에는 명령을 다시 입력하지 않아도 됩니다. PR Writing만은
+PR이나 MR의 제목과 설명이 필요할 때 스스로 시작합니다.
+
+### <img src="assets/readme/mark-align.svg" width="22" height="22" alt=""> Align
+
+코드를 쓰기 전에 결과를 바꿀 선택부터 정합니다. Align은 프로젝트를 조사한 뒤 지금
+답할 수 있는 열린 질문을 함께 묻고, 질문마다 추천안을 냅니다. 답이 나오면 그 답이 새로 만드는 선택까지
+따라갑니다. 결정은 사람이 하거나 AI에 맡깁니다. 대화가 끝난 뒤에도 남겨야 할 합의는
+누가 정했는지와 근거를 표시한 기록으로 남깁니다.
+[Align 스킬](plugins/hope/skills/align/SKILL.md) ·
+[기록 예시](docs/alignments/rescene-fan-calendar-default-run.ko.html)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-align-ko-dark.svg">
+  <img src="assets/readme/hope-align-ko-light.svg" width="960" alt="근거가 연결된 목표와 문제, 사용자 결정과 위임 결정, 제외 항목을 보여 주는 Align 기록 일러스트.">
+</picture>
+
+### <img src="assets/readme/mark-diff.svg" width="22" height="22" alt=""> Diff
+
+승인하기 전에 변경을 이해합니다. Diff는 GitHub PR이나, 커밋하지 않은 수정까지 포함한
+로컬 브랜치를 기준 브랜치와 비교해 리뷰합니다. 결과는 오프라인 HTML 하나입니다.
+코드보다 동작을 먼저 설명하고, 중요한 주장마다 근거가 된 코드 줄을 연결합니다.
+전체 diff도 목적별로 묶여 함께 들어가고, 묶음마다 그렇게 바꾼 이유가 옆에 붙습니다.
+도움이 될 때는 동작을 직접 조작해 보는 마이크로월드와 이해를 확인하는 퀴즈도 더합니다.
+[Diff 스킬](plugins/hope/skills/diff/SKILL.md) ·
+[리뷰 예시](docs/diffs/ky-825-total-timeout.ko.html)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-diff-ko-dark.svg">
+  <img src="assets/readme/hope-diff-ko-light.svg" width="960" alt="로컬 변경의 이전과 이후, 확인·결정할 검토 항목, 목적별로 묶은 변경 코드를 보여 주는 Diff 리뷰 일러스트.">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-microworld-ko-dark.svg">
+  <img src="assets/readme/hope-microworld-ko-light.svg" width="960" alt="timeout, 경과 시간, 남은 재시도에 따라 다음 재시도가 시작되는지 보여 주는 Diff 마이크로월드 일러스트.">
+</picture>
+
+### <img src="assets/readme/mark-whiplash.svg" width="22" height="22" alt=""> Whiplash
+
+> “Not quite my tempo.”
+
+<img src="assets/readme/whiplash-not-my-tempo.jpg" width="480" alt="위플래시에서 니먼을 지적하는 플레처">
+
+*이미지 출처: 영화* 위플래시 *(2014), [Hulu 공식 “Not My Tempo” 클립](https://www.youtube.com/watch?v=gfceCnMJZ3c).*
+
+중요한 문제가 남지 않을 때까지 리뷰, 수정, 검증을 반복합니다. Whiplash는 요청한
+결과를 기준으로 작업을 판단하고, diff 밖의 관련 부분까지 따라가며, 수정 전에 지적이
+맞는지 먼저 확인합니다. 수정 없이 의견만 받으려면 리뷰만 요청하세요. 정리만 원하면
+sweep을 요청하세요. 공개 동작은 그대로 두고 죽은 코드, 중복, 불필요한 작업만 걷어 냅니다.
+[Whiplash 스킬](plugins/hope/skills/whiplash/SKILL.md)
+
+### <img src="assets/readme/mark-design.svg" width="22" height="22" alt=""> Design
+
+디자인 용어 없이, 화면이 해야 할 일이나 거슬리는 점을 말하면 됩니다. Design은 실제
+화면을 살펴 방향을 추천하고 이미지나 작동하는 시안을 만듭니다. 고를 만한 차이가
+남아 있으면 비교안도 냅니다. 피드백을 거듭해도 마음에 든 부분은 지킵니다. Align과
+함께 쓰면 시안이 결정의 시각적 근거가 됩니다.
+[Design 스킬](plugins/hope/skills/design/SKILL.md)
+
+### <img src="assets/readme/mark-write.svg" width="22" height="22" alt=""> Write
+
+글의 의미와 어조를 지키면서 초안을 쓰고, 고치고, 검토합니다. 결론을 앞에 두고 군더더기를
+덜어 내며, 언어마다 그 언어답게 씁니다. 조지 오웰이
+[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/)에서
+제시한 여섯 규칙을 바탕으로 한 글쓰기 기준은 다른 Hope 스킬의 문장에도 적용됩니다.
+[Write 스킬](plugins/hope/skills/write/SKILL.md)
+
+### <img src="assets/readme/mark-pr-writing.svg" width="22" height="22" alt=""> PR Writing
+
+변경을 리뷰할 사람에게 설명합니다. PR을 요청하거나 허가받은 작업이 PR 단계에 이르면,
+PR Writing은 프로젝트의 템플릿과 관례를 읽고 실제 diff와 검증 결과에 근거해 내용을 잡은
+뒤 문장은 Write에 맡깁니다. 간단한 변경은 짧게 쓰고, 위험한 변경은 트레이드오프와
+한계를 밝힙니다.
+[PR Writing 스킬](plugins/hope/skills/pr-writing/SKILL.md)
+
 ## 라이선스
 
-[MIT](LICENSE)
-
-Diagram에서 각색한 디자인 지침에는
-[Diagram Design MIT 고지](plugins/hope/skills/diagram/LICENSE.diagram-design)도
-적용됩니다.
-
-Design은 MIT와 Apache-2.0 지침을 각색했으며, 원저작자 고지와 변경 내역은
-[출처 색인](plugins/hope/skills/design/references/sources.md)에 기록되어 있습니다.
+[MIT](LICENSE). Design은 MIT와 Apache-2.0 지침을 바탕으로 하며, 원본 고지와 변경 내용은
+[출처 색인](plugins/hope/skills/design/references/sources.md)에 있습니다. 서체는 OFL
+글꼴을 수정해 빌드했으며 [서체 출처](plugins/hope/assets/fonts/SOURCE.md)에 정리되어 있습니다.

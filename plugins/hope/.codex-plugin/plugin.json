@@ -23,7 +23,7 @@
       "Use $hope:whiplash to review this work, fix supported issues, and review again.",
       "Use $hope:sweep to remove proven codebase waste without changing customer-observed behavior."
     ],
-    "brandColor": "#087EA4",
+    "brandColor": "#3157FF",
     "composerIcon": "./assets/hope-icon.png",
     "logo": "./assets/hope-protected-light.png"
   }
