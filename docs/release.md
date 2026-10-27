@@ -18,11 +18,9 @@ Every completed change records one release decision in its pull request:
 
 Judge the delivered behavior, not the commit type.
 
-AI or the reviewer chooses `patch`, `minor`, or `major` when a release is
-required.
-
-The repository determines whether the working tree changes the public package
-and calculates the exact version.
+The person making the change, or the AI working with them, chooses the
+decision. No tool compares the package with earlier releases; the pull
+request's Release section is the record of the decision.
 
 Documentation and internal maintenance can still require a release when they
 change a Skill or another packaged contract.
@@ -37,28 +35,11 @@ Every file-changing task ends with:
 npm run check
 ```
 
-The command checks the package structure, the current working tree's release
-impact, and the deterministic tests.
+The command checks the package structure and manifest consistency, then runs
+the deterministic tests.
 
-The release-impact check compares the approved package at the latest stable
-release, the latest `origin/main`, and the current working tree.
-
-It compares the exact package allowlist, file modes, and file contents after
-replacing only the two manifest version values with one neutral value.
-
-When the working tree changes the package, it must increase the base version by
-exactly one patch, minor, or major step.
-
-When the base already records an unreleased version, unrelated work keeps that
-version.
-
-When the base has unversioned package changes, the next completed task records
-their release unless it restores the package to the released state.
-
-A branch must include the latest `origin/main` before the check can pass.
-
-The same command runs in normal CI as a safety net, but local completion owns
-the version decision.
+CI runs the same command in one `Verify` job on Ubuntu with Node.js 22. Browser
+tests run only locally.
 
 ## Prepare a version
 
@@ -79,7 +60,8 @@ npm run release:prepare -- <patch|minor|major>
 
 The command reads the version from `origin/main`, calculates the exact next
 version, updates all four files, rebuilds the package, and checks package
-consistency. It leaves the full test suite to the final check below.
+consistency. It stops when the branch does not include `origin/main`. It leaves
+the full test suite to the final check below.
 
 Pass another base ref as a second argument only when `origin/main` is not the
 task base.

@@ -80,17 +80,6 @@ assert.equal(claudeMarketplaceEntry.version, undefined);
 assert.equal(packageJson.scripts["plugin:dev:install"], "node tools/install-plugin-dev.mjs");
 assert.equal(packageJson.scripts["check:title"], "node tools/check-change-title.mjs");
 assert.equal(
-  packageJson.scripts["render:readme-assets"],
-  "node tools/render-readme-assets.mjs",
-);
-assert.ok(
-  packageJson.scripts.check
-    .split("&&")
-    .map((command) => command.trim())
-    .includes("npm run release:check"),
-  "npm run check must include release impact",
-);
-assert.equal(
   normalizeLineEndings(await read("tools/plugin-package-files.txt")),
   `${pluginPackageFiles.join("\n")}\n`,
 );

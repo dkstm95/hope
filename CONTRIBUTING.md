@@ -29,13 +29,15 @@ npm install
 npm run check
 ```
 
-`npm run check` validates the current working tree's package, release impact,
-and deterministic tests.
+`npm run check` validates the package structure and runs the deterministic
+tests. CI runs the same command.
 
-Run `npm run test:browser` when a Hope GUI layout or interaction changes.
+Browser tests do not run in CI. Run `npm run test:browser` locally when a Hope
+GUI layout or interaction changes; it needs Playwright's Chromium
+(`npx playwright install chromium`).
 
-Run `npm run render:readme-assets` and inspect the updated captures when an
-artifact rendering change affects the README examples.
+The README images in `assets/readme/` are static captures. Replace them by hand
+when a rendering change makes an example misleading.
 
 Verify changed behavior with representative prompts or direct runtime checks.
 Skill discovery and package validity alone do not prove behavior. Add tests

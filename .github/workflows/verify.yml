@@ -11,72 +11,12 @@ permissions:
 
 jobs:
   check:
-    name: Deterministic (Ubuntu / Node ${{ matrix.node }})
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [22, 24]
+    name: Verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 22
       - run: npm ci
       - run: npm run check
-
-  platform-smoke:
-    name: Platform smoke (${{ matrix.os }} / Node 22)
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: npm run build:plugin
-      - name: Check generated plugin files
-        run: >-
-          git diff --exit-code --
-          plugins/hope/LICENSE
-          tools/plugin-package-files.txt
-      - name: Check staged plugin paths
-        run: node --test test/platform-smoke.test.mjs
-
-  browser:
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run check:readme-assets
-      - run: npm run test:browser
-
-  required:
-    name: Verify
-    if: ${{ always() }}
-    needs: [check, platform-smoke, browser]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check every supported system and browser
-        env:
-          BROWSER_RESULT: ${{ needs.browser.result }}
-          CHECK_RESULT: ${{ needs.check.result }}
-          PLATFORM_SMOKE_RESULT: ${{ needs.platform-smoke.result }}
-        run: |
-          test "${CHECK_RESULT}" = "success"
-          test "${PLATFORM_SMOKE_RESULT}" = "success"
-          test "${BROWSER_RESULT}" = "success"

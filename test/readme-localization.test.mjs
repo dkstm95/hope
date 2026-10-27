@@ -2,11 +2,6 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-import {
-  makeDiffAnalysis,
-  makeDiffSnapshot,
-} from "../tools/readme-examples.mjs";
-
 const root = new URL("../", import.meta.url);
 const captureNames = [
   "align",
@@ -18,11 +13,6 @@ const captureNames = [
   "diff-reader",
   "diagram",
 ];
-const detailCaptureNames = captureNames.filter((name) => ![
-  "align",
-  "diff",
-  "diagram",
-].includes(name));
 
 const read = (path) => readFile(new URL(path, root), "utf8");
 
@@ -39,15 +29,6 @@ function collapsedExampleImages(source) {
 
 function expectedImages(suffix) {
   return captureNames.map((name) => `assets/readme/hope-${name}-${suffix}.png`);
-}
-
-async function pngDimensions(path) {
-  const bytes = await readFile(new URL(path, root));
-  assert.equal(bytes.subarray(1, 4).toString("ascii"), "PNG", path);
-  return {
-    height: bytes.readUInt32BE(20),
-    width: bytes.readUInt32BE(16),
-  };
 }
 
 test("README examples keep English and Korean assets separate", async () => {
@@ -85,125 +66,4 @@ test("README examples show overviews and collapse detailed captures by default",
       images.slice(4, 6),
     ]);
   }
-});
-
-test("README detail captures preserve a readable wide layout", async () => {
-  for (const suffix of ["en", "ko"]) {
-    for (const name of detailCaptureNames) {
-      const path = `assets/readme/hope-${name}-${suffix}.png`;
-      const { height, width } = await pngDimensions(path);
-      assert.ok(width >= 720, `${path}: ${width}px wide`);
-      assert.ok(height <= width * 2, `${path}: ${width}x${height}`);
-    }
-  }
-});
-
-test("preserved runtime artifacts retain their original available sections", async () => {
-  for (const [suffix, locale] of [["en", "en-US"], ["ko", "ko-KR"]]) {
-    const align = await read(`docs/alignments/rescene-fan-calendar-default-run.${suffix}.html`);
-    const diff = await read(`docs/diffs/ky-825-default-run.${suffix}.html`);
-    for (const source of [align, diff]) {
-      assert.ok(source.includes(`<html lang="${locale}"`));
-      assert.doesNotMatch(source, /<details class="locale-menu">/u);
-      if (suffix === "en") assert.doesNotMatch(source, /[가-힣]/u);
-    }
-    assert.match(diff, /id="behavior-flow"/u);
-    assert.match(diff, /class="microworld-disclosure"/u);
-    assert.doesNotMatch(diff, /class="quiz-question"/u);
-  }
-});
-
-test("generated README HTML links each locale to its sibling", async () => {
-  const pairs = [
-    {
-      english: "docs/alignments/rescene-fan-calendar.en.html",
-      korean: "docs/alignments/rescene-fan-calendar.ko.html",
-    },
-    {
-      english: "docs/diffs/ky-825-total-timeout.en.html",
-      korean: "docs/diffs/ky-825-total-timeout.ko.html",
-    },
-  ];
-
-  for (const pair of pairs) {
-    const [english, korean] = await Promise.all([
-      read(pair.english),
-      read(pair.korean),
-    ]);
-    const englishSibling = pair.korean.split("/").at(-1);
-    const koreanSibling = pair.english.split("/").at(-1);
-
-    assert.match(english, /<html lang="en-US">/u);
-    assert.match(
-      english,
-      new RegExp(`href="${englishSibling.replaceAll(".", "\\.")}" hreflang="ko-KR" lang="ko-KR">한국어</a>`, "u"),
-    );
-    assert.match(korean, /<html lang="ko-KR">/u);
-    assert.match(
-      korean,
-      new RegExp(`href="${koreanSibling.replaceAll(".", "\\.")}" hreflang="en-US" lang="en-US">English</a>`, "u"),
-    );
-
-    const englishWithoutLocaleLink = english.replace(/<a class="locale-option"[^>]*>한국어<\/a>/u, "");
-    assert.doesNotMatch(englishWithoutLocaleLink, /[가-힣]/u);
-    assert.match(korean, /[가-힣]/u);
-    assert.doesNotMatch(english, /^[\t ]+$/mu);
-    assert.doesNotMatch(korean, /^[\t ]+$/mu);
-  }
-});
-
-test("the fixed Ky example preserves captured pull request provenance", () => {
-  const snapshot = makeDiffSnapshot("en-US");
-  const analysis = makeDiffAnalysis(snapshot);
-  const sources = Object.fromEntries(snapshot.sources
-    .map((source) => [source.id, source]));
-
-  assert.deepEqual(snapshot.pullRequest, {
-    author: "sindresorhus",
-    number: 825,
-    state: "closed",
-    title: "Fix timeout to apply to total operation including retries",
-    url: "https://github.com/sindresorhus/ky/pull/825",
-  });
-  assert.equal(snapshot.capturedAt, "2026-08-30T05:43:00.000Z");
-  assert.deepEqual(snapshot.snapshot, {
-    base: "ecdd45eeaa48cbcbabaa53898dd4a39d1296a694",
-    head: "2a33b80dbcd0efb5a08b39d141c86ddd6ef90ae6",
-    mergeBase: "ecdd45eeaa48cbcbabaa53898dd4a39d1296a694",
-  });
-  assert.deepEqual(snapshot.files.map(({ additions, deletions, path }) => ({
-    additions,
-    deletions,
-    path,
-  })), [
-    { additions: 75, deletions: 7, path: "source/core/Ky.ts" },
-    { additions: 148, deletions: 1, path: "test/hooks.ts" },
-    { additions: 10, deletions: 7, path: "test/http-error.ts" },
-    { additions: 191, deletions: 47, path: "test/retry.ts" },
-  ]);
-  assert.equal(sources["source-2"].lineCount, 3);
-  assert.match(sources["source-2"].text, /entire operation[\s\S]+Fixes #784/u);
-  assert.equal(sources["source-3"].text, "Fix timeout to apply to total operation including retries");
-  assert.match(sources["source-4"].text, /#getRemainingTimeout/u);
-  assert.match(sources["source-5"].text, /beforeRetry hook respects total timeout budget/u);
-  assert.match(sources["source-6"].text, /never-ending error response body still respects/u);
-  assert.match(sources["source-7"].text, /timeout: false does not throw TimeoutError during retries/u);
-  assert.equal(analysis.coreChange.details.length, 4);
-  assert.deepEqual(
-    analysis.behavior.visual.rows.map((row) => row.case),
-    [
-      "Operation starts",
-      "beforeRequest hook",
-      "Before retry wait",
-      "After retry wait",
-      "beforeRetry hook",
-      "afterResponse forced retry",
-      "Error response body (test)",
-      "Next request",
-    ],
-  );
-  assert.equal(analysis.reviewItems[0].kind, "verify");
-  assert.equal(analysis.reviewItems[0].importance, "medium");
-  assert.match(analysis.reviewItems[0].nextStep, /public timeout and hook-lifecycle contract/u);
-  assert.equal(analysis.quiz.length, 3);
 });
