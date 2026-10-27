@@ -26,8 +26,9 @@ export function makeSnapshot({
         subject: "Unchanged callers",
       },
     ],
-    pullRequest: {
+    change: {
       author: "octocat",
+      kind: "github",
       number: 142,
       state: "open",
       title,
@@ -38,7 +39,7 @@ export function makeSnapshot({
       owner: "example",
       provider: "github",
     },
-    schemaVersion: 1,
+    schemaVersion: 2,
     settings: {
       locale,
       localeSource: "override",
@@ -246,41 +247,7 @@ export function makeTeachingBehavior({
 
 export function makeAnalysis(snapshot, runId) {
   return {
-    groups: [{ id: "g-error", title: "Keep the final error", text: "Preserve the failure so callers can inspect its cause.", basis: "inferred", evidence: [reference("source-3", 2, 4)], parts: snapshot.files.map((file) => ({ fileId: file.id })) }],
-    codeSteps: [
-      {
-        basis: "code",
-        evidence: [reference("source-3", 2, 4)],
-        text: "The retry path stores the final error and throws it.",
-        title: "Preserve the final error",
-      },
-    ],
-    contextChecks: [
-      {
-        basis: "code",
-        evidence: [reference("source-3", 1, 4)],
-        explanation: "The changed retry branch and its direct result were checked.",
-        limitIds: [],
-        status: "checked",
-        subject: "Changed retry behavior",
-      },
-      {
-        basis: "unknown",
-        evidence: [],
-        explanation: "Unchanged direct callers were not collected.",
-        limitIds: ["limit-1"],
-        status: "limited",
-        subject: "Unchanged direct callers",
-      },
-      {
-        basis: "unknown",
-        evidence: [],
-        explanation: "This change does not modify stored data or a migration.",
-        limitIds: [],
-        status: "not-applicable",
-        subject: "Stored data and migrations",
-      },
-    ],
+    groups: [{ id: "g-error", kind: "explained", title: "Keep the final error", text: "Preserve the failure so callers can inspect its cause.", basis: "inferred", evidence: [reference("source-3", 2, 4)], parts: snapshot.files.map((file) => ({ fileId: file.id })) }],
     coreChange: {
       after: {
         basis: "code",
@@ -305,9 +272,6 @@ export function makeAnalysis(snapshot, runId) {
         text: "Callers can distinguish the real failure reason.",
       },
     },
-    fileDispositions: [
-      { disposition: "explained", fileId: "file-1" },
-    ],
     limitImpacts: [
       {
         impact: "Compatibility with unchanged callers cannot be confirmed.",
@@ -341,7 +305,64 @@ export function makeAnalysis(snapshot, runId) {
       },
     ],
     runId,
-    schemaVersion: 5,
+    schemaVersion: 6,
     snapshotDigest: snapshot.digest,
+  };
+}
+
+export function makeLocalSnapshot({ locale = "en-US", repository } = {}) {
+  const { change: _change, digest: _digest, repository: _repository, ...value } = makeSnapshot({ locale });
+  const local = {
+    ...value,
+    change: {
+      baseRef: "origin/main",
+      baseRevision: "c".repeat(40),
+      dirty: true,
+      headRevision: "b".repeat(40),
+      kind: "local",
+      repositoryLabel: "hope",
+    },
+    ...(repository ? { repository } : {}),
+    snapshot: { base: "c".repeat(40), head: "b".repeat(40), mergeBase: "c".repeat(40) },
+    sources: value.sources.map((source) => (
+      source.kind.startsWith("pull-request-")
+        ? { ...source, kind: "commit-title", revision: "b".repeat(40) }
+        : source
+    )),
+  };
+  return Object.freeze({ ...local, digest: digestJson(local) });
+}
+
+/** A minimal valid v6 analysis for any captured snapshot with at least one patch. */
+export function makeAnalysisFor(snapshot, runId) {
+  const patch = snapshot.sources.find((source) => source.kind === "patch");
+  const stated = snapshot.sources.find((source) => ["pull-request-description", "commit-title"].includes(source.kind));
+  const code = { basis: "code", evidence: [{ endLine: patch.lineCount, sourceId: patch.id, startLine: 1 }] };
+  return {
+    schemaVersion: 6,
+    runId,
+    snapshotDigest: snapshot.digest,
+    locale: snapshot.settings.locale,
+    title: { ...code, text: "The captured change replaces the old line." },
+    purpose: stated
+      ? { basis: "stated", evidence: [{ endLine: 1, sourceId: stated.id, startLine: 1 }], text: "Record the stated goal." }
+      : { basis: "unknown", evidence: [], text: "No stated goal was captured." },
+    coreChange: {
+      before: { ...code, text: "The old line was in place." },
+      after: { ...code, text: "The new line replaces it." },
+      why: { ...code, basis: "inferred", text: "Readers see the new value." },
+      details: [{ ...code, text: "Only the changed line differs." }],
+    },
+    reviewItems: [],
+    limitImpacts: snapshot.limits.map((limit) => ({ impact: "This limit does not change the explanation.", limitId: limit.id, material: false })),
+    groups: [{
+      basis: "inferred",
+      evidence: code.evidence,
+      id: "g-change",
+      kind: "explained",
+      parts: snapshot.files.map((file) => ({ fileId: file.id })),
+      text: "The change replaces one value.",
+      title: "Replace the value",
+    }],
   };
 }

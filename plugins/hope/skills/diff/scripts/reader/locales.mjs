@@ -20,7 +20,7 @@ const en = {
     "special-entry": "This entry is not a regular text file.",
     "size-limit": "This file exceeds the safe text size limit.",
     binary: "This is a binary file; text before and after cannot be displayed.",
-    "no-text-diff": "GitHub provided no text diff; binary or mode-only details are unavailable.",
+    "no-text-diff": "No text diff was provided; binary or mode-only details are unavailable.",
     "patch-incomplete": "A complete patch could not be reconstructed and verified.",
   },
 };
@@ -47,7 +47,7 @@ const ko = {
     "special-entry": "일반 텍스트 파일이 아닌 항목입니다.",
     "size-limit": "안전하게 수집할 수 있는 텍스트 크기를 초과했습니다.",
     binary: "바이너리 파일이므로 텍스트 변경 전후를 표시할 수 없습니다.",
-    "no-text-diff": "GitHub가 텍스트 변경을 제공하지 않았습니다. 바이너리나 권한 변경의 세부 정보는 확인할 수 없습니다.",
+    "no-text-diff": "텍스트 변경이 없습니다. 바이너리나 권한 변경의 세부 정보는 확인할 수 없습니다.",
     "patch-incomplete": "모든 변경 줄을 포함한 patch를 복원·검증하지 못했습니다.",
   },
 };

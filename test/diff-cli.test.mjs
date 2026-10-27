@@ -14,199 +14,125 @@ import {
   parseDiffArguments,
 } from "../plugins/hope/skills/diff/scripts/cli.mjs";
 
+const captureDefaults = {
+  base: undefined,
+  bundleBytes: undefined,
+  command: "capture",
+  hostLocale: undefined,
+  locale: undefined,
+  outputPath: undefined,
+  theme: undefined,
+  untracked: false,
+  url: undefined,
+};
+
 test("Diff parses every internal Skill command", () => {
   assert.deepEqual(parseDiffArguments([]), { command: "help" });
   assert.deepEqual(parseDiffArguments([
-    "prepare",
+    "capture",
     "https://github.com/example/repo/pull/1",
-    "--host-locale",
-    "ko-KR",
-    "--locale",
-    "en-US",
-    "--theme",
-    "dark",
-    "--output",
-    "review.html",
+    "--host-locale", "ko-KR",
+    "--locale", "en-US",
+    "--theme", "dark",
+    "--output", "review.html",
+    "--bundle-bytes", "65536",
   ]), {
-    command: "prepare",
+    ...captureDefaults,
+    bundleBytes: 65536,
     hostLocale: "ko-KR",
     locale: "en-US",
     outputPath: "review.html",
     theme: "dark",
     url: "https://github.com/example/repo/pull/1",
   });
-  assert.deepEqual(parseDiffArguments(["resolve-target", "#123"]), {
-    command: "resolve-target",
-    pullRequestNumber: 123,
-    url: undefined,
-  });
-
-  for (const command of [
-    "inspect-window",
-    "checkpoint-window",
-    "ledger",
-  ]) {
-    assert.deepEqual(
-      parseDiffArguments([command, "--run", "run-path", "--page", "2"]),
-      { command, page: 2, runPath: "run-path" },
-    );
-  }
-
+  assert.deepEqual(parseDiffArguments(["capture", "#123"]), { ...captureDefaults, pullRequestNumber: 123 });
+  assert.deepEqual(
+    parseDiffArguments(["capture", "--base", "origin/main", "--untracked"]),
+    { ...captureDefaults, base: "origin/main", untracked: true },
+  );
   assert.deepEqual(parseDiffArguments([
-    "context",
-    "--run",
-    "run-path",
-    "--request",
-    "first",
-    "--request",
-    "second",
+    "context", "--run", "run-path",
+    "--path", "src/a.js", "--revision", "head",
+    "--path", "src/b.js", "--revision", "merge-base",
   ]), {
     command: "context",
-    requestIds: ["first", "second"],
+    requests: [
+      { path: "src/a.js", revision: "head" },
+      { path: "src/b.js", revision: "merge-base" },
+    ],
     runPath: "run-path",
   });
-  assert.deepEqual(parseDiffArguments([
-    "microworld-skeleton",
-    "--input",
-    "controls.json",
-  ]), {
-    command: "microworld-skeleton",
-    inputPath: "controls.json",
-  });
-
-  for (const command of ["validate", "finish", "cancel"]) {
-    assert.deepEqual(
-      parseDiffArguments([command, "--run", "run-path"]),
-      { command, runPath: "run-path" },
-    );
+  for (const command of ["validate", "publish", "cancel"]) {
+    assert.deepEqual(parseDiffArguments([command, "--run", "run-path"]), { command, runPath: "run-path" });
   }
 });
 
-test("Diff help describes the private adapter without advertising a binary", async () => {
+test("Diff help lists the capture, context, validate, publish, and cancel commands", async () => {
   let output = "";
-  await runDiffCommand(["--help"], {
-    stdout: {
-      write(value) {
-        output += value;
-      },
-    },
-  });
+  await runDiffCommand(["--help"], { stdout: { write(value) { output += value; } } });
   assert.match(output, /^Use Hope Diff through its private Skill adapter\.\n/u);
-  assert.match(output, /Internal Skill subcommands:\n  resolve-target /u);
-  assert.doesNotMatch(output, /^  hope diff /mu);
+  assert.deepEqual(
+    [...output.matchAll(/^ {2}([a-z-]+) /gmu)].map((match) => match[1]),
+    ["capture", "context", "validate", "publish", "cancel"],
+  );
 });
 
-test("Diff rejects malformed internal Skill commands", () => {
+test("Diff rejects malformed and removed internal Skill commands", () => {
   for (const argv of [
     ["unknown"],
-    ["prepare", "#1", "--run", "run-path"],
-    ["resolve-target", "#1", "--locale", "ko-KR"],
+    ["prepare", "#1"],
+    ["resolve-target", "#1"],
+    ["inspect-window", "--run", "run-path"],
+    ["checkpoint-window", "--run", "run-path"],
+    ["ledger", "--run", "run-path"],
     ["microworld-skeleton"],
-    ["context", "--run", "run-path"],
-    ["inspect-window", "--run", "run-path", "--page", "01"],
-    ["validate", "--run", "run-path", "--page", "1"],
+    ["finish", "--run", "run-path"],
+    ["capture", "#1", "#2"],
+    ["capture", "#1", "--run", "run-path"],
+    ["validate", "--run", "run-path", "--base", "main"],
+    ["publish"],
   ]) {
-    assert.throws(
-      () => parseDiffArguments(argv),
-      /Use Hope Diff through its private Skill adapter/u,
-    );
+    assert.throws(() => parseDiffArguments(argv), /Use Hope Diff through its private Skill adapter|Unknown Hope diff option/u, argv.join(" "));
   }
-
+  assert.throws(() => parseDiffArguments(["capture", "--untracked", "--untracked"]), /repeated/u);
+  assert.throws(() => parseDiffArguments(["capture", "--bundle-bytes", "64k"]), /needs an integer/u);
   assert.throws(
-    () => parseDiffArguments(["validate", "--unknown", "value"]),
-    /Unknown Hope diff option/u,
+    () => parseDiffArguments(["context", "--run", "run-path", "--path", "a.js"]),
+    /matching --path and --revision pairs/u,
+  );
+  assert.throws(
+    () => parseDiffArguments(["context", "--run", "run-path", "--path", "a.js", "--revision", "head", "--revision", "head"]),
+    /matching --path and --revision pairs/u,
   );
 });
 
 test("Diff dispatches every internal Skill command", async () => {
   const rows = [
+    { argv: ["capture", "#7"], dependency: "captureDiff", expectedArguments: [{ ...captureDefaults, pullRequestNumber: 7 }] },
     {
-      argv: ["resolve-target", "#7"],
-      dependency: "resolveDiffTarget",
-      expectedArguments: [{
-        command: "resolve-target",
-        pullRequestNumber: 7,
-        url: undefined,
-      }],
-    },
-    {
-      argv: ["prepare", "#7"],
-      dependency: "prepareDiff",
-      expectedArguments: [{
-        command: "prepare",
-        hostLocale: undefined,
-        locale: undefined,
-        outputPath: undefined,
-        pullRequestNumber: 7,
-        theme: undefined,
-        url: undefined,
-      }],
-    },
-    {
-      argv: ["inspect-window", "--run", "run-path", "--page", "1"],
-      compact: true,
-      dependency: "readDiffWindow",
-      expectedArguments: ["run-path", 1],
-    },
-    {
-      argv: ["checkpoint-window", "--run", "run-path", "--page", "1"],
-      compact: true,
-      dependency: "checkpointDiffWindow",
-      expectedArguments: ["run-path", 1],
-    },
-    {
-      argv: ["ledger", "--run", "run-path", "--page", "1"],
-      dependency: "readDiffLedger",
-      expectedArguments: ["run-path", 1],
-    },
-    {
-      argv: ["context", "--run", "run-path", "--request", "request-1"],
+      argv: ["context", "--run", "run-path", "--path", "src/a.js", "--revision", "head"],
       dependency: "addDiffContext",
-      expectedArguments: ["run-path", ["request-1"]],
+      expectedArguments: ["run-path", [{ path: "src/a.js", revision: "head" }]],
     },
-    {
-      argv: ["microworld-skeleton", "--input", "controls.json"],
-      dependency: "buildMicroworldSkeleton",
-      expectedArguments: ["controls.json"],
-    },
-    {
-      argv: ["validate", "--run", "run-path"],
-      dependency: "validateDiff",
-      expectedArguments: ["run-path"],
-    },
-    {
-      argv: ["finish", "--run", "run-path"],
-      dependency: "finishDiff",
-      expectedArguments: ["run-path"],
-    },
-    {
-      argv: ["cancel", "--run", "run-path"],
-      dependency: "cancelDiff",
-      expectedArguments: ["run-path"],
-    },
+    { argv: ["validate", "--run", "run-path"], dependency: "validateDiff", expectedArguments: ["run-path"] },
+    { argv: ["publish", "--run", "run-path"], dependency: "publishDiff", expectedArguments: ["run-path"] },
+    { argv: ["cancel", "--run", "run-path"], dependency: "cancelDiff", expectedArguments: ["run-path"], result: undefined },
   ];
-
   for (const row of rows) {
     let output = "";
     let received;
-    const result = row.result ?? { command: row.argv[0] };
+    const result = Object.hasOwn(row, "result") ? row.result : { command: row.argv[0] };
     const dependencies = {
       [row.dependency]: async (...values) => {
         received = values;
         return result;
       },
-      stdout: {
-        write(value) {
-          output += value;
-        },
-      },
+      stdout: { write(value) { output += value; } },
     };
-
     assert.equal(await runDiffCommand(row.argv, dependencies), result);
     assert.equal(received.at(-1), dependencies);
     assert.deepEqual(received.slice(0, -1), row.expectedArguments);
-    assert.deepEqual(JSON.parse(output), row.output ?? result);
-    assert.equal(output.includes("\n  "), !row.compact);
+    assert.equal(output, result === undefined ? "" : `${JSON.stringify(result, null, 2)}\n`);
   }
 });
 
@@ -220,16 +146,28 @@ test("Diff emits structured repair, retry, and cleanup errors", () => {
     path: "coreChange.before",
   }];
   assert.equal(diffExitCode(analysisError), 3);
+  analysisError.runPath = "run-path";
   assert.deepEqual(JSON.parse(diffErrorDetails(analysisError).trim()), {
     canRetry: true,
     code: "HOPE_ANALYSIS_INVALID",
     issues: analysisError.issues,
+    runPath: "run-path",
+  });
+
+  const render = new Error("Renderer failed");
+  render.code = "HOPE_DIFF_RENDER_FAILED";
+  render.canRetry = false;
+  render.runPath = "run-path";
+  assert.equal(diffExitCode(render), 1);
+  assert.deepEqual(JSON.parse(diffErrorDetails(render).trim()), {
+    code: "HOPE_DIFF_RENDER_FAILED",
+    runPath: "run-path",
   });
 
   const retryable = new Error("GitHub access failed");
   retryable.code = DIFF_REVALIDATION_RETRYABLE_CODE;
   retryable.canRetry = true;
-  retryable.command = "finish";
+  retryable.command = "publish";
   retryable.runPath = "run-path";
   assert.equal(diffExitCode(retryable), 5);
   assert.deepEqual(
@@ -239,7 +177,7 @@ test("Diff emits structured repair, retry, and cleanup errors", () => {
       message: `hope: GitHub access failed\n${JSON.stringify({
         canRetry: true,
         code: DIFF_REVALIDATION_RETRYABLE_CODE,
-        command: "finish",
+        command: "publish",
         runPath: "run-path",
       })}\n`,
     },
@@ -248,13 +186,13 @@ test("Diff emits structured repair, retry, and cleanup errors", () => {
   const publication = new Error("Publication failed");
   publication.code = DIFF_PUBLICATION_RETRYABLE_CODE;
   publication.canRetry = true;
-  publication.command = "finish";
+  publication.command = "publish";
   publication.runPath = "run-path";
   assert.equal(diffExitCode(publication), 6);
   assert.deepEqual(JSON.parse(diffErrorDetails(publication).trim()), {
     canRetry: true,
     code: DIFF_PUBLICATION_RETRYABLE_CODE,
-    command: "finish",
+    command: "publish",
     runPath: "run-path",
   });
 

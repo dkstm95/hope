@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
-import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import test, { after } from "node:test";
+import test from "node:test";
 
-import { buildMicroworldSkeleton } from "../plugins/hope/skills/diff/scripts/index.mjs";
 import {
-  createMicroworldSkeleton,
+  microworldSelections,
+  normalizeMicroworldControls,
 } from "../plugins/hope/skills/diff/scripts/teaching-aids.mjs";
 import { validateAnalysis } from "../plugins/hope/skills/diff/scripts/validate.mjs";
 import {
@@ -13,12 +11,6 @@ import {
   makeSnapshot,
   makeTeachingBehavior,
 } from "../test-support/diff-fixture.mjs";
-import {
-  registerTestTemporaryDirectoryCleanup,
-} from "../test-support/temporary-directory.mjs";
-
-const createTestTemporaryDirectory = registerTestTemporaryDirectoryCleanup(after);
-
 const runId = "7".repeat(32);
 
 function controls({
@@ -37,50 +29,31 @@ function controls({
   }));
 }
 
-test("the runtime creates an exhaustive bounded microworld skeleton", () => {
-  const skeleton = createMicroworldSkeleton({ controls: controls() });
-  assert.equal(skeleton.version, 6);
-  assert.equal(skeleton.scenarios.length, 4);
+test("the runtime derives every bounded microworld combination", () => {
+  const selections = microworldSelections(normalizeMicroworldControls(controls()));
   assert.deepEqual(
-    skeleton.scenarios.map((scenario) => scenario.when),
-    [
-      [
-        { controlId: "control-1", optionId: "option-1" },
-        { controlId: "control-2", optionId: "option-1" },
-      ],
-      [
-        { controlId: "control-1", optionId: "option-1" },
-        { controlId: "control-2", optionId: "option-2" },
-      ],
-      [
-        { controlId: "control-1", optionId: "option-2" },
-        { controlId: "control-2", optionId: "option-1" },
-      ],
-      [
-        { controlId: "control-1", optionId: "option-2" },
-        { controlId: "control-2", optionId: "option-2" },
-      ],
-    ],
+    selections.map((when) => when.map(({ optionId }) => optionId).join("|")),
+    ["option-1|option-1", "option-1|option-2", "option-2|option-1", "option-2|option-2"],
   );
   assert.throws(
-    () => createMicroworldSkeleton({
-      controls: controls({ controlCount: 3, optionCount: 3 }),
-    }),
+    () => microworldSelections(normalizeMicroworldControls(controls({ controlCount: 3, optionCount: 3 }))),
     /more than 12 combinations/u,
   );
 });
 
-test("the shared Diff boundary reads a private controls file for the skeleton", async () => {
-  const root = await createTestTemporaryDirectory("hope-microworld-controls-");
-  const inputPath = join(root, "controls.json");
-  await writeFile(
-    inputPath,
-    `${JSON.stringify({ controls: controls() }, null, 2)}\n`,
-    { mode: 0o600 },
+test("validation names each missing combination and accepts authored scenario ids", () => {
+  const snapshot = makeSnapshot();
+  const analysis = makeAnalysis(snapshot, runId);
+  analysis.behavior = makeTeachingBehavior();
+  const { scenarios } = analysis.behavior.microworld;
+  scenarios.forEach((scenario, index) => { scenario.id = `case-${String.fromCharCode(97 + index)}`; });
+  assert.equal(validateAnalysis(analysis, snapshot, { runId }).behavior.microworld.scenarios[0].id, "case-a");
+
+  scenarios.splice(1, 2);
+  assert.throws(
+    () => validateAnalysis(analysis, snapshot, { runId }),
+    /missing control combinations: attempt=failed\|saved-error=present; attempt=succeeded\|saved-error=missing/u,
   );
-  const skeleton = await buildMicroworldSkeleton(inputPath);
-  assert.equal(skeleton.scenarios.length, 4);
-  assert.equal(skeleton.controls[0].id, "control-1");
 });
 
 test("optional aids validate directly without a decision record", () => {

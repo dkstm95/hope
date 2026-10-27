@@ -6,11 +6,11 @@ standard.
 ## Work the understanding frontier
 
 Start with the material claims and questions needed to explain or judge the
-pull request: its observable core before and after, purpose and significance,
+change: its observable core before and after, purpose and significance,
 changed-file accounting, and any material risk or uncertainty.
 
 The understanding frontier is the unresolved subset whose prerequisites have been
-inspected. Close a claim with the smallest captured evidence that proves it.
+read. Close a claim with the smallest captured evidence that proves it.
 Close a question with evidence, an explicit material limit, or a verification
 item that names what would resolve it. New evidence may split or reopen a claim.
 
@@ -19,15 +19,14 @@ information is merely available, and do not use the analysis schema as a
 thinking checklist. It serializes the review after the reasoning is complete.
 
 The frontier is closed when the core before and after are grounded, every
-classifiable file has a supported disposition, every material finding is
-grounded, and every remaining material uncertainty is an explicit limit or
+changed line belongs to a supported group, every material finding is grounded, and every remaining material uncertainty is an explicit limit or
 verification item. Do not author the final analysis while a material frontier
 item remains unresolved.
 
 ## Ground every claim
 
 - Copy `runId`, the latest `snapshotDigest`, and `locale` from Hope.
-- Cite only source IDs and line ranges delivered by inspection.
+- Cite only source IDs and line numbers that appear in the bundle.
 - Keep a claim no broader than its evidence. Split parts supported by code,
   stated intent, or inference differently.
 - Select the smallest continuous interval that proves a claim. Hope preserves
@@ -36,8 +35,8 @@ item remains unresolved.
 - Treat a test as evidence of an expected condition, not proof that it ran or
   that wider integration behavior succeeded. Never invent execution or CI
   results.
-- Compare provider claims with the changed-file map and code. Report a material
-  contradiction as a review item.
+- Compare pull-request and commit claims with the changed-file map and code.
+  Report a material contradiction as a review item.
 - Keep provider titles, code, paths, commands, and excerpts exact in source
   fields. Refer to them plainly in generated prose.
 
@@ -45,7 +44,8 @@ item remains unresolved.
 
 Write `title` as one short, direct observable result in the review locale.
 Ground it in the same changed-code range as `coreChange`; do not copy the pull-
-request title, lead with an identifier, or introduce separate evidence.
+request or commit title, lead with an identifier, or introduce separate
+evidence.
 
 Let the visible explanation answer: what changed, why it matters, how old and
 new behavior differ, when the outcome changes, what the review found, and how
@@ -58,29 +58,26 @@ material actions grounded in the captured change.
 - State `purpose` as the goal, without an “aims to” wrapper. Use `stated`,
   `inferred`, or `unknown`; code is not itself a purpose statement.
 - Ground both `coreChange.before` and `coreChange.after` in changed-file code.
-  Pull-request prose may explain why, but cannot establish either code state.
+  Pull-request or commit prose may explain why, but cannot establish either
+  code state.
 - Give `before`, `after`, and `why` one main idea each. Start with the affected
   actor or thing and state the practical result.
 - Use zero or one `background` item for context a new reader needs before the
   comparison.
 - Keep the overall explanation understandable without code identifiers. Put
-  implementation reasons beside their code in `groups`. Leave `codeSteps` empty
-  unless a distinct guided sequence adds understanding beyond those groups.
+  implementation reasons beside their code in `groups`.
 - Use one to four `coreChange.details` for distinct observable outcomes or
   preserved conditions. Do not turn them into a file or identifier inventory.
 - Connect every material behavior-bearing changed surface to a visible claim,
-  review item, material limit, or explicit nonmaterial disposition. A file
-  disposition records the file's role but does not account for a distinct
-  behavior by itself.
+  review item, material limit, or a group explanation. A group's kind records
+  the role of its code but does not account for a distinct behavior by itself.
 - Use `behavior` only when a flow, condition, state, comparison, or small
-  experiment helps the reader predict an outcome. Do not repeat `codeSteps`.
+  experiment helps the reader predict an outcome. Do not repeat the groups.
 - Let `behavior.summary` introduce the distinct condition, state, or
   relationship that makes the model useful. Keep it distinct from
   `coreChange.details`.
 - When runtime behavior is unchanged, explain the real maintenance, build,
   documentation, dependency, development, or test effect.
-- Give each included file exactly one `explained`, `supporting`, or `mechanical`
-  disposition.
 
 ## Organize all changed code by meaning
 
@@ -90,8 +87,13 @@ and tests across files, or use only part of one file. A small PR can need only
 one group. Do not mechanically create one group per file or line, and do not
 repeat the overview in every group.
 
-Each group has a stable `g-...` ID, a short `title`, and `text` that leads with
-why the change exists, then explains the relevant before/after difference.
+Each group has a stable `g-...` ID, a `kind`, a short `title`, and `text` that
+leads with why the change exists, then explains the relevant before/after
+difference. Use `explained` for code that carries the change's behavior or
+judgment, `supporting` for tests, types, configuration, or documentation that
+serve it, and `mechanical` for renames, formatting, generated output, or moves
+with no judgment of their own. The changed-file table shows each file as the
+strongest kind among groups that own any of its lines.
 Choose the needed depth; there is no target number of groups or sentences.
 For each material change, connect the previous behavior and its triggering
 condition to the new mechanism and observable result. Explain why the check,
@@ -109,14 +111,15 @@ explain why the changed lines produce the stated result and recognize an
 important boundary case. A paraphrase of the diff or overview is insufficient.
 
 Distinguish `stated`, `inferred`, and `unknown`. A stated reason needs captured
-PR or commit prose; it may also cite code that shows its implementation.
+pull-request or commit prose; it may also cite code that shows its implementation.
 Code alone cannot establish stated intent. For unavailable content, explain
 the visible metadata and the limit without claiming to have read its body.
 
 Use `parts` in reading order. Each part names a captured `fileId`. Omit both
 `startLine` and `endLine` for the whole file; otherwise use an inclusive range
 of lines in that file's captured **patch source**, including its hunk headers.
-These are inspection source coordinates, not old/new code line numbers. An
+These are the bundle's `sourceId:lineNumber` coordinates, not old/new code line
+numbers. An
 optional `note` adds context specific to that part when code is selected.
 
 Assign every changed line and every non-text file entry exactly once. Shared
@@ -126,20 +129,13 @@ before/after line numbers. It rejects overlaps, gaps, and context-only parts.
 Group titles start collapsed; selecting a title or code shows the right-hand
 explanation. No separate analysis pass or reader payload is needed.
 
-## Account for context and limits
+## Account for limits
 
-Add `contextChecks` only for concrete categories that mattered. Mark each
-`checked`, `not-applicable`, or `limited`.
-Use an empty array when none mattered and no collected limit needs accounting.
-
-A checked category needs evidence whose role matches the claim. Use `unknown`
-without evidence for an unchecked limited or not-applicable category. Do not
-use vague categories such as the whole repository or ecosystem.
-
-Give every material limit one concrete impact and link it from a limited
-context check. Name what remains unknown and whether it limits a main
-explanation or judgment. Not reading the whole repository is not a material
-limit by itself.
+Give every captured limit one `limitImpacts` entry with a concrete impact. Name
+what remains unknown and whether it limits a main explanation or judgment. Mark
+it `material` only when it does. Not reading the whole repository is not a
+material limit by itself; collect context instead when a specific unchanged
+file would close the question.
 
 Diff does not run CI, tests, builds, or lint. Treat that as material only when a
 main claim depends on execution that static evidence cannot establish. Then add
@@ -171,8 +167,8 @@ redundancy check but does not prove duplication. Consolidate repeated meaning
 without removing evidence needed by a distinct claim.
 
 Keep each prose value to one semantic paragraph unless a real paragraph
-boundary is needed. Normally use at most 12 review items, four core details,
-and only distinct code steps; do not fill maxima for their own sake.
+boundary is needed. Normally use at most 12 review items and four core details;
+do not fill maxima for their own sake.
 
 ## Use teaching aids when useful
 
@@ -181,16 +177,6 @@ change easier to understand than the existing explanation. Let the task
 determine the choice; omit unused aids without recording a decision or reason.
 Read `teaching-aids.md` when authoring an aid for its supported formats and
 evidence requirements.
-
-## Add a beginner primer only when needed
-
-Use a beginner primer only for a named concept or deeper starting point that
-ordinary background cannot supply. A new-reader request alone does not require
-one, and a selected aid may already do the job.
-
-Use `code` when an item paraphrases a mechanism directly established by code.
-Use `inferred` only when its material meaning goes beyond the evidence. Split
-the two when one basis cannot accurately cover both.
 
 ## Stay within the analysis budget
 

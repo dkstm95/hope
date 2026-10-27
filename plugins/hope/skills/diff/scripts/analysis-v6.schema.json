@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://hope.local/schemas/analysis-v5.schema.json",
-  "title": "Hope diff analysis v5",
+  "$id": "https://hope.local/schemas/analysis-v6.schema.json",
+  "title": "Hope diff analysis v6",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,16 +12,13 @@
     "title",
     "purpose",
     "coreChange",
-    "contextChecks",
-    "codeSteps",
     "reviewItems",
-    "fileDispositions",
     "limitImpacts",
     "groups"
   ],
   "properties": {
     "schemaVersion": {
-      "const": 5
+      "const": 6
     },
     "runId": {
       "type": "string",
@@ -105,75 +102,11 @@
         }
       }
     },
-    "contextChecks": {
-      "type": "array",
-      "maxItems": 20,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "subject",
-          "status",
-          "basis",
-          "explanation",
-          "evidence",
-          "limitIds"
-        ],
-        "properties": {
-          "subject": {
-            "$ref": "#/$defs/text"
-          },
-          "status": {
-            "enum": [
-              "checked",
-              "not-applicable",
-              "limited"
-            ]
-          },
-          "basis": {
-            "enum": [
-              "stated",
-              "code",
-              "inferred",
-              "unknown"
-            ]
-          },
-          "explanation": {
-            "$ref": "#/$defs/text"
-          },
-          "evidence": {
-            "type": "array",
-            "maxItems": 12,
-            "items": {
-              "$ref": "#/$defs/evidence"
-            }
-          },
-          "limitIds": {
-            "type": "array",
-            "maxItems": 12,
-            "uniqueItems": true,
-            "items": {
-              "type": "string",
-              "pattern": "^limit-[0-9]+$"
-            }
-          }
-        }
-      }
-    },
     "background": {
       "type": "array",
       "maxItems": 1,
       "items": {
         "$ref": "#/$defs/titledClaim"
-      }
-    },
-    "beginnerPrimer": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 8,
-      "description": "Optional evidence-grounded background claims.",
-      "items": {
-        "$ref": "#/$defs/primerClaim"
       }
     },
     "behavior": {
@@ -202,44 +135,6 @@
         },
         "microworld": {
           "$ref": "./teaching-aids-v1.schema.json#/$defs/microworld"
-        }
-      }
-    },
-    "codeSteps": {
-      "type": "array",
-      "maxItems": 20,
-      "description": "Technical implementation steps rendered as collapsed evidence.",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "title",
-          "text",
-          "basis",
-          "evidence"
-        ],
-        "properties": {
-          "title": {
-            "$ref": "#/$defs/text"
-          },
-          "text": {
-            "$ref": "#/$defs/text"
-          },
-          "basis": {
-            "enum": [
-              "stated",
-              "code",
-              "inferred",
-              "unknown"
-            ]
-          },
-          "evidence": {
-            "type": "array",
-            "maxItems": 12,
-            "items": {
-              "$ref": "#/$defs/evidence"
-            }
-          }
         }
       }
     },
@@ -319,31 +214,6 @@
         }
       }
     },
-    "fileDispositions": {
-      "type": "array",
-      "maxItems": 500,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "fileId",
-          "disposition"
-        ],
-        "properties": {
-          "fileId": {
-            "type": "string",
-            "pattern": "^file-[0-9]+$"
-          },
-          "disposition": {
-            "enum": [
-              "explained",
-              "supporting",
-              "mechanical"
-            ]
-          }
-        }
-      }
-    },
     "limitImpacts": {
       "type": "array",
       "maxItems": 514,
@@ -377,12 +247,13 @@
     "groups": {
       "type": "array",
       "maxItems": 20500,
-      "description": "All changed code and unavailable file entries, grouped and ordered by shared reason. Each changed line belongs to exactly one group.",
+      "description": "All changed code and unavailable file entries, grouped and ordered by shared reason. Each changed line and each unavailable file entry belongs to exactly one group.",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
           "id",
+          "kind",
           "title",
           "text",
           "basis",
@@ -393,6 +264,14 @@
           "id": {
             "type": "string",
             "pattern": "^g-[a-z0-9][a-z0-9-]{0,61}$"
+          },
+          "kind": {
+            "enum": [
+              "explained",
+              "supporting",
+              "mechanical"
+            ],
+            "description": "The group's role in the change. Each file's disposition is the strongest kind among groups that own any of its lines."
           },
           "title": {
             "$ref": "#/$defs/text"
@@ -540,40 +419,6 @@
         },
         "evidence": {
           "type": "array",
-          "maxItems": 12,
-          "items": {
-            "$ref": "#/$defs/evidence"
-          }
-        }
-      }
-    },
-    "primerClaim": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "title",
-        "text",
-        "basis",
-        "evidence"
-      ],
-      "description": "A primer item must be grounded. Unknown basis and empty evidence are not allowed.",
-      "properties": {
-        "title": {
-          "$ref": "#/$defs/text"
-        },
-        "text": {
-          "$ref": "#/$defs/text"
-        },
-        "basis": {
-          "enum": [
-            "stated",
-            "code",
-            "inferred"
-          ]
-        },
-        "evidence": {
-          "type": "array",
-          "minItems": 1,
           "maxItems": 12,
           "items": {
             "$ref": "#/$defs/evidence"

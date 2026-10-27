@@ -5,17 +5,12 @@ import { fileURLToPath } from "node:url";
 
 import {
   addDiffContext,
-  buildMicroworldSkeleton,
   cancelDiff,
-  checkpointDiffWindow,
+  captureDiff,
   DIFF_CLEANUP_FAILED_CODE,
   DIFF_PUBLICATION_RETRYABLE_CODE,
   DIFF_REVALIDATION_RETRYABLE_CODE,
-  finishDiff,
-  prepareDiff,
-  readDiffWindow,
-  readDiffLedger,
-  resolveDiffTarget,
+  publishDiff,
   validateDiff,
 } from "./index.mjs";
 import { parsePullRequestTargetArgument } from "./target.mjs";
@@ -34,31 +29,23 @@ function usage() {
     "Use Hope Diff through its private Skill adapter.",
     "",
     "Internal Skill subcommands:",
-    "  resolve-target [GitHub PR URL or PR number]",
-    "  prepare [GitHub PR URL or PR number] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>]",
-    "  inspect-window --run <private-run-path> --page <start-number>",
-    "  checkpoint-window --run <private-run-path> --page <start-number>",
-    "  ledger --run <private-run-path> --page <number>",
-    "  context --run <private-run-path> --request <context-request-id>",
-    "  microworld-skeleton --input <private-controls.json>",
+    "  capture [GitHub PR URL or PR number] [--base <ref>] [--untracked] [--host-locale <locale>] [--locale <locale>] [--theme <theme>] [--output <path>] [--bundle-bytes <n>]",
+    "  context --run <private-run-path> --path <repository-path> --revision head|merge-base [--path <p> --revision <r> ...]",
     "  validate --run <private-run-path>",
-    "  finish --run <private-run-path>",
+    "  publish --run <private-run-path>",
     "  cancel --run <private-run-path>",
   ].join("\n");
 }
 
 const commandOptions = {
-  prepare: ["host-locale", "locale", "theme", "output"],
-  "resolve-target": [],
-  "inspect-window": ["run", "page"],
-  "checkpoint-window": ["run", "page"],
-  ledger: ["run", "page"],
-  context: ["run", "request"],
-  "microworld-skeleton": ["input"],
+  capture: ["base", "untracked", "host-locale", "locale", "theme", "output", "bundle-bytes"],
+  context: ["run", "path", "revision"],
   validate: ["run"],
-  finish: ["run"],
+  publish: ["run"],
   cancel: ["run"],
 };
+const flags = new Set(["untracked"]);
+const repeatable = new Set(["path", "revision"]);
 const knownOptions = new Set(Object.values(commandOptions).flat());
 
 function takeOptions(values) {
@@ -71,19 +58,18 @@ function takeOptions(values) {
       continue;
     }
     const key = value.slice(2);
-    if (!knownOptions.has(key)) {
-      throw new TypeError(`Unknown Hope diff option: ${value}`);
+    if (!knownOptions.has(key)) throw new TypeError(`Unknown Hope diff option: ${value}`);
+    if (flags.has(key)) {
+      if (options[key] !== undefined) throw new TypeError(`Hope diff option ${value} was repeated`);
+      options[key] = true;
+      continue;
     }
     const next = values[index + 1];
-    if (next === undefined || next.startsWith("--")) {
-      throw new TypeError(`Hope diff option ${value} needs a value`);
-    }
-    if (key === "request") {
+    if (next === undefined || next.startsWith("--")) throw new TypeError(`Hope diff option ${value} needs a value`);
+    if (repeatable.has(key)) {
       (options[key] ??= []).push(next);
     } else {
-      if (options[key] !== undefined) {
-        throw new TypeError(`Hope diff option ${value} was repeated`);
-      }
+      if (options[key] !== undefined) throw new TypeError(`Hope diff option ${value} was repeated`);
       options[key] = next;
     }
     index += 1;
@@ -91,48 +77,45 @@ function takeOptions(values) {
   return { options, positionals };
 }
 
+function integerOption(value, name) {
+  if (value === undefined) return undefined;
+  const number = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(number) || String(number) !== value) throw new TypeError(`${name} needs an integer`);
+  return number;
+}
+
 export function parseDiffArguments(argv) {
-  if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
-    return { command: "help" };
-  }
+  if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) return { command: "help" };
   const [command, ...rest] = argv;
   if (!Object.hasOwn(commandOptions, command)) throw new TypeError(usage());
   const { options, positionals } = takeOptions(rest);
-  if (Object.entries(options).some(
-    ([key, value]) => value && !commandOptions[command].includes(key),
-  )) {
-    throw new TypeError(usage());
-  }
-  if (command === "prepare" || command === "resolve-target") {
+  if (Object.keys(options).some((key) => !commandOptions[command].includes(key))) throw new TypeError(usage());
+  if (command === "capture") {
     if (positionals.length > 1) throw new TypeError(usage());
-    const target = parsePullRequestTargetArgument(positionals[0]);
-    if (command === "resolve-target") return { command, ...target };
     return {
+      base: options.base,
+      bundleBytes: integerOption(options["bundle-bytes"], "--bundle-bytes"),
       command,
       hostLocale: options["host-locale"],
       locale: options.locale,
       outputPath: options.output,
       theme: options.theme,
-      ...target,
+      untracked: options.untracked === true,
+      ...parsePullRequestTargetArgument(positionals[0]),
     };
   }
-  if (positionals.length > 0) throw new TypeError(usage());
-  if (command === "microworld-skeleton") {
-    if (!options.input) throw new TypeError(usage());
-    return { command, inputPath: options.input };
-  }
-  if (!options.run) throw new TypeError(usage());
+  if (positionals.length > 0 || !options.run) throw new TypeError(usage());
   if (command === "context") {
-    const requestIds = options.request ?? [];
-    if (requestIds.length === 0) throw new TypeError(usage());
-    return { command, requestIds, runPath: options.run };
-  }
-  if (commandOptions[command].includes("page")) {
-    const page = Number.parseInt(options.page, 10);
-    if (!options.page || !Number.isSafeInteger(page) || String(page) !== options.page) {
-      throw new TypeError(usage());
+    const paths = options.path ?? [];
+    const revisions = options.revision ?? [];
+    if (paths.length === 0 || paths.length !== revisions.length) {
+      throw new TypeError("Hope diff context needs matching --path and --revision pairs");
     }
-    return { command, page, runPath: options.run };
+    return {
+      command,
+      requests: paths.map((path, index) => ({ path, revision: revisions[index] })),
+      runPath: options.run,
+    };
   }
   return { command, runPath: options.run };
 }
@@ -140,77 +123,32 @@ export function parseDiffArguments(argv) {
 export async function main(argv = process.argv.slice(2), dependencies = {}) {
   const options = parseDiffArguments(argv);
   const stdout = dependencies.stdout ?? process.stdout;
-  let result;
   if (options.command === "help") {
     stdout.write(`${usage()}\n`);
-    return;
+    return undefined;
   }
-  if (options.command === "resolve-target") {
-    result = await (dependencies.resolveDiffTarget ?? resolveDiffTarget)(
-      options,
-      dependencies,
-    );
-  } else if (options.command === "prepare") {
-    result = await (dependencies.prepareDiff ?? prepareDiff)(options, dependencies);
-  } else if (options.command === "inspect-window") {
-    result = await (dependencies.readDiffWindow ?? readDiffWindow)(
-      options.runPath,
-      options.page,
-      dependencies,
-    );
-  } else if (options.command === "checkpoint-window") {
-    result = await (
-      dependencies.checkpointDiffWindow ?? checkpointDiffWindow
-    )(
-      options.runPath,
-      options.page,
-      dependencies,
-    );
-  } else if (options.command === "ledger") {
-    result = await (dependencies.readDiffLedger ?? readDiffLedger)(
-      options.runPath,
-      options.page,
-      dependencies,
-    );
-  } else if (options.command === "context") {
-    result = await (dependencies.addDiffContext ?? addDiffContext)(
-      options.runPath,
-      options.requestIds,
-      dependencies,
-    );
-  } else if (options.command === "microworld-skeleton") {
-    result = await (
-      dependencies.buildMicroworldSkeleton ?? buildMicroworldSkeleton
-    )(options.inputPath, dependencies);
-  } else if (options.command === "validate") {
-    result = await (dependencies.validateDiff ?? validateDiff)(
-      options.runPath,
-      dependencies,
-    );
-  } else if (options.command === "finish") {
-    result = await (dependencies.finishDiff ?? finishDiff)(options.runPath, dependencies);
-  } else {
-    result = await (dependencies.cancelDiff ?? cancelDiff)(options.runPath, dependencies);
-  }
-  if (result !== undefined) {
-    if (
-      options.command === "inspect-window"
-      || options.command === "checkpoint-window"
-    ) {
-      stdout.write(`${JSON.stringify(result)}\n`);
-    } else {
-      stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    }
-  }
+  const commands = {
+    cancel: () => (dependencies.cancelDiff ?? cancelDiff)(options.runPath, dependencies),
+    capture: () => (dependencies.captureDiff ?? captureDiff)(options, dependencies),
+    context: () => (dependencies.addDiffContext ?? addDiffContext)(options.runPath, options.requests, dependencies),
+    publish: () => (dependencies.publishDiff ?? publishDiff)(options.runPath, dependencies),
+    validate: () => (dependencies.validateDiff ?? validateDiff)(options.runPath, dependencies),
+  };
+  const result = await commands[options.command]();
+  if (result !== undefined) stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   return result;
 }
 
+const structuredCodes = new Set([
+  "HOPE_ANALYSIS_INVALID",
+  DIFF_REVALIDATION_RETRYABLE_CODE,
+  DIFF_PUBLICATION_RETRYABLE_CODE,
+  DIFF_CLEANUP_FAILED_CODE,
+]);
+
 export function diffErrorDetails(error) {
-  const structured = error?.code === "HOPE_ANALYSIS_INVALID"
-    || error?.code === DIFF_REVALIDATION_RETRYABLE_CODE
-    || error?.code === DIFF_PUBLICATION_RETRYABLE_CODE
-    || error?.code === DIFF_CLEANUP_FAILED_CODE;
-  if (!structured && error?.preservedPath === undefined) return "";
+  const structured = structuredCodes.has(error?.code);
+  if (!structured && error?.preservedPath === undefined && error?.runPath === undefined) return "";
   const details = {};
   if (structured) {
     details.canRetry = error.canRetry;
@@ -218,11 +156,11 @@ export function diffErrorDetails(error) {
     if (Array.isArray(error.issues)) details.issues = error.issues;
     if (error.command !== undefined) details.command = error.command;
     if (error.outputPath !== undefined) details.outputPath = error.outputPath;
-    if (error.runPath !== undefined) details.runPath = error.runPath;
+  } else if (error.code !== undefined) {
+    details.code = error.code;
   }
-  if (error.preservedPath !== undefined) {
-    details.preservedPath = error.preservedPath;
-  }
+  if (error.runPath !== undefined) details.runPath = error.runPath;
+  if (error.preservedPath !== undefined) details.preservedPath = error.preservedPath;
   return `\n${JSON.stringify(details)}`;
 }
 
