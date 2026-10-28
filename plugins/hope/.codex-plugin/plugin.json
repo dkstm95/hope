@@ -1,7 +1,7 @@
 {
   "name": "hope",
   "version": "8.0.2",
-  "description": "Align intent and consequential decisions before implementation and optionally preserve the shared understanding, sweep codebase maintenance, review and fix work through repeated verification, understand pull requests and local changes and the reasons for each change, design interfaces and mockups, create clear explanatory visuals, improve writing, and automatically prepare PR and MR titles and descriptions. Requires Node.js 22 or newer.",
+  "description": "Align intent and consequential decisions before implementation and preserve the shared understanding as a repository record, review and fix work through repeated verification or sweep proven codebase waste, understand pull requests and local changes and the reasons for each change, design interfaces and mockups, improve writing, and automatically prepare PR and MR titles and descriptions. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
     "url": "https://github.com/dkstm95"
@@ -9,19 +9,19 @@
   "homepage": "https://github.com/dkstm95/hope#readme",
   "repository": "https://github.com/dkstm95/hope",
   "license": "MIT",
-  "keywords": ["alignment", "design", "mockups", "sweep", "maintenance", "dead-code", "simplify", "refactor", "review", "diff", "pull-request", "visualization", "diagram", "writing"],
+  "keywords": ["alignment", "design", "mockups", "sweep", "maintenance", "dead-code", "refactor", "review", "diff", "pull-request", "writing"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hope",
     "shortDescription": "Practical ways for people and AI to work better together",
-    "longDescription": "PR Writing automatically prepares PR and MR titles and descriptions using Write. Select other Hope skills explicitly. Align builds shared intent and consequential decisions before implementation and can preserve them in a durable record. Design turns goals and ordinary-language feedback into inspectable interface mockups, independently or when invoked alongside Align. Sweep removes proven codebase waste while preserving customer-observed behavior. Whiplash reviews work, fixes supported material issues, and repeats verification and review until no material issue remains. Diff explains code changes so you can understand consequences and discover follow-up work. Every Diff review also groups the full captured diff by purpose with contextual explanations and reading progress. Diagram makes explanatory diagrams and data charts clear without taking over the active task. Write improves language without changing its meaning.",
+    "longDescription": "PR Writing automatically prepares PR and MR titles and descriptions using Write. Select other Hope skills explicitly. Align builds shared intent and consequential decisions before implementation and can preserve them in a repository record rendered as an HTML page. Design turns goals and ordinary-language feedback into inspectable interface mockups, independently or when invoked alongside Align. Whiplash reviews work, fixes supported material issues, and repeats verification and review until no material issue remains; asked for a sweep, it removes proven codebase waste while preserving customer-observed behavior. Diff explains a pull request or local change so you can understand consequences and discover follow-up work, with the full diff grouped by purpose, contextual explanations, and reading progress. Write improves language without changing its meaning.",
     "developerName": "SeungIl",
     "category": "Engineering",
     "capabilities": ["Read", "Write", "Interactive"],
     "defaultPrompt": [
       "Use $hope:align to build a shared understanding before implementation.",
       "Use $hope:whiplash to review this work, fix supported issues, and review again.",
-      "Use $hope:sweep to remove proven codebase waste without changing customer-observed behavior."
+      "Use $hope:whiplash to sweep this codebase: remove proven waste without changing customer-observed behavior."
     ],
     "brandColor": "#3157FF",
     "composerIcon": "./assets/hope-icon.png",

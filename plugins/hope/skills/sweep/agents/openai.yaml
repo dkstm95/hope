@@ -1,6 +1,0 @@
-interface:
-  display_name: "Hope Sweep"
-  short_description: "Apply behavior-preserving codebase cleanup"
-  default_prompt: "Use $hope:sweep to remove proven codebase waste while preserving customer-observed behavior."
-policy:
-  allow_implicit_invocation: false

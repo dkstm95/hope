@@ -19,7 +19,7 @@ hosts before claiming native invocation works on both.
 | Request or setup | Expected behavior |
 | --- | --- |
 | “Fix this typo”, “review this plan”, “draw this flow”, or “clean up this code” without a skill command | Complete the ordinary request without activating a Hope skill. |
-| Invoke each of `align`, `design`, `diff`, `whiplash`, `sweep`, `diagram`, and `write` with a small suitable task | The selected skill is available and follows its contract; no other Hope skill activates unless the task reaches PR/MR writing. |
+| Invoke each of `align`, `design`, `diff`, `whiplash`, and `write` with a small suitable task | The selected skill is available and follows its contract; no other Hope skill activates unless the task reaches PR/MR writing. |
 | Ask to create a PR, or draft its title and body, without naming a skill | PR Writing activates, reads repository conventions and change evidence, and uses Write. Creation continues when authorized. |
 | Ask for implementation and submission, then let the agent reach the PR/MR writing step | PR Writing and its Write handoff apply at that step without a new skill command. |
 | Ask to update an existing MR description with changed scope | PR Writing uses Write, preserves the project template and language, and reflects the final diff and verification limits. |
@@ -30,9 +30,9 @@ hosts before claiming native invocation works on both.
 | Invoke Align and Design for the same visual decision | Use their public handoff and preserve settled choices without a second product interview. |
 | Invoke Align and ask to keep the agreement for another session | Create a JSON record and its HTML page in the project's decision location, report the record path and revision, and have the receiving session inspect the record. |
 | Supply a Hope 8 Align HTML page and ask to update the agreement | Migrate the page to a record beside it, report where legacy fields went, and revise the record after confirming the changed understanding. |
-| Invoke Design for a dashboard without invoking Diagram | Complete the authorized design without automatically invoking Diagram. |
 | Invoke Write on a paragraph, then say “Make it shorter” | Continue the same writing task without requiring another invocation. |
-| After that task ends, ask for unrelated code cleanup | Use the ordinary workflow; previous invocation does not activate Sweep or extend Write to unrelated work. |
+| After that task ends, ask for unrelated code cleanup | Use the ordinary workflow; previous invocation does not activate Whiplash's sweep or extend Write to unrelated work. |
+| Invoke Whiplash and ask for a sweep of the repository | Apply proven behavior-preserving cleanup only; leave bugs, product decisions, and uncertain removals out and report them as out of scope rather than as findings. |
 | Invoke Diff with a narrow PR question, such as its timeout value | Answer from relevant evidence without starting the full artifact run. |
 
 ## Whiplash completion

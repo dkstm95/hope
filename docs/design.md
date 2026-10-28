@@ -1,7 +1,7 @@
 # Hope design
 
 This document defines Hope's project-wide GUI guidance and the Hope Technical
-Record used by Align, Diff, and standalone Diagram HTML artifacts.
+Record used by Align and Diff HTML artifacts.
 
 The Project GUI layout and Project GUI widgets sections apply whenever a Hope
 feature introduces or changes a matching layout, control, or interaction.
@@ -9,14 +9,13 @@ feature introduces or changes a matching layout, control, or interaction.
 Feature-named sections apply only to that artifact. Sections named for Hope
 artifacts apply to every Technical Record.
 
-The Align, Diff, and Diagram Skills own their feature judgment and prose.
+The Align and Diff Skills own their feature judgment and prose.
 
 The Technical Record is a compact, dual-mode technical memo. One shared token
 source defines its common color, type, spacing, document, and navigation roles.
 Align and Diff use the same document shell: rail, top bar, index, display
-controls, reference preview, print identity, and reading surface. Diagram
-inherits the same roles inside another record and embeds their current values
-in a standalone HTML visual.
+controls, reference preview, print identity, and reading surface. A visual
+inside either record inherits the same roles.
 
 `plugins/hope/assets/artifact-theme.mjs` owns the exact common token values.
 `plugins/hope/assets/artifact-shell/` assembles every Technical Record from
@@ -328,23 +327,6 @@ relationships, and experience choices when the confirmed decisions include
 them. Implementation records hold algorithms, tools, files, protocols,
 execution order, commands, progress, work ownership, changed files, test
 status, and completion results.
-
-## Diagram artifact direction
-
-Diagram uses the Technical Record as its host language. A diagram inside Align
-or Diff inherits that artifact's surface, type, spacing, accent, links, and
-status roles. Its own composition carries only the relationships or quantities
-that earned the visual.
-
-A standalone Diagram HTML uses the same left document rail, document title,
-semantic color roles, theme control, and responsive behavior. Present the main
-visual first, then its conclusion, scope, uncertainty, source, or exact-value
-table when those details contribute meaning.
-
-Use ordinary prose type for human-readable labels and Hope Code for technical
-identifiers. Let `paper`, `ink`, `muted`, `rule`, `accent`, and `link` map to
-the active Technical Record tokens. Status uses text and shape together with
-its semantic color.
 
 ## Project GUI widgets
 
