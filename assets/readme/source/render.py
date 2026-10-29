@@ -30,37 +30,35 @@ FONT_FILES = {
     "code": ROOT / "plugins/hope/assets/fonts/HopeCode.woff2",
 }
 
-# Shared artifact colors from plugins/hope/assets/artifact-theme.mjs, plus the
-# Diff status roles and one accent tint for selected rows.
+THEME_FILE = ROOT / "plugins/hope/assets/artifact-theme.mjs"
+DIFF_TOKENS = ROOT / "plugins/hope/skills/diff/scripts/design/tokens.mjs"
+
+
+def read_palette(path: Path, name: str) -> dict[str, dict[str, str]]:
+    """Read the light and dark hex roles of one exported `Object.freeze` palette."""
+    source = path.read_text(encoding="utf-8")
+    source = source[source.index(f"export const {name} ="):]
+    palette = {}
+    for theme in ("light", "dark"):
+        block = re.search(rf"\b{theme}: Object\.freeze\(\{{(.*?)\}}\)", source, re.S)
+        palette[theme] = dict(re.findall(r'(\w+): "(#[0-9a-fA-F]{6})"', block.group(1)))
+    return palette
+
+
+# The shared artifact theme, plus Diff's status roles and its added and removed
+# line marks, read from the files the artifacts use.
+ARTIFACT_COLORS = read_palette(THEME_FILE, "ARTIFACT_COLORS")
+DIFF_STATUS = read_palette(DIFF_TOKENS, "COLORS")
+DIFF_CODE = read_palette(DIFF_TOKENS, "CODE_THEME")
 THEMES = {
-    "light": {
-        "panel": "#ffffff",
-        "rail": "#f3f5f4",
-        "text": "#171a19",
-        "muted": "#5d6663",
-        "rule": "#e1e4e2",
-        "component": "#818a86",
-        "accent": "#006b52",
-        "tint": "#e9f4ef",
-        "link": "#006aae",
-        "amber": "#8a5a00",
-        "blue": "#006aae",
-        "faint": "#b9c1be",
-    },
-    "dark": {
-        "panel": "#12181d",
-        "rail": "#0c0f11",
-        "text": "#f2f4f5",
-        "muted": "#a8b1b8",
-        "rule": "#2b343b",
-        "component": "#68757e",
-        "accent": "#79ddb1",
-        "tint": "#17302a",
-        "link": "#8bc9ff",
-        "amber": "#e3b341",
-        "blue": "#8bc9ff",
-        "faint": "#4a555d",
-    },
+    theme: {
+        **ARTIFACT_COLORS[theme],
+        "verify": DIFF_STATUS[theme]["verify"],
+        "decide": DIFF_STATUS[theme]["decide"],
+        "added": DIFF_CODE[theme]["addedMark"],
+        "removed": DIFF_CODE[theme]["removedMark"],
+    }
+    for theme in ("light", "dark")
 }
 
 # One mid teal reads on both GitHub backgrounds, so the marks need no variants.
@@ -215,12 +213,17 @@ class Doc:
     def raw(self, markup: str) -> None:
         self.body.append(markup)
 
-    def rect(self, x, y, w, h, fill="none", stroke=None, radius=0, width=1, opacity=None):
+    def rect(self, x, y, w, h, fill="none", stroke=None, radius=0, width=1, opacity=None,
+             dash=None, stroke_opacity=None):
         attributes = f'x="{fmt(x)}" y="{fmt(y)}" width="{fmt(w)}" height="{fmt(h)}" fill="{fill}"'
         if radius:
             attributes += f' rx="{fmt(radius)}"'
         if stroke:
             attributes += f' stroke="{stroke}" stroke-width="{width}"'
+        if dash:
+            attributes += f' stroke-dasharray="{dash}"'
+        if stroke_opacity is not None:
+            attributes += f' stroke-opacity="{stroke_opacity}"'
         if opacity is not None:
             attributes += f' opacity="{opacity}"'
         self.body.append(f"<rect {attributes}/>")
@@ -259,63 +262,138 @@ def escape(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-# Drawing helpers shared by the artifact illustrations.
+# Drawing helpers shared by the record illustrations. They follow the Technical
+# Record shell: a rail with a filled current index, numbered sections, and
+# labels in a quiet gutter.
+
+GUTTER = 120
+
+
+def behind(doc: Doc, draw) -> None:
+    """Run `draw` and move what it adds beneath everything drawn so far."""
+    start = len(doc.body)
+    draw()
+    added = doc.body[start:]
+    del doc.body[start:]
+    doc.body[0:0] = added
 
 
 def frame(doc: Doc, T: dict, rail_width: int = 0) -> None:
-    doc.rect(0.5, 0.5, doc.width - 1, doc.height - 1, fill=T["panel"], stroke=T["rule"], radius=10)
+    w, h = doc.width, doc.height
+    doc.rect(0.5, 0.5, w - 1, h - 1, fill=T["background"], radius=12)
     if rail_width:
         doc.raw(
-            f'<path d="M10.5 0.5 H{rail_width}.5 V{doc.height - 0.5} H10.5 A10 10 0 0 1 0.5 {doc.height - 10.5} '
-            f'V10.5 A10 10 0 0 1 10.5 0.5 Z" fill="{T["rail"]}" stroke="{T["rule"]}"/>'
+            f'<path d="M12.5 0.5 H{rail_width}.5 V{fmt(h - 0.5)} H12.5 A12 12 0 0 1 0.5 {fmt(h - 12.5)} '
+            f'V12.5 A12 12 0 0 1 12.5 0.5 Z" fill="{T["rail"]}"/>'
+        )
+        doc.line(rail_width + 0.5, 1, rail_width + 0.5, h - 1, T["border"])
+    doc.rect(0.5, 0.5, w - 1, h - 1, stroke=T["border"], radius=12)
+
+
+def card(doc: Doc, T: dict, x, y, w, h, fill="none", stroke=None, dash=None, bar=None,
+         stroke_opacity=None, radius=10) -> None:
+    """A rounded surface, optionally with the shell's inset accent bar on the left."""
+    doc.rect(x, y, w, h, fill=fill, stroke=stroke, radius=radius, dash=dash, stroke_opacity=stroke_opacity)
+    if bar:
+        clip = f"clip-{len(doc.body)}"
+        doc.raw(
+            f'<clipPath id="{clip}"><rect x="{fmt(x)}" y="{fmt(y)}" width="{fmt(w)}" height="{fmt(h)}" '
+            f'rx="{radius}"/></clipPath><rect x="{fmt(x)}" y="{fmt(y)}" width="4" height="{fmt(h)}" '
+            f'fill="{bar}" clip-path="url(#{clip})"/>'
         )
 
 
-def rail(doc: Doc, T: dict, brand: str, identity: str, index_label: str, entries: list[str],
-         current: int, footer: str | None = None, width: int = 200) -> None:
-    doc.text(22, 36, brand, FACES["code"], 12, T["accent"], tracking=0.6)
-    brand_width = doc.measure(brand, FACES["code"], 12, tracking=0.6)
-    doc.text(22 + brand_width + 8, 36, "/", FACES["code"], 12, T["muted"])
-    doc.text(22 + brand_width + 20, 36, identity, FACES["code"], 12, T["text"], tracking=0.6)
-    doc.line(22, 58, width - 22, 58, T["rule"])
-    doc.text(22, 84, index_label, FACES["code"], 9.5, T["muted"], tracking=0.8)
-    y = 114
-    for number, entry in enumerate(entries, start=1):
+def rail(doc: Doc, T: dict, product: str, record: str, index_label: str, entries: list[str],
+         current: int, width: int = 200) -> float:
+    """Draw the brand and document index; return the y below the index."""
+    product_width = doc.text(22, 40, product, FACES["bold"], 15, T["text"], tracking=0.3)
+    doc.text(22 + product_width + 8, 40, "/", FACES["medium"], 15, T["border"])
+    doc.text(22 + product_width + 22, 39, record, FACES["code"], 11, T["muted"])
+    doc.text(22, 82, index_label, FACES["medium"], 11.5, T["muted"])
+    doc.text(width - 22, 82, f"{current} / {len(entries)}", FACES["medium"], 11.5, T["muted"], anchor="end")
+    y, rows = 112, []
+    for entry in entries:
+        rows.append((y, entry.split("\n")))
+        y += 18 * entry.count("\n") + 32
+    doc.line(34, rows[0][0], 34, rows[-1][0], T["border"], width=2)
+    for number, (center, parts) in enumerate(rows, start=1):
         is_current = number == current
-        if is_current:
-            doc.line(22, y - 15, 22, y + 7, T["accent"], width=2)
-        doc.text(36, y, f"{number:02d}", FACES["code"], 10, T["accent"] if is_current else T["muted"])
-        for row in entry.split("\n"):
-            doc.text(58, y, row, FACES["bold" if is_current else "medium"], 13,
-                     T["text"] if is_current else T["muted"])
-            y += 18
-        y += 14
-    if footer:
-        doc.line(22, doc.height - 50, width - 22, doc.height - 50, T["rule"])
-        doc.text(22, doc.height - 26, footer, FACES["medium"], 11.5, T["muted"])
+        doc.circle(34, center, 11, fill=T["accent"] if is_current else T["rail"],
+                   stroke=None if is_current else T["border"], width=1.5)
+        doc.text(34, center + 3.8, f"{number:02d}", FACES["bold"], 10.5,
+                 T["panel"] if is_current else T["muted"], anchor="middle")
+        for line_index, part in enumerate(parts):
+            doc.text(56, center + 4.5 + 18 * line_index, part, FACES["bold" if is_current else "medium"],
+                     13.5, T["text"] if is_current else T["muted"])
+    return y
+
+
+def rail_footer(doc: Doc, T: dict, text: str, width: int = 200) -> None:
+    doc.line(22, doc.height - 54, width - 22, doc.height - 54, T["border"])
+    doc.text(22, doc.height - 28, text, FACES["medium"], 12, T["muted"])
+
+
+def history(doc: Doc, T: dict, y: float, title: str, entries: list[tuple[str, str, str]],
+            width: int = 200) -> None:
+    """The rail's version timeline, newest first, with the current version filled."""
+    doc.line(22, y, width - 22, y, T["border"])
+    y += 32
+    doc.text(22, y, title, FACES["medium"], 11.5, T["muted"])
+    y += 28
+    dots = []
+    for head, date, summary in entries:
+        dots.append(y - 4)
+        rows = doc.wrap(head, FACES["bold"], 12, width - 66)
+        y = lines(doc, 44, y, rows, FACES["bold"], 12, T["text"], 17)
+        doc.text(44, y, date, FACES["medium"], 11, T["muted"])
+        y = lines(doc, 44, y + 19, doc.wrap(summary, FACES["medium"], 11.5, width - 66),
+                  FACES["medium"], 11.5, T["muted"], 17) + 14
+    doc.line(28, dots[0], 28, dots[-1], T["border"], width=2)
+    for index, center in enumerate(dots):
+        if index == 0:
+            doc.circle(28, center, 10, fill=T["accentSoft"])
+            doc.circle(28, center, 6, fill=T["accent"])
+        else:
+            doc.circle(28, center, 5, fill=T["rail"], stroke=T["componentBorder"], width=2)
+
+
+def heading(doc: Doc, T: dict, x: float, y: float, title: str, state: str, size: float = 28,
+            refs: list[int] | None = None) -> None:
+    title_width = doc.text(x, y, title, FACES["bold"], size, T["text"], tracking=-0.5)
+    if refs:
+        sup(doc, T, x + title_width + 8, y - 6, refs)
+    doc.circle(x + 4, y + 24, 3.5, fill=T["accent"])
+    doc.text(x + 14, y + 28, state, FACES["medium"], 12.5, T["muted"])
 
 
 def section(doc: Doc, T: dict, x: float, y: float, w: float, number: str, title: str) -> None:
-    doc.text(x, y, number, FACES["code"], 11.5, T["accent"], tracking=0.4)
-    doc.text(x + 34, y, title, FACES["code"], 11.5, T["text"], tracking=1.2)
-    doc.line(x, y + 14, x + w, y + 14, T["rule"])
+    number_width = doc.text(x, y, number, FACES["bold"], 19, T["accent"])
+    doc.text(x + number_width + 10, y, title, FACES["bold"], 19, T["text"], tracking=-0.2)
+    doc.line(x, y + 16, x + w, y + 16, T["border"])
 
 
-def marker(doc: Doc, T: dict, x: float, y: float, label: str, color: str, filled: bool = False) -> float:
-    width = doc.measure(label, FACES["code"], 9, tracking=0.6) + 12
-    doc.rect(x, y - 10.5, width, 15, fill=color if filled else "none", stroke=color, radius=3)
-    doc.text(x + 6, y, label, FACES["code"], 9, T["panel"] if filled else color, tracking=0.6)
-    return width
-
-
-def evidence(doc: Doc, T: dict, x: float, y: float, numbers: list[int]) -> float:
+def sup(doc: Doc, T: dict, x: float, y: float, numbers: list[int]) -> float:
+    """Evidence numbers set as accent superscripts after a line ending at `y`."""
     start = x
     for number in numbers:
-        label = f"[{number}]"
-        width = doc.measure(label, FACES["code"], 9.5)
-        doc.text(x, y, label, FACES["code"], 9.5, T["link"])
-        x += width + 5
+        x += doc.text(x, y - 7, f"[{number}]", FACES["code"], 9.5, T["accent"]) + 4
     return x - start
+
+
+def tag(doc: Doc, T: dict, x: float, y: float, label: str) -> None:
+    """A judgment marker such as [AI] or [User] on the accentSoft surface."""
+    text = f"[{label}]"
+    width = doc.measure(text, FACES["medium"], 10.5) + 12
+    doc.rect(x, y - 16, width, 17, fill=T["accentSoft"], radius=8.5)
+    doc.text(x + 6, y - 4, text, FACES["medium"], 10.5, T["accent"])
+
+
+def paragraph(doc: Doc, x: float, y: float, text: str, face: Face, size: float, fill: str,
+              width: float, leading: float) -> tuple[float, float]:
+    """Wrap and draw text; return the last baseline and the last row's width."""
+    rows = doc.wrap(text, face, size, width)
+    lines(doc, x, y, rows, face, size, fill, leading)
+    return y + leading * (len(rows) - 1), doc.measure(rows[-1], face, size)
 
 
 def lines(doc: Doc, x: float, y: float, rows: list[str], face: Face, size: float, fill: str,
@@ -324,6 +402,22 @@ def lines(doc: Doc, x: float, y: float, rows: list[str], face: Face, size: float
         doc.text(x, y, row, face, size, fill)
         y += leading
     return y
+
+
+def meter(doc: Doc, T: dict, x: float, y: float, color: str, level: int) -> float:
+    """Diff's three-step importance meter."""
+    for step in range(3):
+        doc.rect(x + step * 5, y - 10, 3, 11, fill=color if step < level else T["border"], radius=1.5)
+    return 13
+
+
+def pill(doc: Doc, T: dict, x: float, y: float, label: str, selected: bool) -> float:
+    face = FACES["bold" if selected else "medium"]
+    width = doc.measure(label, face, 13) + 30
+    doc.rect(x + 0.5, y + 0.5, width - 1, 31, fill=T["accent"] if selected else "none",
+             stroke=None if selected else T["componentBorder"], radius=15.5)
+    doc.text(x + 15, y + 21, label, face, 13, T["panel"] if selected else T["text"])
+    return width
 
 
 # Scenes.
@@ -353,7 +447,7 @@ def flow(L: dict, T: dict) -> Doc:
     doc = Doc(960, 214)
     stages = L["flow_stages"]
     xs = [120, 360, 600, 840]
-    doc.line(xs[0], 54, xs[-1], 54, T["rule"], width=2)
+    doc.line(xs[0], 54, xs[-1], 54, T["border"], width=2)
     for x, stage in zip(xs, stages):
         doc.circle(x, 54, 6, fill=T["panel"], stroke=T["accent"], width=2)
         doc.text(x, 30, stage, FACES["bold"], 15, T["text"], anchor="middle")
@@ -361,7 +455,7 @@ def flow(L: dict, T: dict) -> Doc:
         y = 92
         for name, role in chips:
             width = doc.measure(name, FACES["code"], 13, tracking=0.3) + 24
-            doc.rect(x - width / 2, y - 15, width, 24, fill=T["tint"], stroke=T["accent"], radius=12)
+            doc.rect(x - width / 2, y - 15, width, 24, fill=T["accentSoft"], stroke=T["accent"], radius=12)
             doc.text(x, y + 2, name, FACES["code"], 13, T["accent"], anchor="middle", tracking=0.3)
             doc.text(x, y + 26, role, FACES["medium"], 12, T["muted"], anchor="middle")
             y += 64
@@ -369,118 +463,192 @@ def flow(L: dict, T: dict) -> Doc:
 
 
 def align_record(L: dict, T: dict) -> Doc:
-    doc = Doc(960, 424)
-    frame(doc, T, rail_width=200)
-    rail(doc, T, "ALIGN", "SPEC-001", L["index_label"], L["align_index"], 1, L["align_footer"])
+    doc = Doc(960, 0)
     x, w = 236, 688
-    doc.text(x, 50, L["align_title"], FACES["bold"], 24, T["text"], tracking=-0.4)
-    doc.circle(x + 4, 76, 3.5, fill=T["accent"])
-    doc.text(x + 16, 80, L["align_state"], FACES["medium"], 12.5, T["accent"])
-    section(doc, T, x, 118, w, "01", L["align_s1"])
-    y = 158
-    for label, text, refs in L["align_summary"]:
-        rows = doc.wrap(text, FACES["medium"], 13, 420)
-        doc.text(x + 4, y, label, FACES["bold"], 13, T["text"])
-        end = lines(doc, x + 108, y, rows, FACES["medium"], 13, T["text"], 20)
-        last_width = doc.measure(rows[-1], FACES["medium"], 13)
-        evidence(doc, T, x + 108 + last_width + 8, end - 20, refs)
-        doc.line(x, end - 6, x + w, end - 6, T["rule"])
-        y = end + 16
-    section(doc, T, x, y + 14, w, "02", L["align_s2"])
-    y += 52
-    for text, kind in L["align_decisions"]:
-        doc.text(x + 4, y, text, FACES["medium"], 13, T["text"])
-        text_width = doc.measure(text, FACES["medium"], 13)
-        marker(doc, T, x + 4 + text_width + 10, y - 1, kind, T["accent"])
-        doc.line(x, y + 14, x + w, y + 14, T["rule"])
-        y += 34
+    heading(doc, T, x, 60, L["align_title"], L["align_state"])
+    section(doc, T, x, 140, w, "01", L["align_s1"])
+    y = 184
+    label, text, refs = L["align_goal"]
+    doc.text(x, y, label, FACES["medium"], 12.5, T["muted"])
+    end, last = paragraph(doc, x + GUTTER, y, text, FACES["bold"], 15, T["text"], 520, 23)
+    sup(doc, T, x + GUTTER + last + 6, end, refs)
+    y = end + 34
+    label, text = L["align_problem"]
+    doc.text(x, y, label, FACES["medium"], 12.5, T["muted"])
+    end, _ = paragraph(doc, x + GUTTER, y, text, FACES["medium"], 14, T["text"], 520, 22)
+    y = end + 46
+    doc.text(x, y, L["align_goals_label"], FACES["bold"], 15, T["text"])
+    y += 34
+    for text, kind in L["align_goals"]:
+        doc.circle(x + 10, y - 5, 8, stroke=T["accent"], width=1.75)
+        doc.raw(f'<path d="M{fmt(x + 6.5)} {fmt(y - 5)}l2.5 2.5 4.5-5" fill="none" stroke="{T["accent"]}" '
+                'stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>')
+        end, last = paragraph(doc, x + 30, y, text, FACES["medium"], 14, T["text"], 540, 22)
+        tag(doc, T, x + 30 + last + 8, end, kind)
+        y = end + 32
+    section(doc, T, x, y + 18, w, "02", L["align_s2"])
+    y += 58
+    for text, source in L["align_decisions"]:
+        rows = doc.wrap(text, FACES["bold"], 14.5, 548)
+        height = 31 + 22 * (len(rows) - 1) + 22 + 16
+        card(doc, T, x, y, 620, height, fill=T["panel"], stroke=T["border"], bar=T["accent"])
+        doc.raw(f'<rect x="-4.5" y="-4.5" width="9" height="9" rx="2" fill="{T["accent"]}" '
+                f'transform="translate({fmt(x + 24)} {fmt(y + 26)}) rotate(45)"/>')
+        end = lines(doc, x + 44, y + 31, rows, FACES["bold"], 14.5, T["text"], 22)
+        doc.text(x + 44, end, source, FACES["medium"], 11.5, T["muted"])
+        y += height + 10
+    y += 30
     label, text = L["align_excluded"]
-    doc.text(x + 4, y, label, FACES["bold"], 13, T["muted"])
-    doc.text(x + 108, y, text, FACES["medium"], 13, T["muted"])
+    doc.text(x, y, label, FACES["medium"], 12.5, T["muted"])
+    cx = x + GUTTER + 6
+    doc.circle(cx, y - 5, 5.5, stroke=T["muted"], width=1.5)
+    doc.line(cx - 3.9, y - 8.9, cx + 3.9, y - 1.1, T["muted"], width=1.5)
+    doc.text(x + GUTTER + 20, y, text, FACES["medium"], 14, T["muted"])
+    doc.height = round(y + 42)
+    behind(doc, lambda: frame(doc, T, rail_width=200))
+    end = rail(doc, T, "ALIGN", "SPEC-001", L["index_label"], L["align_index"], 1)
+    history(doc, T, end + 8, L["history_label"], L["align_history"])
     return doc
 
 
 def diff_review(L: dict, T: dict) -> Doc:
-    doc = Doc(960, 480)
-    frame(doc, T, rail_width=200)
-    rail(doc, T, "DIFF", "LOCAL-3f2a9c", L["index_label"], L["diff_index"], 1, L["diff_footer"])
-    x, w = 236, 352
-    doc.text(x, 50, L["diff_title"][0], FACES["bold"], 22, T["text"], tracking=-0.4)
-    doc.text(x, 78, L["diff_title"][1], FACES["bold"], 22, T["text"], tracking=-0.4)
-    doc.text(x, 104, L["diff_state"], FACES["medium"], 12, T["muted"])
-    section(doc, T, x, 142, w, "01", L["diff_s1"])
-    y = 180
-    for label, text, refs in L["diff_summary"]:
-        rows = doc.wrap(text, FACES["medium"], 13, w - 72 - 40)
-        doc.text(x + 4, y, label, FACES["bold"], 13, T["text"])
-        end = lines(doc, x + 72, y, rows, FACES["medium"], 13, T["text"], 20)
-        last_width = doc.measure(rows[-1], FACES["medium"], 13)
-        evidence(doc, T, x + 72 + last_width + 8, end - 20, refs)
-        doc.line(x, end - 6, x + w, end - 6, T["rule"])
-        y = end + 16
-    section(doc, T, x, y + 12, w, "02", L["diff_s2"])
-    y += 50
-    for kind, color, text, refs in L["diff_items"]:
-        width = marker(doc, T, x + 4, y - 1, kind, T[color])
-        rows = doc.wrap(text, FACES["medium"], 13, w - width - 60)
-        end = lines(doc, x + 4 + width + 10, y, rows, FACES["medium"], 13, T["text"], 20)
-        text_width = doc.measure(rows[-1], FACES["medium"], 13)
-        evidence(doc, T, x + 4 + width + 10 + text_width + 8, end - 20, refs)
-        y = end + 12
+    doc = Doc(960, 0)
+    x, w = 236, 688
+    heading(doc, T, x, 60, L["diff_title"], L["diff_state"], size=27, refs=[1])
+    section(doc, T, x, 140, w, "01", L["diff_s1"])
 
-    # Reader: the grouped code with the selected group's reason.
-    rx, rw = 612, 324
-    doc.rect(rx + 0.5, 30.5, rw - 1, 418, fill=T["panel"], stroke=T["rule"], radius=8)
-    section(doc, T, rx + 16, 60, rw - 32, "03", L["diff_s3"])
-    doc.text(rx + 16, 96, L["diff_groups_count"], FACES["medium"], 12, T["muted"])
-    doc.text(rx + rw - 16, 96, "+424  −62", FACES["code"], 11, T["muted"], anchor="end")
-    y = 126
-    for index, (title, kind, selected) in enumerate(L["diff_groups"], start=1):
-        if selected:
-            doc.rect(rx + 12, y - 18, rw - 24, 42, fill=T["tint"], radius=5)
-            doc.line(rx + 12, y - 18, rx + 12, y + 24, T["accent"], width=2)
-        doc.raw(f'<path d="M{rx + 25} {y - 8}l4 4.5-4 4.5" fill="none" stroke="{T["muted"]}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>')
-        doc.text(rx + 38, y + 1, f"{index:02d}", FACES["code"], 10, T["accent"] if selected else T["muted"])
-        doc.text(rx + 62, y + 1, title, FACES["bold" if selected else "medium"], 12.5, T["text"])
-        doc.text(rx + 62, y + 17, kind, FACES["code"], 9, T["accent"] if selected else T["muted"], tracking=0.6)
-        y += 48
-    doc.line(rx + 16, y - 10, rx + rw - 16, y - 10, T["rule"])
-    y += 14
-    doc.text(rx + 16, y, L["diff_reason_title"], FACES["bold"], 13, T["text"])
-    end = lines(doc, rx + 16, y + 24, doc.wrap(L["diff_reason"], FACES["medium"], 12, rw - 36),
-                FACES["medium"], 12, T["muted"], 18)
-    doc.text(rx + 16, end + 4, L["diff_reason_basis"], FACES["code"], 9.5, T["muted"], tracking=0.6)
-    basis_width = doc.measure(L["diff_reason_basis"], FACES["code"], 9.5, tracking=0.6)
-    evidence(doc, T, rx + 16 + basis_width + 10, end + 4, [4, 5])
+    def row(y: float, label: str, text: str, refs: list[int], size: float = 14.5) -> float:
+        doc.text(x, y, label, FACES["medium"], 12.5, T["muted"])
+        end, last = paragraph(doc, x + GUTTER, y, text, FACES["medium"], size, T["text"], 560, 23)
+        sup(doc, T, x + GUTTER + last + 6, end, refs)
+        return end
+
+    y = row(184, *L["diff_goal"], size=15.5) + 26
+
+    # AS-IS on a dashed outline, TO-BE on the accentSoft surface, joined by an arrow.
+    gap, pad = 24, 20
+    card_width = (w - gap) / 2
+    cards = [(L["diff_before"], T["muted"]), (L["diff_after"], T["text"])]
+    wrapped = [doc.wrap(text, FACES["medium"], 14.5, card_width - 2 * pad - 30) for (_, text, _), _ in cards]
+    height = 58 + 22 * (max(len(rows) for rows in wrapped) - 1) + 24
+    for index, (((label, _, refs), color), rows) in enumerate(zip(cards, wrapped)):
+        left = x + index * (card_width + gap)
+        if index == 0:
+            card(doc, T, left + 0.5, y + 0.5, card_width - 1, height - 1, stroke=T["componentBorder"], dash="4 3")
+        else:
+            card(doc, T, left + 0.5, y + 0.5, card_width - 1, height - 1, fill=T["accentSoft"],
+                 stroke=T["accent"], stroke_opacity=0.4, bar=T["accent"])
+        doc.text(left + pad + (4 if index else 0), y + 32, label, FACES["medium"], 11, T["accent"] if index else T["muted"],
+                 tracking=0.8)
+        end = lines(doc, left + pad + (4 if index else 0), y + 58, rows, FACES["medium"], 14.5, color, 22)
+        sup(doc, T, left + pad + (4 if index else 0) + doc.measure(rows[-1], FACES["medium"], 14.5) + 6, end - 22, refs)
+    cx, cy = x + card_width + gap / 2, y + height / 2
+    doc.circle(cx, cy, 14, fill=T["panel"], stroke=T["componentBorder"])
+    doc.raw(f'<path d="M{fmt(cx - 5)} {fmt(cy)}h10m-4-4 4 4-4 4" fill="none" stroke="{T["accent"]}" '
+            'stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>')
+    y = row(y + height + 36, *L["diff_impact"]) + 40
+
+    # Change shape: one bar, one segment per code group.
+    label, counts, groups = L["diff_shape"]
+    doc.text(x, y, label, FACES["medium"], 12.5, T["muted"])
+    left, span = x + GUTTER, w - GUTTER
+    total = sum(lines_changed for _, lines_changed, _ in groups)
+    cursor = left
+    for index, (_, lines_changed, role) in enumerate(groups):
+        width = (span - 2 * (len(groups) - 1)) * lines_changed / total
+        doc.rect(cursor, y - 13, width, 16, fill=T[role])
+        cursor += width + 2
+    y += 28
+    cursor = left + doc.text(left, y, counts, FACES["medium"], 12.5, T["text"]) + 8
+    cursor += doc.text(cursor, y, "+424", FACES["code"], 11, T["added"]) + 6
+    cursor += doc.text(cursor, y, "−62", FACES["code"], 11, T["removed"]) + 22
+    for name, _, role in groups:
+        doc.rect(cursor, y - 9.5, 10, 10, fill=T[role], radius=3)
+        cursor += 16 + doc.text(cursor + 16, y, f"{name} 1", FACES["medium"], 12.5, T["muted"]) + 22
+    y += 46
+
+    # Review items: kind bar, kind label, three-step importance meter, title.
+    for kind, role, level, importance, title in L["diff_items"]:
+        doc.rect(x, y - 16, 3, 24, fill=T[role], radius=1.5)
+        cursor = x + 16 + doc.text(x + 16, y, kind, FACES["bold"], 12.5, T[role]) + 10
+        cursor += meter(doc, T, cursor, y, T[role], level) + 8
+        doc.text(cursor, y, importance, FACES["medium"], 11.5, T["muted"])
+        doc.text(x + 16 + 250, y, title, FACES["bold"], 14.5, T["text"])
+        y += 40
+    doc.height = round(y + 52)
+    behind(doc, lambda: frame(doc, T, rail_width=200))
+    rail(doc, T, "DIFF", "LOCAL-3f2a9c", L["index_label"], L["diff_index"], 1)
+    rail_footer(doc, T, L["diff_footer"])
     return doc
 
 
 def microworld(L: dict, T: dict) -> Doc:
-    doc = Doc(960, 250)
-    frame(doc, T)
-    doc.text(28, 44, L["micro_title"], FACES["bold"], 17, T["text"], tracking=-0.2)
-    doc.text(28, 68, L["micro_warning"], FACES["medium"], 12, T["muted"])
-    doc.line(28, 86, 932, 86, T["rule"])
-    y = 124
+    doc = Doc(960, 0)
+    pill_label = L["micro_try"]
+    pill_width = doc.measure(pill_label, FACES["bold"], 11.5) + 34
+    doc.rect(28, 28, pill_width, 24, fill=T["accent"], radius=12)
+    doc.raw(f'<path d="M40 35.5v9l7-4.5z" fill="{T["panel"]}"/>')
+    doc.text(52, 44.5, pill_label, FACES["bold"], 11.5, T["panel"])
+    doc.text(28, 88, L["micro_title"], FACES["bold"], 21, T["text"], tracking=-0.3)
+    end, last = paragraph(doc, 28, 116, L["micro_lead"], FACES["medium"], 14, T["text"], 820, 22)
+    sup(doc, T, 28 + last + 6, end, [2])
+
+    # Controls on the left.
+    top = end + 44
+    doc.text(28, top, L["micro_controls_label"], FACES["bold"], 11.5, T["muted"])
+    y = top + 32
     for label, options, chosen in L["micro_controls"]:
-        doc.text(28, y, label, FACES["code"], 11.5, T["muted"], tracking=0.4)
-        x = 150
+        doc.text(28, y, label, FACES["bold"], 13.5, T["text"])
+        cursor = 28
         for index, option in enumerate(options):
-            width = doc.measure(option, FACES["medium"], 12.5) + 22
-            selected = index == chosen
-            doc.rect(x, y - 15, width, 24, fill=T["accent"] if selected else "none",
-                     stroke=T["accent"] if selected else T["component"], radius=12)
-            doc.text(x + 11, y + 2, option, FACES["medium"], 12.5, T["panel"] if selected else T["text"])
-            x += width + 8
-        y += 44
-    ox = 560
-    doc.rect(ox + 0.5, 100.5, 371, 120, fill=T["tint"], stroke=T["accent"], radius=8)
-    doc.text(ox + 22, 128, L["micro_outcome_label"], FACES["code"], 10, T["accent"], tracking=0.8)
-    doc.text(ox + 22, 160, L["micro_outcome"], FACES["bold"], 22, T["text"], tracking=-0.3)
-    reason = doc.wrap(L["micro_reason"], FACES["medium"], 12.5, 300)
-    end = lines(doc, ox + 22, 186, reason, FACES["medium"], 12.5, T["text"], 18)
-    last_width = doc.measure(reason[-1], FACES["medium"], 12.5)
-    evidence(doc, T, ox + 22 + last_width + 8, end - 18, [2, 5])
+            cursor += pill(doc, T, cursor, y + 10, option, index == chosen) + 6
+        y += 72
+    left_end = y - 30
+
+    # Before and after traces with what to notice, on the right.
+    rx, rw = 330, 602
+    doc.text(rx, top + 2, L["micro_scenario"], FACES["bold"], 15.5, T["text"])
+    y = top + 20
+    gap = 14
+    card_width = (rw - gap) / 2
+    traces = [L["micro_before"], L["micro_after"]]
+    height = 56 + 22 * (max(len(steps) for _, steps, _ in traces) - 1) + 16 + 24 + 24 + 22
+    for index, (label, steps, outcome) in enumerate(traces):
+        left = rx + index * (card_width + gap)
+        if index == 0:
+            card(doc, T, left + 0.5, y + 0.5, card_width - 1, height - 1, stroke=T["componentBorder"], dash="4 3")
+        else:
+            card(doc, T, left + 0.5, y + 0.5, card_width - 1, height - 1, fill=T["accentSoft"], bar=T["accent"])
+        inner = left + 18 + (4 if index else 0)
+        doc.text(inner, y + 30, label, FACES["bold"], 11.5, T["accent"] if index else T["muted"])
+        end = lines(doc, inner, y + 56, steps, FACES["medium"], 13.5, T["muted"], 22) - 22
+        doc.line(inner, end + 16, left + card_width - 18, end + 16, T["componentBorder"] if index == 0 else T["accent"],
+                 width=0.75)
+        doc.text(inner, end + 40, L["micro_outcome_label"], FACES["bold"], 11.5, T["muted"])
+        doc.text(inner, end + 64, outcome, FACES["bold"], 14.5, T["text"])
+    y += height + 12
+    rows = doc.wrap(L["micro_reason"], FACES["medium"], 14, rw - 60)
+    notice_height = 50 + 22 * (len(rows) - 1) + 18
+    doc.rect(rx, y, rw, notice_height, fill=T["background"], radius=8)
+    doc.text(rx + 18, y + 26, L["micro_notice_label"], FACES["bold"], 11.5, T["accent"])
+    end = lines(doc, rx + 18, y + 50, rows, FACES["medium"], 14, T["text"], 22) - 22
+    sup(doc, T, rx + 18 + doc.measure(rows[-1], FACES["medium"], 14) + 6, end, [2, 5])
+    y = max(left_end, y + notice_height) + 38
+    doc.text(28, y, L["micro_warning"], FACES["medium"], 12.5, T["muted"])
+    doc.height = round(y + 30)
+
+    def panel():
+        glow = f"glow-{len(doc.body)}"
+        doc.raw(
+            f'<defs><linearGradient id="{glow}" x1="1" y1="0" x2="0.45" y2="0.75">'
+            f'<stop offset="0" stop-color="{T["accentSoft"]}"/>'
+            f'<stop offset="1" stop-color="{T["accentSoft"]}" stop-opacity="0"/></linearGradient></defs>'
+        )
+        doc.rect(0.5, 0.5, doc.width - 1, doc.height - 1, fill=T["panel"], radius=12)
+        doc.rect(0.5, 0.5, doc.width - 1, doc.height - 1, fill=f"url(#{glow})", stroke=T["accent"],
+                 stroke_opacity=0.45, radius=12)
+
+    behind(doc, panel)
     return doc
 
 
@@ -515,56 +683,63 @@ LABELS = {
             [("diff", "understand the change"), ("whiplash", "review, fix, verify, repeat")],
             [("pr-writing", "explain it to reviewers")],
         ],
-        "index_label": "DOCUMENT INDEX",
+        "index_label": "Document index",
+        "history_label": "Version history",
         "align_index": ["Intent", "Decisions", "Design directions", "Boundary and\nevidence"],
-        "align_footer": "Version 2",
+        "align_history": [
+            ("v2 · Current understanding", "2026-09-09", "Added how source conflicts resolve."),
+            ("v1", "2026-09-02", "First agreement on the fan schedule."),
+        ],
         "align_title": "Fan schedule",
         "align_state": "Current understanding",
-        "align_s1": "INTENT",
-        "align_summary": [
-            ("Goal", "Give fans one reliable place to check schedules, deadlines, and the next safe action.", [1, 2]),
-            ("Problem", "Broadcasts, votes, and applications use different dates and sources, so fans act on stale information.", [3]),
+        "align_s1": "Intent",
+        "align_goal": ("Goal", "Give fans one reliable place to check schedules, deadlines, and the next safe action.", [1, 2]),
+        "align_problem": ("Problem", "Broadcasts, votes, and applications use different dates and sources, so fans act on stale information."),
+        "align_goals_label": "Detailed goals",
+        "align_goals": [
+            ("Every event shows its time, primary source, and last check.", "AI"),
+            ("Monthly context and urgent actions are easy to tell apart.", "User"),
         ],
-        "align_s2": "DECISIONS",
+        "align_s2": "Decisions",
         "align_decisions": [
-            ("The primary source wins on conflict; the other values stay visible.", "USER"),
-            ("Cancelled events remain listed for seven days.", "DELEGATED"),
+            ("The primary source wins on conflict; the other values stay visible.", "Selected by the person"),
+            ("Cancelled events remain listed for seven days.", "AI choice delegated by the person"),
         ],
-        "align_excluded": ("Excluded", "Push notifications, until the schedule is trusted."),
-        "diff_index": ["Summary", "Review", "Read the changes", "Evidence and\nscope"],
+        "align_excluded": ("Outside scope", "Push notifications, until the schedule is trusted."),
+        "diff_index": ["Summary", "Behavior change", "Read the changes", "Review items", "Evidence and\nscope"],
         "diff_footer": "working tree · main",
-        "diff_title": ["One timeout budget", "across retries"],
+        "diff_title": "One timeout budget across retries",
         "diff_state": "Local changes against main · 4 files",
-        "diff_s1": "SUMMARY",
-        "diff_summary": [
-            ("Before", "Each retry got a fresh timeout, so a slow endpoint could run far past the limit.", [1]),
-            ("After", "Every attempt spends one budget. When it runs out, the next request does not start.", [2, 3]),
-        ],
-        "diff_s2": "REVIEW",
+        "diff_s1": "Summary",
+        "diff_goal": ("Goal", "Keep every retry inside the request's timeout.", [1]),
+        "diff_before": ("AS-IS", "Each retry got a fresh timeout, so a slow endpoint could run far past the limit.", [1]),
+        "diff_after": ("TO-BE", "Every attempt spends one budget. When it runs out, the next request does not start.", [2, 3]),
+        "diff_impact": ("Impact", "A slow endpoint can no longer hold a request far past its limit.", [2]),
+        "diff_shape": ("Change shape", "3 groups · 4 files", [
+            ("explained", 300, "accent"),
+            ("supporting", 90, "link"),
+            ("mechanical", 96, "componentBorder"),
+        ]),
         "diff_items": [
-            ("VERIFY", "blue", "Hook timing when the budget is already spent", [4]),
-            ("DECIDE", "amber", "Whether the public timeout contract changes", [1, 2]),
+            ("Verification needed", "verify", 2, "Medium", "Hook timing when the budget is already spent"),
+            ("Decide", "decide", 3, "High", "Whether the public timeout contract changes"),
         ],
-        "diff_s3": "READ THE CHANGES",
-        "diff_groups_count": "3 groups · 4 files",
-        "diff_groups": [
-            ("One budget across attempts", "EXPLAINED", True),
-            ("Recheck time after waits and hooks", "SUPPORTING", False),
-            ("Update the retry tests", "MECHANICAL", False),
-        ],
-        "diff_reason_title": "Why this group",
-        "diff_reason": "The start time is recorded once. Each attempt subtracts the time already spent, so a retry never gets a fresh allowance.",
-        "diff_reason_basis": "STATED",
-        "micro_title": "Try it: does the next retry start?",
-        "micro_warning": "A simplified model of the captured change, not the real code.",
+        "micro_try": "Try it",
+        "micro_title": "Does the next retry start?",
+        "micro_lead": "Change the timeout, elapsed time, and retries left to compare outcomes.",
+        "micro_controls_label": "Change the model",
         "micro_controls": [
-            ("timeout", ["2 s", "off"], 0),
-            ("elapsed", ["0.5 s", "1.8 s", "2.4 s"], 2),
-            ("retries left", ["0", "1"], 1),
+            ("Timeout", ["2 s", "off"], 0),
+            ("Elapsed", ["0.5 s", "1.8 s", "2.4 s"], 2),
+            ("Retries left", ["0", "1"], 1),
         ],
-        "micro_outcome_label": "OUTCOME",
-        "micro_outcome": "No retry",
+        "micro_scenario": "2.4 s elapsed, one retry left",
+        "micro_before": ("Before", ["1. Start a fresh 2 s timeout.", "2. Run the retry."], "The retry starts."),
+        "micro_after": ("After", ["1. Subtract the 2.4 s already spent.", "2. Find no budget left."], "No retry."),
+        "micro_outcome_label": "Outcome:",
+        "micro_notice_label": "What to notice:",
         "micro_reason": "The budget ran out at 2 s, so the request stops before the next attempt.",
+        "micro_warning": "Explanation model only. It does not run repository code or report a test result.",
     },
     "ko": {
         "hero_see": "더 보고,",
@@ -578,55 +753,62 @@ LABELS = {
             [("pr-writing", "리뷰어에게 설명합니다")],
         ],
         "index_label": "문서 목차",
-        "align_index": ["의도", "결정", "디자인 방향", "경계와 근거"],
-        "align_footer": "버전 2",
+        "history_label": "버전 이력",
+        "align_index": ["의도", "결정", "디자인 시안", "경계와 근거"],
+        "align_history": [
+            ("v2 · 현재 합의", "2026-09-09", "출처 충돌을 처리하는 방식을 더했습니다."),
+            ("v1", "2026-09-02", "팬 일정의 첫 합의입니다."),
+        ],
         "align_title": "팬 일정",
-        "align_state": "현재 이해",
+        "align_state": "현재 합의",
         "align_s1": "의도",
-        "align_summary": [
-            ("목표", "팬이 일정, 마감, 다음에 할 안전한 행동을 한곳에서 확인할 수 있게 합니다.", [1, 2]),
-            ("문제", "방송, 투표, 신청마다 날짜와 출처가 달라 팬이 오래된 정보로 움직입니다.", [3]),
+        "align_goal": ("목표", "팬이 일정, 마감, 다음에 할 안전한 행동을 한곳에서 확인할 수 있게 합니다.", [1, 2]),
+        "align_problem": ("문제", "방송, 투표, 신청마다 날짜와 출처가 달라 팬이 오래된 정보로 움직입니다."),
+        "align_goals_label": "상세 목표",
+        "align_goals": [
+            ("각 일정은 시각, 우선 출처, 마지막 확인 시각을 보여 줍니다.", "AI"),
+            ("월간 맥락과 긴급 행동을 쉽게 구분할 수 있습니다.", "유저"),
         ],
         "align_s2": "결정",
         "align_decisions": [
-            ("출처가 충돌하면 주 출처를 따르고 다른 값도 보여 줍니다.", "사용자"),
-            ("취소된 일정은 7일 동안 목록에 남깁니다.", "위임"),
+            ("출처가 충돌하면 주 출처를 따르고 다른 값도 보여 줍니다.", "사용자가 선택함"),
+            ("취소된 일정은 7일 동안 목록에 남깁니다.", "사용자가 AI에 선택을 위임함"),
         ],
-        "align_excluded": ("제외", "일정을 신뢰할 수 있을 때까지 푸시 알림은 미룹니다."),
-        "diff_index": ["요약", "검토", "변경 읽기", "근거와 범위"],
+        "align_excluded": ("범위 밖", "일정을 신뢰할 수 있을 때까지 푸시 알림은 미룹니다."),
+        "diff_index": ["요약", "동작 변화", "변경 코드 읽기", "검토 항목", "근거와 범위"],
         "diff_footer": "작업 트리 · main",
-        "diff_title": ["재시도 전체에", "하나의 시간 예산"],
+        "diff_title": "재시도 전체에 하나의 시간 예산",
         "diff_state": "main 기준 로컬 변경 · 파일 4개",
         "diff_s1": "요약",
-        "diff_summary": [
-            ("이전", "재시도할 때마다 제한 시간이 새로 시작되어, 느린 서버에서는 제한을 한참 넘겼습니다.", [1]),
-            ("이후", "모든 시도가 하나의 예산을 나눠 씁니다. 예산이 바닥나면 다음 요청을 시작하지 않습니다.", [2, 3]),
-        ],
-        "diff_s2": "검토",
+        "diff_goal": ("목표", "모든 재시도를 요청의 제한 시간 안에서 끝냅니다.", [1]),
+        "diff_before": ("AS-IS", "재시도할 때마다 제한 시간이 새로 시작되어, 느린 서버에서는 제한을 한참 넘겼습니다.", [1]),
+        "diff_after": ("TO-BE", "모든 시도가 하나의 예산을 나눠 씁니다. 예산이 바닥나면 다음 요청을 시작하지 않습니다.", [2, 3]),
+        "diff_impact": ("영향", "느린 서버도 요청을 제한 시간보다 한참 오래 붙잡지 못합니다.", [2]),
+        "diff_shape": ("변경 구성", "3개 묶음 · 4개 파일", [
+            ("핵심 설명", 300, "accent"),
+            ("보조 근거", 90, "link"),
+            ("기계적 변경", 96, "componentBorder"),
+        ]),
         "diff_items": [
-            ("확인", "blue", "예산이 이미 소진된 뒤의 훅 실행 시점", [4]),
-            ("결정", "amber", "공개 timeout 계약이 바뀌는지 여부", [1, 2]),
+            ("검증 필요", "verify", 2, "보통", "예산이 이미 소진된 뒤의 훅 실행 시점"),
+            ("결정 필요", "decide", 3, "높음", "공개 timeout 계약이 바뀌는지 여부"),
         ],
-        "diff_s3": "변경 읽기",
-        "diff_groups_count": "묶음 3개 · 파일 4개",
-        "diff_groups": [
-            ("시도 전체에 하나의 예산 유지", "설명", True),
-            ("대기와 훅 이후 시간 재확인", "보조", False),
-            ("재시도 테스트 갱신", "기계적", False),
-        ],
-        "diff_reason_title": "이 묶음의 이유",
-        "diff_reason": "시작 시각을 한 번만 기록하고 시도마다 이미 쓴 시간을 뺍니다. 그래서 재시도가 시간을 새로 받지 않습니다.",
-        "diff_reason_basis": "명시됨",
-        "micro_title": "직접 확인: 다음 재시도가 시작될까요?",
-        "micro_warning": "수집한 변경을 단순화한 모델이며 실제 코드가 아닙니다.",
+        "micro_try": "직접 해보기",
+        "micro_title": "다음 재시도가 시작될까요?",
+        "micro_lead": "timeout, 경과 시간, 남은 재시도를 바꿔 결과를 비교합니다.",
+        "micro_controls_label": "모델 바꿔보기",
         "micro_controls": [
             ("timeout", ["2초", "없음"], 0),
-            ("경과", ["0.5초", "1.8초", "2.4초"], 2),
+            ("경과 시간", ["0.5초", "1.8초", "2.4초"], 2),
             ("남은 재시도", ["0", "1"], 1),
         ],
-        "micro_outcome_label": "결과",
-        "micro_outcome": "재시도 없음",
+        "micro_scenario": "2.4초 경과, 재시도 1회 남음",
+        "micro_before": ("이전", ["1. 2초 timeout을 새로 시작합니다.", "2. 재시도를 실행합니다."], "재시도가 시작됩니다."),
+        "micro_after": ("이후", ["1. 이미 쓴 2.4초를 뺍니다.", "2. 남은 예산이 없습니다."], "재시도 없음"),
+        "micro_outcome_label": "결과:",
+        "micro_notice_label": "살펴볼 점:",
         "micro_reason": "2초에 예산이 바닥나 다음 시도 전에 요청을 멈춥니다.",
+        "micro_warning": "설명을 위한 모델입니다. 저장소 코드를 실행하거나 테스트 결과를 보여주지 않습니다.",
     },
 }
 
@@ -634,16 +816,16 @@ TITLES = {
     "en": {
         "hero": ("Hope", "Hope, for Claude Code and Codex: keep your judgment and agency while AI does more of the work. See more, understand more, decide more."),
         "flow": ("Where each skill works", "Align and Design at intent, Write while building, Diff and Whiplash at review, PR Writing at submission."),
-        "align": ("Align record", "An Align record with a goal, a problem, and decisions marked as user, delegated, or excluded, each linked to evidence."),
-        "diff": ("Diff review", "A Diff review of local changes with before and after, review items, and the changed code grouped by purpose with the selected group's reason."),
-        "microworld": ("Diff microworld", "A Diff microworld with timeout, elapsed, and retry controls and the resulting outcome linked to evidence."),
+        "align": ("Align record", "An Align record with a goal and problem linked to evidence, checked detailed goals marked AI or User, decisions selected by the person or delegated, an item outside scope, and a version history."),
+        "diff": ("Diff review", "A Diff review of local changes with the goal, AS-IS and TO-BE, impact, the change shape across three code groups, and review items to verify and decide."),
+        "microworld": ("Diff microworld", "A Diff microworld with timeout, elapsed, and retry controls that compares the next retry before and after the change."),
     },
     "ko": {
         "hero": ("Hope", "Claude Code와 Codex용 Hope: AI가 일을 더 많이 맡아도 판단과 주도권은 사람에게 남깁니다. 더 보고, 더 이해하고, 더 결정합니다."),
         "flow": ("스킬별 역할", "의도 단계의 Align과 Design, 구현 중의 Write, 검토 단계의 Diff와 Whiplash, 제출 단계의 PR Writing."),
-        "align": ("Align 기록", "목표와 문제, 사용자·위임·제외로 표시된 결정과 근거 번호가 담긴 Align 기록."),
-        "diff": ("Diff 리뷰", "로컬 변경의 이전과 이후, 검토 항목, 목적별로 묶은 변경 코드와 선택한 묶음의 이유를 보여 주는 Diff 리뷰."),
-        "microworld": ("Diff 마이크로월드", "timeout, 경과 시간, 재시도 조작과 그 결과, 근거 번호를 보여 주는 Diff 마이크로월드."),
+        "align": ("Align 기록", "근거가 연결된 목표와 문제, AI·유저로 표시된 상세 목표, 사용자가 선택하거나 위임한 결정, 범위 밖 항목, 버전 이력이 담긴 Align 기록."),
+        "diff": ("Diff 리뷰", "로컬 변경의 목표, AS-IS와 TO-BE, 영향, 세 코드 묶음의 변경 구성, 검증하고 결정할 검토 항목을 보여 주는 Diff 리뷰."),
+        "microworld": ("Diff 마이크로월드", "timeout, 경과 시간, 재시도 조작에 따라 다음 재시도를 변경 이전과 이후로 비교하는 Diff 마이크로월드."),
     },
 }
 
