@@ -56,7 +56,7 @@ PR이나 MR의 제목과 설명이 필요할 때 스스로 시작합니다.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-align-ko-dark.svg">
-  <img src="assets/readme/hope-align-ko-light.svg" width="960" alt="근거가 연결된 목표와 문제, 사용자 결정과 위임 결정, 제외 항목을 보여 주는 Align 기록 일러스트.">
+  <img src="assets/readme/hope-align-ko-light.svg" width="960" alt="근거가 연결된 목표와 문제, 확인 표시가 붙은 상세 목표, 사용자가 선택하거나 위임한 결정, 범위 밖 항목, 버전 이력을 보여 주는 Align 기록 일러스트.">
 </picture>
 
 ### <img src="assets/readme/mark-diff.svg" width="22" height="22" alt=""> Diff
@@ -71,12 +71,12 @@ PR이나 MR의 제목과 설명이 필요할 때 스스로 시작합니다.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-diff-ko-dark.svg">
-  <img src="assets/readme/hope-diff-ko-light.svg" width="960" alt="로컬 변경의 이전과 이후, 확인·결정할 검토 항목, 목적별로 묶은 변경 코드를 보여 주는 Diff 리뷰 일러스트.">
+  <img src="assets/readme/hope-diff-ko-light.svg" width="960" alt="로컬 변경의 목표, AS-IS와 TO-BE, 세 코드 묶음의 변경 구성, 검증하고 결정할 검토 항목을 보여 주는 Diff 리뷰 일러스트.">
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-microworld-ko-dark.svg">
-  <img src="assets/readme/hope-microworld-ko-light.svg" width="960" alt="timeout, 경과 시간, 남은 재시도에 따라 다음 재시도가 시작되는지 보여 주는 Diff 마이크로월드 일러스트.">
+  <img src="assets/readme/hope-microworld-ko-light.svg" width="960" alt="timeout, 경과 시간, 남은 재시도로 상황을 정하고 변경 이전과 이후의 흐름으로 다음 재시도가 시작되는지 보여 주는 Diff 마이크로월드 일러스트.">
 </picture>
 
 ### <img src="assets/readme/mark-whiplash.svg" width="22" height="22" alt=""> Whiplash

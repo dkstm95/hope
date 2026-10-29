@@ -59,7 +59,7 @@ as a record that marks who made each call and links it to evidence.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-align-en-dark.svg">
-  <img src="assets/readme/hope-align-en-light.svg" width="960" alt="Illustration of an Align record with a goal and problem linked to evidence, decisions marked as the user's or delegated, and an excluded item.">
+  <img src="assets/readme/hope-align-en-light.svg" width="960" alt="Illustration of an Align record with a goal and problem linked to evidence, checked detailed goals, decisions selected by the person or delegated, an item outside scope, and a version history.">
 </picture>
 
 ### <img src="assets/readme/mark-diff.svg" width="22" height="22" alt=""> Diff
@@ -75,12 +75,12 @@ try the behavior and a quiz to check your understanding.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-diff-en-dark.svg">
-  <img src="assets/readme/hope-diff-en-light.svg" width="960" alt="Illustration of a Diff review of local changes, with before and after, review items to verify and decide, and the changed code grouped by purpose.">
+  <img src="assets/readme/hope-diff-en-light.svg" width="960" alt="Illustration of a Diff review of local changes, with the goal, AS-IS and TO-BE, the change shape across three code groups, and review items to verify and decide.">
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hope-microworld-en-dark.svg">
-  <img src="assets/readme/hope-microworld-en-light.svg" width="960" alt="Illustration of a Diff microworld where timeout, elapsed time, and remaining retries determine whether the next retry starts.">
+  <img src="assets/readme/hope-microworld-en-light.svg" width="960" alt="Illustration of a Diff microworld where timeout, elapsed time, and remaining retries set a scenario, and before and after traces show whether the next retry starts.">
 </picture>
 
 ### <img src="assets/readme/mark-whiplash.svg" width="22" height="22" alt=""> Whiplash
