@@ -1,6 +1,6 @@
 {
   "name": "hope",
-  "version": "8.0.2",
+  "version": "9.0.0",
   "description": "Align intent and consequential decisions before implementation and preserve the shared understanding as a repository record, review and fix work through repeated verification or sweep proven codebase waste, understand pull requests and local changes and the reasons for each change, design interfaces and mockups, improve writing, and automatically prepare PR and MR titles and descriptions. Requires Node.js 22 or newer.",
   "author": {
     "name": "SeungIl",
