@@ -26,5 +26,6 @@ separate workflow, worker, or artifact.
 Use the current language unless the person or project chooses another. Read
 translated text for naturalness, then compare versions for meaning drift.
 
-Return the requested text, edit result, or material review findings; do not
-return the standard or a checklist.
+Return the requested text or edit result. In a review, tie each material
+finding to its passage and suggest a fix. Do not return the standard or a
+checklist.
