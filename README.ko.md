@@ -104,9 +104,11 @@ sweep을 요청하세요. 공개 동작은 그대로 두고 죽은 코드, 중�
 ### <img src="assets/readme/mark-write.svg" width="22" height="22" alt=""> Write
 
 글의 의미와 어조를 지키면서 초안을 쓰고, 고치고, 검토합니다. 결론을 앞에 두고 군더더기를
-덜어 내며, 언어마다 그 언어답게 씁니다. 조지 오웰이
+덜어 내고, 한 개념에는 한 용어만 쓰며, 언어마다 그 언어답게 씁니다. 조지 오웰이
 [Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/)에서
-제시한 여섯 규칙을 바탕으로 한 글쓰기 기준은 다른 Hope 스킬의 문장에도 적용됩니다.
+제시한 여섯 규칙과
+[ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/)를 바탕으로 한
+글쓰기 기준은 다른 Hope 스킬의 문장에도 적용됩니다.
 [Write 스킬](plugins/hope/skills/write/SKILL.md)
 
 ### <img src="assets/readme/mark-pr-writing.svg" width="22" height="22" alt=""> PR Writing

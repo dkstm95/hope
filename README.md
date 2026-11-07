@@ -110,10 +110,13 @@ the visual evidence for a decision.
 ### <img src="assets/readme/mark-write.svg" width="22" height="22" alt=""> Write
 
 Draft, edit, or review text while keeping its meaning and voice. Write leads
-with the point, cuts filler, and writes each language natively. Its writing
-standard, adapted from George Orwell’s six rules in
-[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/),
-also shapes the language of every other Hope skill.
+with the point, cuts filler, keeps one term per concept, and writes each
+language natively. Its writing standard, adapted from George Orwell’s six rules
+in
+[Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/)
+and from
+[ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/), also
+shapes the language of every other Hope skill.
 [Write Skill](plugins/hope/skills/write/SKILL.md)
 
 ### <img src="assets/readme/mark-pr-writing.svg" width="22" height="22" alt=""> PR Writing
