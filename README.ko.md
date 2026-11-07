@@ -111,6 +111,20 @@ sweep을 요청하세요. 공개 동작은 그대로 두고 죽은 코드, 중�
 글쓰기 기준은 다른 Hope 스킬의 문장에도 적용됩니다.
 [Write 스킬](plugins/hope/skills/write/SKILL.md)
 
+Write 스킬은 직접 시작할 때만 동작합니다. 모든 프로젝트에서 Claude Code와 Codex의
+응답이 이 기준을 따르게 하려면 에이전트에게 다음 프롬프트를 주세요.
+
+```text
+Hope 글쓰기 기준을 내 전역 에이전트 지침에 추가해 줘.
+1. https://raw.githubusercontent.com/dkstm95/hope/main/plugins/hope/skills/write/references/writing-standard.md 를 가져와.
+2. ~/.claude/CLAUDE.md와 ~/.codex/AGENTS.md 각각에 대해: 파일이 없으면 만들고 기존 내용은 유지해. 기준은 <!-- hope-writing-standard:start --> 줄과 <!-- hope-writing-standard:end --> 줄 사이에 넣고, 그 사이에 이전 사본이 있으면 교체해.
+3. 표시 줄 안쪽, 기준 앞에 다음 문장을 넣어: "Apply this standard to responses and written work unless the project or the person asks for another style."
+4. `claude -p`와 `codex exec`를 한 번씩 실행해서 둘 다 기준의 제목들을 보고하는지 확인해.
+```
+
+기준을 갱신하려면 같은 프롬프트를 다시 주면 됩니다. 프로젝트 지침과 명시적인 요청이
+여전히 우선하며, Claude Code의 `--bare`처럼 전역 지침을 건너뛰는 모드도 있습니다.
+
 ### <img src="assets/readme/mark-pr-writing.svg" width="22" height="22" alt=""> PR Writing
 
 변경을 리뷰할 사람에게 설명합니다. PR을 요청하거나 허가받은 작업이 PR 단계에 이르면,

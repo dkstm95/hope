@@ -119,6 +119,21 @@ and from
 shapes the language of every other Hope skill.
 [Write Skill](plugins/hope/skills/write/SKILL.md)
 
+Write itself runs only when you start it. To make every Claude Code and Codex
+reply follow its standard in all your projects, give your agent this prompt:
+
+```text
+Add the Hope writing standard to my global agent instructions.
+1. Fetch https://raw.githubusercontent.com/dkstm95/hope/main/plugins/hope/skills/write/references/writing-standard.md.
+2. For ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md: create the file if it is missing and keep its existing content. Put the standard between the lines <!-- hope-writing-standard:start --> and <!-- hope-writing-standard:end -->, replacing any earlier copy between them.
+3. Inside the markers, before the standard, add: "Apply this standard to responses and written work unless the project or the person asks for another style."
+4. Run `claude -p` and `codex exec` once each and confirm that both report the standard's headings.
+```
+
+Run the same prompt again to update the copy. Project instructions and explicit
+requests still take precedence, and some modes skip global instructions, such
+as Claude Code's `--bare`.
+
 ### <img src="assets/readme/mark-pr-writing.svg" width="22" height="22" alt=""> PR Writing
 
 Explain a change to the people who review it. When you ask for a PR or an
